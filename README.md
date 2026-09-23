@@ -19,6 +19,9 @@
 - [전투 화면 와이어프레임](docs/prototype/combat-screen-wireframe.svg)
 - [입력 상태도와 전투 데이터 설계](docs/prototype/INPUT_AND_DATA_DESIGN.md)
 - [첫 프로토타입 구현 작업 목록](docs/prototype/IMPLEMENTATION_BACKLOG.md)
+- [프로토타입 화면 흐름과 UI 명세](docs/prototype/PROTOTYPE_UI_FLOW.md)
+- [조작 배치 편집 화면 와이어프레임](docs/prototype/control-layout-editor-wireframe.svg)
+- [프로토타입 테스트 계획](docs/prototype/PROTOTYPE_TEST_PLAN.md)
 
 PDF에는 Noto Sans KR 글꼴이 포함되어 있어 한글이 깨지지 않습니다. GitHub에서 내용을 빠르게 확인할 때는 Markdown 문서를 사용할 수 있습니다.
 
@@ -35,7 +38,9 @@ python planning/build_gdd.py
 
 ## 다음 작업
 
-1. `CP-001` Godot 4.x 빈 프로젝트로 Android 실제 기기 설치
-2. `CP-002` 프레임과 멀티터치 입력 지연 확인
+기획 단계는 첫 프로토타입 구현을 시작할 수 있는 수준으로 정리되었습니다.
+
+1. 개발 시작 승인 후 `CP-001` Godot 4.x 프로젝트 생성
+2. Android 실제 기기 설치와 멀티터치 확인
 3. `CP-101` 입력 명령 계층 구현
 4. `CP-102`부터 이동 샌드박스 제작

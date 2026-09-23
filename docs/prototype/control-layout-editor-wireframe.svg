@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">조작 배치 편집 화면 와이어프레임</title>
+  <desc id="desc">상단에서 프리셋, 크기, 불투명도와 테스트 기능을 조절하고 전투 화면의 가상 패드와 버튼을 드래그하는 가로형 모바일 설정 화면.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bdeeff"/>
+      <stop offset="1" stop-color="#eefbdc"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#183442" flood-opacity=".24"/>
+    </filter>
+    <style>
+      text { font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; fill: #173142; }
+      .title { font-size: 27px; font-weight: 700; }
+      .label { font-size: 21px; font-weight: 700; }
+      .small { font-size: 17px; font-weight: 600; }
+      .tool { fill: #fff; fill-opacity: .95; stroke: #b7cad3; stroke-width: 2; }
+      .control { fill: #fff; fill-opacity: .88; stroke: #3c6c81; stroke-width: 4; }
+      .selected { stroke: #177dd1; stroke-width: 8; stroke-dasharray: 12 8; }
+      .touch { fill: #5fa9dc; fill-opacity: .14; stroke: #177dd1; stroke-opacity: .8; stroke-width: 3; stroke-dasharray: 9 7; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" rx="30" fill="url(#sky)"/>
+  <path d="M0 610 Q380 360 790 620 V900 H0Z" fill="#8ed19a"/>
+  <path d="M700 625 Q1160 360 1600 585 V900 H700Z" fill="#73bc87"/>
+  <rect y="710" width="1600" height="190" fill="#5f9b67"/>
+  <rect y="700" width="1600" height="16" fill="#a1e580"/>
+
+  <g filter="url(#shadow)">
+    <rect x="28" y="24" width="1544" height="150" rx="24" fill="#f8fbfc" fill-opacity=".97"/>
+    <text class="title" x="58" y="68">조작 배치</text>
+
+    <rect class="tool" x="55" y="88" width="265" height="58" rx="12"/>
+    <text class="small" x="78" y="124">프리셋: 사용자 설정 ▾</text>
+
+    <text class="small" x="358" y="106">선택 버튼 크기 100%</text>
+    <rect x="358" y="122" width="252" height="8" rx="4" fill="#c9d8de"/>
+    <rect x="358" y="122" width="122" height="8" rx="4" fill="#177dd1"/>
+    <circle cx="480" cy="126" r="14" fill="#177dd1"/>
+
+    <text class="small" x="650" y="106">전체 불투명도 82%</text>
+    <rect x="650" y="122" width="252" height="8" rx="4" fill="#c9d8de"/>
+    <rect x="650" y="122" width="191" height="8" rx="4" fill="#177dd1"/>
+    <circle cx="841" cy="126" r="14" fill="#177dd1"/>
+
+    <rect class="tool" x="952" y="87" width="168" height="60" rx="12"/>
+    <text class="label" x="1036" y="124" text-anchor="middle">10초 테스트</text>
+    <rect class="tool" x="1138" y="87" width="126" height="60" rx="12"/>
+    <text class="label" x="1201" y="124" text-anchor="middle">초기화</text>
+    <rect x="1282" y="87" width="126" height="60" rx="12" fill="#e9eef1"/>
+    <text class="label" x="1345" y="124" text-anchor="middle">취소</text>
+    <rect x="1426" y="87" width="118" height="60" rx="12" fill="#173142"/>
+    <text class="label" x="1485" y="124" text-anchor="middle" fill="#fff">적용</text>
+  </g>
+
+  <rect x="34" y="194" width="1532" height="674" rx="24" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="8 8"/>
+  <text class="small" x="55" y="226" fill="#fff">안전 영역 · 버튼을 드래그하세요</text>
+
+  <g>
+    <circle class="touch" cx="220" cy="706" r="128"/>
+    <circle class="control" cx="220" cy="706" r="92"/>
+    <circle cx="220" cy="706" r="42" fill="#6d8fa0"/>
+    <text class="small" x="220" y="838" text-anchor="middle" fill="#fff">이동 패드 영역</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <circle class="touch selected" cx="1460" cy="758" r="92"/>
+    <circle class="control" cx="1460" cy="758" r="70" fill="#fff4bd"/>
+    <text class="label" x="1460" y="766" text-anchor="middle">점프</text>
+
+    <circle class="touch" cx="1300" cy="770" r="76"/>
+    <circle class="control" cx="1300" cy="770" r="58"/>
+    <text class="small" x="1300" y="777" text-anchor="middle">회피</text>
+
+    <circle class="touch" cx="1270" cy="600" r="76"/>
+    <circle class="control" cx="1270" cy="600" r="58" fill="#d8f0ff"/>
+    <text class="small" x="1270" y="607" text-anchor="middle">스킬 1</text>
+
+    <circle class="touch" cx="1435" cy="570" r="76"/>
+    <circle class="control" cx="1435" cy="570" r="58" fill="#d8f0ff"/>
+    <text class="small" x="1435" y="577" text-anchor="middle">스킬 2</text>
+
+    <circle class="touch" cx="1110" cy="625" r="76"/>
+    <circle class="control" cx="1110" cy="625" r="58" fill="#ffe1a3"/>
+    <text class="small" x="1110" y="632" text-anchor="middle">필살기</text>
+
+    <rect class="touch" x="1042" y="741" width="136" height="120" rx="24"/>
+    <rect class="control" x="1058" y="757" width="104" height="88" rx="18" fill="#e8defc"/>
+    <text class="small" x="1110" y="808" text-anchor="middle">전환</text>
+  </g>
+
+  <rect x="1230" y="218" width="326" height="82" rx="14" fill="#173142" fill-opacity=".88"/>
+  <text class="small" x="1393" y="251" text-anchor="middle" fill="#fff">선택: 점프</text>
+  <text class="small" x="1393" y="279" text-anchor="middle" fill="#fff">위치 92%, 84% · 크기 100%</text>
+</svg>
