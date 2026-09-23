@@ -5,7 +5,8 @@
 ## 현재 상태
 
 - 게임 기획서 버전: `0.1`
-- 단계: 전투 프로토타입 제작 전 기획
+- 전투 프로토타입 명세 버전: `0.1`
+- 단계: 첫 전투 프로토타입 구현 준비 완료
 - 주인공: 로안 / 루미
 - 미소의 여왕: 세라
 - 구현 소스: 아직 작성 전
@@ -14,6 +15,8 @@
 
 - [게임 기획서 PDF](docs/Happiness_Tale_GDD_v0.1_KR.pdf)
 - [게임 기획서 Markdown](docs/GAME_DESIGN.md)
+- [첫 전투 프로토타입 명세](docs/prototype/COMBAT_PROTOTYPE_SPEC.md)
+- [전투 화면 와이어프레임](docs/prototype/combat-screen-wireframe.svg)
 
 PDF에는 Noto Sans KR 글꼴이 포함되어 있어 한글이 깨지지 않습니다. GitHub에서 내용을 빠르게 확인할 때는 Markdown 문서를 사용할 수 있습니다.
 
@@ -30,7 +33,7 @@ python planning/build_gdd.py
 
 ## 다음 작업
 
-1. 첫 전투 화면과 터치 영역 와이어프레임 확정
-2. 검·활 및 적의 초기 전투 수치 설계
-3. 제작 엔진과 안드로이드 빌드 기준 결정
+1. Godot 4.x 빈 프로젝트로 Android 실제 기기 설치와 입력 지연 확인
+2. 입력 상태도와 전투 데이터 스키마 작성
+3. 프로토타입 작업 티켓 분해
 4. 약 3분 분량의 첫 전투 스테이지 구현
