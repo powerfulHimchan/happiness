@@ -6,10 +6,10 @@
 
 - 게임 기획서 버전: `0.1`
 - 전투 프로토타입 명세 버전: `0.1`
-- 단계: 첫 전투 프로토타입 구현 준비 완료
+- 단계: `CP-001/002` Godot·Android 기술 검증 진행 중
 - 주인공: 로안 / 루미
 - 미소의 여왕: 세라
-- 구현 소스: 아직 작성 전
+- 구현 소스: Godot 멀티터치 진단 프로젝트 작성 완료
 
 ## 문서
 
@@ -22,6 +22,18 @@
 - [프로토타입 화면 흐름과 UI 명세](docs/prototype/PROTOTYPE_UI_FLOW.md)
 - [조작 배치 편집 화면 와이어프레임](docs/prototype/control-layout-editor-wireframe.svg)
 - [프로토타입 테스트 계획](docs/prototype/PROTOTYPE_TEST_PLAN.md)
+- [CP-001/002 구현 상태](docs/prototype/CP001_CP002_STATUS.md)
+
+## 프로토타입 실행
+
+Godot 4.7.2 stable에서 [`game/project.godot`](game/project.godot)를 엽니다. 현재 빌드는 전투 구현 전 Android 가로 화면, 안전 영역, 30/60 FPS와 멀티터치를 확인하는 진단 화면입니다.
+
+```bash
+./scripts/check_godot_project.sh
+godot --path game --editor
+```
+
+자세한 실행과 Android 연결 방법은 [Godot 프로토타입 안내](game/README.md)를 참고하세요.
 
 PDF에는 Noto Sans KR 글꼴이 포함되어 있어 한글이 깨지지 않습니다. GitHub에서 내용을 빠르게 확인할 때는 Markdown 문서를 사용할 수 있습니다.
 
@@ -38,9 +50,7 @@ python planning/build_gdd.py
 
 ## 다음 작업
 
-기획 단계는 첫 프로토타입 구현을 시작할 수 있는 수준으로 정리되었습니다.
-
-1. 개발 시작 승인 후 `CP-001` Godot 4.x 프로젝트 생성
-2. Android 실제 기기 설치와 멀티터치 확인
-3. `CP-101` 입력 명령 계층 구현
-4. `CP-102`부터 이동 샌드박스 제작
+1. Godot 4.7.2와 Android Export Templates 설치
+2. Android SDK 경로 설정 후 실제 기기 원클릭 배포
+3. `CP-001/002` 실기기 체크리스트 완료
+4. `CP-101` 입력 명령 계층 구현

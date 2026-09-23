@@ -7,3 +7,11 @@ local.properties
 *.iml
 *.log
 docs/*.docx
+
+# Godot
+.godot/
+game/.godot/
+game/android/
+build/android/
+*.apk
+*.aab

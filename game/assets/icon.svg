@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Happiness Tale prototype icon</title>
+  <desc id="desc">A dawn sun rising behind a small clock.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#80d8f7"/>
+      <stop offset="1" stop-color="#f9e7a7"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="52" fill="url(#sky)"/>
+  <circle cx="128" cy="118" r="52" fill="#fff2a5"/>
+  <path d="M30 164 Q82 122 128 163 Q176 120 226 164 V226 H30Z" fill="#64ad78"/>
+  <circle cx="128" cy="162" r="52" fill="#f8fbfc" stroke="#204c61" stroke-width="12"/>
+  <path d="M128 128 V163 L151 181" fill="none" stroke="#204c61" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="128" cy="162" r="7" fill="#204c61"/>
+</svg>
