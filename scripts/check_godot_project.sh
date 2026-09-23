@@ -6,6 +6,7 @@ game_root="$project_root/game"
 
 required_files=(
   "$game_root/project.godot"
+  "$game_root/export_presets.cfg"
   "$game_root/scenes/diagnostics/touch_diagnostics.tscn"
   "$game_root/scripts/diagnostics/touch_diagnostics.gd"
   "$game_root/assets/icon.svg"
@@ -25,6 +26,11 @@ fi
 
 if ! rg -q 'res://scripts/diagnostics/touch_diagnostics.gd' "$game_root/scenes/diagnostics/touch_diagnostics.tscn"; then
   echo "Diagnostic scene does not reference its script." >&2
+  exit 1
+fi
+
+if ! rg -q 'name="Android Debug APK"' "$game_root/export_presets.cfg"; then
+  echo "Android debug export preset is missing." >&2
   exit 1
 fi
 

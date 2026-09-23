@@ -12,6 +12,7 @@ docs/*.docx
 .godot/
 game/.godot/
 game/android/
+game/build/
 build/android/
 *.apk
 *.aab

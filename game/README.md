@@ -31,9 +31,15 @@ godot --path game --editor
 1. Godot Editor의 `Editor Settings → Export → Android`에서 Java SDK Path를 JDK 17로 설정한다.
 2. Android SDK Path를 `platform-tools/adb`가 포함된 SDK 디렉터리로 설정한다.
 3. Godot 4.7.2용 Export Templates를 설치한다.
-4. `Project → Export`에서 Android 프리셋을 추가한다.
-5. 패키지 이름을 `com.powerfulhimchan.happinesstale`로 설정한다.
+4. 프로젝트에 포함된 `Android Debug APK` 프리셋을 확인한다.
+5. 패키지 이름은 테스트 앱 분리를 위해 `com.powerfulhimchan.happinesstale.diagnostics`를 사용한다.
 6. USB 디버깅이 활성화된 기기를 연결하고 Runnable 프리셋으로 원클릭 배포한다.
+
+## GitHub Actions APK
+
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 결과물 이름은 `happiness-tale-diagnostics-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+
+이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
 첫 기기 테스트에서는 아래를 확인한다.
 
@@ -48,6 +54,7 @@ godot --path game --editor
 ```text
 game/
 ├── assets/icon.svg
+├── export_presets.cfg
 ├── project.godot
 ├── scenes/diagnostics/touch_diagnostics.tscn
 └── scripts/diagnostics/touch_diagnostics.gd
