@@ -6,10 +6,10 @@
 
 - 게임 기획서 버전: `0.1`
 - 전투 프로토타입 명세 버전: `0.1`
-- 단계: `CP-001/002` Godot·Android 기술 검증 진행 중
+- 단계: `CP-101` 입력 명령 계층 실기기 검증판
 - 주인공: 로안 / 루미
 - 미소의 여왕: 세라
-- 구현 소스: Godot 멀티터치 진단 프로젝트 작성 완료
+- 구현 소스: Godot 멀티터치 입력 명령 샌드박스 작성 완료
 
 ## 문서
 
@@ -26,7 +26,7 @@
 
 ## 프로토타입 실행
 
-Godot 4.7.2 stable에서 [`game/project.godot`](game/project.godot)를 엽니다. 현재 빌드는 전투 구현 전 Android 가로 화면, 안전 영역, 30/60 FPS와 멀티터치를 확인하는 진단 화면입니다.
+Godot 4.7.2 stable에서 [`game/project.godot`](game/project.godot)를 엽니다. 현재 빌드는 동적 이동 패드를 유지하면서 점프·회피·스킬·필살기·무기 전환을 동시에 입력하고, 명령 우선순위와 버퍼를 확인하는 `CP-101` 샌드박스입니다.
 
 ```bash
 ./scripts/check_godot_project.sh
@@ -52,7 +52,7 @@ python planning/build_gdd.py
 
 ## 다음 작업
 
-1. Godot 4.7.2와 Android Export Templates 설치
-2. Android SDK 경로 설정 후 실제 기기 원클릭 배포
-3. `CP-001/002` 실기기 체크리스트 완료
-4. `CP-101` 입력 명령 계층 구현
+1. `CP-101` APK에서 이동 중 액션 동시입력 확인
+2. 스킬 2와 점프·무기 전환 동시입력 시 버퍼 동작 확인
+3. `CP-102` 캐릭터 지상 이동 구현
+4. `CP-103` 가변 점프와 입력 보정 구현
