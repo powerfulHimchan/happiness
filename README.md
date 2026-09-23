@@ -17,6 +17,8 @@
 - [게임 기획서 Markdown](docs/GAME_DESIGN.md)
 - [첫 전투 프로토타입 명세](docs/prototype/COMBAT_PROTOTYPE_SPEC.md)
 - [전투 화면 와이어프레임](docs/prototype/combat-screen-wireframe.svg)
+- [입력 상태도와 전투 데이터 설계](docs/prototype/INPUT_AND_DATA_DESIGN.md)
+- [첫 프로토타입 구현 작업 목록](docs/prototype/IMPLEMENTATION_BACKLOG.md)
 
 PDF에는 Noto Sans KR 글꼴이 포함되어 있어 한글이 깨지지 않습니다. GitHub에서 내용을 빠르게 확인할 때는 Markdown 문서를 사용할 수 있습니다.
 
@@ -33,7 +35,7 @@ python planning/build_gdd.py
 
 ## 다음 작업
 
-1. Godot 4.x 빈 프로젝트로 Android 실제 기기 설치와 입력 지연 확인
-2. 입력 상태도와 전투 데이터 스키마 작성
-3. 프로토타입 작업 티켓 분해
-4. 약 3분 분량의 첫 전투 스테이지 구현
+1. `CP-001` Godot 4.x 빈 프로젝트로 Android 실제 기기 설치
+2. `CP-002` 프레임과 멀티터치 입력 지연 확인
+3. `CP-101` 입력 명령 계층 구현
+4. `CP-102`부터 이동 샌드박스 제작
