@@ -74,20 +74,24 @@ jobs:
           cache: true
           verbose: true
 
-      - name: Verify APK
+      - name: Collect and verify APK
         shell: bash
         run: |
-          test -s game/build/android/happiness-tale-diagnostics.apk
-          sha256sum game/build/android/happiness-tale-diagnostics.apk \
-            | tee game/build/android/happiness-tale-diagnostics.apk.sha256
-          ls -lh game/build/android/
+          apk_path="$(find game/build -type f -name 'happiness-tale-diagnostics.apk' -print -quit)"
+          test -n "${apk_path}"
+          test -s "${apk_path}"
+          mkdir -p dist
+          cp "${apk_path}" dist/happiness-tale-diagnostics.apk
+          sha256sum dist/happiness-tale-diagnostics.apk \
+            | tee dist/happiness-tale-diagnostics.apk.sha256
+          ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: happiness-tale-diagnostics-apk
           path: |
-            game/build/android/happiness-tale-diagnostics.apk
-            game/build/android/happiness-tale-diagnostics.apk.sha256
+            dist/happiness-tale-diagnostics.apk
+            dist/happiness-tale-diagnostics.apk.sha256
           if-no-files-found: error
           retention-days: 14
