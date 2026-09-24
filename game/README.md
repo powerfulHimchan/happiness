@@ -37,7 +37,7 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp102-visibility-fix-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp102-facing-fix-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 

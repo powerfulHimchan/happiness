@@ -29,7 +29,7 @@ var _reversal_test_active: bool = false
 var _reversal_target_sign: int = 0
 var _last_position_x: float = 0.0
 
-@onready var avatar: Node2D = $Avatar
+@onready var avatar_sprite: Sprite2D = $Avatar/Sprite2D
 
 
 func _ready() -> void:
@@ -72,7 +72,7 @@ func set_move_vector(input_vector: Vector2) -> void:
 			_reversal_target_sign = new_sign
 		if facing_direction != new_sign:
 			facing_direction = new_sign
-			avatar.scale.x = float(facing_direction)
+			avatar_sprite.flip_h = facing_direction < 0
 		_last_input_sign = new_sign
 
 	if absf(new_input) <= 0.001 and absf(move_input) > 0.001 \
@@ -91,7 +91,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	velocity = Vector2.ZERO
 	move_input = 0.0
 	facing_direction = 1
-	avatar.scale.x = 1.0
+	avatar_sprite.flip_h = false
 	stop_test_passed = false
 	reversal_test_passed = false
 	last_stop_time_s = 0.0

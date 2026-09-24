@@ -39,6 +39,11 @@ if ! rg -q 'class_name PrototypePlayer' "$game_root/scripts/player/prototype_pla
   exit 1
 fi
 
+if ! rg -q 'avatar_sprite\.flip_h = facing_direction < 0' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "Player sprite facing flip is missing." >&2
+  exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
