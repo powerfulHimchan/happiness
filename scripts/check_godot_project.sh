@@ -11,7 +11,7 @@ required_files=(
   "$game_root/scripts/movement/ground_movement_sandbox.gd"
   "$game_root/scripts/movement/ground_movement_controls.gd"
   "$game_root/scripts/player/prototype_player.gd"
-  "$game_root/scripts/player/prototype_avatar.gd"
+  "$game_root/assets/prototype_player.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
   "$game_root/assets/icon.svg"

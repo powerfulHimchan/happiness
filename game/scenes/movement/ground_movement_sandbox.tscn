@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
-[ext_resource type="Script" path="res://scripts/player/prototype_avatar.gd" id="3_avatar"]
+[ext_resource type="Texture2D" path="res://assets/prototype_player.svg" id="3_avatar"]
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_controls.gd" id="4_controls"]
 
 [sub_resource type="RectangleShape2D" id="FloorShape"]
@@ -37,14 +37,24 @@ position = Vector2(4950, 500)
 shape = SubResource("WallShape")
 
 [node name="Player" type="CharacterBody2D" parent="."]
-position = Vector2(520, 780)
+position = Vector2(960, 780)
 script = ExtResource("2_player")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
 shape = SubResource("PlayerShape")
 
 [node name="Avatar" type="Node2D" parent="Player"]
-script = ExtResource("3_avatar")
+z_index = 20
+
+[node name="Sprite2D" type="Sprite2D" parent="Player/Avatar"]
+position = Vector2(0, -30)
+scale = Vector2(0.78, 0.78)
+texture = ExtResource("3_avatar")
+
+[node name="VisibilityMarker" type="Polygon2D" parent="Player/Avatar"]
+position = Vector2(0, -132)
+polygon = PackedVector2Array(-13, 0, 13, 0, 0, 18)
+color = Color(1, 0.819608, 0.4, 1)
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
 position = Vector2(0, -105)

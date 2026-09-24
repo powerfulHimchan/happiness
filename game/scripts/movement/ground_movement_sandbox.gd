@@ -2,7 +2,7 @@ extends Node2D
 
 ## CP-102 지상 이동 검증 트랙과 UI 연결을 담당한다.
 
-const TRACK_START := Vector2(520.0, 780.0)
+const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
 const TRACK_RIGHT := 4900.0
 const FLOOR_TOP := 840.0
