@@ -1,11 +1,12 @@
 extends Node2D
 
-## CP-102 지상 이동 검증 트랙과 UI 연결을 담당한다.
+## CP-103 지상 이동과 점프 검증 트랙, UI 연결을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
 const TRACK_RIGHT := 4900.0
 const FLOOR_TOP := 840.0
+const PRACTICE_PLATFORM_RECT := Rect2(1675.0, 660.0, 650.0, 40.0)
 
 @onready var player: PrototypePlayer = $Player
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
@@ -13,6 +14,8 @@ const FLOOR_TOP := 840.0
 
 func _ready() -> void:
 	controls.move_vector_changed.connect(player.set_move_vector)
+	controls.jump_pressed.connect(player.request_jump)
+	controls.jump_released.connect(player.release_jump)
 	controls.reset_requested.connect(_reset_test)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	controls.update_movement_metrics({
@@ -25,6 +28,14 @@ func _ready() -> void:
 		"reversal_passed": false,
 		"stop_time_s": 0.0,
 		"stop_distance_m": 0.0,
+		"jump_state": "지상",
+		"jump_held": false,
+		"jump_count": 0,
+		"jump_height_m": 0.0,
+		"last_jump_height_m": 0.0,
+		"last_jump_assist": "대기",
+		"coyote_remaining_s": 0.0,
+		"jump_buffer_remaining_s": 0.0,
 	})
 	queue_redraw()
 
@@ -36,7 +47,18 @@ func _draw() -> void:
 	_draw_hills()
 	draw_rect(Rect2(TRACK_LEFT - 100.0, FLOOR_TOP, TRACK_RIGHT - TRACK_LEFT + 200.0, 300.0), Color("6aa66b"), true)
 	draw_rect(Rect2(TRACK_LEFT - 100.0, FLOOR_TOP, TRACK_RIGHT - TRACK_LEFT + 200.0, 18.0), Color("b8d86f"), true)
+	draw_rect(PRACTICE_PLATFORM_RECT, Color("507f5b"), true)
+	draw_rect(Rect2(PRACTICE_PLATFORM_RECT.position, Vector2(PRACTICE_PLATFORM_RECT.size.x, 10.0)), Color("d9ef85"), true)
 	_draw_track_markers()
+	draw_string(
+		ThemeDB.fallback_font,
+		PRACTICE_PLATFORM_RECT.position + Vector2(145.0, -18.0),
+		"코요테 / 착지 버퍼 연습 발판",
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1.0,
+		22,
+		Color("315b4c")
+	)
 
 
 func _draw_hills() -> void:

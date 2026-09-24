@@ -54,6 +54,26 @@ if rg -q 'signi\(' "$game_root/scripts/player/prototype_player.gd"; then
   exit 1
 fi
 
+if ! rg -q 'const COYOTE_TIME_S := 0\.10' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "CP-103 coyote time is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'const JUMP_BUFFER_S := 0\.12' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "CP-103 jump buffer is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'jump_pressed\.connect\(player\.request_jump\)' "$game_root/scripts/movement/ground_movement_sandbox.gd"; then
+  echo "Jump input is not connected to the player." >&2
+  exit 1
+fi
+
+if ! rg -q 'PracticePlatform' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+  echo "CP-103 practice platform is missing." >&2
+  exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1

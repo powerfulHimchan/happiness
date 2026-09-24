@@ -1,9 +1,11 @@
 extends Control
 
-## CP-102용 모바일 조작 HUD.
+## CP-103용 모바일 조작 HUD.
 ## CP-101의 포인터 소유권과 명령 버퍼를 유지하면서 이동 결과를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
+signal jump_pressed
+signal jump_released
 signal reset_requested
 
 const PANEL_COLOR := Color("18394b")
@@ -66,7 +68,7 @@ var redraw_accumulator: float = 0.0
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-102 이동 테스트 시작")
+	_append_action_log("CP-103 점프 테스트 시작")
 	queue_redraw()
 
 
@@ -91,6 +93,7 @@ func _physics_process(_delta: float) -> void:
 			command.phase_name(),
 			last_latency_msec,
 		])
+		_dispatch_action_command(command)
 		processed += 1
 
 
@@ -138,6 +141,7 @@ func release_all_inputs() -> void:
 	move_vector = Vector2.ZERO
 	move_origin = move_zone.get_center()
 	move_vector_changed.emit(Vector2.ZERO)
+	jump_released.emit()
 	queue_redraw()
 
 
@@ -199,6 +203,15 @@ func _submit_action(action_id: StringName, phase: int, pointer_id: int) -> void:
 		pointer_id,
 		Time.get_ticks_msec()
 	)
+
+
+func _dispatch_action_command(command: PlayerCommand) -> void:
+	if command.command_type != PlayerCommand.Type.JUMP:
+		return
+	if command.phase == PlayerCommand.Phase.PRESSED:
+		jump_pressed.emit()
+	elif command.phase == PlayerCommand.Phase.RELEASED:
+		jump_released.emit()
 
 
 func _handle_header_action(position: Vector2) -> bool:
@@ -282,9 +295,9 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.205, 170.0, 215.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-102 · 캐릭터 지상 이동", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-103 · 가변 점프와 입력 보정", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"속도 5.5 m/s · 가속 40 · 감속 45 · 반전 가속 60 m/s²",
+		"최대 높이 2.2 m · 코요테 0.10초 · 착지 버퍼 0.12초",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -297,37 +310,38 @@ func _draw_header() -> void:
 	var facing_text := "오른쪽" if facing > 0 else "왼쪽"
 	_draw_text(
 		"현재 %+.2f m/s  |  목표 %+.2f  |  위치 %.1f m  |  시선 %s" % [speed, target, position_m, facing_text],
-		panel_rect.position + Vector2(22.0, 111.0),
-		22
+		panel_rect.position + Vector2(22.0, 108.0),
+		20
 	)
 
-	var stop_passed: bool = bool(movement_metrics.get("stop_passed", false))
-	var reversal_passed: bool = bool(movement_metrics.get("reversal_passed", false))
-	var stop_text := "감속 PASS" if stop_passed else "감속 대기"
-	var reversal_text := "방향 전환 PASS" if reversal_passed else "방향 전환 대기"
-	var status_color := PASS_COLOR if stop_passed and reversal_passed else WAIT_COLOR
+	var jump_state: String = String(movement_metrics.get("jump_state", "지상"))
+	var jump_height: float = float(movement_metrics.get("jump_height_m", 0.0))
+	var jump_count: int = int(movement_metrics.get("jump_count", 0))
+	var jump_held: bool = bool(movement_metrics.get("jump_held", false))
+	var hold_text := "누름" if jump_held else "뗌"
 	_draw_text(
-		"%s  ·  %s  ·  동시 조작 최대 %d  ·  입력 지연 %d ms" % [
-			stop_text,
-			reversal_text,
+		"점프 %s/%s  |  높이 %.2f m  |  실행 %d회" % [jump_state, hold_text, jump_height, jump_count],
+		panel_rect.position + Vector2(22.0, 143.0),
+		20,
+		ACTIVE_COLOR if jump_state != "지상" else TEXT_COLOR
+	)
+
+	var assist: String = String(movement_metrics.get("last_jump_assist", "대기"))
+	var coyote: float = float(movement_metrics.get("coyote_remaining_s", 0.0))
+	var jump_buffer: float = float(movement_metrics.get("jump_buffer_remaining_s", 0.0))
+	var status_color := PASS_COLOR if jump_count > 0 else WAIT_COLOR
+	_draw_text(
+		"최근 %s  |  보정 잔여 C %.2f / B %.2f초  |  동시 %d  |  %d ms" % [
+			assist,
+			coyote,
+			jump_buffer,
 			peak_simultaneous_controls,
 			last_latency_msec,
 		],
-		panel_rect.position + Vector2(22.0, 150.0),
-		20,
+		panel_rect.position + Vector2(22.0, 178.0),
+		18,
 		status_color
 	)
-
-	if stop_passed:
-		_draw_text(
-			"정지 %.2f초 / %.2fm" % [
-				float(movement_metrics.get("stop_time_s", 0.0)),
-				float(movement_metrics.get("stop_distance_m", 0.0)),
-			],
-			panel_rect.position + Vector2(22.0, 183.0),
-			17,
-			MUTED_TEXT_COLOR
-		)
 
 	_draw_button(fps_60_rect, "60 FPS", Engine.max_fps == 60)
 	_draw_button(fps_30_rect, "30 FPS", Engine.max_fps == 30)
