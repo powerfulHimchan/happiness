@@ -63,11 +63,11 @@ func _physics_process(delta: float) -> void:
 func set_move_vector(input_vector: Vector2) -> void:
 	var raw_axis := clampf(input_vector.x, -1.0, 1.0)
 	var new_input := _apply_dead_zone(raw_axis)
-	var new_sign := signi(new_input)
+	var new_sign := _direction_sign(new_input)
 
 	if new_sign != 0:
 		if _last_input_sign != 0 and new_sign != _last_input_sign \
-			and signi(velocity.x) == _last_input_sign:
+			and _direction_sign(velocity.x) == _last_input_sign:
 			_reversal_test_active = true
 			_reversal_target_sign = new_sign
 		if facing_direction != new_sign:
@@ -110,7 +110,7 @@ func _movement_rate_mps2(target_speed_px: float) -> float:
 	if absf(move_input) <= 0.001:
 		return DECELERATION_MPS2
 	if absf(velocity.x) > STOP_EPSILON_MPS * PIXELS_PER_METER \
-		and signi(velocity.x) != signi(target_speed_px):
+		and _direction_sign(velocity.x) != _direction_sign(target_speed_px):
 		return TURN_ACCELERATION_MPS2
 	return ACCELERATION_MPS2
 
@@ -121,6 +121,10 @@ func _apply_dead_zone(axis: float) -> float:
 		return 0.0
 	var normalized := (magnitude - INPUT_DEAD_ZONE) / (1.0 - INPUT_DEAD_ZONE)
 	return signf(axis) * clampf(normalized, 0.0, 1.0)
+
+
+func _direction_sign(value: float) -> int:
+	return int(signf(value))
 
 
 func _update_movement_tests(delta: float) -> void:
@@ -136,7 +140,7 @@ func _update_movement_tests(delta: float) -> void:
 			last_stop_time_s = _stop_elapsed_s
 			last_stop_distance_m = _stop_distance_px / PIXELS_PER_METER
 
-	if _reversal_test_active and signi(velocity.x) == _reversal_target_sign:
+	if _reversal_test_active and _direction_sign(velocity.x) == _reversal_target_sign:
 		_reversal_test_active = false
 		reversal_test_passed = true
 

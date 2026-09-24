@@ -44,6 +44,16 @@ if ! rg -q 'avatar_sprite\.flip_h = facing_direction < 0' "$game_root/scripts/pl
   exit 1
 fi
 
+if ! rg -q 'return int\(signf\(value\)\)' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "Float-safe direction sign conversion is missing." >&2
+  exit 1
+fi
+
+if rg -q 'signi\(' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "Integer sign conversion must not be used for float movement values." >&2
+  exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
