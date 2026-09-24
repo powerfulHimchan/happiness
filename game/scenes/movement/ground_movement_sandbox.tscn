@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/combat/prototype_target.gd" id="6_target"]
 [ext_resource type="Texture2D" path="res://assets/prototype_target.svg" id="7_target_texture"]
 [ext_resource type="Texture2D" path="res://assets/prototype_target_selection.svg" id="8_target_selection"]
+[ext_resource type="Script" path="res://scripts/combat/damage_receiver.gd" id="9_damage_receiver"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -117,6 +118,11 @@ limit_top = 0
 limit_right = 5000
 limit_bottom = 1080
 limit_smoothed = true
+
+[node name="DamageReceiver" type="Node" parent="Player"]
+script = ExtResource("9_damage_receiver")
+max_health = 100
+post_hit_invulnerability_s = 0.5
 
 [node name="AutoTargetSelector" type="Node2D" parent="Player"]
 z_index = 15

@@ -1,13 +1,16 @@
 extends Control
 
-## CP-201용 모바일 조작 HUD.
-## 기존 이동 조작을 유지하면서 자동 공격 대상 선택 결과를 표시한다.
+## CP-202용 모바일 조작 HUD.
+## 기존 이동 조작을 유지하면서 피해 이벤트와 중복 차단 결과를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
 signal jump_released
 signal evade_pressed
 signal reset_requested
+signal damage_test_pressed
+signal duplicate_damage_test_pressed
+signal lethal_damage_test_pressed
 
 const PANEL_COLOR := Color("18394b")
 const PANEL_BORDER_COLOR := Color("4f7180")
@@ -32,9 +35,9 @@ const ACTION_ORDER: Array[StringName] = [
 const ACTION_LABELS := {
 	&"jump": "점프",
 	&"evade": "회피",
-	&"skill_1": "스킬 1",
-	&"skill_2": "스킬 2",
-	&"ultimate": "필살기",
+	&"skill_1": "피격 12",
+	&"skill_2": "중복 ×2",
+	&"ultimate": "치명타",
 	&"weapon_swap": "전환",
 }
 const ACTION_TYPES := {
@@ -67,12 +70,13 @@ var redraw_accumulator: float = 0.0
 var last_invincibility_log_seen: String = ""
 var last_fall_log_seen: String = ""
 var last_target_key_seen: String = "없음"
+var last_damage_log_seen: String = ""
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-201 자동 대상 탐색 시작")
+	_append_action_log("CP-202 피해 처리 테스트 시작")
 	queue_redraw()
 
 
@@ -146,6 +150,12 @@ func update_movement_metrics(metrics: Dictionary) -> void:
 		and fall_log != last_fall_log_seen:
 		last_fall_log_seen = fall_log
 		_append_action_log(fall_log)
+	var damage_log: String = String(metrics.get("last_damage_log", ""))
+	if not damage_log.is_empty() \
+		and damage_log != "피해 기록 대기" \
+		and damage_log != last_damage_log_seen:
+		last_damage_log_seen = damage_log
+		_append_action_log(damage_log)
 	queue_redraw()
 
 
@@ -156,6 +166,11 @@ func update_target_metrics(metrics: Dictionary) -> void:
 	if target_key != last_target_key_seen:
 		last_target_key_seen = target_key
 		_append_action_log("대상 → %s" % target_key)
+	queue_redraw()
+
+
+func report_damage_test(message: String) -> void:
+	_append_action_log(message)
 	queue_redraw()
 
 
@@ -242,6 +257,15 @@ func _dispatch_action_command(command: PlayerCommand) -> void:
 		PlayerCommand.Type.EVADE:
 			if command.phase == PlayerCommand.Phase.PRESSED:
 				evade_pressed.emit()
+		PlayerCommand.Type.SKILL_1:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				damage_test_pressed.emit()
+		PlayerCommand.Type.SKILL_2:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				duplicate_damage_test_pressed.emit()
+		PlayerCommand.Type.ULTIMATE:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				lethal_damage_test_pressed.emit()
 
 
 func _handle_header_action(position: Vector2) -> bool:
@@ -325,50 +349,48 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.205, 170.0, 215.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-201 · 자동 공격 대상 탐색", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-202 · 피해·피격 공통 처리", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"전방 반원 · 검 사거리 1.6 m · 0.10초 재탐색 · 20% 전환",
+		"DamageEvent · 피격 무적 0.50초 · 동일 event_id 중복 차단",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
 	)
 
-	var target_key: String = String(movement_metrics.get("target_key", "없음"))
-	var target_distance: float = float(movement_metrics.get("target_distance_m", 0.0))
-	var attack_range: float = float(movement_metrics.get("target_attack_range_m", 1.6))
-	var candidates: int = int(movement_metrics.get("target_candidate_count", 0))
-	var switches: int = int(movement_metrics.get("target_switch_count", 0))
+	var health: int = int(movement_metrics.get("health", 100))
+	var max_health: int = int(movement_metrics.get("max_health", 100))
+	var dead: bool = bool(movement_metrics.get("damage_dead", false))
+	var hit_invulnerable: bool = bool(movement_metrics.get("damage_post_hit_invulnerable", false))
+	var hit_invulnerable_s: float = float(movement_metrics.get("damage_post_hit_remaining_s", 0.0))
+	var state_text := "사망" if dead else ("피격 무적" if hit_invulnerable else "정상")
 	_draw_text(
-		"대상 %s  |  거리 %.2f/%.1f m  |  후보 %d  |  전환 %d" % [
-			target_key, target_distance, attack_range, candidates, switches,
+		"HP %d/%d  |  상태 %s  |  무적 남음 %.2fs" % [
+			health, max_health, state_text, hit_invulnerable_s,
 		],
 		panel_rect.position + Vector2(22.0, 108.0),
 		20,
-		PASS_COLOR if target_key != "없음" else WAIT_COLOR
+		WAIT_COLOR if dead else (ACTIVE_COLOR if hit_invulnerable else PASS_COLOR)
 	)
 
-	var rear_filtered: int = int(movement_metrics.get("target_rear_filtered", 0))
-	var range_filtered: int = int(movement_metrics.get("target_range_filtered", 0))
-	var scans: int = int(movement_metrics.get("target_scan_count", 0))
-	var decision: String = String(movement_metrics.get("target_last_decision", "탐색 대기"))
+	var applied: int = int(movement_metrics.get("damage_applied_count", 0))
+	var duplicates: int = int(movement_metrics.get("damage_duplicate_blocked_count", 0))
+	var invulnerable_blocks: int = int(movement_metrics.get("damage_invulnerable_blocked_count", 0))
+	var last_result: String = String(movement_metrics.get("damage_last_result", "대기"))
 	_draw_text(
-		"후방 제외 %d  |  사거리 제외 %d  |  스캔 %d  |  %s" % [
-			rear_filtered, range_filtered, scans, decision,
+		"적용 %d  |  중복 차단 %d  |  무적 차단 %d  |  최근 %s" % [
+			applied, duplicates, invulnerable_blocks, last_result,
 		],
 		panel_rect.position + Vector2(22.0, 143.0),
 		18,
 		MUTED_TEXT_COLOR
 	)
 
-	var speed: float = float(movement_metrics.get("speed_mps", 0.0))
-	var health: int = int(movement_metrics.get("health", 100))
-	var max_health: int = int(movement_metrics.get("max_health", 100))
-	var falls: int = int(movement_metrics.get("fall_count", 0))
-	var facing: int = int(movement_metrics.get("facing", 1))
-	var facing_text := "오른쪽" if facing > 0 else "왼쪽"
+	var last_event: String = String(movement_metrics.get("damage_last_event_id", "없음"))
+	var tags: String = String(movement_metrics.get("last_damage_tags", "없음"))
+	var stagger_s: float = float(movement_metrics.get("last_stagger_s", 0.0))
 	_draw_text(
-		"속도 %+.2f m/s  |  시선 %s  |  HP %d/%d  |  낙하 %d  |  입력 %d ms" % [
-			speed, facing_text, health, max_health, falls, last_latency_msec,
+		"이벤트 %s  |  경직 %.2fs  |  태그 [%s]" % [
+			last_event, stagger_s, tags,
 		],
 		panel_rect.position + Vector2(22.0, 178.0),
 		18,

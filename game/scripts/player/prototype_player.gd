@@ -1,11 +1,12 @@
 class_name PrototypePlayer
 extends CharacterBody2D
 
-## CP-105 이동 액션과 낙하 복귀 모델.
+## CP-202 이동 액션 위 공통 피해·피격·사망 모델.
 ## 100 px를 1 m로 환산해 기획 수치를 물리 좌표에 적용한다.
 
 signal movement_metrics_changed(metrics: Dictionary)
 signal fall_recovery_started
+signal player_died
 
 enum MobilityAction {
 	NONE,
@@ -35,6 +36,7 @@ const FALL_DAMAGE_RATIO := 0.10
 const FALL_BOUNDARY_Y := 1160.0
 const FALL_RECOVERY_DELAY_S := 0.45
 const RESPAWN_INPUT_LOCK_S := 0.20
+const POST_HIT_FLASH_S := 0.12
 const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
@@ -55,12 +57,15 @@ var ground_evade_count: int = 0
 var air_dash_count: int = 0
 var last_mobility_result: String = "대기"
 var last_invincibility_log: String = "무적 로그 대기"
-var health: int = MAX_HEALTH
 var fall_count: int = 0
 var last_fall_damage: int = 0
 var last_fall_log: String = "낙하 기록 대기"
 var last_safe_position: Vector2 = Vector2(960.0, 780.0)
 var last_safe_label: String = "시작 지점"
+var last_damage_log: String = "피해 기록 대기"
+var last_damage_summary: String = "없음"
+var last_damage_tags: String = "없음"
+var last_stagger_s: float = 0.0
 var _stop_test_active: bool = false
 var _stop_elapsed_s: float = 0.0
 var _stop_distance_px: float = 0.0
@@ -84,9 +89,11 @@ var _invincibility_end_frame: int = -1
 var _fall_recovery_active: bool = false
 var _fall_recovery_remaining_s: float = 0.0
 var _input_lock_remaining_s: float = 0.0
+var _hit_flash_remaining_s: float = 0.0
 
 @onready var avatar: Node2D = $Avatar
 @onready var avatar_sprite: Sprite2D = $Avatar/Sprite2D
+@onready var damage_receiver: DamageReceiver = $DamageReceiver
 
 
 func _ready() -> void:
@@ -95,6 +102,14 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	damage_receiver.tick(delta)
+	_hit_flash_remaining_s = maxf(0.0, _hit_flash_remaining_s - delta)
+	if damage_receiver.dead:
+		velocity = Vector2.ZERO
+		_update_avatar_action_visual()
+		_emit_metrics()
+		return
+
 	if _fall_recovery_active:
 		_update_fall_recovery(delta)
 		_update_avatar_action_visual()
@@ -206,6 +221,31 @@ func set_safe_spawn(spawn_position: Vector2, safe_label: String) -> void:
 	last_safe_label = safe_label
 
 
+func receive_damage(event: DamageEvent) -> int:
+	var result := damage_receiver.try_receive(event, invincible or _fall_recovery_active)
+	last_damage_summary = event.summary() if event != null else "잘못된 이벤트"
+	last_damage_tags = ", ".join(event.tags) if event != null else "없음"
+	last_stagger_s = event.stagger_s if event != null else 0.0
+	last_damage_log = "%s · %s · HP %d/%d" % [
+		DamageReceiver.result_name(result),
+		String(event.event_id) if event != null else "ID 없음",
+		damage_receiver.health,
+		damage_receiver.max_health,
+	]
+
+	if result == DamageReceiver.Result.APPLIED:
+		_hit_flash_remaining_s = POST_HIT_FLASH_S
+		_input_lock_remaining_s = maxf(_input_lock_remaining_s, event.stagger_s)
+		move_input = 0.0
+		move_input_vector = Vector2.ZERO
+		if damage_receiver.dead:
+			_cancel_actions_for_recovery()
+			velocity = Vector2.ZERO
+			player_died.emit()
+	_emit_metrics()
+	return result
+
+
 func reset_movement_test(spawn_position: Vector2) -> void:
 	global_position = spawn_position
 	velocity = Vector2.ZERO
@@ -223,12 +263,16 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	air_dash_count = 0
 	last_mobility_result = "대기"
 	last_invincibility_log = "무적 로그 대기"
-	health = MAX_HEALTH
+	damage_receiver.reset()
 	fall_count = 0
 	last_fall_damage = 0
 	last_fall_log = "낙하 기록 대기"
 	last_safe_position = spawn_position
 	last_safe_label = "시작 지점"
+	last_damage_log = "피해 기록 대기"
+	last_damage_summary = "없음"
+	last_damage_tags = "없음"
+	last_stagger_s = 0.0
 	stop_test_passed = false
 	reversal_test_passed = false
 	last_stop_time_s = 0.0
@@ -256,6 +300,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	_fall_recovery_active = false
 	_fall_recovery_remaining_s = 0.0
 	_input_lock_remaining_s = 0.0
+	_hit_flash_remaining_s = 0.0
 	avatar.visible = true
 	avatar_sprite.modulate = Color.WHITE
 	_emit_metrics()
@@ -385,7 +430,17 @@ func _end_invincibility() -> void:
 
 
 func _update_avatar_action_visual() -> void:
-	if _input_lock_remaining_s > 0.0:
+	if damage_receiver.dead:
+		avatar_sprite.modulate = Color("647986")
+	elif _hit_flash_remaining_s > 0.0:
+		avatar_sprite.modulate = (
+			Color.WHITE
+			if int(Engine.get_physics_frames()) % 4 < 2
+			else Color("ff6b6b")
+		)
+	elif damage_receiver.is_post_hit_invulnerable():
+		avatar_sprite.modulate = Color("ffb4a9")
+	elif _input_lock_remaining_s > 0.0:
 		avatar_sprite.modulate = Color("ff9f8f")
 	elif invincible:
 		avatar_sprite.modulate = Color("76f4ff")
@@ -409,7 +464,7 @@ func _begin_fall_recovery() -> void:
 		return
 	fall_count += 1
 	last_fall_damage = int(round(MAX_HEALTH * FALL_DAMAGE_RATIO))
-	health = maxi(1, health - last_fall_damage)
+	last_fall_damage = damage_receiver.apply_environmental_damage(last_fall_damage, 1)
 	last_fall_log = "낙하 %d회 · HP -%d" % [fall_count, last_fall_damage]
 	_fall_recovery_active = true
 	_fall_recovery_remaining_s = FALL_RECOVERY_DELAY_S
@@ -431,7 +486,11 @@ func _update_fall_recovery(delta: float) -> void:
 	_fall_recovery_active = false
 	air_dash_available = true
 	avatar.visible = true
-	last_fall_log = "복귀 %s · HP %d/%d" % [last_safe_label, health, MAX_HEALTH]
+	last_fall_log = "복귀 %s · HP %d/%d" % [
+		last_safe_label,
+		damage_receiver.health,
+		damage_receiver.max_health,
+	]
 
 
 func _cancel_actions_for_recovery() -> void:
@@ -448,7 +507,7 @@ func _cancel_actions_for_recovery() -> void:
 
 
 func _is_input_locked() -> bool:
-	return _fall_recovery_active or _input_lock_remaining_s > 0.0
+	return damage_receiver.dead or _fall_recovery_active or _input_lock_remaining_s > 0.0
 
 
 func _recovery_state_name() -> String:
@@ -556,8 +615,8 @@ func _emit_metrics() -> void:
 		"last_invincibility_log": last_invincibility_log,
 		"invincibility_start_frame": _invincibility_start_frame,
 		"invincibility_end_frame": _invincibility_end_frame,
-		"health": health,
-		"max_health": MAX_HEALTH,
+		"health": damage_receiver.health,
+		"max_health": damage_receiver.max_health,
 		"fall_count": fall_count,
 		"last_fall_damage": last_fall_damage,
 		"last_fall_log": last_fall_log,
@@ -566,4 +625,17 @@ func _emit_metrics() -> void:
 		"recovery_state": _recovery_state_name(),
 		"input_locked": _is_input_locked(),
 		"fall_recovery_remaining_s": _fall_recovery_remaining_s,
+		"damage_dead": damage_receiver.dead,
+		"damage_post_hit_invulnerable": damage_receiver.is_post_hit_invulnerable(),
+		"damage_post_hit_remaining_s": damage_receiver.post_hit_remaining_s(),
+		"damage_applied_count": damage_receiver.applied_count,
+		"damage_duplicate_blocked_count": damage_receiver.duplicate_blocked_count,
+		"damage_invulnerable_blocked_count": damage_receiver.invulnerable_blocked_count,
+		"damage_dead_blocked_count": damage_receiver.dead_blocked_count,
+		"damage_last_result": DamageReceiver.result_name(damage_receiver.last_result),
+		"damage_last_event_id": damage_receiver.last_event_id,
+		"last_damage_log": last_damage_log,
+		"last_damage_summary": last_damage_summary,
+		"last_damage_tags": last_damage_tags,
+		"last_stagger_s": last_stagger_s,
 	})

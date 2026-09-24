@@ -11,6 +11,8 @@ required_files=(
   "$game_root/scripts/movement/ground_movement_sandbox.gd"
   "$game_root/scripts/movement/ground_movement_controls.gd"
   "$game_root/scripts/player/prototype_player.gd"
+  "$game_root/scripts/combat/damage_event.gd"
+  "$game_root/scripts/combat/damage_receiver.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/assets/prototype_player.svg"
@@ -145,6 +147,28 @@ fi
 if ! rg -q 'BodySprite' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
   || ! rg -q 'SelectionSprite' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
   echo "CP-201 explicit target sprites are missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'class_name DamageEvent' "$game_root/scripts/combat/damage_event.gd" \
+  || ! rg -q 'attacker_id: StringName' "$game_root/scripts/combat/damage_event.gd" \
+  || ! rg -q 'stagger_s: float' "$game_root/scripts/combat/damage_event.gd" \
+  || ! rg -q 'tags: PackedStringArray' "$game_root/scripts/combat/damage_event.gd"; then
+  echo "CP-202 common damage event fields are missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'class_name DamageReceiver' "$game_root/scripts/combat/damage_receiver.gd" \
+  || ! rg -q 'post_hit_invulnerability_s: float = 0\.50' "$game_root/scripts/combat/damage_receiver.gd" \
+  || ! rg -q '_processed_event_ids\.has\(event\.event_id\)' "$game_root/scripts/combat/damage_receiver.gd"; then
+  echo "CP-202 damage receiver or duplicate prevention is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'name="DamageReceiver"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'player\.receive_damage\(event\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
+  || ! rg -q 'duplicate_damage_test_pressed' "$game_root/scripts/movement/ground_movement_controls.gd"; then
+  echo "CP-202 scene integration and mobile damage tests are missing." >&2
   exit 1
 fi
 

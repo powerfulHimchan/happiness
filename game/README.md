@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스를 거쳐 `CP-201 대상 탐색과 표시`를 검증하는 프로젝트다. 현재 메인 화면에서는 전방 반원과 검 사거리 필터, 최근접 선택, 20퍼센트 대상 유지 기준과 흰색 표식을 확인한다.
+`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스, `CP-201` 대상 탐색을 거쳐 `CP-202 피해·피격 공통 처리`를 검증하는 프로젝트다. 현재 메인 화면에서는 공통 피해 이벤트, 같은 타격의 중복 방지, 피격 후 0.50초 무적과 사망 상태를 확인한다.
 
 ## 기준 환경
 
@@ -37,11 +37,11 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp201-targeting-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp202-damage-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
-`CP-201` 기기 테스트에서는 기존 이동 항목과 함께 아래를 확인한다.
+`CP-202` 기기 테스트에서는 기존 이동·대상 탐색 항목과 함께 아래를 확인한다.
 
 - 화면이 가로 방향으로 고정되는가?
 - 카메라 홀과 둥근 모서리가 녹색 안전 영역 밖에 있는가?
@@ -66,6 +66,12 @@ godot --path game --editor
 - 다른 표적이 현재 대상보다 20퍼센트 이상 가까워질 때만 대상이 전환되는가?
 - 방향을 바꾸거나 대상이 1.6m 사거리 밖으로 나가면 즉시 다시 탐색하는가?
 - 대상이 없을 때 HUD에 `대상 없음`이 표시되는가?
+- 상태가 정상일 때 `피격 12`를 누르면 HP가 정확히 12 감소하는가?
+- 피격 직후 0.50초 동안 캐릭터 색이 바뀌고 추가 피해가 `무적 차단`되는가?
+- 무적이 끝난 뒤 `중복 ×2`를 누르면 HP가 14만 감소하고 `중복 차단`이 1 증가하는가?
+- 지상 회피 중 `피격 12`를 누르면 HP가 감소하지 않는가?
+- `치명타`를 누르면 HP가 0이 되고 캐릭터가 회색으로 바뀌며 이동할 수 없는가?
+- `초기화`를 누르면 HP, 사망 상태와 피해 카운터가 모두 복구되는가?
 
 ## 현재 파일
 
@@ -81,6 +87,8 @@ game/
 ├── scripts/movement/ground_movement_controls.gd
 ├── scripts/player/prototype_player.gd
 ├── scripts/player/prototype_avatar.gd
+├── scripts/combat/damage_event.gd
+├── scripts/combat/damage_receiver.gd
 ├── scripts/combat/auto_target_selector.gd
 ├── scripts/combat/prototype_target.gd
 ├── scripts/input/input_command_sandbox.gd
@@ -91,8 +99,8 @@ game/
 
 ## 아직 포함하지 않은 것
 
-- 실제 피해·피격과 적 사망
+- 검·활 공격이 실제 적에게 주는 피해와 적 사망
 - 실제 전투 UI와 버튼 배치 편집
 - 검·활 공격과 스킬
 
-다음 구현 티켓은 `CP-202 피해·피격 공통 처리`다.
+다음 구현 티켓은 `CP-203 검 기본 공격과 스킬`이다.

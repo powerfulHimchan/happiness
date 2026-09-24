@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-201 이동 트랙 위 자동 공격 대상 탐색과 표시 검증을 담당한다.
+## CP-202 공통 피해 이벤트, 중복 차단, 피격 무적과 사망 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -17,14 +17,20 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var target_selector: AutoTargetSelector = $Player/AutoTargetSelector
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
 
+var _attack_sequence: int = 0
+
 
 func _ready() -> void:
 	controls.move_vector_changed.connect(player.set_move_vector)
 	controls.jump_pressed.connect(player.request_jump)
 	controls.jump_released.connect(player.release_jump)
 	controls.evade_pressed.connect(player.request_evade)
+	controls.damage_test_pressed.connect(_run_damage_test)
+	controls.duplicate_damage_test_pressed.connect(_run_duplicate_damage_test)
+	controls.lethal_damage_test_pressed.connect(_run_lethal_damage_test)
 	controls.reset_requested.connect(_reset_test)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
+	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
 	$LeftSafeZone.body_entered.connect(
@@ -76,6 +82,19 @@ func _ready() -> void:
 		"recovery_state": "정상",
 		"input_locked": false,
 		"fall_recovery_remaining_s": 0.0,
+		"damage_dead": false,
+		"damage_post_hit_invulnerable": false,
+		"damage_post_hit_remaining_s": 0.0,
+		"damage_applied_count": 0,
+		"damage_duplicate_blocked_count": 0,
+		"damage_invulnerable_blocked_count": 0,
+		"damage_dead_blocked_count": 0,
+		"damage_last_result": "대기",
+		"damage_last_event_id": "없음",
+		"last_damage_log": "피해 기록 대기",
+		"last_damage_summary": "없음",
+		"last_damage_tags": "없음",
+		"last_stagger_s": 0.0,
 	})
 	target_selector.force_scan()
 	queue_redraw()
@@ -150,6 +169,7 @@ func _draw_track_markers() -> void:
 
 
 func _reset_test() -> void:
+	_attack_sequence = 0
 	player.reset_movement_test(TRACK_START)
 	for node in get_tree().get_nodes_in_group("targetable"):
 		var target := node as PrototypeTarget
@@ -157,6 +177,64 @@ func _reset_test() -> void:
 			target.reset_target()
 	target_selector.reset_selection()
 	controls.release_all_inputs()
+
+
+func _run_damage_test() -> void:
+	var event := _create_damage_event(
+		&"slime_contact",
+		12,
+		0.18,
+		PackedStringArray(["contact", "physical", "test"])
+	)
+	var result := player.receive_damage(event)
+	controls.report_damage_test("단일 피격 → %s" % DamageReceiver.result_name(result))
+
+
+func _run_duplicate_damage_test() -> void:
+	var event := _create_damage_event(
+		&"duplicate_contact",
+		14,
+		0.22,
+		PackedStringArray(["contact", "duplicate_test"])
+	)
+	var first_result := player.receive_damage(event)
+	var second_result := player.receive_damage(event)
+	controls.report_damage_test("동일 ID ×2 → %s / %s" % [
+		DamageReceiver.result_name(first_result),
+		DamageReceiver.result_name(second_result),
+	])
+
+
+func _run_lethal_damage_test() -> void:
+	var event := _create_damage_event(
+		&"elite_finisher",
+		120,
+		0.35,
+		PackedStringArray(["heavy", "physical", "lethal_test"])
+	)
+	var result := player.receive_damage(event)
+	controls.report_damage_test("치명 피해 → %s" % DamageReceiver.result_name(result))
+
+
+func _create_damage_event(
+	attack_id: StringName,
+	damage: int,
+	stagger_s: float,
+	tags: PackedStringArray
+) -> DamageEvent:
+	_attack_sequence += 1
+	var event := DamageEvent.new()
+	event.event_id = StringName("training_dummy:%s:%d:hit0" % [
+		String(attack_id),
+		_attack_sequence,
+	])
+	event.attacker_id = &"training_dummy"
+	event.attack_id = attack_id
+	event.damage = damage
+	event.stagger_s = stagger_s
+	event.tags = tags
+	event.source_position = player.global_position + Vector2(180.0, -38.0)
+	return event
 
 
 func _on_safe_zone_entered(
