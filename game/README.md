@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인과 `CP-101~104` 이동 액션 구현을 거쳐 `CP-105 낙하와 안전 발판 복귀`를 검증하는 프로젝트다. 현재 메인 화면에서는 실제 낙하 구간, 최대 체력 10% 피해, 입력 초기화와 마지막 안전 지점 복귀를 확인한다.
+`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스를 거쳐 `CP-201 대상 탐색과 표시`를 검증하는 프로젝트다. 현재 메인 화면에서는 전방 반원과 검 사거리 필터, 최근접 선택, 20퍼센트 대상 유지 기준과 흰색 표식을 확인한다.
 
 ## 기준 환경
 
@@ -37,11 +37,11 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp105-fall-recovery-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp201-targeting-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
-`CP-105` 기기 테스트에서는 아래를 확인한다.
+`CP-201` 기기 테스트에서는 기존 이동 항목과 함께 아래를 확인한다.
 
 - 화면이 가로 방향으로 고정되는가?
 - 카메라 홀과 둥근 모서리가 녹색 안전 영역 밖에 있는가?
@@ -61,6 +61,11 @@ godot --path game --editor
 - 약 0.45초 후 마지막 안전 지점으로 복귀하고 잠시 입력이 잠기는가?
 - 연습 발판이나 오른쪽 평지를 지난 뒤 낙하하면 해당 안전 지점으로 복귀하는가?
 - 낙하 구역 자체가 안전 지점으로 저장되어 연속 낙하하지 않는가?
+- 오른쪽을 볼 때 플레이어 왼쪽의 표적은 대상에서 제외되는가?
+- 전방의 두 표적이 교차해도 흰 외곽선과 표식이 빠르게 번갈아 바뀌지 않는가?
+- 다른 표적이 현재 대상보다 20퍼센트 이상 가까워질 때만 대상이 전환되는가?
+- 방향을 바꾸거나 대상이 1.6m 사거리 밖으로 나가면 즉시 다시 탐색하는가?
+- 대상이 없을 때 HUD에 `대상 없음`이 표시되는가?
 
 ## 현재 파일
 
@@ -76,6 +81,8 @@ game/
 ├── scripts/movement/ground_movement_controls.gd
 ├── scripts/player/prototype_player.gd
 ├── scripts/player/prototype_avatar.gd
+├── scripts/combat/auto_target_selector.gd
+├── scripts/combat/prototype_target.gd
 ├── scripts/input/input_command_sandbox.gd
 ├── scripts/input/player_command.gd
 ├── scripts/input/player_command_buffer.gd
@@ -84,8 +91,8 @@ game/
 
 ## 아직 포함하지 않은 것
 
-- 자동 공격과 적
+- 실제 피해·피격과 적 사망
 - 실제 전투 UI와 버튼 배치 편집
-- 검·활과 적
+- 검·활 공격과 스킬
 
-다음 구현 티켓은 `CP-201 대상 탐색과 표시`다.
+다음 구현 티켓은 `CP-202 피해·피격 공통 처리`다.

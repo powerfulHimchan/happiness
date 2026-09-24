@@ -11,6 +11,8 @@ required_files=(
   "$game_root/scripts/movement/ground_movement_sandbox.gd"
   "$game_root/scripts/movement/ground_movement_controls.gd"
   "$game_root/scripts/player/prototype_player.gd"
+  "$game_root/scripts/combat/auto_target_selector.gd"
+  "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/assets/prototype_player.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
@@ -107,6 +109,34 @@ fi
 
 if rg -q 'size = Vector2\(5000, 120\)' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
   echo "Continuous floor still blocks the CP-105 fall zone." >&2
+  exit 1
+fi
+
+if ! rg -q 'class_name AutoTargetSelector' "$game_root/scripts/combat/auto_target_selector.gd"; then
+  echo "CP-201 auto target selector is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'const RETARGET_INTERVAL_S := 0\.10' "$game_root/scripts/combat/auto_target_selector.gd" \
+  || ! rg -q 'const SWITCH_DISTANCE_RATIO := 0\.80' "$game_root/scripts/combat/auto_target_selector.gd" \
+  || ! rg -q 'const ATTACK_RANGE_M := 1\.6' "$game_root/scripts/combat/auto_target_selector.gd"; then
+  echo "CP-201 targeting constants do not match the combat spec." >&2
+  exit 1
+fi
+
+if ! rg -q 'offset\.x \* float\(player\.facing_direction\) <= 0\.0' "$game_root/scripts/combat/auto_target_selector.gd"; then
+  echo "CP-201 forward-facing target filter is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'target_selector\.target_metrics_changed\.connect\(controls\.update_target_metrics\)' "$game_root/scripts/movement/ground_movement_sandbox.gd"; then
+  echo "CP-201 target metrics are not connected to the HUD." >&2
+  exit 1
+fi
+
+if ! rg -q 'CrossingTargetA' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'RearTarget' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+  echo "CP-201 crossing and rear target fixtures are missing." >&2
   exit 1
 fi
 

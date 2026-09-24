@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-105 이동 액션, 낙하 피해와 안전 지점 복귀 검증 트랙을 담당한다.
+## CP-201 이동 트랙 위 자동 공격 대상 탐색과 표시 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -14,6 +14,7 @@ const PRACTICE_SAFE_SPAWN := Vector2(2000.0, 600.0)
 const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 
 @onready var player: PrototypePlayer = $Player
+@onready var target_selector: AutoTargetSelector = $Player/AutoTargetSelector
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
 
 
@@ -25,6 +26,7 @@ func _ready() -> void:
 	controls.reset_requested.connect(_reset_test)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
+	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
 	$LeftSafeZone.body_entered.connect(
 		_on_safe_zone_entered.bind(TRACK_START, "시작 평지")
 	)
@@ -75,6 +77,7 @@ func _ready() -> void:
 		"input_locked": false,
 		"fall_recovery_remaining_s": 0.0,
 	})
+	target_selector.force_scan()
 	queue_redraw()
 
 
@@ -148,6 +151,11 @@ func _draw_track_markers() -> void:
 
 func _reset_test() -> void:
 	player.reset_movement_test(TRACK_START)
+	for node in get_tree().get_nodes_in_group("targetable"):
+		var target := node as PrototypeTarget
+		if target != null:
+			target.reset_target()
+	target_selector.reset_selection()
 	controls.release_all_inputs()
 
 

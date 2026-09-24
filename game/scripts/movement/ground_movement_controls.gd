@@ -1,7 +1,7 @@
 extends Control
 
-## CP-105용 모바일 조작 HUD.
-## CP-101의 포인터 소유권과 명령 버퍼를 유지하면서 이동 결과를 표시한다.
+## CP-201용 모바일 조작 HUD.
+## 기존 이동 조작을 유지하면서 자동 공격 대상 선택 결과를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -66,12 +66,13 @@ var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
 var last_invincibility_log_seen: String = ""
 var last_fall_log_seen: String = ""
+var last_target_key_seen: String = "없음"
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-105 낙하 복귀 테스트 시작")
+	_append_action_log("CP-201 자동 대상 탐색 시작")
 	queue_redraw()
 
 
@@ -131,7 +132,8 @@ func _draw() -> void:
 
 
 func update_movement_metrics(metrics: Dictionary) -> void:
-	movement_metrics = metrics.duplicate()
+	for key in metrics:
+		movement_metrics[key] = metrics[key]
 	var invincibility_log: String = String(metrics.get("last_invincibility_log", ""))
 	if not invincibility_log.is_empty() \
 		and invincibility_log != "무적 로그 대기" \
@@ -144,6 +146,16 @@ func update_movement_metrics(metrics: Dictionary) -> void:
 		and fall_log != last_fall_log_seen:
 		last_fall_log_seen = fall_log
 		_append_action_log(fall_log)
+	queue_redraw()
+
+
+func update_target_metrics(metrics: Dictionary) -> void:
+	for key in metrics:
+		movement_metrics[key] = metrics[key]
+	var target_key: String = String(metrics.get("target_key", "없음"))
+	if target_key != last_target_key_seen:
+		last_target_key_seen = target_key
+		_append_action_log("대상 → %s" % target_key)
 	queue_redraw()
 
 
@@ -313,10 +325,37 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.205, 170.0, 215.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-105 · 낙하와 안전 발판 복귀", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-201 · 자동 공격 대상 탐색", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"낙하 피해 최대 체력 10% · 복귀 대기 0.45초 · 입력 초기화",
+		"전방 반원 · 검 사거리 1.6 m · 0.10초 재탐색 · 20% 전환",
 		panel_rect.position + Vector2(22.0, 72.0),
+		18,
+		MUTED_TEXT_COLOR
+	)
+
+	var target_key: String = String(movement_metrics.get("target_key", "없음"))
+	var target_distance: float = float(movement_metrics.get("target_distance_m", 0.0))
+	var attack_range: float = float(movement_metrics.get("target_attack_range_m", 1.6))
+	var candidates: int = int(movement_metrics.get("target_candidate_count", 0))
+	var switches: int = int(movement_metrics.get("target_switch_count", 0))
+	_draw_text(
+		"대상 %s  |  거리 %.2f/%.1f m  |  후보 %d  |  전환 %d" % [
+			target_key, target_distance, attack_range, candidates, switches,
+		],
+		panel_rect.position + Vector2(22.0, 108.0),
+		20,
+		PASS_COLOR if target_key != "없음" else WAIT_COLOR
+	)
+
+	var rear_filtered: int = int(movement_metrics.get("target_rear_filtered", 0))
+	var range_filtered: int = int(movement_metrics.get("target_range_filtered", 0))
+	var scans: int = int(movement_metrics.get("target_scan_count", 0))
+	var decision: String = String(movement_metrics.get("target_last_decision", "탐색 대기"))
+	_draw_text(
+		"후방 제외 %d  |  사거리 제외 %d  |  스캔 %d  |  %s" % [
+			rear_filtered, range_filtered, scans, decision,
+		],
+		panel_rect.position + Vector2(22.0, 143.0),
 		18,
 		MUTED_TEXT_COLOR
 	)
@@ -325,32 +364,15 @@ func _draw_header() -> void:
 	var health: int = int(movement_metrics.get("health", 100))
 	var max_health: int = int(movement_metrics.get("max_health", 100))
 	var falls: int = int(movement_metrics.get("fall_count", 0))
-	var safe_label: String = String(movement_metrics.get("last_safe_label", "시작 평지"))
-	var recovery_state: String = String(movement_metrics.get("recovery_state", "정상"))
+	var facing: int = int(movement_metrics.get("facing", 1))
+	var facing_text := "오른쪽" if facing > 0 else "왼쪽"
 	_draw_text(
-		"HP %d/%d  |  낙하 %d회  |  안전 %s  |  %s" % [health, max_health, falls, safe_label, recovery_state],
-		panel_rect.position + Vector2(22.0, 108.0),
-		20
-	)
-
-	var jump_state: String = String(movement_metrics.get("jump_state", "지상"))
-	var mobility_action: String = String(movement_metrics.get("mobility_action", "일반"))
-	var air_dash_available: bool = bool(movement_metrics.get("air_dash_available", true))
-	var air_dash_text := "대시 준비" if air_dash_available else "대시 사용"
-	_draw_text(
-		"속도 %+.2f m/s  |  점프 %s  |  동작 %s  |  %s" % [speed, jump_state, mobility_action, air_dash_text],
-		panel_rect.position + Vector2(22.0, 143.0),
-		20,
-		ACTIVE_COLOR if mobility_action != "일반" else TEXT_COLOR
-	)
-
-	var fall_log: String = String(movement_metrics.get("last_fall_log", "낙하 기록 대기"))
-	var status_color := PASS_COLOR if falls > 0 and recovery_state == "정상" else WAIT_COLOR
-	_draw_text(
-		"%s  |  입력 지연 %d ms" % [fall_log, last_latency_msec],
+		"속도 %+.2f m/s  |  시선 %s  |  HP %d/%d  |  낙하 %d  |  입력 %d ms" % [
+			speed, facing_text, health, max_health, falls, last_latency_msec,
+		],
 		panel_rect.position + Vector2(22.0, 178.0),
 		18,
-		status_color
+		TEXT_COLOR
 	)
 
 	_draw_button(fps_60_rect, "60 FPS", Engine.max_fps == 60)
