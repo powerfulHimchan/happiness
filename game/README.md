@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스, `CP-201` 대상 탐색을 거쳐 `CP-202 피해·피격 공통 처리`를 검증하는 프로젝트다. 현재 메인 화면에서는 공통 피해 이벤트, 같은 타격의 중복 방지, 피격 후 0.50초 무적과 사망 상태를 확인한다.
+`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스, `CP-201~202` 대상·피해 처리를 거쳐 `CP-203 검 기본 공격과 스킬`을 검증하는 프로젝트다. 현재 메인 화면에서는 자동 3연격, 돌진 베기, 회전 베기, 재사용 대기시간과 회피 취소를 확인한다.
 
 ## 기준 환경
 
@@ -37,11 +37,11 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp202-damage-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp203-sword-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
-`CP-202` 기기 테스트에서는 기존 이동·대상 탐색 항목과 함께 아래를 확인한다.
+`CP-203` 기기 테스트에서는 기존 이동·대상·피해 처리 항목과 함께 아래를 확인한다.
 
 - 화면이 가로 방향으로 고정되는가?
 - 카메라 홀과 둥근 모서리가 녹색 안전 영역 밖에 있는가?
@@ -72,6 +72,12 @@ godot --path game --editor
 - 지상 회피 중 `피격 12`를 누르면 HP가 감소하지 않는가?
 - `치명타`를 누르면 HP가 0이 되고 캐릭터가 회색으로 바뀌며 이동할 수 없는가?
 - `초기화`를 누르면 HP, 사망 상태와 피해 카운터가 모두 복구되는가?
+- 전방 표적의 HP가 자동 공격으로 12, 14, 20 순서대로 감소하는가?
+- 전방 대상이 없어진 뒤 0.90초가 지나면 콤보가 1타로 초기화되는가?
+- `돌진` 버튼이 3.5m 전진, 피해 35와 6초 재사용 대기시간을 적용하는가?
+- `회전` 버튼이 주변 표적마다 피해 20을 두 번 주고 9초 재사용 대기시간을 적용하는가?
+- 스킬 시작 직후에는 회피가 잠기고 HUD에 취소 가능이 표시된 뒤에는 회피로 중단되는가?
+- 기본 공격 중 회피해도 이동과 무적이 즉시 적용되는가?
 
 ## 현재 파일
 
@@ -89,6 +95,9 @@ game/
 ├── scripts/player/prototype_avatar.gd
 ├── scripts/combat/damage_event.gd
 ├── scripts/combat/damage_receiver.gd
+├── scripts/combat/weapon_definition.gd
+├── scripts/combat/skill_definition.gd
+├── scripts/combat/sword_combat_controller.gd
 ├── scripts/combat/auto_target_selector.gd
 ├── scripts/combat/prototype_target.gd
 ├── scripts/input/input_command_sandbox.gd
@@ -99,8 +108,8 @@ game/
 
 ## 아직 포함하지 않은 것
 
-- 검·활 공격이 실제 적에게 주는 피해와 적 사망
+- 활 공격과 투사체
 - 실제 전투 UI와 버튼 배치 편집
 - 검·활 공격과 스킬
 
-다음 구현 티켓은 `CP-203 검 기본 공격과 스킬`이다.
+다음 구현 티켓은 `CP-204 활 기본 공격과 스킬`이다.

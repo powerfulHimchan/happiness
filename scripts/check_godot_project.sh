@@ -13,11 +13,18 @@ required_files=(
   "$game_root/scripts/player/prototype_player.gd"
   "$game_root/scripts/combat/damage_event.gd"
   "$game_root/scripts/combat/damage_receiver.gd"
+  "$game_root/scripts/combat/weapon_definition.gd"
+  "$game_root/scripts/combat/skill_definition.gd"
+  "$game_root/scripts/combat/sword_combat_controller.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
+  "$game_root/data/weapons/sword_basic.tres"
+  "$game_root/data/skills/sword_dash.tres"
+  "$game_root/data/skills/sword_spin.tres"
   "$game_root/assets/prototype_player.svg"
   "$game_root/assets/prototype_target.svg"
   "$game_root/assets/prototype_target_selection.svg"
+  "$game_root/assets/sword_slash.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
   "$game_root/assets/icon.svg"
@@ -167,8 +174,36 @@ fi
 
 if ! rg -q 'name="DamageReceiver"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
   || ! rg -q 'player\.receive_damage\(event\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
-  || ! rg -q 'duplicate_damage_test_pressed' "$game_root/scripts/movement/ground_movement_controls.gd"; then
+  || ! rg -q 'damage_test_pressed' "$game_root/scripts/movement/ground_movement_controls.gd"; then
   echo "CP-202 scene integration and mobile damage tests are missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'class_name WeaponDefinition' "$game_root/scripts/combat/weapon_definition.gd" \
+  || ! rg -q 'class_name SkillDefinition' "$game_root/scripts/combat/skill_definition.gd" \
+  || ! rg -q 'class_name SwordCombatController' "$game_root/scripts/combat/sword_combat_controller.gd"; then
+  echo "CP-203 sword combat data or controller types are missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'damage = PackedInt32Array\(12, 14, 20\)' "$game_root/data/weapons/sword_basic.tres" \
+  || ! rg -q 'attack_interval_s = PackedFloat32Array\(0\.28, 0\.3, 0\.42\)' "$game_root/data/weapons/sword_basic.tres"; then
+  echo "CP-203 sword combo data does not match the combat spec." >&2
+  exit 1
+fi
+
+if ! rg -q 'cooldown_s = 6\.0' "$game_root/data/skills/sword_dash.tres" \
+  || ! rg -q 'movement_distance_m = 3\.5' "$game_root/data/skills/sword_dash.tres" \
+  || ! rg -q 'damage = PackedInt32Array\(20, 20\)' "$game_root/data/skills/sword_spin.tres" \
+  || ! rg -q 'cooldown_s = 9\.0' "$game_root/data/skills/sword_spin.tres"; then
+  echo "CP-203 sword skill data does not match the combat spec." >&2
+  exit 1
+fi
+
+if ! rg -q 'name="SwordCombatController"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'sword_skill_1_pressed\.connect\(sword_combat\.request_skill_1\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
+  || ! rg -q 'player\.evade_started\.connect' "$game_root/scripts/combat/sword_combat_controller.gd"; then
+  echo "CP-203 sword scene, input, or evade cancel integration is missing." >&2
   exit 1
 fi
 

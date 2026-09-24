@@ -7,6 +7,7 @@ extends CharacterBody2D
 signal movement_metrics_changed(metrics: Dictionary)
 signal fall_recovery_started
 signal player_died
+signal evade_started
 
 enum MobilityAction {
 	NONE,
@@ -66,6 +67,7 @@ var last_damage_log: String = "피해 기록 대기"
 var last_damage_summary: String = "없음"
 var last_damage_tags: String = "없음"
 var last_stagger_s: float = 0.0
+var combat_evade_allowed: bool = true
 var _stop_test_active: bool = false
 var _stop_elapsed_s: float = 0.0
 var _stop_distance_px: float = 0.0
@@ -90,6 +92,10 @@ var _fall_recovery_active: bool = false
 var _fall_recovery_remaining_s: float = 0.0
 var _input_lock_remaining_s: float = 0.0
 var _hit_flash_remaining_s: float = 0.0
+var _combat_action_active: bool = false
+var _combat_horizontal_velocity_px: float = 0.0
+var _combat_move_allowed: bool = true
+var _combat_turn_allowed: bool = true
 
 @onready var avatar: Node2D = $Avatar
 @onready var avatar_sprite: Sprite2D = $Avatar/Sprite2D
@@ -128,9 +134,11 @@ func _physics_process(delta: float) -> void:
 		air_dash_available = true
 	_update_jump_windows(delta, grounded_at_start)
 
-	if _mobility_action == MobilityAction.NONE:
+	if _mobility_action == MobilityAction.NONE and not _combat_action_active:
 		_try_execute_jump(grounded_at_start)
 		_apply_standard_movement(delta, grounded_at_start)
+	elif _mobility_action == MobilityAction.NONE:
+		_apply_combat_action_movement(delta, grounded_at_start)
 	else:
 		_apply_mobility_velocity()
 
@@ -158,7 +166,7 @@ func set_move_vector(input_vector: Vector2) -> void:
 	var new_input := move_input_vector.x
 	var new_sign := _direction_sign(new_input)
 
-	if new_sign != 0:
+	if new_sign != 0 and (not _combat_action_active or _combat_turn_allowed):
 		if _last_input_sign != 0 and new_sign != _last_input_sign \
 			and _direction_sign(velocity.x) == _last_input_sign:
 			_reversal_test_active = true
@@ -180,7 +188,7 @@ func set_move_vector(input_vector: Vector2) -> void:
 
 
 func request_jump() -> void:
-	if _is_input_locked():
+	if _is_input_locked() or _combat_action_active:
 		return
 	jump_held = true
 	_jump_buffer_remaining_s = JUMP_BUFFER_S
@@ -199,6 +207,9 @@ func request_evade() -> void:
 		return
 	if _mobility_action != MobilityAction.NONE:
 		last_mobility_result = "동작 중 입력 무시"
+		return
+	if not combat_evade_allowed:
+		last_mobility_result = "공격 취소 불가 구간"
 		return
 
 	if is_on_floor():
@@ -219,6 +230,38 @@ func set_safe_spawn(spawn_position: Vector2, safe_label: String) -> void:
 		return
 	last_safe_position = spawn_position
 	last_safe_label = safe_label
+
+
+func can_use_combat_action() -> bool:
+	return not _is_input_locked() and _mobility_action == MobilityAction.NONE
+
+
+func can_continue_combat_action() -> bool:
+	return not damage_receiver.dead \
+		and not _fall_recovery_active \
+		and _input_lock_remaining_s <= 0.0
+
+
+func begin_combat_action(
+	horizontal_velocity_px: float,
+	can_move: bool,
+	can_turn: bool
+) -> void:
+	_combat_action_active = true
+	_combat_horizontal_velocity_px = horizontal_velocity_px
+	_combat_move_allowed = can_move
+	_combat_turn_allowed = can_turn
+
+
+func end_combat_action() -> void:
+	_combat_action_active = false
+	_combat_horizontal_velocity_px = 0.0
+	_combat_move_allowed = true
+	_combat_turn_allowed = true
+
+
+func set_combat_evade_allowed(allowed: bool) -> void:
+	combat_evade_allowed = allowed
 
 
 func receive_damage(event: DamageEvent) -> int:
@@ -301,6 +344,8 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	_fall_recovery_remaining_s = 0.0
 	_input_lock_remaining_s = 0.0
 	_hit_flash_remaining_s = 0.0
+	combat_evade_allowed = true
+	end_combat_action()
 	avatar.visible = true
 	avatar_sprite.modulate = Color.WHITE
 	_emit_metrics()
@@ -319,6 +364,22 @@ func _apply_standard_movement(delta: float, grounded: bool) -> void:
 		and absf(velocity.x) < STOP_EPSILON_MPS * PIXELS_PER_METER:
 		velocity.x = 0.0
 
+	if not grounded or velocity.y < 0.0:
+		velocity.y += GRAVITY_MPS2 * PIXELS_PER_METER * delta
+	else:
+		velocity.y = minf(velocity.y, 0.0)
+
+
+func _apply_combat_action_movement(delta: float, grounded: bool) -> void:
+	if not _combat_move_allowed or not is_zero_approx(_combat_horizontal_velocity_px):
+		velocity.x = _combat_horizontal_velocity_px
+	else:
+		var target_speed_px := move_input * MAX_SPEED_MPS * PIXELS_PER_METER
+		velocity.x = move_toward(
+			velocity.x,
+			target_speed_px,
+			ACCELERATION_MPS2 * PIXELS_PER_METER * delta
+		)
 	if not grounded or velocity.y < 0.0:
 		velocity.y += GRAVITY_MPS2 * PIXELS_PER_METER * delta
 	else:
@@ -367,6 +428,7 @@ func _start_ground_evade() -> void:
 	ground_evade_count += 1
 	last_mobility_result = "지상 회피"
 	_begin_invincibility()
+	evade_started.emit()
 
 
 func _start_air_dash() -> void:
@@ -384,6 +446,7 @@ func _start_air_dash() -> void:
 	air_dash_available = false
 	air_dash_count += 1
 	last_mobility_result = "공중 대시"
+	evade_started.emit()
 
 
 func _apply_mobility_velocity() -> void:
@@ -470,6 +533,8 @@ func _begin_fall_recovery() -> void:
 	_fall_recovery_remaining_s = FALL_RECOVERY_DELAY_S
 	_input_lock_remaining_s = FALL_RECOVERY_DELAY_S + RESPAWN_INPUT_LOCK_S
 	_cancel_actions_for_recovery()
+	end_combat_action()
+	combat_evade_allowed = true
 	velocity = Vector2.ZERO
 	avatar.visible = false
 	fall_recovery_started.emit()
@@ -504,6 +569,8 @@ func _cancel_actions_for_recovery() -> void:
 	_mobility_remaining_s = 0.0
 	_invincible_remaining_s = 0.0
 	invincible = false
+	end_combat_action()
+	combat_evade_allowed = true
 
 
 func _is_input_locked() -> bool:
@@ -638,4 +705,6 @@ func _emit_metrics() -> void:
 		"last_damage_summary": last_damage_summary,
 		"last_damage_tags": last_damage_tags,
 		"last_stagger_s": last_stagger_s,
+		"combat_action_active": _combat_action_active,
+		"combat_evade_allowed": combat_evade_allowed,
 	})

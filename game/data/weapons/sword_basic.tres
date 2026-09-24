@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_definition.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+weapon_id = &"sword_basic"
+display_name = "연습용 검"
+attack_range_m = 1.6
+attack_interval_s = PackedFloat32Array(0.28, 0.3, 0.42)
+damage = PackedInt32Array(12, 14, 20)
+projectile_speed_mps = 0.0
+skill_ids = PackedStringArray("sword_dash", "sword_spin")

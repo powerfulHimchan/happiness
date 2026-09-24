@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-202 공통 피해 이벤트, 중복 차단, 피격 무적과 사망 검증을 담당한다.
+## CP-203 검 자동 3연격, 돌진 베기와 회전 베기 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -15,6 +15,7 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 
 @onready var player: PrototypePlayer = $Player
 @onready var target_selector: AutoTargetSelector = $Player/AutoTargetSelector
+@onready var sword_combat: SwordCombatController = $Player/SwordCombatController
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
 
 var _attack_sequence: int = 0
@@ -25,14 +26,15 @@ func _ready() -> void:
 	controls.jump_pressed.connect(player.request_jump)
 	controls.jump_released.connect(player.release_jump)
 	controls.evade_pressed.connect(player.request_evade)
+	controls.sword_skill_1_pressed.connect(sword_combat.request_skill_1)
+	controls.sword_skill_2_pressed.connect(sword_combat.request_skill_2)
 	controls.damage_test_pressed.connect(_run_damage_test)
-	controls.duplicate_damage_test_pressed.connect(_run_duplicate_damage_test)
-	controls.lethal_damage_test_pressed.connect(_run_lethal_damage_test)
 	controls.reset_requested.connect(_reset_test)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
+	sword_combat.combat_metrics_changed.connect(controls.update_combat_metrics)
 	$LeftSafeZone.body_entered.connect(
 		_on_safe_zone_entered.bind(TRACK_START, "시작 평지")
 	)
@@ -97,6 +99,7 @@ func _ready() -> void:
 		"last_stagger_s": 0.0,
 	})
 	target_selector.force_scan()
+	sword_combat.force_emit_metrics()
 	queue_redraw()
 
 
@@ -176,44 +179,19 @@ func _reset_test() -> void:
 		if target != null:
 			target.reset_target()
 	target_selector.reset_selection()
+	sword_combat.reset_combat()
 	controls.release_all_inputs()
 
 
 func _run_damage_test() -> void:
 	var event := _create_damage_event(
-		&"slime_contact",
+		&"incoming_training_hit",
 		12,
 		0.18,
 		PackedStringArray(["contact", "physical", "test"])
 	)
 	var result := player.receive_damage(event)
-	controls.report_damage_test("단일 피격 → %s" % DamageReceiver.result_name(result))
-
-
-func _run_duplicate_damage_test() -> void:
-	var event := _create_damage_event(
-		&"duplicate_contact",
-		14,
-		0.22,
-		PackedStringArray(["contact", "duplicate_test"])
-	)
-	var first_result := player.receive_damage(event)
-	var second_result := player.receive_damage(event)
-	controls.report_damage_test("동일 ID ×2 → %s / %s" % [
-		DamageReceiver.result_name(first_result),
-		DamageReceiver.result_name(second_result),
-	])
-
-
-func _run_lethal_damage_test() -> void:
-	var event := _create_damage_event(
-		&"elite_finisher",
-		120,
-		0.35,
-		PackedStringArray(["heavy", "physical", "lethal_test"])
-	)
-	var result := player.receive_damage(event)
-	controls.report_damage_test("치명 피해 → %s" % DamageReceiver.result_name(result))
+	controls.report_damage_test("연습 피격 12 → %s" % DamageReceiver.result_name(result))
 
 
 func _create_damage_event(

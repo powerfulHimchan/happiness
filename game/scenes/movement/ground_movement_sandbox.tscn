@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -9,6 +9,11 @@
 [ext_resource type="Texture2D" path="res://assets/prototype_target.svg" id="7_target_texture"]
 [ext_resource type="Texture2D" path="res://assets/prototype_target_selection.svg" id="8_target_selection"]
 [ext_resource type="Script" path="res://scripts/combat/damage_receiver.gd" id="9_damage_receiver"]
+[ext_resource type="Script" path="res://scripts/combat/sword_combat_controller.gd" id="10_sword_controller"]
+[ext_resource type="Resource" path="res://data/weapons/sword_basic.tres" id="11_sword_weapon"]
+[ext_resource type="Resource" path="res://data/skills/sword_dash.tres" id="12_sword_dash"]
+[ext_resource type="Resource" path="res://data/skills/sword_spin.tres" id="13_sword_spin"]
+[ext_resource type="Texture2D" path="res://assets/sword_slash.svg" id="14_sword_slash"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -128,6 +133,17 @@ post_hit_invulnerability_s = 0.5
 z_index = 15
 script = ExtResource("5_selector")
 
+[node name="SwordCombatController" type="Node2D" parent="Player"]
+z_index = 35
+script = ExtResource("10_sword_controller")
+weapon = ExtResource("11_sword_weapon")
+skill_1 = ExtResource("12_sword_dash")
+skill_2 = ExtResource("13_sword_spin")
+
+[node name="SwordSlash" type="Sprite2D" parent="Player/SwordCombatController"]
+visible = false
+texture = ExtResource("14_sword_slash")
+
 [node name="Targets" type="Node2D" parent="."]
 z_index = 40
 z_as_relative = false
@@ -148,6 +164,31 @@ position = Vector2(0, -38)
 z_index = 1
 texture = ExtResource("8_target_selection")
 
+[node name="DamageReceiver" type="Node" parent="Targets/RearTarget"]
+script = ExtResource("9_damage_receiver")
+max_health = 600
+post_hit_invulnerability_s = 0.0
+
+[node name="HealthBar" type="ProgressBar" parent="Targets/RearTarget"]
+offset_left = -52.0
+offset_top = -118.0
+offset_right = 52.0
+offset_bottom = -102.0
+mouse_filter = 2
+value = 600.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="Targets/RearTarget"]
+offset_left = -60.0
+offset_top = -101.0
+offset_right = 60.0
+offset_bottom = -78.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.933333, 0.980392, 0.988235, 1)
+theme_override_font_sizes/font_size = 16
+text = "600/600"
+horizontal_alignment = 1
+
 [node name="CrossingTargetA" type="Node2D" parent="Targets"]
 position = Vector2(1065, 780)
 script = ExtResource("6_target")
@@ -165,6 +206,31 @@ visible = false
 position = Vector2(0, -38)
 z_index = 1
 texture = ExtResource("8_target_selection")
+
+[node name="DamageReceiver" type="Node" parent="Targets/CrossingTargetA"]
+script = ExtResource("9_damage_receiver")
+max_health = 600
+post_hit_invulnerability_s = 0.0
+
+[node name="HealthBar" type="ProgressBar" parent="Targets/CrossingTargetA"]
+offset_left = -52.0
+offset_top = -118.0
+offset_right = 52.0
+offset_bottom = -102.0
+mouse_filter = 2
+value = 600.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="Targets/CrossingTargetA"]
+offset_left = -60.0
+offset_top = -101.0
+offset_right = 60.0
+offset_bottom = -78.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.933333, 0.980392, 0.988235, 1)
+theme_override_font_sizes/font_size = 16
+text = "600/600"
+horizontal_alignment = 1
 
 [node name="CrossingTargetB" type="Node2D" parent="Targets"]
 position = Vector2(1105, 780)
@@ -184,6 +250,31 @@ visible = false
 position = Vector2(0, -38)
 z_index = 1
 texture = ExtResource("8_target_selection")
+
+[node name="DamageReceiver" type="Node" parent="Targets/CrossingTargetB"]
+script = ExtResource("9_damage_receiver")
+max_health = 600
+post_hit_invulnerability_s = 0.0
+
+[node name="HealthBar" type="ProgressBar" parent="Targets/CrossingTargetB"]
+offset_left = -52.0
+offset_top = -118.0
+offset_right = 52.0
+offset_bottom = -102.0
+mouse_filter = 2
+value = 600.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="Targets/CrossingTargetB"]
+offset_left = -60.0
+offset_top = -101.0
+offset_right = 60.0
+offset_bottom = -78.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.933333, 0.980392, 0.988235, 1)
+theme_override_font_sizes/font_size = 16
+text = "600/600"
+horizontal_alignment = 1
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 layer = 10

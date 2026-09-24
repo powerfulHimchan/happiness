@@ -1,7 +1,7 @@
 extends Control
 
-## CP-202용 모바일 조작 HUD.
-## 기존 이동 조작을 유지하면서 피해 이벤트와 중복 차단 결과를 표시한다.
+## CP-203용 모바일 조작 HUD.
+## 자동 3연격과 검 스킬 상태, 표적 HP와 재사용 대기시간을 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -9,8 +9,8 @@ signal jump_released
 signal evade_pressed
 signal reset_requested
 signal damage_test_pressed
-signal duplicate_damage_test_pressed
-signal lethal_damage_test_pressed
+signal sword_skill_1_pressed
+signal sword_skill_2_pressed
 
 const PANEL_COLOR := Color("18394b")
 const PANEL_BORDER_COLOR := Color("4f7180")
@@ -35,9 +35,9 @@ const ACTION_ORDER: Array[StringName] = [
 const ACTION_LABELS := {
 	&"jump": "점프",
 	&"evade": "회피",
-	&"skill_1": "피격 12",
-	&"skill_2": "중복 ×2",
-	&"ultimate": "치명타",
+	&"skill_1": "돌진",
+	&"skill_2": "회전",
+	&"ultimate": "피격 12",
 	&"weapon_swap": "전환",
 }
 const ACTION_TYPES := {
@@ -71,12 +71,13 @@ var last_invincibility_log_seen: String = ""
 var last_fall_log_seen: String = ""
 var last_target_key_seen: String = "없음"
 var last_damage_log_seen: String = ""
+var last_combat_log_seen: String = ""
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-202 피해 처리 테스트 시작")
+	_append_action_log("CP-203 검 전투 테스트 시작")
 	queue_redraw()
 
 
@@ -166,6 +167,18 @@ func update_target_metrics(metrics: Dictionary) -> void:
 	if target_key != last_target_key_seen:
 		last_target_key_seen = target_key
 		_append_action_log("대상 → %s" % target_key)
+	queue_redraw()
+
+
+func update_combat_metrics(metrics: Dictionary) -> void:
+	for key in metrics:
+		movement_metrics[key] = metrics[key]
+	var combat_log: String = String(metrics.get("combat_last_log", ""))
+	if not combat_log.is_empty() \
+	and combat_log != "공격 대기" \
+	and combat_log != last_combat_log_seen:
+		last_combat_log_seen = combat_log
+		_append_action_log(combat_log)
 	queue_redraw()
 
 
@@ -259,13 +272,13 @@ func _dispatch_action_command(command: PlayerCommand) -> void:
 				evade_pressed.emit()
 		PlayerCommand.Type.SKILL_1:
 			if command.phase == PlayerCommand.Phase.PRESSED:
-				damage_test_pressed.emit()
+				sword_skill_1_pressed.emit()
 		PlayerCommand.Type.SKILL_2:
 			if command.phase == PlayerCommand.Phase.PRESSED:
-				duplicate_damage_test_pressed.emit()
+				sword_skill_2_pressed.emit()
 		PlayerCommand.Type.ULTIMATE:
 			if command.phase == PlayerCommand.Phase.PRESSED:
-				lethal_damage_test_pressed.emit()
+				damage_test_pressed.emit()
 
 
 func _handle_header_action(position: Vector2) -> bool:
@@ -346,12 +359,12 @@ func _draw_header() -> void:
 	var safe := _safe_area_in_viewport()
 	var panel_rect := Rect2(
 		safe.position + Vector2(14.0, 14.0),
-		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.205, 170.0, 215.0))
+		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.235, 205.0, 245.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-202 · 피해·피격 공통 처리", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-203 · 검 자동 3연격과 액티브 스킬", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"DamageEvent · 피격 무적 0.50초 · 동일 event_id 중복 차단",
+		"기본 12→14→20 · 돌진 35 / 6초 · 회전 20×2 / 9초",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -362,39 +375,51 @@ func _draw_header() -> void:
 	var dead: bool = bool(movement_metrics.get("damage_dead", false))
 	var hit_invulnerable: bool = bool(movement_metrics.get("damage_post_hit_invulnerable", false))
 	var hit_invulnerable_s: float = float(movement_metrics.get("damage_post_hit_remaining_s", 0.0))
-	var state_text := "사망" if dead else ("피격 무적" if hit_invulnerable else "정상")
+	var state_text := "사망" if dead else ("피격 무적" if hit_invulnerable else "전투 가능")
 	_draw_text(
 		"HP %d/%d  |  상태 %s  |  무적 남음 %.2fs" % [
 			health, max_health, state_text, hit_invulnerable_s,
 		],
-		panel_rect.position + Vector2(22.0, 108.0),
+		panel_rect.position + Vector2(22.0, 106.0),
 		20,
 		WAIT_COLOR if dead else (ACTIVE_COLOR if hit_invulnerable else PASS_COLOR)
 	)
 
-	var applied: int = int(movement_metrics.get("damage_applied_count", 0))
-	var duplicates: int = int(movement_metrics.get("damage_duplicate_blocked_count", 0))
-	var invulnerable_blocks: int = int(movement_metrics.get("damage_invulnerable_blocked_count", 0))
-	var last_result: String = String(movement_metrics.get("damage_last_result", "대기"))
+	var combat_action: String = String(movement_metrics.get("combat_action", "자동 공격"))
+	var combo_next: int = int(movement_metrics.get("combo_next_hit", 1))
+	var target_health: String = String(movement_metrics.get("combat_target_health", "대상 없음"))
 	_draw_text(
-		"적용 %d  |  중복 차단 %d  |  무적 차단 %d  |  최근 %s" % [
-			applied, duplicates, invulnerable_blocks, last_result,
+		"행동 %s  |  다음 기본 %d타  |  %s" % [
+			combat_action, combo_next, target_health,
 		],
-		panel_rect.position + Vector2(22.0, 143.0),
+		panel_rect.position + Vector2(22.0, 139.0),
 		18,
 		MUTED_TEXT_COLOR
 	)
 
-	var last_event: String = String(movement_metrics.get("damage_last_event_id", "없음"))
-	var tags: String = String(movement_metrics.get("last_damage_tags", "없음"))
-	var stagger_s: float = float(movement_metrics.get("last_stagger_s", 0.0))
+	var skill_1_cooldown: float = float(movement_metrics.get("sword_skill_1_cooldown_s", 0.0))
+	var skill_2_cooldown: float = float(movement_metrics.get("sword_skill_2_cooldown_s", 0.0))
+	var cancel_ready: bool = bool(movement_metrics.get("combat_evade_cancel_ready", true))
 	_draw_text(
-		"이벤트 %s  |  경직 %.2fs  |  태그 [%s]" % [
-			last_event, stagger_s, tags,
+		"돌진 대기 %.1fs  |  회전 대기 %.1fs  |  회피 취소 %s" % [
+			skill_1_cooldown, skill_2_cooldown, "가능" if cancel_ready else "잠김",
 		],
-		panel_rect.position + Vector2(22.0, 178.0),
+		panel_rect.position + Vector2(22.0, 172.0),
 		18,
 		TEXT_COLOR
+	)
+
+	var total_damage: int = int(movement_metrics.get("combat_total_damage", 0))
+	var basic_count: int = int(movement_metrics.get("basic_attack_count", 0))
+	var skill_hits: int = int(movement_metrics.get("skill_hit_count", 0))
+	var combat_log: String = String(movement_metrics.get("combat_last_log", "공격 대기"))
+	_draw_text(
+		"누적 피해 %d  |  기본 %d회 / 스킬 %d회  |  %s" % [
+			total_damage, basic_count, skill_hits, combat_log,
+		],
+		panel_rect.position + Vector2(22.0, 205.0),
+		17,
+		PASS_COLOR
 	)
 
 	_draw_button(fps_60_rect, "60 FPS", Engine.max_fps == 60)
