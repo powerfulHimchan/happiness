@@ -14,6 +14,8 @@ required_files=(
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/assets/prototype_player.svg"
+  "$game_root/assets/prototype_target.svg"
+  "$game_root/assets/prototype_target_selection.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
   "$game_root/assets/icon.svg"
@@ -137,6 +139,12 @@ fi
 if ! rg -q 'CrossingTargetA' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
   || ! rg -q 'RearTarget' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
   echo "CP-201 crossing and rear target fixtures are missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'BodySprite' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'SelectionSprite' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+  echo "CP-201 explicit target sprites are missing." >&2
   exit 1
 fi
 

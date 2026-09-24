@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -6,6 +6,8 @@
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_controls.gd" id="4_controls"]
 [ext_resource type="Script" path="res://scripts/combat/auto_target_selector.gd" id="5_selector"]
 [ext_resource type="Script" path="res://scripts/combat/prototype_target.gd" id="6_target"]
+[ext_resource type="Texture2D" path="res://assets/prototype_target.svg" id="7_target_texture"]
+[ext_resource type="Texture2D" path="res://assets/prototype_target_selection.svg" id="8_target_selection"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -130,6 +132,16 @@ script = ExtResource("6_target")
 target_key = "후방 표적"
 body_color = Color(0.956863, 0.572549, 0.509804, 1)
 
+[node name="BodySprite" type="Sprite2D" parent="Targets/RearTarget"]
+position = Vector2(0, -38)
+texture = ExtResource("7_target_texture")
+
+[node name="SelectionSprite" type="Sprite2D" parent="Targets/RearTarget"]
+visible = false
+position = Vector2(0, -38)
+z_index = 1
+texture = ExtResource("8_target_selection")
+
 [node name="CrossingTargetA" type="Node2D" parent="Targets"]
 position = Vector2(1065, 780)
 script = ExtResource("6_target")
@@ -137,6 +149,16 @@ target_key = "교차 표적 A"
 body_color = Color(0.47451, 0.788235, 0.419608, 1)
 patrol_amplitude_px = 25.0
 patrol_period_s = 2.4
+
+[node name="BodySprite" type="Sprite2D" parent="Targets/CrossingTargetA"]
+position = Vector2(0, -38)
+texture = ExtResource("7_target_texture")
+
+[node name="SelectionSprite" type="Sprite2D" parent="Targets/CrossingTargetA"]
+visible = false
+position = Vector2(0, -38)
+z_index = 1
+texture = ExtResource("8_target_selection")
 
 [node name="CrossingTargetB" type="Node2D" parent="Targets"]
 position = Vector2(1105, 780)
@@ -146,6 +168,16 @@ body_color = Color(0.368627, 0.713726, 0.85098, 1)
 patrol_amplitude_px = 25.0
 patrol_period_s = 2.4
 patrol_phase_radians = 3.14159
+
+[node name="BodySprite" type="Sprite2D" parent="Targets/CrossingTargetB"]
+position = Vector2(0, -38)
+texture = ExtResource("7_target_texture")
+
+[node name="SelectionSprite" type="Sprite2D" parent="Targets/CrossingTargetB"]
+visible = false
+position = Vector2(0, -38)
+z_index = 1
+texture = ExtResource("8_target_selection")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 layer = 10

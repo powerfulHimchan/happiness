@@ -12,18 +12,21 @@ extends Node2D
 
 const BODY_CENTER := Vector2(0.0, -38.0)
 const HIT_RADIUS_PX := 32.0
-const BODY_RADIUS_PX := 42.0
 
 var _origin_position: Vector2
 var _elapsed_s: float = 0.0
 var _selected: bool = false
 var _targetable: bool = true
 
+@onready var body_sprite: Sprite2D = $BodySprite
+@onready var selection_sprite: Sprite2D = $SelectionSprite
+
 
 func _ready() -> void:
 	_origin_position = position
 	add_to_group("targetable")
-	queue_redraw()
+	body_sprite.modulate = body_color
+	selection_sprite.visible = _selected
 
 
 func _process(delta: float) -> void:
@@ -38,7 +41,7 @@ func set_selected(selected: bool) -> void:
 	if _selected == selected:
 		return
 	_selected = selected
-	queue_redraw()
+	selection_sprite.visible = selected
 
 
 func is_targetable() -> bool:
@@ -58,41 +61,3 @@ func reset_target() -> void:
 	position = _origin_position
 	_targetable = true
 	set_selected(false)
-
-
-func _draw() -> void:
-	# 밝은 캐주얼 판타지 톤의 절차형 풀잎 슬라임 표적.
-	draw_ellipse(Vector2(0.0, -3.0), Vector2(48.0, 13.0), Color("3f6f66"), 28)
-	if _selected:
-		draw_arc(BODY_CENTER, BODY_RADIUS_PX + 7.0, 0.0, TAU, 48, Color.WHITE, 8.0, true)
-		draw_colored_polygon(
-			PackedVector2Array([
-				Vector2(-11.0, -105.0),
-				Vector2(11.0, -105.0),
-				Vector2(0.0, -88.0),
-			]),
-			Color.WHITE
-		)
-		draw_arc(Vector2(0.0, -102.0), 15.0, 0.0, TAU, 24, Color("ffd166"), 4.0, true)
-
-	draw_circle(BODY_CENTER, BODY_RADIUS_PX, body_color)
-	draw_arc(BODY_CENTER, BODY_RADIUS_PX, 0.0, TAU, 40, Color.WHITE, 4.0, true)
-	draw_colored_polygon(
-		PackedVector2Array([
-			Vector2(-11.0, -73.0),
-			Vector2(-2.0, -101.0),
-			Vector2(9.0, -72.0),
-		]),
-		Color("70b85f")
-	)
-	draw_circle(Vector2(-13.0, -42.0), 5.5, Color("173147"))
-	draw_circle(Vector2(13.0, -42.0), 5.5, Color("173147"))
-	draw_arc(Vector2(0.0, -29.0), 11.0, 0.18, PI - 0.18, 16, Color("315b4c"), 3.0, true)
-
-
-func draw_ellipse(center: Vector2, radii: Vector2, color: Color, segments: int) -> void:
-	var points := PackedVector2Array()
-	for index in range(segments):
-		var angle := TAU * float(index) / float(segments)
-		points.append(center + Vector2(cos(angle) * radii.x, sin(angle) * radii.y))
-	draw_colored_polygon(points, color)
