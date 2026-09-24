@@ -7,8 +7,11 @@ game_root="$project_root/game"
 required_files=(
   "$game_root/project.godot"
   "$game_root/export_presets.cfg"
-  "$game_root/scenes/input/input_command_sandbox.tscn"
-  "$game_root/scripts/input/input_command_sandbox.gd"
+  "$game_root/scenes/movement/ground_movement_sandbox.tscn"
+  "$game_root/scripts/movement/ground_movement_sandbox.gd"
+  "$game_root/scripts/movement/ground_movement_controls.gd"
+  "$game_root/scripts/player/prototype_player.gd"
+  "$game_root/scripts/player/prototype_avatar.gd"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
   "$game_root/assets/icon.svg"
@@ -21,13 +24,18 @@ for required_file in "${required_files[@]}"; do
   fi
 done
 
-if ! rg -q 'run/main_scene="res://scenes/input/input_command_sandbox.tscn"' "$game_root/project.godot"; then
+if ! rg -q 'run/main_scene="res://scenes/movement/ground_movement_sandbox.tscn"' "$game_root/project.godot"; then
   echo "Main scene is not configured correctly." >&2
   exit 1
 fi
 
-if ! rg -q 'res://scripts/input/input_command_sandbox.gd' "$game_root/scenes/input/input_command_sandbox.tscn"; then
-  echo "Input sandbox scene does not reference its script." >&2
+if ! rg -q 'res://scripts/movement/ground_movement_sandbox.gd' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+  echo "Ground movement scene does not reference its controller." >&2
+  exit 1
+fi
+
+if ! rg -q 'class_name PrototypePlayer' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "PrototypePlayer type is missing." >&2
   exit 1
 fi
 

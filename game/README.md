@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인을 거쳐 `CP-101 입력 명령 계층`을 검증하는 프로젝트다. 현재 메인 화면은 전투 구현 전 단계의 입력 샌드박스로, 동적 이동 패드와 액션 버튼 멀티터치, 포인터 소유권, 명령 우선순위와 입력 버퍼를 확인한다.
+`CP-001`, `CP-002` 기술 확인과 `CP-101 입력 명령 계층`을 거쳐 `CP-102 캐릭터 지상 이동`을 검증하는 프로젝트다. 현재 메인 화면에서는 동적 이동 패드로 임시 캐릭터를 움직이며 가속·감속·방향 전환과 바라보는 방향을 확인한다. 액션 버튼의 멀티터치와 명령 버퍼도 그대로 유지한다.
 
 ## 기준 환경
 
@@ -37,18 +37,18 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp101-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp102-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
-`CP-101` 기기 테스트에서는 아래를 확인한다.
+`CP-102` 기기 테스트에서는 아래를 확인한다.
 
 - 화면이 가로 방향으로 고정되는가?
 - 카메라 홀과 둥근 모서리가 녹색 안전 영역 밖에 있는가?
+- 오른쪽으로 가속한 뒤 패드를 놓으면 흔들림 없이 멈추고 `감속 PASS`가 표시되는가?
+- 오른쪽 이동 중 곧바로 왼쪽으로 전환하면 캐릭터가 한 번만 방향을 바꾸고 `방향 전환 PASS`가 표시되는가?
+- 패드 입력 세기에 따라 목표 속도가 0–5.5 m/s 범위에서 달라지는가?
 - 이동 패드를 유지한 채 점프·회피·스킬을 각각 누를 수 있는가?
-- 버튼을 누른 손가락이 영역 밖으로 움직여도 다른 버튼으로 바뀌지 않는가?
-- 스킬 2와 점프 또는 무기 전환을 동시에 누르면 잠금 해제 후 버퍼된 명령이 실행되는가?
-- 같은 프레임의 명령이 회피, 필살기, 스킬, 점프, 전환 순서로 실행되는가?
 - 60/30 FPS 전환 후 게임 시간이 달라지지 않는가?
 - 앱을 백그라운드로 보냈다가 돌아와도 입력이 고정된 채 남지 않는가?
 
@@ -59,8 +59,13 @@ game/
 ├── assets/icon.svg
 ├── export_presets.cfg
 ├── project.godot
+├── scenes/movement/ground_movement_sandbox.tscn
 ├── scenes/input/input_command_sandbox.tscn
 ├── scenes/diagnostics/touch_diagnostics.tscn
+├── scripts/movement/ground_movement_sandbox.gd
+├── scripts/movement/ground_movement_controls.gd
+├── scripts/player/prototype_player.gd
+├── scripts/player/prototype_avatar.gd
 ├── scripts/input/input_command_sandbox.gd
 ├── scripts/input/player_command.gd
 ├── scripts/input/player_command_buffer.gd
@@ -69,8 +74,8 @@ game/
 
 ## 아직 포함하지 않은 것
 
-- 플레이어 이동과 점프
+- 점프와 회피
 - 실제 전투 UI와 버튼 배치 편집
 - 검·활과 적
 
-다음 구현 티켓은 `CP-102 캐릭터 지상 이동`이다.
+다음 구현 티켓은 `CP-103 가변 점프와 입력 보정`이다.

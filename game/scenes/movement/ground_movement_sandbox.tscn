@@ -1,0 +1,70 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/player/prototype_avatar.gd" id="3_avatar"]
+[ext_resource type="Script" path="res://scripts/movement/ground_movement_controls.gd" id="4_controls"]
+
+[sub_resource type="RectangleShape2D" id="FloorShape"]
+size = Vector2(5000, 120)
+
+[sub_resource type="RectangleShape2D" id="WallShape"]
+size = Vector2(100, 1000)
+
+[sub_resource type="CapsuleShape2D" id="PlayerShape"]
+radius = 36.0
+height = 120.0
+
+[node name="GroundMovementSandbox" type="Node2D"]
+script = ExtResource("1_world")
+
+[node name="Floor" type="StaticBody2D" parent="."]
+position = Vector2(2500, 900)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
+shape = SubResource("FloorShape")
+
+[node name="LeftWall" type="StaticBody2D" parent="."]
+position = Vector2(50, 500)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftWall"]
+shape = SubResource("WallShape")
+
+[node name="RightWall" type="StaticBody2D" parent="."]
+position = Vector2(4950, 500)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightWall"]
+shape = SubResource("WallShape")
+
+[node name="Player" type="CharacterBody2D" parent="."]
+position = Vector2(520, 780)
+script = ExtResource("2_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+shape = SubResource("PlayerShape")
+
+[node name="Avatar" type="Node2D" parent="Player"]
+script = ExtResource("3_avatar")
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+position = Vector2(0, -105)
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+limit_left = 0
+limit_top = 0
+limit_right = 5000
+limit_bottom = 1080
+limit_smoothed = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="GroundMovementControls" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_controls")
