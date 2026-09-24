@@ -12,6 +12,7 @@ extends Node2D
 
 const BODY_CENTER := Vector2(0.0, -38.0)
 const HIT_RADIUS_PX := 32.0
+const BODY_RADIUS_PX := 42.0
 
 var _origin_position: Vector2
 var _elapsed_s: float = 0.0
@@ -61,9 +62,9 @@ func reset_target() -> void:
 
 func _draw() -> void:
 	# 밝은 캐주얼 판타지 톤의 절차형 풀잎 슬라임 표적.
-	draw_ellipse(Vector2(0.0, -3.0), Vector2(42.0, 11.0), Color("3f6f66"), 28)
+	draw_ellipse(Vector2(0.0, -3.0), Vector2(48.0, 13.0), Color("3f6f66"), 28)
 	if _selected:
-		draw_arc(BODY_CENTER, 43.0, 0.0, TAU, 48, Color.WHITE, 7.0, true)
+		draw_arc(BODY_CENTER, BODY_RADIUS_PX + 7.0, 0.0, TAU, 48, Color.WHITE, 8.0, true)
 		draw_colored_polygon(
 			PackedVector2Array([
 				Vector2(-11.0, -105.0),
@@ -74,8 +75,8 @@ func _draw() -> void:
 		)
 		draw_arc(Vector2(0.0, -102.0), 15.0, 0.0, TAU, 24, Color("ffd166"), 4.0, true)
 
-	draw_circle(BODY_CENTER, 38.0, body_color)
-	draw_arc(BODY_CENTER, 38.0, 0.0, TAU, 40, body_color.lightened(0.24), 4.0, true)
+	draw_circle(BODY_CENTER, BODY_RADIUS_PX, body_color)
+	draw_arc(BODY_CENTER, BODY_RADIUS_PX, 0.0, TAU, 40, Color.WHITE, 4.0, true)
 	draw_colored_polygon(
 		PackedVector2Array([
 			Vector2(-11.0, -73.0),
