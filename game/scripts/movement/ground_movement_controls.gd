@@ -1,11 +1,12 @@
 extends Control
 
-## CP-103용 모바일 조작 HUD.
+## CP-104용 모바일 조작 HUD.
 ## CP-101의 포인터 소유권과 명령 버퍼를 유지하면서 이동 결과를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
 signal jump_released
+signal evade_pressed
 signal reset_requested
 
 const PANEL_COLOR := Color("18394b")
@@ -63,12 +64,13 @@ var movement_metrics: Dictionary = {}
 var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
+var last_invincibility_log_seen: String = ""
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-103 점프 테스트 시작")
+	_append_action_log("CP-104 회피 테스트 시작")
 	queue_redraw()
 
 
@@ -129,6 +131,12 @@ func _draw() -> void:
 
 func update_movement_metrics(metrics: Dictionary) -> void:
 	movement_metrics = metrics.duplicate()
+	var invincibility_log: String = String(metrics.get("last_invincibility_log", ""))
+	if not invincibility_log.is_empty() \
+		and invincibility_log != "무적 로그 대기" \
+		and invincibility_log != last_invincibility_log_seen:
+		last_invincibility_log_seen = invincibility_log
+		_append_action_log(invincibility_log)
 	queue_redraw()
 
 
@@ -206,12 +214,15 @@ func _submit_action(action_id: StringName, phase: int, pointer_id: int) -> void:
 
 
 func _dispatch_action_command(command: PlayerCommand) -> void:
-	if command.command_type != PlayerCommand.Type.JUMP:
-		return
-	if command.phase == PlayerCommand.Phase.PRESSED:
-		jump_pressed.emit()
-	elif command.phase == PlayerCommand.Phase.RELEASED:
-		jump_released.emit()
+	match command.command_type:
+		PlayerCommand.Type.JUMP:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				jump_pressed.emit()
+			elif command.phase == PlayerCommand.Phase.RELEASED:
+				jump_released.emit()
+		PlayerCommand.Type.EVADE:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				evade_pressed.emit()
 
 
 func _handle_header_action(position: Vector2) -> bool:
@@ -295,9 +306,9 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.205, 170.0, 215.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-103 · 가변 점프와 입력 보정", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-104 · 지상 회피와 공중 대시", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"최대 높이 2.2 m · 코요테 0.10초 · 착지 버퍼 0.12초",
+		"지상 회피 9.0 m/s · 무적 0.18초 · 공중 대시 9.5 m/s",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -315,27 +326,27 @@ func _draw_header() -> void:
 	)
 
 	var jump_state: String = String(movement_metrics.get("jump_state", "지상"))
-	var jump_height: float = float(movement_metrics.get("jump_height_m", 0.0))
-	var jump_count: int = int(movement_metrics.get("jump_count", 0))
-	var jump_held: bool = bool(movement_metrics.get("jump_held", false))
-	var hold_text := "누름" if jump_held else "뗌"
+	var mobility_action: String = String(movement_metrics.get("mobility_action", "일반"))
+	var invincible: bool = bool(movement_metrics.get("invincible", false))
+	var air_dash_available: bool = bool(movement_metrics.get("air_dash_available", true))
+	var invincible_text := "무적 ON" if invincible else "무적 OFF"
+	var air_dash_text := "대시 준비" if air_dash_available else "대시 사용"
 	_draw_text(
-		"점프 %s/%s  |  높이 %.2f m  |  실행 %d회" % [jump_state, hold_text, jump_height, jump_count],
+		"점프 %s  |  동작 %s  |  %s  |  %s" % [jump_state, mobility_action, invincible_text, air_dash_text],
 		panel_rect.position + Vector2(22.0, 143.0),
 		20,
-		ACTIVE_COLOR if jump_state != "지상" else TEXT_COLOR
+		ACTIVE_COLOR if mobility_action != "일반" else TEXT_COLOR
 	)
 
-	var assist: String = String(movement_metrics.get("last_jump_assist", "대기"))
-	var coyote: float = float(movement_metrics.get("coyote_remaining_s", 0.0))
-	var jump_buffer: float = float(movement_metrics.get("jump_buffer_remaining_s", 0.0))
-	var status_color := PASS_COLOR if jump_count > 0 else WAIT_COLOR
+	var ground_evades: int = int(movement_metrics.get("ground_evade_count", 0))
+	var air_dashes: int = int(movement_metrics.get("air_dash_count", 0))
+	var invincibility_log: String = String(movement_metrics.get("last_invincibility_log", "무적 로그 대기"))
+	var status_color := PASS_COLOR if ground_evades > 0 or air_dashes > 0 else WAIT_COLOR
 	_draw_text(
-		"최근 %s  |  보정 잔여 C %.2f / B %.2f초  |  동시 %d  |  %d ms" % [
-			assist,
-			coyote,
-			jump_buffer,
-			peak_simultaneous_controls,
+		"%s  |  지상 %d회 / 공중 %d회  |  입력 %d ms" % [
+			invincibility_log,
+			ground_evades,
+			air_dashes,
 			last_latency_msec,
 		],
 		panel_rect.position + Vector2(22.0, 178.0),

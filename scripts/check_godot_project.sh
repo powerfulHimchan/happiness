@@ -74,6 +74,21 @@ if ! rg -q 'PracticePlatform' "$game_root/scenes/movement/ground_movement_sandbo
   exit 1
 fi
 
+if ! rg -q 'const GROUND_EVADE_INVINCIBLE_S := 0\.18' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "CP-104 ground evade invincibility is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'air_dash_available = false' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "CP-104 air dash single-use gate is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'evade_pressed\.connect\(player\.request_evade\)' "$game_root/scripts/movement/ground_movement_sandbox.gd"; then
+  echo "Evade input is not connected to the player." >&2
+  exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1

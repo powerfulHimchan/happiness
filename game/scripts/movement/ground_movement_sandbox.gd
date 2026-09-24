@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-103 지상 이동과 점프 검증 트랙, UI 연결을 담당한다.
+## CP-104 지상 이동, 점프, 회피와 공중 대시 검증 트랙을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -16,6 +16,7 @@ func _ready() -> void:
 	controls.move_vector_changed.connect(player.set_move_vector)
 	controls.jump_pressed.connect(player.request_jump)
 	controls.jump_released.connect(player.release_jump)
+	controls.evade_pressed.connect(player.request_evade)
 	controls.reset_requested.connect(_reset_test)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	controls.update_movement_metrics({
@@ -36,6 +37,17 @@ func _ready() -> void:
 		"last_jump_assist": "대기",
 		"coyote_remaining_s": 0.0,
 		"jump_buffer_remaining_s": 0.0,
+		"mobility_action": "일반",
+		"invincible": false,
+		"invincible_remaining_s": 0.0,
+		"evade_cooldown_remaining_s": 0.0,
+		"air_dash_available": true,
+		"ground_evade_count": 0,
+		"air_dash_count": 0,
+		"last_mobility_result": "대기",
+		"last_invincibility_log": "무적 로그 대기",
+		"invincibility_start_frame": -1,
+		"invincibility_end_frame": -1,
 	})
 	queue_redraw()
 
