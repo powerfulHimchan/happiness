@@ -1,10 +1,11 @@
 class_name PrototypePlayer
 extends CharacterBody2D
 
-## CP-104 지상 이동, 가변 점프, 회피와 공중 대시 모델.
+## CP-105 이동 액션과 낙하 복귀 모델.
 ## 100 px를 1 m로 환산해 기획 수치를 물리 좌표에 적용한다.
 
 signal movement_metrics_changed(metrics: Dictionary)
+signal fall_recovery_started
 
 enum MobilityAction {
 	NONE,
@@ -29,6 +30,11 @@ const GROUND_EVADE_INVINCIBLE_S := 0.18
 const GROUND_EVADE_COOLDOWN_S := 0.45
 const AIR_DASH_SPEED_MPS := 9.5
 const AIR_DASH_DURATION_S := 0.18
+const MAX_HEALTH := 100
+const FALL_DAMAGE_RATIO := 0.10
+const FALL_BOUNDARY_Y := 1160.0
+const FALL_RECOVERY_DELAY_S := 0.45
+const RESPAWN_INPUT_LOCK_S := 0.20
 const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
@@ -49,6 +55,12 @@ var ground_evade_count: int = 0
 var air_dash_count: int = 0
 var last_mobility_result: String = "대기"
 var last_invincibility_log: String = "무적 로그 대기"
+var health: int = MAX_HEALTH
+var fall_count: int = 0
+var last_fall_damage: int = 0
+var last_fall_log: String = "낙하 기록 대기"
+var last_safe_position: Vector2 = Vector2(960.0, 780.0)
+var last_safe_label: String = "시작 지점"
 var _stop_test_active: bool = false
 var _stop_elapsed_s: float = 0.0
 var _stop_distance_px: float = 0.0
@@ -69,7 +81,11 @@ var _invincible_remaining_s: float = 0.0
 var _evade_cooldown_remaining_s: float = 0.0
 var _invincibility_start_frame: int = -1
 var _invincibility_end_frame: int = -1
+var _fall_recovery_active: bool = false
+var _fall_recovery_remaining_s: float = 0.0
+var _input_lock_remaining_s: float = 0.0
 
+@onready var avatar: Node2D = $Avatar
 @onready var avatar_sprite: Sprite2D = $Avatar/Sprite2D
 
 
@@ -79,6 +95,18 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _fall_recovery_active:
+		_update_fall_recovery(delta)
+		_update_avatar_action_visual()
+		_emit_metrics()
+		return
+
+	_input_lock_remaining_s = maxf(0.0, _input_lock_remaining_s - delta)
+	if global_position.y >= FALL_BOUNDARY_Y:
+		_begin_fall_recovery()
+		_emit_metrics()
+		return
+
 	var grounded_at_start := is_on_floor()
 	_update_mobility_timers(delta)
 	if grounded_at_start:
@@ -92,6 +120,10 @@ func _physics_process(delta: float) -> void:
 		_apply_mobility_velocity()
 
 	move_and_slide()
+	if global_position.y >= FALL_BOUNDARY_Y:
+		_begin_fall_recovery()
+		_emit_metrics()
+		return
 	if not grounded_at_start and is_on_floor():
 		air_dash_available = true
 		if _mobility_action == MobilityAction.AIR_DASH:
@@ -103,6 +135,10 @@ func _physics_process(delta: float) -> void:
 
 
 func set_move_vector(input_vector: Vector2) -> void:
+	if _is_input_locked():
+		move_input = 0.0
+		move_input_vector = Vector2.ZERO
+		return
 	move_input_vector = _apply_vector_dead_zone(input_vector.limit_length(1.0))
 	var new_input := move_input_vector.x
 	var new_sign := _direction_sign(new_input)
@@ -129,6 +165,8 @@ func set_move_vector(input_vector: Vector2) -> void:
 
 
 func request_jump() -> void:
+	if _is_input_locked():
+		return
 	jump_held = true
 	_jump_buffer_remaining_s = JUMP_BUFFER_S
 	_jump_requested_airborne = not is_on_floor()
@@ -141,6 +179,9 @@ func release_jump() -> void:
 
 
 func request_evade() -> void:
+	if _is_input_locked():
+		last_mobility_result = "복귀 중 입력 잠금"
+		return
 	if _mobility_action != MobilityAction.NONE:
 		last_mobility_result = "동작 중 입력 무시"
 		return
@@ -156,6 +197,13 @@ func request_evade() -> void:
 		last_mobility_result = "공중 대시 사용 완료"
 		return
 	_start_air_dash()
+
+
+func set_safe_spawn(spawn_position: Vector2, safe_label: String) -> void:
+	if _fall_recovery_active or spawn_position.y >= FALL_BOUNDARY_Y:
+		return
+	last_safe_position = spawn_position
+	last_safe_label = safe_label
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
@@ -175,6 +223,12 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	air_dash_count = 0
 	last_mobility_result = "대기"
 	last_invincibility_log = "무적 로그 대기"
+	health = MAX_HEALTH
+	fall_count = 0
+	last_fall_damage = 0
+	last_fall_log = "낙하 기록 대기"
+	last_safe_position = spawn_position
+	last_safe_label = "시작 지점"
 	stop_test_passed = false
 	reversal_test_passed = false
 	last_stop_time_s = 0.0
@@ -199,6 +253,10 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	_evade_cooldown_remaining_s = 0.0
 	_invincibility_start_frame = -1
 	_invincibility_end_frame = -1
+	_fall_recovery_active = false
+	_fall_recovery_remaining_s = 0.0
+	_input_lock_remaining_s = 0.0
+	avatar.visible = true
 	avatar_sprite.modulate = Color.WHITE
 	_emit_metrics()
 
@@ -327,7 +385,9 @@ func _end_invincibility() -> void:
 
 
 func _update_avatar_action_visual() -> void:
-	if invincible:
+	if _input_lock_remaining_s > 0.0:
+		avatar_sprite.modulate = Color("ff9f8f")
+	elif invincible:
 		avatar_sprite.modulate = Color("76f4ff")
 	elif _mobility_action == MobilityAction.AIR_DASH:
 		avatar_sprite.modulate = Color("ffd166")
@@ -342,6 +402,61 @@ func _mobility_action_name() -> String:
 		MobilityAction.AIR_DASH:
 			return "공중 대시"
 	return "일반"
+
+
+func _begin_fall_recovery() -> void:
+	if _fall_recovery_active:
+		return
+	fall_count += 1
+	last_fall_damage = int(round(MAX_HEALTH * FALL_DAMAGE_RATIO))
+	health = maxi(1, health - last_fall_damage)
+	last_fall_log = "낙하 %d회 · HP -%d" % [fall_count, last_fall_damage]
+	_fall_recovery_active = true
+	_fall_recovery_remaining_s = FALL_RECOVERY_DELAY_S
+	_input_lock_remaining_s = FALL_RECOVERY_DELAY_S + RESPAWN_INPUT_LOCK_S
+	_cancel_actions_for_recovery()
+	velocity = Vector2.ZERO
+	avatar.visible = false
+	fall_recovery_started.emit()
+
+
+func _update_fall_recovery(delta: float) -> void:
+	_fall_recovery_remaining_s = maxf(0.0, _fall_recovery_remaining_s - delta)
+	_input_lock_remaining_s = maxf(0.0, _input_lock_remaining_s - delta)
+	if _fall_recovery_remaining_s > 0.0:
+		return
+	global_position = last_safe_position
+	velocity = Vector2.ZERO
+	_last_position_x = global_position.x
+	_fall_recovery_active = false
+	air_dash_available = true
+	avatar.visible = true
+	last_fall_log = "복귀 %s · HP %d/%d" % [last_safe_label, health, MAX_HEALTH]
+
+
+func _cancel_actions_for_recovery() -> void:
+	move_input = 0.0
+	move_input_vector = Vector2.ZERO
+	jump_held = false
+	_jump_buffer_remaining_s = 0.0
+	_jump_requested_airborne = false
+	_jump_in_progress = false
+	_mobility_action = MobilityAction.NONE
+	_mobility_remaining_s = 0.0
+	_invincible_remaining_s = 0.0
+	invincible = false
+
+
+func _is_input_locked() -> bool:
+	return _fall_recovery_active or _input_lock_remaining_s > 0.0
+
+
+func _recovery_state_name() -> String:
+	if _fall_recovery_active:
+		return "복귀 대기"
+	if _input_lock_remaining_s > 0.0:
+		return "입력 잠금"
+	return "정상"
 
 
 func _update_jump_windows(delta: float, grounded: bool) -> void:
@@ -441,4 +556,14 @@ func _emit_metrics() -> void:
 		"last_invincibility_log": last_invincibility_log,
 		"invincibility_start_frame": _invincibility_start_frame,
 		"invincibility_end_frame": _invincibility_end_frame,
+		"health": health,
+		"max_health": MAX_HEALTH,
+		"fall_count": fall_count,
+		"last_fall_damage": last_fall_damage,
+		"last_fall_log": last_fall_log,
+		"last_safe_position": last_safe_position,
+		"last_safe_label": last_safe_label,
+		"recovery_state": _recovery_state_name(),
+		"input_locked": _is_input_locked(),
+		"fall_recovery_remaining_s": _fall_recovery_remaining_s,
 	})

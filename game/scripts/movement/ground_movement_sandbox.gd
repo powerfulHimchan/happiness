@@ -1,12 +1,17 @@
 extends Node2D
 
-## CP-104 지상 이동, 점프, 회피와 공중 대시 검증 트랙을 담당한다.
+## CP-105 이동 액션, 낙하 피해와 안전 지점 복귀 검증 트랙을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
 const TRACK_RIGHT := 4900.0
 const FLOOR_TOP := 840.0
 const PRACTICE_PLATFORM_RECT := Rect2(1675.0, 660.0, 650.0, 40.0)
+const LEFT_FLOOR_RECT := Rect2(0.0, FLOOR_TOP, 3300.0, 300.0)
+const RIGHT_FLOOR_RECT := Rect2(3800.0, FLOOR_TOP, 1200.0, 300.0)
+const FALL_ZONE_RECT := Rect2(3300.0, FLOOR_TOP, 500.0, 360.0)
+const PRACTICE_SAFE_SPAWN := Vector2(2000.0, 600.0)
+const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 
 @onready var player: PrototypePlayer = $Player
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
@@ -18,7 +23,18 @@ func _ready() -> void:
 	controls.jump_released.connect(player.release_jump)
 	controls.evade_pressed.connect(player.request_evade)
 	controls.reset_requested.connect(_reset_test)
+	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
+	$LeftSafeZone.body_entered.connect(
+		_on_safe_zone_entered.bind(TRACK_START, "시작 평지")
+	)
+	$PracticeSafeZone.body_entered.connect(
+		_on_safe_zone_entered.bind(PRACTICE_SAFE_SPAWN, "연습 발판")
+	)
+	$RightSafeZone.body_entered.connect(
+		_on_safe_zone_entered.bind(RIGHT_SAFE_SPAWN, "오른쪽 평지")
+	)
+	player.set_safe_spawn(TRACK_START, "시작 평지")
 	controls.update_movement_metrics({
 		"speed_mps": 0.0,
 		"target_speed_mps": 0.0,
@@ -48,6 +64,16 @@ func _ready() -> void:
 		"last_invincibility_log": "무적 로그 대기",
 		"invincibility_start_frame": -1,
 		"invincibility_end_frame": -1,
+		"health": PrototypePlayer.MAX_HEALTH,
+		"max_health": PrototypePlayer.MAX_HEALTH,
+		"fall_count": 0,
+		"last_fall_damage": 0,
+		"last_fall_log": "낙하 기록 대기",
+		"last_safe_position": TRACK_START,
+		"last_safe_label": "시작 평지",
+		"recovery_state": "정상",
+		"input_locked": false,
+		"fall_recovery_remaining_s": 0.0,
 	})
 	queue_redraw()
 
@@ -57,8 +83,12 @@ func _draw() -> void:
 	draw_rect(Rect2(-700.0, -400.0, 6500.0, 1400.0), Color("b9ecf2"), true)
 	draw_circle(Vector2(900.0, 160.0), 90.0, Color("fff3b0"))
 	_draw_hills()
-	draw_rect(Rect2(TRACK_LEFT - 100.0, FLOOR_TOP, TRACK_RIGHT - TRACK_LEFT + 200.0, 300.0), Color("6aa66b"), true)
-	draw_rect(Rect2(TRACK_LEFT - 100.0, FLOOR_TOP, TRACK_RIGHT - TRACK_LEFT + 200.0, 18.0), Color("b8d86f"), true)
+	draw_rect(LEFT_FLOOR_RECT, Color("6aa66b"), true)
+	draw_rect(RIGHT_FLOOR_RECT, Color("6aa66b"), true)
+	draw_rect(Rect2(LEFT_FLOOR_RECT.position, Vector2(LEFT_FLOOR_RECT.size.x, 18.0)), Color("b8d86f"), true)
+	draw_rect(Rect2(RIGHT_FLOOR_RECT.position, Vector2(RIGHT_FLOOR_RECT.size.x, 18.0)), Color("b8d86f"), true)
+	draw_rect(FALL_ZONE_RECT, Color("173147"), true)
+	draw_rect(Rect2(FALL_ZONE_RECT.position, Vector2(FALL_ZONE_RECT.size.x, 14.0)), Color("f26b5e"), true)
 	draw_rect(PRACTICE_PLATFORM_RECT, Color("507f5b"), true)
 	draw_rect(Rect2(PRACTICE_PLATFORM_RECT.position, Vector2(PRACTICE_PLATFORM_RECT.size.x, 10.0)), Color("d9ef85"), true)
 	_draw_track_markers()
@@ -70,6 +100,15 @@ func _draw() -> void:
 		-1.0,
 		22,
 		Color("315b4c")
+	)
+	draw_string(
+		ThemeDB.fallback_font,
+		FALL_ZONE_RECT.position + Vector2(145.0, 58.0),
+		"낙하 테스트",
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1.0,
+		24,
+		Color("ffb4a9")
 	)
 
 
@@ -110,3 +149,13 @@ func _draw_track_markers() -> void:
 func _reset_test() -> void:
 	player.reset_movement_test(TRACK_START)
 	controls.release_all_inputs()
+
+
+func _on_safe_zone_entered(
+	body: Node2D,
+	spawn_position: Vector2,
+	safe_label: String
+) -> void:
+	if body != player:
+		return
+	player.set_safe_spawn(spawn_position, safe_label)

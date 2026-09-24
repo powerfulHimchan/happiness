@@ -89,6 +89,27 @@ if ! rg -q 'evade_pressed\.connect\(player\.request_evade\)' "$game_root/scripts
   exit 1
 fi
 
+if ! rg -q 'const FALL_DAMAGE_RATIO := 0\.10' "$game_root/scripts/player/prototype_player.gd"; then
+  echo "CP-105 fall damage ratio is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'fall_recovery_started\.connect\(controls\.release_all_inputs\)' "$game_root/scripts/movement/ground_movement_sandbox.gd"; then
+  echo "Fall recovery input reset is not connected." >&2
+  exit 1
+fi
+
+if ! rg -q 'LeftSafeZone' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'RightSafeZone' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+  echo "CP-105 safe zones are missing." >&2
+  exit 1
+fi
+
+if rg -q 'size = Vector2\(5000, 120\)' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+  echo "Continuous floor still blocks the CP-105 fall zone." >&2
+  exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1

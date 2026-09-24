@@ -1,6 +1,6 @@
 extends Control
 
-## CP-104용 모바일 조작 HUD.
+## CP-105용 모바일 조작 HUD.
 ## CP-101의 포인터 소유권과 명령 버퍼를 유지하면서 이동 결과를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
@@ -65,12 +65,13 @@ var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
 var last_invincibility_log_seen: String = ""
+var last_fall_log_seen: String = ""
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-104 회피 테스트 시작")
+	_append_action_log("CP-105 낙하 복귀 테스트 시작")
 	queue_redraw()
 
 
@@ -137,6 +138,12 @@ func update_movement_metrics(metrics: Dictionary) -> void:
 		and invincibility_log != last_invincibility_log_seen:
 		last_invincibility_log_seen = invincibility_log
 		_append_action_log(invincibility_log)
+	var fall_log: String = String(metrics.get("last_fall_log", ""))
+	if not fall_log.is_empty() \
+		and fall_log != "낙하 기록 대기" \
+		and fall_log != last_fall_log_seen:
+		last_fall_log_seen = fall_log
+		_append_action_log(fall_log)
 	queue_redraw()
 
 
@@ -306,49 +313,41 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.205, 170.0, 215.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-104 · 지상 회피와 공중 대시", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-105 · 낙하와 안전 발판 복귀", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"지상 회피 9.0 m/s · 무적 0.18초 · 공중 대시 9.5 m/s",
+		"낙하 피해 최대 체력 10% · 복귀 대기 0.45초 · 입력 초기화",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
 	)
 
 	var speed: float = float(movement_metrics.get("speed_mps", 0.0))
-	var target: float = float(movement_metrics.get("target_speed_mps", 0.0))
-	var facing: int = int(movement_metrics.get("facing", 1))
-	var position_m: float = float(movement_metrics.get("position_m", 0.0))
-	var facing_text := "오른쪽" if facing > 0 else "왼쪽"
+	var health: int = int(movement_metrics.get("health", 100))
+	var max_health: int = int(movement_metrics.get("max_health", 100))
+	var falls: int = int(movement_metrics.get("fall_count", 0))
+	var safe_label: String = String(movement_metrics.get("last_safe_label", "시작 평지"))
+	var recovery_state: String = String(movement_metrics.get("recovery_state", "정상"))
 	_draw_text(
-		"현재 %+.2f m/s  |  목표 %+.2f  |  위치 %.1f m  |  시선 %s" % [speed, target, position_m, facing_text],
+		"HP %d/%d  |  낙하 %d회  |  안전 %s  |  %s" % [health, max_health, falls, safe_label, recovery_state],
 		panel_rect.position + Vector2(22.0, 108.0),
 		20
 	)
 
 	var jump_state: String = String(movement_metrics.get("jump_state", "지상"))
 	var mobility_action: String = String(movement_metrics.get("mobility_action", "일반"))
-	var invincible: bool = bool(movement_metrics.get("invincible", false))
 	var air_dash_available: bool = bool(movement_metrics.get("air_dash_available", true))
-	var invincible_text := "무적 ON" if invincible else "무적 OFF"
 	var air_dash_text := "대시 준비" if air_dash_available else "대시 사용"
 	_draw_text(
-		"점프 %s  |  동작 %s  |  %s  |  %s" % [jump_state, mobility_action, invincible_text, air_dash_text],
+		"속도 %+.2f m/s  |  점프 %s  |  동작 %s  |  %s" % [speed, jump_state, mobility_action, air_dash_text],
 		panel_rect.position + Vector2(22.0, 143.0),
 		20,
 		ACTIVE_COLOR if mobility_action != "일반" else TEXT_COLOR
 	)
 
-	var ground_evades: int = int(movement_metrics.get("ground_evade_count", 0))
-	var air_dashes: int = int(movement_metrics.get("air_dash_count", 0))
-	var invincibility_log: String = String(movement_metrics.get("last_invincibility_log", "무적 로그 대기"))
-	var status_color := PASS_COLOR if ground_evades > 0 or air_dashes > 0 else WAIT_COLOR
+	var fall_log: String = String(movement_metrics.get("last_fall_log", "낙하 기록 대기"))
+	var status_color := PASS_COLOR if falls > 0 and recovery_state == "정상" else WAIT_COLOR
 	_draw_text(
-		"%s  |  지상 %d회 / 공중 %d회  |  입력 %d ms" % [
-			invincibility_log,
-			ground_evades,
-			air_dashes,
-			last_latency_msec,
-		],
+		"%s  |  입력 지연 %d ms" % [fall_log, last_latency_msec],
 		panel_rect.position + Vector2(22.0, 178.0),
 		18,
 		status_color

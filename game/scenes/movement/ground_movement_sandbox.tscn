@@ -1,12 +1,15 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
 [ext_resource type="Texture2D" path="res://assets/prototype_player.svg" id="3_avatar"]
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_controls.gd" id="4_controls"]
 
-[sub_resource type="RectangleShape2D" id="FloorShape"]
-size = Vector2(5000, 120)
+[sub_resource type="RectangleShape2D" id="LeftFloorShape"]
+size = Vector2(3300, 120)
+
+[sub_resource type="RectangleShape2D" id="RightFloorShape"]
+size = Vector2(1200, 120)
 
 [sub_resource type="RectangleShape2D" id="WallShape"]
 size = Vector2(100, 1000)
@@ -18,14 +21,29 @@ height = 120.0
 [sub_resource type="RectangleShape2D" id="PracticePlatformShape"]
 size = Vector2(650, 40)
 
+[sub_resource type="RectangleShape2D" id="LeftSafeZoneShape"]
+size = Vector2(3000, 180)
+
+[sub_resource type="RectangleShape2D" id="PracticeSafeZoneShape"]
+size = Vector2(650, 120)
+
+[sub_resource type="RectangleShape2D" id="RightSafeZoneShape"]
+size = Vector2(1000, 180)
+
 [node name="GroundMovementSandbox" type="Node2D"]
 script = ExtResource("1_world")
 
-[node name="Floor" type="StaticBody2D" parent="."]
-position = Vector2(2500, 900)
+[node name="LeftFloor" type="StaticBody2D" parent="."]
+position = Vector2(1650, 900)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
-shape = SubResource("FloorShape")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftFloor"]
+shape = SubResource("LeftFloorShape")
+
+[node name="RightFloor" type="StaticBody2D" parent="."]
+position = Vector2(4400, 900)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightFloor"]
+shape = SubResource("RightFloorShape")
 
 [node name="LeftWall" type="StaticBody2D" parent="."]
 position = Vector2(50, 500)
@@ -44,6 +62,27 @@ position = Vector2(2000, 680)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PracticePlatform"]
 shape = SubResource("PracticePlatformShape")
+
+[node name="LeftSafeZone" type="Area2D" parent="."]
+position = Vector2(1650, 750)
+collision_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftSafeZone"]
+shape = SubResource("LeftSafeZoneShape")
+
+[node name="PracticeSafeZone" type="Area2D" parent="."]
+position = Vector2(2000, 590)
+collision_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PracticeSafeZone"]
+shape = SubResource("PracticeSafeZoneShape")
+
+[node name="RightSafeZone" type="Area2D" parent="."]
+position = Vector2(4400, 750)
+collision_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightSafeZone"]
+shape = SubResource("RightSafeZoneShape")
 
 [node name="Player" type="CharacterBody2D" parent="."]
 position = Vector2(960, 780)
