@@ -1,7 +1,7 @@
 extends Control
 
-## CP-204용 모바일 조작 HUD.
-## 검·활 테스트 전환과 활 투사체, 근접 피해 감소, 관통 횟수를 표시한다.
+## CP-205용 모바일 조작 HUD.
+## 전환 제한, 예약 입력과 두 무기의 독립 대기시간을 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -73,12 +73,13 @@ var last_fall_log_seen: String = ""
 var last_target_key_seen: String = "없음"
 var last_damage_log_seen: String = ""
 var last_combat_log_seen: String = ""
+var last_weapon_switch_log_seen: String = ""
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-204 활 전투 테스트 시작")
+	_append_action_log("CP-205 두 무기 전환 테스트 시작")
 	queue_redraw()
 
 
@@ -180,6 +181,12 @@ func update_combat_metrics(metrics: Dictionary) -> void:
 	and combat_log != last_combat_log_seen:
 		last_combat_log_seen = combat_log
 		_append_action_log(combat_log)
+	var switch_log: String = String(metrics.get("weapon_switch_last_log", ""))
+	if not switch_log.is_empty() \
+	and switch_log != "전환 대기" \
+	and switch_log != last_weapon_switch_log_seen:
+		last_weapon_switch_log_seen = switch_log
+		_append_action_log(switch_log)
 	queue_redraw()
 
 
@@ -366,9 +373,9 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.235, 205.0, 245.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-204 · 활 자동 사격과 투사체", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-205 · 검·활 두 무기 전환", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"기본 14 / 0.75초 · 관통 36 / 최대 3개체 · 화살비 8×6",
+		"전환 제한 0.50초 · 공격 대기시간 유지 · 무기별 스킬 쿨다운 유지",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -392,42 +399,41 @@ func _draw_header() -> void:
 	var combat_action: String = String(movement_metrics.get("combat_action", "자동 공격"))
 	var weapon_name: String = String(movement_metrics.get("weapon_name", "연습용 검"))
 	var target_health: String = String(movement_metrics.get("combat_target_health", "대상 없음"))
-	var screen_filtered: int = int(movement_metrics.get("target_screen_filtered", 0))
+	var active_weapon_id: String = String(movement_metrics.get("active_weapon_id", "sword"))
 	_draw_text(
-		"%s  |  행동 %s  |  %s  |  화면 밖 제외 %d" % [
-			weapon_name, combat_action, target_health, screen_filtered,
+		"주 무기 %s(%s)  |  행동 %s  |  %s" % [
+			weapon_name, active_weapon_id, combat_action, target_health,
 		],
 		panel_rect.position + Vector2(22.0, 139.0),
 		18,
 		MUTED_TEXT_COLOR
 	)
 
-	var skill_1_name: String = String(movement_metrics.get("skill_1_name", "스킬 1"))
-	var skill_2_name: String = String(movement_metrics.get("skill_2_name", "스킬 2"))
-	var skill_1_cooldown: float = float(movement_metrics.get("skill_1_cooldown_s", 0.0))
-	var skill_2_cooldown: float = float(movement_metrics.get("skill_2_cooldown_s", 0.0))
-	var cancel_ready: bool = bool(movement_metrics.get("combat_evade_cancel_ready", true))
+	var switch_remaining: float = float(movement_metrics.get("weapon_switch_remaining_s", 0.0))
+	var switch_buffered: bool = bool(movement_metrics.get("weapon_switch_buffered", false))
+	var switch_buffer_remaining: float = float(movement_metrics.get("weapon_switch_buffer_remaining_s", 0.0))
+	var switch_count: int = int(movement_metrics.get("weapon_switch_count", 0))
+	var blocked_count: int = int(movement_metrics.get("weapon_switch_blocked_count", 0))
+	var sword_basic: float = float(movement_metrics.get("sword_basic_remaining_s", 0.0))
+	var bow_basic: float = float(movement_metrics.get("bow_basic_remaining_s", 0.0))
 	_draw_text(
-		"%s %.1fs  |  %s %.1fs  |  회피 취소 %s" % [
-			skill_1_name, skill_1_cooldown, skill_2_name, skill_2_cooldown,
-			"가능" if cancel_ready else "잠김",
+		"전환 %.2fs  |  예약 %s %.2fs  |  성공 %d / 차단 %d  |  기본 검 %.2f · 활 %.2f" % [
+			switch_remaining, "ON" if switch_buffered else "OFF", switch_buffer_remaining,
+			switch_count, blocked_count, sword_basic, bow_basic,
 		],
 		panel_rect.position + Vector2(22.0, 172.0),
 		18,
 		TEXT_COLOR
 	)
 
-	var total_damage: int = int(movement_metrics.get("combat_total_damage", 0))
-	var basic_count: int = int(movement_metrics.get("basic_attack_count", 0))
-	var skill_hits: int = int(movement_metrics.get("skill_hit_count", 0))
-	var projectile_count: int = int(movement_metrics.get("projectile_fired_count", 0))
-	var close_reduced_count: int = int(movement_metrics.get("near_damage_reduced_count", 0))
-	var piercing_hits: int = int(movement_metrics.get("piercing_last_hit_count", 0))
-	var combat_log: String = String(movement_metrics.get("combat_last_log", "공격 대기"))
+	var sword_skill_1: float = float(movement_metrics.get("sword_skill_1_cooldown_s", 0.0))
+	var sword_skill_2: float = float(movement_metrics.get("sword_skill_2_cooldown_s", 0.0))
+	var bow_skill_1: float = float(movement_metrics.get("bow_skill_1_cooldown_s", 0.0))
+	var bow_skill_2: float = float(movement_metrics.get("bow_skill_2_cooldown_s", 0.0))
+	var switch_log: String = String(movement_metrics.get("weapon_switch_last_log", "전환 대기"))
 	_draw_text(
-		"피해 %d  |  기본 %d / 스킬 %d  |  투사체 %d · 근접감소 %d · 관통 %d  |  %s" % [
-			total_damage, basic_count, skill_hits, projectile_count,
-			close_reduced_count, piercing_hits, combat_log,
+		"검 스킬 %.1f / %.1f  |  활 스킬 %.1f / %.1f  |  %s" % [
+			sword_skill_1, sword_skill_2, bow_skill_1, bow_skill_2, switch_log,
 		],
 		panel_rect.position + Vector2(22.0, 205.0),
 		17,

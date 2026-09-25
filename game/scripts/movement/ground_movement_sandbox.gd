@@ -28,7 +28,7 @@ func _ready() -> void:
 	controls.evade_pressed.connect(player.request_evade)
 	controls.skill_1_pressed.connect(weapon_controller.request_skill_1)
 	controls.skill_2_pressed.connect(weapon_controller.request_skill_2)
-	controls.weapon_swap_pressed.connect(weapon_controller.toggle_test_weapon)
+	controls.weapon_swap_pressed.connect(weapon_controller.request_weapon_switch)
 	controls.damage_test_pressed.connect(_run_damage_test)
 	controls.reset_requested.connect(_reset_test)
 	player.fall_recovery_started.connect(controls.release_all_inputs)

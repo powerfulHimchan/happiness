@@ -236,6 +236,12 @@ func can_use_combat_action() -> bool:
 	return not _is_input_locked() and _mobility_action == MobilityAction.NONE
 
 
+func can_switch_weapon() -> bool:
+	return not _is_input_locked() \
+		and _mobility_action == MobilityAction.NONE \
+		and not _combat_action_active
+
+
 func can_continue_combat_action() -> bool:
 	return not damage_receiver.dead \
 		and not _fall_recovery_active \

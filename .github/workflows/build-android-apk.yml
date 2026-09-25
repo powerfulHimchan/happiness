@@ -77,21 +77,21 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-cp204-bow.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-cp205-weapon-swap.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-cp204-bow.apk
-          sha256sum dist/happiness-tale-cp204-bow.apk \
-            | tee dist/happiness-tale-cp204-bow.apk.sha256
+          cp "${apk_path}" dist/happiness-tale-cp205-weapon-swap.apk
+          sha256sum dist/happiness-tale-cp205-weapon-swap.apk \
+            | tee dist/happiness-tale-cp205-weapon-swap.apk.sha256
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-cp204-bow-apk
+          name: happiness-tale-cp205-weapon-swap-apk
           path: |
-            dist/happiness-tale-cp204-bow.apk
-            dist/happiness-tale-cp204-bow.apk.sha256
+            dist/happiness-tale-cp205-weapon-swap.apk
+            dist/happiness-tale-cp205-weapon-swap.apk.sha256
           if-no-files-found: error
           retention-days: 14

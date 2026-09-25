@@ -241,9 +241,30 @@ fi
 
 if ! rg -q 'screen_only and not is_target_on_screen' "$game_root/scripts/combat/auto_target_selector.gd" \
   || ! rg -q 'CLOSE_DAMAGE_MULTIPLIER := 0\.80' "$game_root/scripts/combat/bow_combat_controller.gd" \
-  || ! rg -q 'weapon_swap_pressed\.connect\(weapon_controller\.toggle_test_weapon\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
+  || ! rg -q 'weapon_swap_pressed\.connect\(weapon_controller\.request_weapon_switch\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
   || ! rg -q 'OffscreenTarget' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
   echo "CP-204 screen filtering, close penalty, or mobile test integration is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'const SWITCH_COOLDOWN_S := 0\.50' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'const SWITCH_BUFFER_S := 0\.20' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'player\.can_switch_weapon\(\)' "$game_root/scripts/combat/prototype_weapon_controller.gd"; then
+  echo "CP-205 weapon switch limit or action buffer is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'sword_combat\.current_metrics\(\)' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'bow_combat\.current_metrics\(\)' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'sword_basic_remaining_s' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'bow_skill_2_cooldown_s' "$game_root/scripts/combat/prototype_weapon_controller.gd"; then
+  echo "CP-205 per-weapon attack and skill cooldown state reporting is missing." >&2
+  exit 1
+fi
+
+if ! rg -q '_basic_remaining_s = maxf\(0\.0, _basic_remaining_s - delta\)' "$game_root/scripts/combat/sword_combat_controller.gd" \
+  || ! rg -q '_basic_remaining_s = maxf\(0\.0, _basic_remaining_s - delta\)' "$game_root/scripts/combat/bow_combat_controller.gd"; then
+  echo "CP-205 inactive weapon attack waits must continue without reset." >&2
   exit 1
 fi
 
