@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"bow_piercing"
+display_name = "관통 화살"
+cooldown_s = 7.0
+duration_s = 0.34
+hit_times_s = PackedFloat32Array(0.12)
+damage = PackedInt32Array(36)
+hit_range_m = 8.0
+movement_distance_m = 0.0
+max_targets = 3
+can_move = true
+can_turn = false
+evade_cancel_start_s = 0.16
+ultimate_gain = 8

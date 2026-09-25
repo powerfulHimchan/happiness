@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_definition.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+weapon_id = &"bow_basic"
+display_name = "연습용 활"
+attack_range_m = 8.0
+attack_interval_s = PackedFloat32Array(0.75)
+damage = PackedInt32Array(14)
+projectile_speed_mps = 14.0
+skill_ids = PackedStringArray("bow_piercing", "bow_arrow_rain")

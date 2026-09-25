@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-203 검 자동 3연격, 돌진 베기와 회전 베기 검증을 담당한다.
+## CP-204 활 자동 사격, 관통 화살과 화살비 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -15,7 +15,7 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 
 @onready var player: PrototypePlayer = $Player
 @onready var target_selector: AutoTargetSelector = $Player/AutoTargetSelector
-@onready var sword_combat: SwordCombatController = $Player/SwordCombatController
+@onready var weapon_controller: PrototypeWeaponController = $Player/PrototypeWeaponController
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
 
 var _attack_sequence: int = 0
@@ -26,15 +26,16 @@ func _ready() -> void:
 	controls.jump_pressed.connect(player.request_jump)
 	controls.jump_released.connect(player.release_jump)
 	controls.evade_pressed.connect(player.request_evade)
-	controls.sword_skill_1_pressed.connect(sword_combat.request_skill_1)
-	controls.sword_skill_2_pressed.connect(sword_combat.request_skill_2)
+	controls.skill_1_pressed.connect(weapon_controller.request_skill_1)
+	controls.skill_2_pressed.connect(weapon_controller.request_skill_2)
+	controls.weapon_swap_pressed.connect(weapon_controller.toggle_test_weapon)
 	controls.damage_test_pressed.connect(_run_damage_test)
 	controls.reset_requested.connect(_reset_test)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
-	sword_combat.combat_metrics_changed.connect(controls.update_combat_metrics)
+	weapon_controller.combat_metrics_changed.connect(controls.update_combat_metrics)
 	$LeftSafeZone.body_entered.connect(
 		_on_safe_zone_entered.bind(TRACK_START, "시작 평지")
 	)
@@ -99,7 +100,7 @@ func _ready() -> void:
 		"last_stagger_s": 0.0,
 	})
 	target_selector.force_scan()
-	sword_combat.force_emit_metrics()
+	weapon_controller.force_emit_metrics()
 	queue_redraw()
 
 
@@ -179,7 +180,7 @@ func _reset_test() -> void:
 		if target != null:
 			target.reset_target()
 	target_selector.reset_selection()
-	sword_combat.reset_combat()
+	weapon_controller.reset_combat()
 	controls.release_all_inputs()
 
 

@@ -16,15 +16,24 @@ required_files=(
   "$game_root/scripts/combat/weapon_definition.gd"
   "$game_root/scripts/combat/skill_definition.gd"
   "$game_root/scripts/combat/sword_combat_controller.gd"
+  "$game_root/scripts/combat/bow_combat_controller.gd"
+  "$game_root/scripts/combat/bow_projectile.gd"
+  "$game_root/scripts/combat/prototype_weapon_controller.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
   "$game_root/data/skills/sword_dash.tres"
   "$game_root/data/skills/sword_spin.tres"
+  "$game_root/data/weapons/bow_basic.tres"
+  "$game_root/data/skills/bow_piercing.tres"
+  "$game_root/data/skills/bow_arrow_rain.tres"
+  "$game_root/scenes/combat/bow_projectile.tscn"
   "$game_root/assets/prototype_player.svg"
   "$game_root/assets/prototype_target.svg"
   "$game_root/assets/prototype_target_selection.svg"
   "$game_root/assets/sword_slash.svg"
+  "$game_root/assets/bow_arrow.svg"
+  "$game_root/assets/bow_rain.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
   "$game_root/assets/icon.svg"
@@ -130,7 +139,7 @@ fi
 
 if ! rg -q 'const RETARGET_INTERVAL_S := 0\.10' "$game_root/scripts/combat/auto_target_selector.gd" \
   || ! rg -q 'const SWITCH_DISTANCE_RATIO := 0\.80' "$game_root/scripts/combat/auto_target_selector.gd" \
-  || ! rg -q 'const ATTACK_RANGE_M := 1\.6' "$game_root/scripts/combat/auto_target_selector.gd"; then
+  || ! rg -q 'const DEFAULT_ATTACK_RANGE_M := 1\.6' "$game_root/scripts/combat/auto_target_selector.gd"; then
   echo "CP-201 targeting constants do not match the combat spec." >&2
   exit 1
 fi
@@ -201,9 +210,40 @@ if ! rg -q 'cooldown_s = 6\.0' "$game_root/data/skills/sword_dash.tres" \
 fi
 
 if ! rg -q 'name="SwordCombatController"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
-  || ! rg -q 'sword_skill_1_pressed\.connect\(sword_combat\.request_skill_1\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
+  || ! rg -q 'skill_1_pressed\.connect\(weapon_controller\.request_skill_1\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
   || ! rg -q 'player\.evade_started\.connect' "$game_root/scripts/combat/sword_combat_controller.gd"; then
   echo "CP-203 sword scene, input, or evade cancel integration is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'class_name BowCombatController' "$game_root/scripts/combat/bow_combat_controller.gd" \
+  || ! rg -q 'class_name BowProjectile' "$game_root/scripts/combat/bow_projectile.gd" \
+  || ! rg -q 'class_name PrototypeWeaponController' "$game_root/scripts/combat/prototype_weapon_controller.gd"; then
+  echo "CP-204 bow combat, projectile, or weapon test controller is missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'attack_range_m = 8\.0' "$game_root/data/weapons/bow_basic.tres" \
+  || ! rg -q 'projectile_speed_mps = 14\.0' "$game_root/data/weapons/bow_basic.tres" \
+  || ! rg -q 'damage = PackedInt32Array\(14\)' "$game_root/data/weapons/bow_basic.tres"; then
+  echo "CP-204 bow basic attack data does not match the combat spec." >&2
+  exit 1
+fi
+
+if ! rg -q 'damage = PackedInt32Array\(36\)' "$game_root/data/skills/bow_piercing.tres" \
+  || ! rg -q 'max_targets = 3' "$game_root/data/skills/bow_piercing.tres" \
+  || ! rg -q 'cooldown_s = 7\.0' "$game_root/data/skills/bow_piercing.tres" \
+  || ! rg -q 'damage = PackedInt32Array\(8, 8, 8, 8, 8, 8\)' "$game_root/data/skills/bow_arrow_rain.tres" \
+  || ! rg -q 'cooldown_s = 11\.0' "$game_root/data/skills/bow_arrow_rain.tres"; then
+  echo "CP-204 bow skill data does not match the combat spec." >&2
+  exit 1
+fi
+
+if ! rg -q 'screen_only and not is_target_on_screen' "$game_root/scripts/combat/auto_target_selector.gd" \
+  || ! rg -q 'CLOSE_DAMAGE_MULTIPLIER := 0\.80' "$game_root/scripts/combat/bow_combat_controller.gd" \
+  || ! rg -q 'weapon_swap_pressed\.connect\(weapon_controller\.toggle_test_weapon\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
+  || ! rg -q 'OffscreenTarget' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+  echo "CP-204 screen filtering, close penalty, or mobile test integration is missing." >&2
   exit 1
 fi
 

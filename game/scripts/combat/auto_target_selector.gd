@@ -1,23 +1,27 @@
 class_name AutoTargetSelector
 extends Node2D
 
-## CP-201 자동 기본 공격 대상 선택기.
-## 플레이어 전방 반원과 검 사거리 안의 최근접 적을 0.10초마다 검사한다.
+## 검과 활이 공유하는 자동 기본 공격 대상 선택기.
+## 활 프로필에서는 사거리와 함께 화면 안 대상만 허용한다.
 
 signal target_metrics_changed(metrics: Dictionary)
 
 const RETARGET_INTERVAL_S := 0.10
 const SWITCH_DISTANCE_RATIO := 0.80
-const ATTACK_RANGE_M := 1.6
+const DEFAULT_ATTACK_RANGE_M := 1.6
 const ATTACK_ORIGIN_LOCAL := Vector2(0.0, -38.0)
 
 var current_target: PrototypeTarget
+var attack_range_m: float = DEFAULT_ATTACK_RANGE_M
+var screen_only: bool = false
+var profile_name: String = "검"
 var _retarget_remaining_s: float = 0.0
 var _switch_count: int = 0
 var _scan_count: int = 0
 var _candidate_count: int = 0
 var _rear_filtered_count: int = 0
 var _range_filtered_count: int = 0
+var _screen_filtered_count: int = 0
 var _current_distance_m: float = 0.0
 var _last_decision: String = "대상 탐색 대기"
 var _last_facing: int = 1
@@ -49,6 +53,19 @@ func force_scan() -> void:
 	_retarget_remaining_s = RETARGET_INTERVAL_S
 
 
+func set_target_profile(
+	new_profile_name: String,
+	new_attack_range_m: float,
+	new_screen_only: bool
+) -> void:
+	profile_name = new_profile_name
+	attack_range_m = maxf(0.1, new_attack_range_m)
+	screen_only = new_screen_only
+	_set_current_target(null, "%s 프로필 전환" % profile_name, false)
+	force_scan()
+	queue_redraw()
+
+
 func reset_selection() -> void:
 	_set_current_target(null, "초기화", false)
 	_switch_count = 0
@@ -60,15 +77,19 @@ func reset_selection() -> void:
 func _scan_targets(scan_reason: String) -> void:
 	_scan_count += 1
 	var origin := _attack_origin_global()
-	var range_px := ATTACK_RANGE_M * PrototypePlayer.PIXELS_PER_METER
+	var range_px := attack_range_m * PrototypePlayer.PIXELS_PER_METER
 	var candidates: Array[PrototypeTarget] = []
 	var candidate_distances: Dictionary = {}
 	_rear_filtered_count = 0
 	_range_filtered_count = 0
+	_screen_filtered_count = 0
 
 	for node in get_tree().get_nodes_in_group("targetable"):
 		var target := node as PrototypeTarget
 		if target == null or not target.is_targetable():
+			continue
+		if screen_only and not is_target_on_screen(target):
+			_screen_filtered_count += 1
 			continue
 		var hit_point := target.closest_hit_point(origin)
 		var offset := hit_point - origin
@@ -120,7 +141,17 @@ func _is_current_target_valid() -> bool:
 	var offset := current_target.closest_hit_point(origin) - origin
 	if offset.x * float(player.facing_direction) <= 0.0:
 		return false
-	return offset.length() <= ATTACK_RANGE_M * PrototypePlayer.PIXELS_PER_METER
+	if screen_only and not is_target_on_screen(current_target):
+		return false
+	return offset.length() <= attack_range_m * PrototypePlayer.PIXELS_PER_METER
+
+
+func is_target_on_screen(target: PrototypeTarget, margin_px: float = 20.0) -> bool:
+	if not is_instance_valid(target):
+		return false
+	var screen_position := target.get_global_transform_with_canvas() * Vector2.ZERO
+	var visible_rect := Rect2(Vector2.ZERO, get_viewport_rect().size).grow(-margin_px)
+	return visible_rect.has_point(screen_position)
 
 
 func _set_current_target(
@@ -167,17 +198,20 @@ func _emit_metrics() -> void:
 		"target_candidate_count": _candidate_count,
 		"target_rear_filtered": _rear_filtered_count,
 		"target_range_filtered": _range_filtered_count,
+		"target_screen_filtered": _screen_filtered_count,
 		"target_switch_count": _switch_count,
 		"target_scan_count": _scan_count,
 		"target_last_decision": _last_decision,
 		"target_scan_remaining_s": _retarget_remaining_s,
-		"target_attack_range_m": ATTACK_RANGE_M,
+		"target_attack_range_m": attack_range_m,
+		"target_profile_name": profile_name,
+		"target_screen_only": screen_only,
 	})
 
 
 func _draw() -> void:
 	var center := ATTACK_ORIGIN_LOCAL
-	var radius := ATTACK_RANGE_M * PrototypePlayer.PIXELS_PER_METER
+	var radius := attack_range_m * PrototypePlayer.PIXELS_PER_METER
 	var start_angle := -PI * 0.5 if player.facing_direction > 0 else PI * 0.5
 	var end_angle := PI * 0.5 if player.facing_direction > 0 else PI * 1.5
 	draw_arc(center, radius, start_angle, end_angle, 40, Color("fff3b0", 0.34), 3.0, true)

@@ -25,6 +25,7 @@ var skill_hit_count: int = 0
 var total_damage: int = 0
 var last_combat_log: String = "공격 대기"
 var last_event_id: String = "없음"
+var active: bool = true
 var _basic_remaining_s: float = 0.0
 var _combo_idle_s: float = 0.0
 var _skill_1_cooldown_s: float = 0.0
@@ -56,6 +57,9 @@ func _physics_process(delta: float) -> void:
 	_slash_remaining_s = maxf(0.0, _slash_remaining_s - delta)
 	_update_slash_visual()
 
+	if not active:
+		_emit_metrics()
+		return
 	if _action != Action.NONE:
 		_update_skill_action(delta)
 	elif player.can_use_combat_action():
@@ -66,11 +70,26 @@ func _physics_process(delta: float) -> void:
 
 
 func request_skill_1() -> void:
+	if not active:
+		return
 	_start_skill(Action.DASH_SLASH, skill_1, _skill_1_cooldown_s)
 
 
 func request_skill_2() -> void:
+	if not active:
+		return
 	_start_skill(Action.SPIN_SLASH, skill_2, _skill_2_cooldown_s)
+
+
+func set_active(enabled: bool) -> void:
+	if active == enabled:
+		return
+	active = enabled
+	if not active:
+		_finish_action("무기 전환으로 검 공격 중단")
+		_slash_remaining_s = 0.0
+		slash_sprite.visible = false
+	_emit_metrics()
 
 
 func reset_combat() -> void:
@@ -91,6 +110,10 @@ func reset_combat() -> void:
 
 func force_emit_metrics() -> void:
 	_emit_metrics()
+
+
+func current_metrics() -> Dictionary:
+	return _build_metrics()
 
 
 func _update_basic_attack(delta: float) -> void:
@@ -328,17 +351,22 @@ func _on_player_interrupted(reason: String) -> void:
 
 
 func _emit_metrics() -> void:
+	combat_metrics_changed.emit(_build_metrics())
+
+
+func _build_metrics() -> Dictionary:
 	var target := target_selector.current_target
-	combat_metrics_changed.emit({
+	return {
+		"active_weapon_id": "sword",
 		"weapon_name": weapon.display_name if weapon != null else "없음",
 		"combat_action": _action_name(),
 		"combo_next_hit": combo_index + 1,
 		"combo_reset_remaining_s": maxf(0.0, COMBO_RESET_S - _combo_idle_s),
 		"basic_attack_remaining_s": _basic_remaining_s,
-		"sword_skill_1_name": skill_1.display_name if skill_1 != null else "스킬 1",
-		"sword_skill_1_cooldown_s": _skill_1_cooldown_s,
-		"sword_skill_2_name": skill_2.display_name if skill_2 != null else "스킬 2",
-		"sword_skill_2_cooldown_s": _skill_2_cooldown_s,
+		"skill_1_name": skill_1.display_name if skill_1 != null else "스킬 1",
+		"skill_1_cooldown_s": _skill_1_cooldown_s,
+		"skill_2_name": skill_2.display_name if skill_2 != null else "스킬 2",
+		"skill_2_cooldown_s": _skill_2_cooldown_s,
 		"combat_evade_cancel_ready": player.combat_evade_allowed,
 		"basic_attack_count": basic_attack_count,
 		"skill_hit_count": skill_hit_count,
@@ -346,4 +374,7 @@ func _emit_metrics() -> void:
 		"combat_last_log": last_combat_log,
 		"combat_last_event_id": last_event_id,
 		"combat_target_health": target.health_summary() if is_instance_valid(target) else "대상 없음",
-	})
+		"projectile_fired_count": 0,
+		"near_damage_reduced_count": 0,
+		"piercing_last_hit_count": 0,
+	}

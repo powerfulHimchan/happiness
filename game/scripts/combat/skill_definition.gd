@@ -11,6 +11,7 @@ extends Resource
 @export var damage: PackedInt32Array = PackedInt32Array()
 @export var hit_range_m: float = 0.0
 @export var movement_distance_m: float = 0.0
+@export var max_targets: int = 0
 @export var can_move: bool = false
 @export var can_turn: bool = false
 @export var evade_cancel_start_s: float = 0.0

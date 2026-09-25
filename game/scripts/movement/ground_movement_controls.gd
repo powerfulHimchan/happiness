@@ -1,7 +1,7 @@
 extends Control
 
-## CP-203용 모바일 조작 HUD.
-## 자동 3연격과 검 스킬 상태, 표적 HP와 재사용 대기시간을 표시한다.
+## CP-204용 모바일 조작 HUD.
+## 검·활 테스트 전환과 활 투사체, 근접 피해 감소, 관통 횟수를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -9,8 +9,9 @@ signal jump_released
 signal evade_pressed
 signal reset_requested
 signal damage_test_pressed
-signal sword_skill_1_pressed
-signal sword_skill_2_pressed
+signal skill_1_pressed
+signal skill_2_pressed
+signal weapon_swap_pressed
 
 const PANEL_COLOR := Color("18394b")
 const PANEL_BORDER_COLOR := Color("4f7180")
@@ -77,7 +78,7 @@ var last_combat_log_seen: String = ""
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-203 검 전투 테스트 시작")
+	_append_action_log("CP-204 활 전투 테스트 시작")
 	queue_redraw()
 
 
@@ -272,13 +273,16 @@ func _dispatch_action_command(command: PlayerCommand) -> void:
 				evade_pressed.emit()
 		PlayerCommand.Type.SKILL_1:
 			if command.phase == PlayerCommand.Phase.PRESSED:
-				sword_skill_1_pressed.emit()
+				skill_1_pressed.emit()
 		PlayerCommand.Type.SKILL_2:
 			if command.phase == PlayerCommand.Phase.PRESSED:
-				sword_skill_2_pressed.emit()
+				skill_2_pressed.emit()
 		PlayerCommand.Type.ULTIMATE:
 			if command.phase == PlayerCommand.Phase.PRESSED:
 				damage_test_pressed.emit()
+		PlayerCommand.Type.WEAPON_SWAP:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				weapon_swap_pressed.emit()
 
 
 func _handle_header_action(position: Vector2) -> bool:
@@ -362,9 +366,9 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.235, 205.0, 245.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-203 · 검 자동 3연격과 액티브 스킬", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-204 · 활 자동 사격과 투사체", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"기본 12→14→20 · 돌진 35 / 6초 · 회전 20×2 / 9초",
+		"기본 14 / 0.75초 · 관통 36 / 최대 3개체 · 화살비 8×6",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -386,23 +390,27 @@ func _draw_header() -> void:
 	)
 
 	var combat_action: String = String(movement_metrics.get("combat_action", "자동 공격"))
-	var combo_next: int = int(movement_metrics.get("combo_next_hit", 1))
+	var weapon_name: String = String(movement_metrics.get("weapon_name", "연습용 검"))
 	var target_health: String = String(movement_metrics.get("combat_target_health", "대상 없음"))
+	var screen_filtered: int = int(movement_metrics.get("target_screen_filtered", 0))
 	_draw_text(
-		"행동 %s  |  다음 기본 %d타  |  %s" % [
-			combat_action, combo_next, target_health,
+		"%s  |  행동 %s  |  %s  |  화면 밖 제외 %d" % [
+			weapon_name, combat_action, target_health, screen_filtered,
 		],
 		panel_rect.position + Vector2(22.0, 139.0),
 		18,
 		MUTED_TEXT_COLOR
 	)
 
-	var skill_1_cooldown: float = float(movement_metrics.get("sword_skill_1_cooldown_s", 0.0))
-	var skill_2_cooldown: float = float(movement_metrics.get("sword_skill_2_cooldown_s", 0.0))
+	var skill_1_name: String = String(movement_metrics.get("skill_1_name", "스킬 1"))
+	var skill_2_name: String = String(movement_metrics.get("skill_2_name", "스킬 2"))
+	var skill_1_cooldown: float = float(movement_metrics.get("skill_1_cooldown_s", 0.0))
+	var skill_2_cooldown: float = float(movement_metrics.get("skill_2_cooldown_s", 0.0))
 	var cancel_ready: bool = bool(movement_metrics.get("combat_evade_cancel_ready", true))
 	_draw_text(
-		"돌진 대기 %.1fs  |  회전 대기 %.1fs  |  회피 취소 %s" % [
-			skill_1_cooldown, skill_2_cooldown, "가능" if cancel_ready else "잠김",
+		"%s %.1fs  |  %s %.1fs  |  회피 취소 %s" % [
+			skill_1_name, skill_1_cooldown, skill_2_name, skill_2_cooldown,
+			"가능" if cancel_ready else "잠김",
 		],
 		panel_rect.position + Vector2(22.0, 172.0),
 		18,
@@ -412,10 +420,14 @@ func _draw_header() -> void:
 	var total_damage: int = int(movement_metrics.get("combat_total_damage", 0))
 	var basic_count: int = int(movement_metrics.get("basic_attack_count", 0))
 	var skill_hits: int = int(movement_metrics.get("skill_hit_count", 0))
+	var projectile_count: int = int(movement_metrics.get("projectile_fired_count", 0))
+	var close_reduced_count: int = int(movement_metrics.get("near_damage_reduced_count", 0))
+	var piercing_hits: int = int(movement_metrics.get("piercing_last_hit_count", 0))
 	var combat_log: String = String(movement_metrics.get("combat_last_log", "공격 대기"))
 	_draw_text(
-		"누적 피해 %d  |  기본 %d회 / 스킬 %d회  |  %s" % [
-			total_damage, basic_count, skill_hits, combat_log,
+		"피해 %d  |  기본 %d / 스킬 %d  |  투사체 %d · 근접감소 %d · 관통 %d  |  %s" % [
+			total_damage, basic_count, skill_hits, projectile_count,
+			close_reduced_count, piercing_hits, combat_log,
 		],
 		panel_rect.position + Vector2(22.0, 205.0),
 		17,
@@ -458,7 +470,17 @@ func _draw_action_controls() -> void:
 		var color := ACTIVE_COLOR if pressed else ACTION_COLOR
 		draw_circle(rect.get_center(), rect.size.x * 0.5, Color(color, 0.30 if pressed else 0.20))
 		draw_arc(rect.get_center(), rect.size.x * 0.5, 0.0, TAU, 44, color, 5.0, true)
-		_draw_text_centered(String(ACTION_LABELS[action_id]), rect, 18, TEXT_COLOR)
+		_draw_text_centered(_action_label(action_id), rect, 18, TEXT_COLOR)
+
+
+func _action_label(action_id: StringName) -> String:
+	if action_id == &"skill_1":
+		return String(movement_metrics.get("skill_1_button_label", ACTION_LABELS[action_id]))
+	if action_id == &"skill_2":
+		return String(movement_metrics.get("skill_2_button_label", ACTION_LABELS[action_id]))
+	if action_id == &"weapon_swap":
+		return String(movement_metrics.get("weapon_switch_label", ACTION_LABELS[action_id]))
+	return String(ACTION_LABELS[action_id])
 
 
 func _draw_pointer_markers() -> void:

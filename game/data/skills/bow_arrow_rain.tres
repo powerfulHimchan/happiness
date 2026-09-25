@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"bow_arrow_rain"
+display_name = "화살비"
+cooldown_s = 11.0
+duration_s = 1.08
+hit_times_s = PackedFloat32Array(0.3, 0.42, 0.54, 0.66, 0.78, 0.9)
+damage = PackedInt32Array(8, 8, 8, 8, 8, 8)
+hit_range_m = 2.4
+movement_distance_m = 0.0
+max_targets = 0
+can_move = true
+can_turn = true
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
