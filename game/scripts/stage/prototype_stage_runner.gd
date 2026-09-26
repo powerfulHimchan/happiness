@@ -29,7 +29,7 @@ const SECTION_OBJECTIVES: Array[String] = [
 	"검·활을 전환해 혼합 웨이브 처치",
 	"돌진을 벽으로 유도해 정예 처치",
 ]
-const SECTION_TARGET_SECONDS := PackedFloat32Array([40.0, 35.0, 35.0, 40.0, 30.0])
+const SECTION_TARGET_SECONDS: Array[float] = [40.0, 35.0, 35.0, 40.0, 30.0]
 const STAGE_TARGET_SECONDS := 180.0
 const ADVANCE_ONE_X := 1230.0
 const ADVANCE_TWO_X := 3830.0
@@ -287,7 +287,7 @@ func _actual_time_summary() -> String:
 
 func _format_seconds(value: float) -> String:
 	var total_seconds := maxi(0, int(floor(value)))
-	return "%d:%02d" % [total_seconds / 60, total_seconds % 60]
+	return "%d:%02d" % [int(total_seconds / 60), total_seconds % 60]
 
 
 func _emit_metrics() -> void:

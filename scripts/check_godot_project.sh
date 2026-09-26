@@ -364,7 +364,7 @@ if ! rg -q 'class_name EliteShockwave' "$game_root/scripts/combat/elite_shockwav
 fi
 
 if ! rg -q 'class_name PrototypeStageRunner' "$game_root/scripts/stage/prototype_stage_runner.gd" \
-  || ! rg -q 'SECTION_TARGET_SECONDS := PackedFloat32Array\(\[40\.0, 35\.0, 35\.0, 40\.0, 30\.0\]\)' "$game_root/scripts/stage/prototype_stage_runner.gd" \
+  || ! rg -q 'SECTION_TARGET_SECONDS: Array\[float\] = \[40\.0, 35\.0, 35\.0, 40\.0, 30\.0\]' "$game_root/scripts/stage/prototype_stage_runner.gd" \
   || ! rg -q 'STAGE_TARGET_SECONDS := 180\.0' "$game_root/scripts/stage/prototype_stage_runner.gd"; then
 	echo "CP-303 five-section runner or target timing is missing." >&2
 	exit 1

@@ -650,4 +650,4 @@ func _safe_area_in_viewport() -> Rect2:
 
 func _format_clock(value: float) -> String:
 	var total_seconds := maxi(0, int(floor(value)))
-	return "%d:%02d" % [total_seconds / 60, total_seconds % 60]
+	return "%d:%02d" % [int(total_seconds / 60), total_seconds % 60]
