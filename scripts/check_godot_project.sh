@@ -407,14 +407,14 @@ elif command -v godot4 >/dev/null 2>&1; then
 fi
 
 if [[ -n "$godot_command" ]]; then
-  "$godot_command" --headless --path "$game_root" --import
-  "$godot_command" --headless --path "$game_root" \
+  timeout 120s "$godot_command" --headless --path "$game_root" --import
+  timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp206_runtime_test.gd
-  "$godot_command" --headless --path "$game_root" \
+  timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp301_runtime_test.gd
-  "$godot_command" --headless --path "$game_root" \
+  timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp302_runtime_test.gd
-  "$godot_command" --headless --path "$game_root" \
+  timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp303_runtime_test.gd
   echo "Godot headless project check: OK"
 else
