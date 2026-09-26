@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스, `CP-201~301` 전투·적 구현을 거쳐 `CP-302 갑옷 멧돼지 정예`를 검증하는 프로젝트다. 현재 메인 화면에서는 정예의 돌진·벽 기절·충격파·2페이즈와 검·활 약점을 확인한다.
+`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스, `CP-201~302` 전투·적 구현을 거쳐 `CP-303 3분 스테이지 진행기`를 검증하는 프로젝트다. 현재 메인 화면에서는 전진 2개, 웨이브 2개, 정예 1개 구간의 순차 진행과 목표·실제 시간을 확인한다.
 
 ## 기준 환경
 
@@ -37,11 +37,11 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp302-armored-boar-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp303-stage-runner-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
-`CP-302` 기기 테스트에서는 기존 이동·대상·피해·검·활·필살기·일반 적 항목과 함께 아래를 확인한다.
+`CP-303` 기기 테스트에서는 기존 이동·대상·피해·검·활·필살기·적 항목과 함께 아래를 확인한다.
 
 - 화면이 가로 방향으로 고정되는가?
 - 카메라 홀과 둥근 모서리가 녹색 안전 영역 밖에 있는가?
@@ -108,6 +108,13 @@ godot --path game --editor
 - 체력 50퍼센트 아래에서 2페이즈로 전환하고 경고·기절 시간이 짧아지는가?
 - 2페이즈 충격파가 0.22초 간격으로 두 번 발생하는가?
 - 돌진과 충격파가 번갈아 나와 같은 패턴을 세 번 연속 사용하지 않는가?
+- 첫 전진 구간에서 네 관문이 닫혀 있고 첫 도달 지점에서 첫 관문만 열리는가?
+- 1차 웨이브의 풀잎 슬라임과 씨앗 포대를 모두 처치해야 두 번째 관문이 열리는가?
+- 낙하 구간을 건넌 뒤 혼합 웨이브의 세 적이 오른쪽 전장에 출현하는가?
+- 혼합 웨이브를 모두 처치한 뒤에만 갑옷 멧돼지가 출현하는가?
+- 각 구간 목표 시간과 실제 시간이 HUD에 표시되고 완료 뒤 5개 기록이 유지되는가?
+- 전체 시간이 3분을 초과해도 실패 처리 없이 현재 구간을 계속할 수 있는가?
+- 정예를 처치하면 마지막 관문이 열리고 스테이지 완료 시간이 기록되는가?
 
 ## 현재 파일
 
@@ -138,6 +145,7 @@ game/
 ├── scripts/combat/elite_shockwave.gd
 ├── scripts/combat/auto_target_selector.gd
 ├── scripts/combat/prototype_target.gd
+├── scripts/stage/prototype_stage_runner.gd
 ├── scripts/input/input_command_sandbox.gd
 ├── scripts/input/player_command.gd
 ├── scripts/input/player_command_buffer.gd
@@ -149,4 +157,4 @@ game/
 - 실제 전투 UI와 버튼 배치 편집
 - 주먹·지팡이·봉·방패 공격과 스킬
 
-다음 구현 티켓은 `CP-303 3분 스테이지 진행기`다.
+다음 구현 티켓은 `CP-304 전투 HUD와 결과 화면`이다.

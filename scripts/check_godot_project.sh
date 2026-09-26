@@ -24,9 +24,11 @@ required_files=(
   "$game_root/scripts/combat/enemy_seed_projectile.gd"
   "$game_root/scripts/combat/elite_armored_boar.gd"
   "$game_root/scripts/combat/elite_shockwave.gd"
+  "$game_root/scripts/stage/prototype_stage_runner.gd"
   "$game_root/tests/cp206_runtime_test.gd"
   "$game_root/tests/cp301_runtime_test.gd"
   "$game_root/tests/cp302_runtime_test.gd"
+  "$game_root/tests/cp303_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -361,6 +363,27 @@ if ! rg -q 'class_name EliteShockwave' "$game_root/scripts/combat/elite_shockwav
 	exit 1
 fi
 
+if ! rg -q 'class_name PrototypeStageRunner' "$game_root/scripts/stage/prototype_stage_runner.gd" \
+  || ! rg -q 'SECTION_TARGET_SECONDS := PackedFloat32Array\(\[40\.0, 35\.0, 35\.0, 40\.0, 30\.0\]\)' "$game_root/scripts/stage/prototype_stage_runner.gd" \
+  || ! rg -q 'STAGE_TARGET_SECONDS := 180\.0' "$game_root/scripts/stage/prototype_stage_runner.gd"; then
+	echo "CP-303 five-section runner or target timing is missing." >&2
+	exit 1
+fi
+
+if ! rg -q 'name="GateA"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'name="GateB"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'name="GateC"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'name="FinalGate"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'stage_runner\.stage_metrics_changed\.connect\(controls\.update_stage_metrics\)' "$game_root/scripts/movement/ground_movement_sandbox.gd"; then
+	echo "CP-303 gates or stage HUD metrics are missing." >&2
+	exit 1
+fi
+
+if rg -q 'stage_elapsed_s >= STAGE_TARGET_SECONDS.*failed' "$game_root/scripts/stage/prototype_stage_runner.gd"; then
+	echo "CP-303 target time must not cause a forced failure." >&2
+	exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -391,6 +414,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/cp301_runtime_test.gd
   "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp302_runtime_test.gd
+  "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp303_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

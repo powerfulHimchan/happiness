@@ -1,7 +1,7 @@
 extends Control
 
-## CP-302용 모바일 조작 HUD.
-## 갑옷 멧돼지의 패턴·페이즈·무기 약점과 새벽의 틈 상태를 표시한다.
+## CP-303용 모바일 조작 HUD.
+## 현재 구간의 목표·실제 시간, 관문, 적과 기존 전투 상태를 함께 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -76,12 +76,13 @@ var last_combat_log_seen: String = ""
 var last_weapon_switch_log_seen: String = ""
 var last_ultimate_log_seen: String = ""
 var last_enemy_log_seen: String = ""
+var last_stage_log_seen: String = ""
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-302 갑옷 멧돼지 테스트 시작")
+	_append_action_log("CP-303 3분 스테이지 시작")
 	queue_redraw()
 
 
@@ -213,6 +214,16 @@ func update_enemy_metrics(metrics: Dictionary) -> void:
 	and enemy_log != last_enemy_log_seen:
 		last_enemy_log_seen = enemy_log
 		_append_action_log(enemy_log)
+	queue_redraw()
+
+
+func update_stage_metrics(metrics: Dictionary) -> void:
+	for key in metrics:
+		movement_metrics[key] = metrics[key]
+	var stage_log: String = String(metrics.get("stage_last_log", ""))
+	if not stage_log.is_empty() and stage_log != last_stage_log_seen:
+		last_stage_log_seen = stage_log
+		_append_action_log(stage_log)
 	queue_redraw()
 
 
@@ -394,9 +405,27 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.235, 205.0, 245.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-302 · 갑옷 멧돼지 정예", panel_rect.position + Vector2(22.0, 40.0), 29)
+	var section_index: int = int(movement_metrics.get("stage_section_index", 1))
+	var section_count: int = int(movement_metrics.get("stage_section_count", 5))
+	var section_name: String = String(movement_metrics.get("stage_section_name", "전진 1"))
+	var stage_elapsed: float = float(movement_metrics.get("stage_elapsed_s", 0.0))
+	var stage_target: float = float(movement_metrics.get("stage_target_s", 180.0))
+	var stage_complete: bool = bool(movement_metrics.get("stage_complete", false))
 	_draw_text(
-		"돌진→벽 기절·검 약점  |  충격파·활 약점  |  체력 50% 분노",
+		"CP-303 · %s %d/%d · %s / %s" % [
+			"완료" if stage_complete else section_name,
+			section_index,
+			section_count,
+			_format_clock(stage_elapsed),
+			_format_clock(stage_target),
+		],
+		panel_rect.position + Vector2(22.0, 40.0),
+		27,
+		PASS_COLOR if stage_complete else TEXT_COLOR
+	)
+	var stage_objective: String = String(movement_metrics.get("stage_objective", "첫 관문까지 전진"))
+	_draw_text(
+		stage_objective,
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -430,19 +459,22 @@ func _draw_header() -> void:
 		MUTED_TEXT_COLOR
 	)
 
-	var elite_health: int = int(movement_metrics.get("elite_health", 0))
-	var elite_max_health: int = int(movement_metrics.get("elite_max_health", 180))
-	var elite_phase: int = int(movement_metrics.get("elite_phase", 0))
-	var elite_state: String = String(movement_metrics.get("elite_state", "미등장"))
-	var elite_pattern: String = String(movement_metrics.get("elite_pattern", "없음"))
-	var elite_weakness: String = String(movement_metrics.get("elite_weakness", "활 125%"))
+	var section_elapsed: float = float(movement_metrics.get("stage_section_elapsed_s", 0.0))
+	var section_target: float = float(movement_metrics.get("stage_section_target_s", 0.0))
+	var active_enemy_count: int = int(movement_metrics.get("stage_active_enemy_count", 0))
+	var closed_gate_count: int = int(movement_metrics.get("stage_closed_gate_count", 4))
+	var section_overtime: bool = bool(movement_metrics.get("stage_section_overtime", false))
 	_draw_text(
-		"정예 HP %d/%d  |  %d페이즈  |  %s(%s)  |  약점 %s" % [
-			elite_health, elite_max_health, elite_phase, elite_state, elite_pattern, elite_weakness,
+		"구간 %.1f/%.0fs  |  남은 적 %d  |  닫힌 관문 %d  |  %s" % [
+			section_elapsed,
+			section_target,
+			active_enemy_count,
+			closed_gate_count,
+			"목표 초과·계속 진행" if section_overtime else "목표 이내",
 		],
 		panel_rect.position + Vector2(22.0, 172.0),
 		17,
-		ACTIVE_COLOR if elite_state.contains("경고") else TEXT_COLOR
+		WAIT_COLOR if section_overtime else TEXT_COLOR
 	)
 
 	var ultimate_gauge: int = int(movement_metrics.get("ultimate_gauge", 0))
@@ -614,3 +646,8 @@ func _safe_area_in_viewport() -> Rect2:
 		size.y / float(window_pixels.y)
 	)
 	return Rect2(Vector2(safe_pixels.position) * scale, Vector2(safe_pixels.size) * scale)
+
+
+func _format_clock(value: float) -> String:
+	var total_seconds := maxi(0, int(floor(value)))
+	return "%d:%02d" % [total_seconds / 60, total_seconds % 60]

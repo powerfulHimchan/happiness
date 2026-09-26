@@ -120,6 +120,11 @@ func reset_target() -> void:
 		warning_line.visible = false
 
 
+func set_stage_spawn(spawn_position: Vector2) -> void:
+	super.set_stage_spawn(spawn_position)
+	_spawn_position = spawn_position
+
+
 func current_metrics() -> Dictionary:
 	return {
 		"enemy_key": target_key,

@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3]
+[gd_scene load_steps=38 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -27,6 +27,7 @@
 [ext_resource type="Texture2D" path="res://assets/wind_spirit.svg" id="27_wind_spirit"]
 [ext_resource type="Script" path="res://scripts/combat/elite_armored_boar.gd" id="28_elite_boar"]
 [ext_resource type="Texture2D" path="res://assets/armored_boar.svg" id="29_armored_boar"]
+[ext_resource type="Script" path="res://scripts/stage/prototype_stage_runner.gd" id="30_stage_runner"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -52,6 +53,9 @@ size = Vector2(650, 120)
 
 [sub_resource type="RectangleShape2D" id="RightSafeZoneShape"]
 size = Vector2(1000, 180)
+
+[sub_resource type="RectangleShape2D" id="StageGateShape"]
+size = Vector2(28, 1080)
 
 [node name="GroundMovementSandbox" type="Node2D"]
 script = ExtResource("1_world")
@@ -634,6 +638,52 @@ theme_override_colors/font_color = Color(1, 0.819608, 0.4, 1)
 theme_override_font_sizes/font_size = 17
 text = "정예 180/180"
 horizontal_alignment = 1
+
+[node name="StageGates" type="Node2D" parent="."]
+z_index = 30
+
+[node name="GateA" type="StaticBody2D" parent="StageGates"]
+position = Vector2(1300, 540)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StageGates/GateA"]
+shape = SubResource("StageGateShape")
+
+[node name="GateVisual" type="Polygon2D" parent="StageGates/GateA"]
+polygon = PackedVector2Array(-14, -540, 14, -540, 14, 540, -14, 540)
+color = Color(1, 0.819608, 0.4, 0.72)
+
+[node name="GateB" type="StaticBody2D" parent="StageGates"]
+position = Vector2(2200, 540)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StageGates/GateB"]
+shape = SubResource("StageGateShape")
+
+[node name="GateVisual" type="Polygon2D" parent="StageGates/GateB"]
+polygon = PackedVector2Array(-14, -540, 14, -540, 14, 540, -14, 540)
+color = Color(1, 0.819608, 0.4, 0.72)
+
+[node name="GateC" type="StaticBody2D" parent="StageGates"]
+position = Vector2(3900, 540)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StageGates/GateC"]
+shape = SubResource("StageGateShape")
+
+[node name="GateVisual" type="Polygon2D" parent="StageGates/GateC"]
+polygon = PackedVector2Array(-14, -540, 14, -540, 14, 540, -14, 540)
+color = Color(1, 0.819608, 0.4, 0.72)
+
+[node name="FinalGate" type="StaticBody2D" parent="StageGates"]
+position = Vector2(4800, 540)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StageGates/FinalGate"]
+shape = SubResource("StageGateShape")
+
+[node name="GateVisual" type="Polygon2D" parent="StageGates/FinalGate"]
+polygon = PackedVector2Array(-14, -540, 14, -540, 14, 540, -14, 540)
+color = Color(1, 0.419608, 0.368627, 0.78)
+
+[node name="StageRunner" type="Node" parent="."]
+script = ExtResource("30_stage_runner")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 layer = 10

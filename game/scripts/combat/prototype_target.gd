@@ -105,6 +105,11 @@ func health_summary() -> String:
 	]
 
 
+func set_stage_spawn(spawn_position: Vector2) -> void:
+	_origin_position = spawn_position
+	position = spawn_position
+
+
 func reset_target() -> void:
 	_elapsed_s = 0.0
 	position = _origin_position

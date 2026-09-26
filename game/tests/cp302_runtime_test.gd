@@ -10,6 +10,8 @@ func _initialize() -> void:
 func _run() -> void:
 	var sandbox := SANDBOX_SCENE.instantiate()
 	root.add_child(sandbox)
+	var stage_runner := sandbox.get_node("StageRunner") as PrototypeStageRunner
+	stage_runner.set_stage_enabled(false)
 	var player := sandbox.get_node("Player") as PrototypePlayer
 	var boar := sandbox.get_node("Targets/ArmoredBoar") as EliteArmoredBoar
 	for node in get_nodes_in_group("prototype_enemy"):

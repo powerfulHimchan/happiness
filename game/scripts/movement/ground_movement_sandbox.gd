@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-302 갑옷 멧돼지 정예의 패턴, 페이즈와 무기 약점 검증을 담당한다.
+## CP-303 3분 스테이지의 이동, 전투, 관문과 시간 기록 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -18,6 +18,7 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var weapon_controller: PrototypeWeaponController = $Player/PrototypeWeaponController
 @onready var ultimate_controller: UltimateController = $Player/UltimateController
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
+@onready var stage_runner: PrototypeStageRunner = $StageRunner
 
 var _enemy_metrics_elapsed_s: float = 0.0
 
@@ -38,6 +39,7 @@ func _ready() -> void:
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
 	weapon_controller.combat_metrics_changed.connect(controls.update_combat_metrics)
 	ultimate_controller.ultimate_metrics_changed.connect(controls.update_ultimate_metrics)
+	stage_runner.stage_metrics_changed.connect(controls.update_stage_metrics)
 	$LeftSafeZone.body_entered.connect(
 		_on_safe_zone_entered.bind(TRACK_START, "시작 평지")
 	)
@@ -104,6 +106,7 @@ func _ready() -> void:
 	target_selector.force_scan()
 	weapon_controller.force_emit_metrics()
 	ultimate_controller.force_emit_metrics()
+	stage_runner.force_emit_metrics()
 	_emit_enemy_metrics()
 	queue_redraw()
 
@@ -193,6 +196,7 @@ func _reset_test() -> void:
 	target_selector.reset_selection()
 	weapon_controller.reset_combat()
 	ultimate_controller.reset_ultimate()
+	stage_runner.reset_stage()
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	_enemy_metrics_elapsed_s = 0.0
