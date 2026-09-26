@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스, `CP-201~206` 전투·필살기를 거쳐 `CP-301 일반 적 세 종류`를 검증하는 프로젝트다. 현재 메인 화면에서는 풀잎 슬라임, 씨앗 포대와 바람 정령의 서로 다른 경고·공격·빈틈을 확인한다.
+`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스, `CP-201~301` 전투·적 구현을 거쳐 `CP-302 갑옷 멧돼지 정예`를 검증하는 프로젝트다. 현재 메인 화면에서는 정예의 돌진·벽 기절·충격파·2페이즈와 검·활 약점을 확인한다.
 
 ## 기준 환경
 
@@ -37,11 +37,11 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp301-common-enemies-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp302-armored-boar-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
-`CP-301` 기기 테스트에서는 기존 이동·대상·피해·검·활·필살기 항목과 함께 아래를 확인한다.
+`CP-302` 기기 테스트에서는 기존 이동·대상·피해·검·활·필살기·일반 적 항목과 함께 아래를 확인한다.
 
 - 화면이 가로 방향으로 고정되는가?
 - 카메라 홀과 둥근 모서리가 녹색 안전 영역 밖에 있는가?
@@ -101,6 +101,13 @@ godot --path game --editor
 - 바람 정령이 머리 높이를 유지하고 0.6초 흰 경고선 뒤 피해 10의 직선 돌진을 하는가?
 - 바람 정령이 벽에 닿거나 빗나간 뒤 1.2초 동안 멈추는가?
 - 적이 사망하면 대상에서 제외되고 남아 있던 경고 표시가 즉시 사라지는가?
+- 갑옷 멧돼지가 붉은 직선 경고 뒤 돌진하고 벽 충돌 시 1페이즈에서 2초 기절하는가?
+- 평상시 검 피해가 60퍼센트, 활 피해가 125퍼센트로 보정되는가?
+- 벽 충돌 기절 중 검 피해가 175퍼센트가 되고 HUD 약점이 바뀌는가?
+- 충격파가 지면 양쪽으로 이동하며 회피 무적으로 통과하면 정확한 회피 게이지를 주는가?
+- 체력 50퍼센트 아래에서 2페이즈로 전환하고 경고·기절 시간이 짧아지는가?
+- 2페이즈 충격파가 0.22초 간격으로 두 번 발생하는가?
+- 돌진과 충격파가 번갈아 나와 같은 패턴을 세 번 연속 사용하지 않는가?
 
 ## 현재 파일
 
@@ -127,6 +134,8 @@ game/
 ├── scripts/combat/ultimate_controller.gd
 ├── scripts/combat/prototype_enemy.gd
 ├── scripts/combat/enemy_seed_projectile.gd
+├── scripts/combat/elite_armored_boar.gd
+├── scripts/combat/elite_shockwave.gd
 ├── scripts/combat/auto_target_selector.gd
 ├── scripts/combat/prototype_target.gd
 ├── scripts/input/input_command_sandbox.gd
@@ -140,4 +149,4 @@ game/
 - 실제 전투 UI와 버튼 배치 편집
 - 주먹·지팡이·봉·방패 공격과 스킬
 
-다음 구현 티켓은 `CP-302 갑옷 멧돼지 정예`다.
+다음 구현 티켓은 `CP-303 3분 스테이지 진행기`다.

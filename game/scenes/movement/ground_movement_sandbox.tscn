@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3]
+[gd_scene load_steps=36 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -25,6 +25,8 @@
 [ext_resource type="Texture2D" path="res://assets/leaf_slime.svg" id="25_leaf_slime"]
 [ext_resource type="Texture2D" path="res://assets/seed_sack.svg" id="26_seed_sack"]
 [ext_resource type="Texture2D" path="res://assets/wind_spirit.svg" id="27_wind_spirit"]
+[ext_resource type="Script" path="res://scripts/combat/elite_armored_boar.gd" id="28_elite_boar"]
+[ext_resource type="Texture2D" path="res://assets/armored_boar.svg" id="29_armored_boar"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -566,6 +568,71 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(0.933333, 0.980392, 0.988235, 1)
 theme_override_font_sizes/font_size = 16
 text = "24/24"
+horizontal_alignment = 1
+
+[node name="ArmoredBoar" type="Node2D" parent="Targets"]
+position = Vector2(2500, 780)
+script = ExtResource("28_elite_boar")
+target_key = "갑옷 멧돼지"
+body_color = Color(1, 1, 1, 1)
+player_path = NodePath("../../Player")
+
+[node name="BodySprite" type="Sprite2D" parent="Targets/ArmoredBoar"]
+position = Vector2(0, -48)
+texture = ExtResource("29_armored_boar")
+
+[node name="SelectionSprite" type="Sprite2D" parent="Targets/ArmoredBoar"]
+visible = false
+position = Vector2(0, -48)
+z_index = 3
+scale = Vector2(1.8, 1.45)
+texture = ExtResource("8_target_selection")
+
+[node name="WarningRing" type="Sprite2D" parent="Targets/ArmoredBoar"]
+visible = false
+position = Vector2(0, -48)
+z_index = 2
+scale = Vector2(2.0, 1.6)
+modulate = Color(1, 0.42, 0.32, 0.85)
+texture = ExtResource("8_target_selection")
+
+[node name="WarningLine" type="Line2D" parent="Targets/ArmoredBoar"]
+visible = false
+z_index = 1
+width = 13.0
+default_color = Color(1, 0.42, 0.32, 0.88)
+points = PackedVector2Array(0, -42, -1100, -42)
+
+[node name="ArmorMarker" type="Polygon2D" parent="Targets/ArmoredBoar"]
+position = Vector2(0, -126)
+z_index = 4
+polygon = PackedVector2Array(-18, 0, -10, -13, 0, -19, 10, -13, 18, 0, 0, 18)
+color = Color(0.568627, 0.717647, 0.780392, 1)
+
+[node name="DamageReceiver" type="Node" parent="Targets/ArmoredBoar"]
+script = ExtResource("9_damage_receiver")
+max_health = 180
+post_hit_invulnerability_s = 0.0
+
+[node name="HealthBar" type="ProgressBar" parent="Targets/ArmoredBoar"]
+offset_left = -88.0
+offset_top = -154.0
+offset_right = 88.0
+offset_bottom = -136.0
+mouse_filter = 2
+max_value = 180.0
+value = 180.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="Targets/ArmoredBoar"]
+offset_left = -90.0
+offset_top = -135.0
+offset_right = 90.0
+offset_bottom = -110.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.819608, 0.4, 1)
+theme_override_font_sizes/font_size = 17
+text = "정예 180/180"
 horizontal_alignment = 1
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]

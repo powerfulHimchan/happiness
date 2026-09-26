@@ -56,6 +56,20 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Happiness Tale,C=KR"
 
+      - name: Run Godot project and runtime checks
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/godot-check"
+          curl -fsSL \
+            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" \
+            -o "${RUNNER_TEMP}/godot-check/godot.zip"
+          unzip -q "${RUNNER_TEMP}/godot-check/godot.zip" -d "${RUNNER_TEMP}/godot-check"
+          ln -s \
+            "${RUNNER_TEMP}/godot-check/Godot_v4.7.2-stable_linux.x86_64" \
+            "${RUNNER_TEMP}/godot-check/godot"
+          chmod +x "${RUNNER_TEMP}/godot-check/Godot_v4.7.2-stable_linux.x86_64"
+          PATH="${RUNNER_TEMP}/godot-check:${PATH}" ./scripts/check_godot_project.sh
+
       - name: Export Godot project
         id: export
         uses: firebelley/godot-export@v8.0.0
@@ -77,21 +91,21 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-cp301-common-enemies.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-cp302-armored-boar.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-cp301-common-enemies.apk
-          sha256sum dist/happiness-tale-cp301-common-enemies.apk \
-            | tee dist/happiness-tale-cp301-common-enemies.apk.sha256
+          cp "${apk_path}" dist/happiness-tale-cp302-armored-boar.apk
+          sha256sum dist/happiness-tale-cp302-armored-boar.apk \
+            | tee dist/happiness-tale-cp302-armored-boar.apk.sha256
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-cp301-common-enemies-apk
+          name: happiness-tale-cp302-armored-boar-apk
           path: |
-            dist/happiness-tale-cp301-common-enemies.apk
-            dist/happiness-tale-cp301-common-enemies.apk.sha256
+            dist/happiness-tale-cp302-armored-boar.apk
+            dist/happiness-tale-cp302-armored-boar.apk.sha256
           if-no-files-found: error
           retention-days: 14

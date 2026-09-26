@@ -57,6 +57,7 @@ func _ready() -> void:
 	super._ready()
 	_spawn_position = position
 	add_to_group("prototype_enemy")
+	add_to_group("combat_enemy")
 	warning_ring.visible = false
 	warning_line.visible = false
 	_set_state(State.IDLE, "%s 등장" % enemy_name())

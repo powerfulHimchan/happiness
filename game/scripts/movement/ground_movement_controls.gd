@@ -1,7 +1,7 @@
 extends Control
 
-## CP-301용 모바일 조작 HUD.
-## 일반 적 세 종류의 경고·행동 상태와 새벽의 틈 상태를 표시한다.
+## CP-302용 모바일 조작 HUD.
+## 갑옷 멧돼지의 패턴·페이즈·무기 약점과 새벽의 틈 상태를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -81,7 +81,7 @@ var last_enemy_log_seen: String = ""
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-301 일반 적 테스트 시작")
+	_append_action_log("CP-302 갑옷 멧돼지 테스트 시작")
 	queue_redraw()
 
 
@@ -394,9 +394,9 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.235, 205.0, 245.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-301 · 일반 적 세 종류", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-302 · 갑옷 멧돼지 정예", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"슬라임 0.35초 · 씨앗 1.0초 · 정령 0.6초 공격 경고",
+		"돌진→벽 기절·검 약점  |  충격파·활 약점  |  체력 50% 분노",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -430,18 +430,19 @@ func _draw_header() -> void:
 		MUTED_TEXT_COLOR
 	)
 
-	var enemy_alive: int = int(movement_metrics.get("enemy_alive_count", 0))
-	var enemy_total: int = int(movement_metrics.get("enemy_total_count", 3))
-	var warning_active: int = int(movement_metrics.get("enemy_warning_active_count", 0))
-	var enemy_projectiles: int = int(movement_metrics.get("enemy_projectile_count", 0))
-	var enemy_states: String = String(movement_metrics.get("enemy_state_summary", "적 상태 준비"))
+	var elite_health: int = int(movement_metrics.get("elite_health", 0))
+	var elite_max_health: int = int(movement_metrics.get("elite_max_health", 180))
+	var elite_phase: int = int(movement_metrics.get("elite_phase", 0))
+	var elite_state: String = String(movement_metrics.get("elite_state", "미등장"))
+	var elite_pattern: String = String(movement_metrics.get("elite_pattern", "없음"))
+	var elite_weakness: String = String(movement_metrics.get("elite_weakness", "활 125%"))
 	_draw_text(
-		"적 %d/%d  |  경고 %d  |  씨앗탄 %d  |  %s" % [
-			enemy_alive, enemy_total, warning_active, enemy_projectiles, enemy_states,
+		"정예 HP %d/%d  |  %d페이즈  |  %s(%s)  |  약점 %s" % [
+			elite_health, elite_max_health, elite_phase, elite_state, elite_pattern, elite_weakness,
 		],
 		panel_rect.position + Vector2(22.0, 172.0),
 		17,
-		ACTIVE_COLOR if warning_active > 0 else TEXT_COLOR
+		ACTIVE_COLOR if elite_state.contains("경고") else TEXT_COLOR
 	)
 
 	var ultimate_gauge: int = int(movement_metrics.get("ultimate_gauge", 0))

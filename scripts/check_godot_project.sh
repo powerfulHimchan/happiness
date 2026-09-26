@@ -22,8 +22,11 @@ required_files=(
   "$game_root/scripts/combat/ultimate_controller.gd"
   "$game_root/scripts/combat/prototype_enemy.gd"
   "$game_root/scripts/combat/enemy_seed_projectile.gd"
+  "$game_root/scripts/combat/elite_armored_boar.gd"
+  "$game_root/scripts/combat/elite_shockwave.gd"
   "$game_root/tests/cp206_runtime_test.gd"
   "$game_root/tests/cp301_runtime_test.gd"
+  "$game_root/tests/cp302_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -34,6 +37,7 @@ required_files=(
   "$game_root/data/skills/bow_arrow_rain.tres"
   "$game_root/scenes/combat/bow_projectile.tscn"
   "$game_root/scenes/combat/enemy_seed_projectile.tscn"
+  "$game_root/scenes/combat/elite_shockwave.tscn"
   "$game_root/assets/prototype_player.svg"
   "$game_root/assets/prototype_target.svg"
   "$game_root/assets/prototype_target_selection.svg"
@@ -44,6 +48,8 @@ required_files=(
   "$game_root/assets/leaf_slime.svg"
   "$game_root/assets/seed_sack.svg"
   "$game_root/assets/wind_spirit.svg"
+  "$game_root/assets/armored_boar.svg"
+  "$game_root/assets/elite_shockwave.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
   "$game_root/assets/icon.svg"
@@ -332,6 +338,29 @@ if ! rg -q 'name="LeafSlime"' "$game_root/scenes/movement/ground_movement_sandbo
 	exit 1
 fi
 
+if ! rg -q 'class_name EliteArmoredBoar' "$game_root/scripts/combat/elite_armored_boar.gd" \
+  || ! rg -q 'const MAX_HEALTH := 180' "$game_root/scripts/combat/elite_armored_boar.gd" \
+  || ! rg -q 'PHASE_TWO_HEALTH_RATIO := 0\.50' "$game_root/scripts/combat/elite_armored_boar.gd" \
+  || ! rg -q 'current_pattern = Pattern\.SHOCKWAVE if last_pattern == Pattern\.CHARGE else Pattern\.CHARGE' "$game_root/scripts/combat/elite_armored_boar.gd"; then
+	echo "CP-302 elite health, phase change, or anti-repeat pattern rule is missing." >&2
+	exit 1
+fi
+
+if ! rg -q 'SWORD_ARMOR_MULTIPLIER := 0\.60' "$game_root/scripts/combat/elite_armored_boar.gd" \
+  || ! rg -q 'BOW_ARMOR_MULTIPLIER := 1\.25' "$game_root/scripts/combat/elite_armored_boar.gd" \
+  || ! rg -q 'SWORD_STUN_MULTIPLIER := 1\.75' "$game_root/scripts/combat/elite_armored_boar.gd" \
+  || ! rg -q 'name="ArmoredBoar"' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+	echo "CP-302 weapon weakness values or elite scene fixture are missing." >&2
+	exit 1
+fi
+
+if ! rg -q 'class_name EliteShockwave' "$game_root/scripts/combat/elite_shockwave.gd" \
+  || ! rg -q 'State\.STUNNED' "$game_root/scripts/combat/elite_armored_boar.gd" \
+  || ! rg -q '_spawn_shockwaves' "$game_root/scripts/combat/elite_armored_boar.gd"; then
+	echo "CP-302 wall stun or shockwave integration is missing." >&2
+	exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -360,6 +389,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/cp206_runtime_test.gd
   "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp301_runtime_test.gd
+  "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp302_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

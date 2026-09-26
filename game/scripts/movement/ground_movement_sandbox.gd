@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-301 일반 적 세 종류의 경고, 공격과 빈틈 검증을 담당한다.
+## CP-302 갑옷 멧돼지 정예의 패턴, 페이즈와 무기 약점 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -208,11 +208,11 @@ func _emit_enemy_metrics() -> void:
 	var state_labels: Array[String] = []
 	var newest_log := "행동 대기"
 	var newest_event_msec := -1
-	for node in get_tree().get_nodes_in_group("prototype_enemy"):
-		var enemy := node as PrototypeEnemy
-		if enemy == null:
+	var elite_metrics: Dictionary = {}
+	for enemy in get_tree().get_nodes_in_group("combat_enemy"):
+		if not enemy.has_method("current_metrics"):
 			continue
-		var metrics := enemy.current_metrics()
+		var metrics: Dictionary = enemy.current_metrics()
 		if bool(metrics.get("enemy_alive", false)):
 			alive_count += 1
 		if bool(metrics.get("enemy_warning", false)):
@@ -227,15 +227,23 @@ func _emit_enemy_metrics() -> void:
 		if event_msec >= newest_event_msec:
 			newest_event_msec = event_msec
 			newest_log = String(metrics.get("enemy_last_log", "행동 대기"))
+		if enemy.is_in_group("elite_enemy"):
+			elite_metrics = metrics
 	controls.update_enemy_metrics({
 		"enemy_alive_count": alive_count,
-		"enemy_total_count": 3,
+		"enemy_total_count": 4,
 		"enemy_warning_active_count": warning_count,
 		"enemy_attack_total_count": attack_count,
 		"enemy_hit_total_count": hit_count,
 		"enemy_projectile_count": get_tree().get_nodes_in_group("enemy_projectile").size(),
 		"enemy_state_summary": " · ".join(state_labels),
 		"enemy_last_log": newest_log,
+		"elite_phase": int(elite_metrics.get("elite_phase", 0)),
+		"elite_state": String(elite_metrics.get("enemy_state", "미등장")),
+		"elite_pattern": String(elite_metrics.get("elite_pattern", "없음")),
+		"elite_weakness": String(elite_metrics.get("elite_weakness", "활 125%")),
+		"elite_health": int(elite_metrics.get("elite_health", 0)),
+		"elite_max_health": int(elite_metrics.get("elite_max_health", 180)),
 	})
 
 
