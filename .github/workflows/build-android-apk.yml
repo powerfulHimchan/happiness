@@ -68,7 +68,7 @@ jobs:
             "${RUNNER_TEMP}/godot-check/Godot_v4.7.2-stable_linux.x86_64" \
             "${RUNNER_TEMP}/godot-check/godot"
           chmod +x "${RUNNER_TEMP}/godot-check/Godot_v4.7.2-stable_linux.x86_64"
-          PATH="${RUNNER_TEMP}/godot-check:${PATH}" ./scripts/check_godot_project.sh
+          PATH="${RUNNER_TEMP}/godot-check:${PATH}" bash ./scripts/check_godot_project.sh
 
       - name: Export Godot project
         id: export
