@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-204 활 자동 사격, 관통 화살과 화살비 검증을 담당한다.
+## CP-206 공용 필살기 게이지와 선택적 시간 감속 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -16,9 +16,9 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var player: PrototypePlayer = $Player
 @onready var target_selector: AutoTargetSelector = $Player/AutoTargetSelector
 @onready var weapon_controller: PrototypeWeaponController = $Player/PrototypeWeaponController
+@onready var ultimate_controller: UltimateController = $Player/UltimateController
+@onready var training_enemy_projectile: TrainingEnemyProjectile = $TrainingEnemyProjectile
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
-
-var _attack_sequence: int = 0
 
 
 func _ready() -> void:
@@ -28,14 +28,18 @@ func _ready() -> void:
 	controls.evade_pressed.connect(player.request_evade)
 	controls.skill_1_pressed.connect(weapon_controller.request_skill_1)
 	controls.skill_2_pressed.connect(weapon_controller.request_skill_2)
+	controls.ultimate_pressed.connect(ultimate_controller.request_ultimate)
 	controls.weapon_swap_pressed.connect(weapon_controller.request_weapon_switch)
-	controls.damage_test_pressed.connect(_run_damage_test)
 	controls.reset_requested.connect(_reset_test)
+	training_enemy_projectile.precise_evade_registered.connect(
+		ultimate_controller.register_precise_evade
+	)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
 	weapon_controller.combat_metrics_changed.connect(controls.update_combat_metrics)
+	ultimate_controller.ultimate_metrics_changed.connect(controls.update_ultimate_metrics)
 	$LeftSafeZone.body_entered.connect(
 		_on_safe_zone_entered.bind(TRACK_START, "시작 평지")
 	)
@@ -101,6 +105,7 @@ func _ready() -> void:
 	})
 	target_selector.force_scan()
 	weapon_controller.force_emit_metrics()
+	ultimate_controller.force_emit_metrics()
 	queue_redraw()
 
 
@@ -173,7 +178,6 @@ func _draw_track_markers() -> void:
 
 
 func _reset_test() -> void:
-	_attack_sequence = 0
 	player.reset_movement_test(TRACK_START)
 	for node in get_tree().get_nodes_in_group("targetable"):
 		var target := node as PrototypeTarget
@@ -181,39 +185,9 @@ func _reset_test() -> void:
 			target.reset_target()
 	target_selector.reset_selection()
 	weapon_controller.reset_combat()
+	ultimate_controller.reset_ultimate()
+	training_enemy_projectile.reset_projectile()
 	controls.release_all_inputs()
-
-
-func _run_damage_test() -> void:
-	var event := _create_damage_event(
-		&"incoming_training_hit",
-		12,
-		0.18,
-		PackedStringArray(["contact", "physical", "test"])
-	)
-	var result := player.receive_damage(event)
-	controls.report_damage_test("연습 피격 12 → %s" % DamageReceiver.result_name(result))
-
-
-func _create_damage_event(
-	attack_id: StringName,
-	damage: int,
-	stagger_s: float,
-	tags: PackedStringArray
-) -> DamageEvent:
-	_attack_sequence += 1
-	var event := DamageEvent.new()
-	event.event_id = StringName("training_dummy:%s:%d:hit0" % [
-		String(attack_id),
-		_attack_sequence,
-	])
-	event.attacker_id = &"training_dummy"
-	event.attack_id = attack_id
-	event.damage = damage
-	event.stagger_s = stagger_s
-	event.tags = tags
-	event.source_position = player.global_position + Vector2(180.0, -38.0)
-	return event
 
 
 func _on_safe_zone_entered(

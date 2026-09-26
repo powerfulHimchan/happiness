@@ -20,6 +20,7 @@ var _elapsed_s: float = 0.0
 var _selected: bool = false
 var _targetable: bool = true
 var _hit_flash_remaining_s: float = 0.0
+var _enemy_time_scale: float = 1.0
 var last_damage_log: String = "피해 기록 대기"
 
 @onready var body_sprite: Sprite2D = $BodySprite
@@ -32,18 +33,21 @@ var last_damage_log: String = "피해 기록 대기"
 func _ready() -> void:
 	_origin_position = position
 	add_to_group("targetable")
+	add_to_group("enemy_time_scaled")
+	add_to_group("enemy_actor")
 	body_sprite.modulate = body_color
 	selection_sprite.visible = _selected
 	_refresh_status()
 
 
 func _process(delta: float) -> void:
-	damage_receiver.tick(delta)
-	_hit_flash_remaining_s = maxf(0.0, _hit_flash_remaining_s - delta)
+	var scaled_delta := delta * _enemy_time_scale
+	damage_receiver.tick(scaled_delta)
+	_hit_flash_remaining_s = maxf(0.0, _hit_flash_remaining_s - scaled_delta)
 	_update_visual()
 	if patrol_amplitude_px <= 0.0 or patrol_period_s <= 0.0:
 		return
-	_elapsed_s += delta
+	_elapsed_s += scaled_delta
 	var phase := (_elapsed_s / patrol_period_s) * TAU + patrol_phase_radians
 	position.x = _origin_position.x + sin(phase) * patrol_amplitude_px
 
@@ -53,6 +57,10 @@ func set_selected(selected: bool) -> void:
 		return
 	_selected = selected
 	selection_sprite.visible = selected
+
+
+func set_enemy_time_scale(value: float) -> void:
+	_enemy_time_scale = clampf(value, 0.0, 1.0)
 
 
 func is_targetable() -> bool:
@@ -99,6 +107,7 @@ func reset_target() -> void:
 	_targetable = true
 	damage_receiver.reset()
 	_hit_flash_remaining_s = 0.0
+	_enemy_time_scale = 1.0
 	last_damage_log = "피해 기록 대기"
 	set_selected(false)
 	_refresh_status()

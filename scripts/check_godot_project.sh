@@ -19,6 +19,9 @@ required_files=(
   "$game_root/scripts/combat/bow_combat_controller.gd"
   "$game_root/scripts/combat/bow_projectile.gd"
   "$game_root/scripts/combat/prototype_weapon_controller.gd"
+  "$game_root/scripts/combat/ultimate_controller.gd"
+  "$game_root/scripts/combat/training_enemy_projectile.gd"
+  "$game_root/tests/cp206_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -34,6 +37,7 @@ required_files=(
   "$game_root/assets/sword_slash.svg"
   "$game_root/assets/bow_arrow.svg"
   "$game_root/assets/bow_rain.svg"
+  "$game_root/assets/enemy_projectile.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
   "$game_root/assets/icon.svg"
@@ -182,9 +186,8 @@ if ! rg -q 'class_name DamageReceiver' "$game_root/scripts/combat/damage_receive
 fi
 
 if ! rg -q 'name="DamageReceiver"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
-  || ! rg -q 'player\.receive_damage\(event\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
-  || ! rg -q 'damage_test_pressed' "$game_root/scripts/movement/ground_movement_controls.gd"; then
-  echo "CP-202 scene integration and mobile damage tests are missing." >&2
+  || ! rg -q 'player\.receive_damage\(event\)' "$game_root/scripts/combat/training_enemy_projectile.gd"; then
+  echo "CP-202 scene integration and incoming damage path are missing." >&2
   exit 1
 fi
 
@@ -268,6 +271,35 @@ if ! rg -q '_basic_remaining_s = maxf\(0\.0, _basic_remaining_s - delta\)' "$gam
   exit 1
 fi
 
+if ! rg -q 'class_name UltimateController' "$game_root/scripts/combat/ultimate_controller.gd" \
+  || ! rg -q 'const MAX_GAUGE := 100' "$game_root/scripts/combat/ultimate_controller.gd" \
+  || ! rg -q 'const BASIC_HIT_GAIN := 4' "$game_root/scripts/combat/ultimate_controller.gd" \
+  || ! rg -q 'const SKILL_HIT_GAIN := 8' "$game_root/scripts/combat/ultimate_controller.gd" \
+  || ! rg -q 'const PRECISE_EVADE_GAIN := 12' "$game_root/scripts/combat/ultimate_controller.gd"; then
+  echo "CP-206 ultimate gauge rules are missing." >&2
+  exit 1
+fi
+
+if ! rg -q 'const DURATION_S := 3\.0' "$game_root/scripts/combat/ultimate_controller.gd" \
+  || ! rg -q 'const ENEMY_TIME_SCALE := 0\.15' "$game_root/scripts/combat/ultimate_controller.gd" \
+  || ! rg -q 'get_nodes_in_group\("enemy_time_scaled"\)' "$game_root/scripts/combat/ultimate_controller.gd"; then
+  echo "CP-206 selective time slowdown is missing." >&2
+  exit 1
+fi
+
+if rg -q 'enemy_time_scale' "$game_root/scripts/combat/bow_projectile.gd" \
+  || rg -q 'Engine\.time_scale' "$game_root/scripts/combat/ultimate_controller.gd"; then
+  echo "CP-206 must not slow the player or player projectiles globally." >&2
+  exit 1
+fi
+
+if ! rg -q 'ultimate_pressed\.connect\(ultimate_controller\.request_ultimate\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
+  || ! rg -q 'name="TrainingEnemyProjectile"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'ultimate_gauge_ratio' "$game_root/scripts/movement/ground_movement_controls.gd"; then
+  echo "CP-206 scene, input, training projectile, or HUD integration is missing." >&2
+  exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -292,6 +324,8 @@ fi
 
 if [[ -n "$godot_command" ]]; then
   "$godot_command" --headless --path "$game_root" --editor --quit-after 1
+  "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp206_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

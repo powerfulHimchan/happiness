@@ -1,16 +1,16 @@
 extends Control
 
-## CP-205용 모바일 조작 HUD.
-## 전환 제한, 예약 입력과 두 무기의 독립 대기시간을 표시한다.
+## CP-206용 모바일 조작 HUD.
+## 새벽의 틈 게이지와 적 전용 시간 감속 상태를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
 signal jump_released
 signal evade_pressed
 signal reset_requested
-signal damage_test_pressed
 signal skill_1_pressed
 signal skill_2_pressed
+signal ultimate_pressed
 signal weapon_swap_pressed
 
 const PANEL_COLOR := Color("18394b")
@@ -38,7 +38,7 @@ const ACTION_LABELS := {
 	&"evade": "회피",
 	&"skill_1": "돌진",
 	&"skill_2": "회전",
-	&"ultimate": "피격 12",
+	&"ultimate": "새벽 0%",
 	&"weapon_swap": "전환",
 }
 const ACTION_TYPES := {
@@ -74,12 +74,13 @@ var last_target_key_seen: String = "없음"
 var last_damage_log_seen: String = ""
 var last_combat_log_seen: String = ""
 var last_weapon_switch_log_seen: String = ""
+var last_ultimate_log_seen: String = ""
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-205 두 무기 전환 테스트 시작")
+	_append_action_log("CP-206 새벽의 틈 테스트 시작")
 	queue_redraw()
 
 
@@ -190,8 +191,15 @@ func update_combat_metrics(metrics: Dictionary) -> void:
 	queue_redraw()
 
 
-func report_damage_test(message: String) -> void:
-	_append_action_log(message)
+func update_ultimate_metrics(metrics: Dictionary) -> void:
+	for key in metrics:
+		movement_metrics[key] = metrics[key]
+	var ultimate_log: String = String(metrics.get("ultimate_last_log", ""))
+	if not ultimate_log.is_empty() \
+	and ultimate_log != "게이지 충전 대기" \
+	and ultimate_log != last_ultimate_log_seen:
+		last_ultimate_log_seen = ultimate_log
+		_append_action_log(ultimate_log)
 	queue_redraw()
 
 
@@ -286,7 +294,7 @@ func _dispatch_action_command(command: PlayerCommand) -> void:
 				skill_2_pressed.emit()
 		PlayerCommand.Type.ULTIMATE:
 			if command.phase == PlayerCommand.Phase.PRESSED:
-				damage_test_pressed.emit()
+				ultimate_pressed.emit()
 		PlayerCommand.Type.WEAPON_SWAP:
 			if command.phase == PlayerCommand.Phase.PRESSED:
 				weapon_swap_pressed.emit()
@@ -373,9 +381,9 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.235, 205.0, 245.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-205 · 검·활 두 무기 전환", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-206 · 공용 필살기 새벽의 틈", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"전환 제한 0.50초 · 공격 대기시간 유지 · 무기별 스킬 쿨다운 유지",
+		"3초 동안 적과 적 투사체 15% · 플레이어와 활 투사체 100%",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -409,31 +417,30 @@ func _draw_header() -> void:
 		MUTED_TEXT_COLOR
 	)
 
-	var switch_remaining: float = float(movement_metrics.get("weapon_switch_remaining_s", 0.0))
-	var switch_buffered: bool = bool(movement_metrics.get("weapon_switch_buffered", false))
-	var switch_buffer_remaining: float = float(movement_metrics.get("weapon_switch_buffer_remaining_s", 0.0))
-	var switch_count: int = int(movement_metrics.get("weapon_switch_count", 0))
-	var blocked_count: int = int(movement_metrics.get("weapon_switch_blocked_count", 0))
-	var sword_basic: float = float(movement_metrics.get("sword_basic_remaining_s", 0.0))
-	var bow_basic: float = float(movement_metrics.get("bow_basic_remaining_s", 0.0))
+	var ultimate_gauge: int = int(movement_metrics.get("ultimate_gauge", 0))
+	var ultimate_active: bool = bool(movement_metrics.get("ultimate_active", false))
+	var ultimate_remaining: float = float(movement_metrics.get("ultimate_remaining_s", 0.0))
+	var enemy_scale: float = float(movement_metrics.get("enemy_time_scale", 1.0))
+	var enemy_count: int = int(movement_metrics.get("ultimate_enemy_actor_count", 0))
+	var projectile_count: int = int(movement_metrics.get("ultimate_enemy_projectile_count", 0))
 	_draw_text(
-		"전환 %.2fs  |  예약 %s %.2fs  |  성공 %d / 차단 %d  |  기본 검 %.2f · 활 %.2f" % [
-			switch_remaining, "ON" if switch_buffered else "OFF", switch_buffer_remaining,
-			switch_count, blocked_count, sword_basic, bow_basic,
+		"새벽의 틈 %d%%  |  %s %.2fs  |  적 시간 %.0f%%  |  적 %d + 투사체 %d" % [
+			ultimate_gauge, "발동" if ultimate_active else "대기", ultimate_remaining,
+			enemy_scale * 100.0, enemy_count, projectile_count,
 		],
 		panel_rect.position + Vector2(22.0, 172.0),
 		18,
-		TEXT_COLOR
+		ACTIVE_COLOR if ultimate_active or ultimate_gauge >= 100 else TEXT_COLOR
 	)
 
 	var sword_skill_1: float = float(movement_metrics.get("sword_skill_1_cooldown_s", 0.0))
 	var sword_skill_2: float = float(movement_metrics.get("sword_skill_2_cooldown_s", 0.0))
 	var bow_skill_1: float = float(movement_metrics.get("bow_skill_1_cooldown_s", 0.0))
 	var bow_skill_2: float = float(movement_metrics.get("bow_skill_2_cooldown_s", 0.0))
-	var switch_log: String = String(movement_metrics.get("weapon_switch_last_log", "전환 대기"))
+	var ultimate_log: String = String(movement_metrics.get("ultimate_last_log", "게이지 충전 대기"))
 	_draw_text(
-		"검 스킬 %.1f / %.1f  |  활 스킬 %.1f / %.1f  |  %s" % [
-			sword_skill_1, sword_skill_2, bow_skill_1, bow_skill_2, switch_log,
+		"검 %.1f / %.1f  |  활 %.1f / %.1f  |  %s" % [
+			sword_skill_1, sword_skill_2, bow_skill_1, bow_skill_2, ultimate_log,
 		],
 		panel_rect.position + Vector2(22.0, 205.0),
 		17,
@@ -473,9 +480,24 @@ func _draw_action_controls() -> void:
 	for action_id in ACTION_ORDER:
 		var rect: Rect2 = action_rects[action_id]
 		var pressed := control_pointers.has(action_id)
-		var color := ACTIVE_COLOR if pressed else ACTION_COLOR
+		var ultimate_ready := action_id == &"ultimate" \
+			and bool(movement_metrics.get("ultimate_ready", false))
+		var ultimate_active := action_id == &"ultimate" \
+			and bool(movement_metrics.get("ultimate_active", false))
+		var color := ACTIVE_COLOR if pressed or ultimate_ready or ultimate_active else ACTION_COLOR
 		draw_circle(rect.get_center(), rect.size.x * 0.5, Color(color, 0.30 if pressed else 0.20))
 		draw_arc(rect.get_center(), rect.size.x * 0.5, 0.0, TAU, 44, color, 5.0, true)
+		if action_id == &"ultimate":
+			var ratio: float = float(movement_metrics.get("ultimate_gauge_ratio", 0.0))
+			if ultimate_active:
+				var duration: float = float(movement_metrics.get("ultimate_duration_s", 3.0))
+				var remaining: float = float(movement_metrics.get("ultimate_remaining_s", 0.0))
+				ratio = remaining / maxf(duration, 0.001)
+			draw_arc(
+				rect.get_center(), rect.size.x * 0.5 - 10.0,
+				-PI * 0.5, -PI * 0.5 + TAU * clampf(ratio, 0.0, 1.0),
+				48, ACTIVE_COLOR, 9.0, true
+			)
 		_draw_text_centered(_action_label(action_id), rect, 18, TEXT_COLOR)
 
 
@@ -486,6 +508,12 @@ func _action_label(action_id: StringName) -> String:
 		return String(movement_metrics.get("skill_2_button_label", ACTION_LABELS[action_id]))
 	if action_id == &"weapon_swap":
 		return String(movement_metrics.get("weapon_switch_label", ACTION_LABELS[action_id]))
+	if action_id == &"ultimate":
+		if bool(movement_metrics.get("ultimate_active", false)):
+			return "새벽 %.1f" % float(movement_metrics.get("ultimate_remaining_s", 0.0))
+		if bool(movement_metrics.get("ultimate_ready", false)):
+			return "새벽 준비"
+		return "새벽 %d%%" % int(movement_metrics.get("ultimate_gauge", 0))
 	return String(ACTION_LABELS[action_id])
 
 

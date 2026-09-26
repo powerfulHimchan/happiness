@@ -14,5 +14,7 @@ game/.godot/
 game/android/
 game/build/
 build/android/
+*.uid
+*.import
 *.apk
 *.aab

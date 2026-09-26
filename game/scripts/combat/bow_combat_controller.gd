@@ -4,6 +4,7 @@ extends Node2D
 ## CP-204 활 자동 사격, 관통 화살과 화살비를 관리한다.
 
 signal combat_metrics_changed(metrics: Dictionary)
+signal hit_registered(is_skill: bool, target: PrototypeTarget, damage: int)
 
 enum Action {
 	NONE,
@@ -255,6 +256,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			applied_targets += 1
 			skill_hit_count += 1
 			total_damage += event.damage
+			hit_registered.emit(true, rain_target, event.damage)
 	last_combat_log = "화살비 %d/6 · 피해 8 · %d개체" % [
 		hit_index + 1,
 		applied_targets,
@@ -299,9 +301,11 @@ func _on_projectile_hit(
 ) -> void:
 	if result == DamageReceiver.Result.APPLIED:
 		total_damage += damage
-		if projectile_id == _piercing_projectile_id:
+		var is_skill := projectile_id == _piercing_projectile_id
+		if is_skill:
 			piercing_last_hit_count += 1
 			skill_hit_count += 1
+		hit_registered.emit(is_skill, target, damage)
 	last_combat_log = "%s 적중 · 피해 %d · %s" % [
 		target.target_key,
 		damage,

@@ -4,6 +4,7 @@ extends Node2D
 ## CP-203 검 자동 3연격과 두 액티브 스킬의 실행 상태를 관리한다.
 
 signal combat_metrics_changed(metrics: Dictionary)
+signal hit_registered(is_skill: bool, target: PrototypeTarget, damage: int)
 
 enum Action {
 	NONE,
@@ -289,6 +290,7 @@ func _damage_target(
 	var result := target.receive_damage(event)
 	if result == DamageReceiver.Result.APPLIED:
 		total_damage += damage
+		hit_registered.emit(attack_id != &"sword_basic", target, damage)
 	return result
 
 

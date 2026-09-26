@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -20,6 +20,9 @@
 [ext_resource type="Resource" path="res://data/skills/bow_piercing.tres" id="18_bow_piercing"]
 [ext_resource type="Resource" path="res://data/skills/bow_arrow_rain.tres" id="19_bow_rain_skill"]
 [ext_resource type="Texture2D" path="res://assets/bow_rain.svg" id="20_bow_rain_texture"]
+[ext_resource type="Script" path="res://scripts/combat/ultimate_controller.gd" id="21_ultimate_controller"]
+[ext_resource type="Script" path="res://scripts/combat/training_enemy_projectile.gd" id="22_enemy_projectile"]
+[ext_resource type="Texture2D" path="res://assets/enemy_projectile.svg" id="23_enemy_projectile_texture"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -164,6 +167,18 @@ texture = ExtResource("20_bow_rain_texture")
 
 [node name="PrototypeWeaponController" type="Node" parent="Player"]
 script = ExtResource("16_weapon_controller")
+
+[node name="UltimateController" type="Node" parent="Player"]
+script = ExtResource("21_ultimate_controller")
+
+[node name="TrainingEnemyProjectile" type="Node2D" parent="."]
+position = Vector2(520, 748)
+z_index = 30
+script = ExtResource("22_enemy_projectile")
+player_path = NodePath("../Player")
+
+[node name="ProjectileSprite" type="Sprite2D" parent="TrainingEnemyProjectile"]
+texture = ExtResource("23_enemy_projectile_texture")
 
 [node name="Targets" type="Node2D" parent="."]
 z_index = 40
