@@ -20,8 +20,10 @@ required_files=(
   "$game_root/scripts/combat/bow_projectile.gd"
   "$game_root/scripts/combat/prototype_weapon_controller.gd"
   "$game_root/scripts/combat/ultimate_controller.gd"
-  "$game_root/scripts/combat/training_enemy_projectile.gd"
+  "$game_root/scripts/combat/prototype_enemy.gd"
+  "$game_root/scripts/combat/enemy_seed_projectile.gd"
   "$game_root/tests/cp206_runtime_test.gd"
+  "$game_root/tests/cp301_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -31,13 +33,17 @@ required_files=(
   "$game_root/data/skills/bow_piercing.tres"
   "$game_root/data/skills/bow_arrow_rain.tres"
   "$game_root/scenes/combat/bow_projectile.tscn"
+  "$game_root/scenes/combat/enemy_seed_projectile.tscn"
   "$game_root/assets/prototype_player.svg"
   "$game_root/assets/prototype_target.svg"
   "$game_root/assets/prototype_target_selection.svg"
   "$game_root/assets/sword_slash.svg"
   "$game_root/assets/bow_arrow.svg"
   "$game_root/assets/bow_rain.svg"
-  "$game_root/assets/enemy_projectile.svg"
+  "$game_root/assets/enemy_seed_projectile.svg"
+  "$game_root/assets/leaf_slime.svg"
+  "$game_root/assets/seed_sack.svg"
+  "$game_root/assets/wind_spirit.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
   "$game_root/assets/icon.svg"
@@ -186,7 +192,7 @@ if ! rg -q 'class_name DamageReceiver' "$game_root/scripts/combat/damage_receive
 fi
 
 if ! rg -q 'name="DamageReceiver"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
-  || ! rg -q 'player\.receive_damage\(event\)' "$game_root/scripts/combat/training_enemy_projectile.gd"; then
+  || ! rg -q 'player\.receive_damage\(event\)' "$game_root/scripts/combat/enemy_seed_projectile.gd"; then
   echo "CP-202 scene integration and incoming damage path are missing." >&2
   exit 1
 fi
@@ -294,10 +300,36 @@ if rg -q 'enemy_time_scale' "$game_root/scripts/combat/bow_projectile.gd" \
 fi
 
 if ! rg -q 'ultimate_pressed\.connect\(ultimate_controller\.request_ultimate\)' "$game_root/scripts/movement/ground_movement_sandbox.gd" \
-  || ! rg -q 'name="TrainingEnemyProjectile"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'class_name EnemySeedProjectile' "$game_root/scripts/combat/enemy_seed_projectile.gd" \
   || ! rg -q 'ultimate_gauge_ratio' "$game_root/scripts/movement/ground_movement_controls.gd"; then
-  echo "CP-206 scene, input, training projectile, or HUD integration is missing." >&2
-  exit 1
+	echo "CP-206 scene, input, enemy projectile, or HUD integration is missing." >&2
+	exit 1
+fi
+
+if ! rg -q 'class_name PrototypeEnemy' "$game_root/scripts/combat/prototype_enemy.gd" \
+  || ! rg -q 'const SLIME_WARNING_S := 0\.35' "$game_root/scripts/combat/prototype_enemy.gd" \
+  || ! rg -q 'const SEED_WARNING_S := 1\.00' "$game_root/scripts/combat/prototype_enemy.gd" \
+  || ! rg -q 'const WIND_WARNING_S := 0\.60' "$game_root/scripts/combat/prototype_enemy.gd"; then
+	echo "CP-301 enemy types or warning durations are missing." >&2
+	exit 1
+fi
+
+if ! rg -q 'const SLIME_DAMAGE := 8' "$game_root/scripts/combat/prototype_enemy.gd" \
+  || ! rg -q 'const SEED_DAMAGE := 7' "$game_root/scripts/combat/prototype_enemy.gd" \
+  || ! rg -q 'const WIND_DAMAGE := 10' "$game_root/scripts/combat/prototype_enemy.gd" \
+  || ! rg -q 'SEED_RECOVERY_S := 1\.00' "$game_root/scripts/combat/prototype_enemy.gd" \
+  || ! rg -q 'WIND_RECOVERY_S := 1\.20' "$game_root/scripts/combat/prototype_enemy.gd"; then
+	echo "CP-301 damage or recovery values do not match the combat spec." >&2
+	exit 1
+fi
+
+if ! rg -q 'name="LeafSlime"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'name="SeedSack"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'name="WindSpirit"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'name="WarningRing"' "$game_root/scenes/movement/ground_movement_sandbox.tscn" \
+  || ! rg -q 'name="WarningLine"' "$game_root/scenes/movement/ground_movement_sandbox.tscn"; then
+	echo "CP-301 enemy fixtures or warning visuals are missing." >&2
+	exit 1
 fi
 
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
@@ -323,9 +355,11 @@ elif command -v godot4 >/dev/null 2>&1; then
 fi
 
 if [[ -n "$godot_command" ]]; then
-  "$godot_command" --headless --path "$game_root" --editor --quit-after 1
+  "$godot_command" --headless --path "$game_root" --import
   "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp206_runtime_test.gd
+  "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp301_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

@@ -1,7 +1,7 @@
 extends Control
 
-## CP-206용 모바일 조작 HUD.
-## 새벽의 틈 게이지와 적 전용 시간 감속 상태를 표시한다.
+## CP-301용 모바일 조작 HUD.
+## 일반 적 세 종류의 경고·행동 상태와 새벽의 틈 상태를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -75,12 +75,13 @@ var last_damage_log_seen: String = ""
 var last_combat_log_seen: String = ""
 var last_weapon_switch_log_seen: String = ""
 var last_ultimate_log_seen: String = ""
+var last_enemy_log_seen: String = ""
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-206 새벽의 틈 테스트 시작")
+	_append_action_log("CP-301 일반 적 테스트 시작")
 	queue_redraw()
 
 
@@ -200,6 +201,18 @@ func update_ultimate_metrics(metrics: Dictionary) -> void:
 	and ultimate_log != last_ultimate_log_seen:
 		last_ultimate_log_seen = ultimate_log
 		_append_action_log(ultimate_log)
+	queue_redraw()
+
+
+func update_enemy_metrics(metrics: Dictionary) -> void:
+	for key in metrics:
+		movement_metrics[key] = metrics[key]
+	var enemy_log: String = String(metrics.get("enemy_last_log", ""))
+	if not enemy_log.is_empty() \
+	and enemy_log != "행동 대기" \
+	and enemy_log != last_enemy_log_seen:
+		last_enemy_log_seen = enemy_log
+		_append_action_log(enemy_log)
 	queue_redraw()
 
 
@@ -381,9 +394,9 @@ func _draw_header() -> void:
 		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.235, 205.0, 245.0))
 	)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
-	_draw_text("CP-206 · 공용 필살기 새벽의 틈", panel_rect.position + Vector2(22.0, 40.0), 29)
+	_draw_text("CP-301 · 일반 적 세 종류", panel_rect.position + Vector2(22.0, 40.0), 29)
 	_draw_text(
-		"3초 동안 적과 적 투사체 15% · 플레이어와 활 투사체 100%",
+		"슬라임 0.35초 · 씨앗 1.0초 · 정령 0.6초 공격 경고",
 		panel_rect.position + Vector2(22.0, 72.0),
 		18,
 		MUTED_TEXT_COLOR
@@ -417,34 +430,32 @@ func _draw_header() -> void:
 		MUTED_TEXT_COLOR
 	)
 
+	var enemy_alive: int = int(movement_metrics.get("enemy_alive_count", 0))
+	var enemy_total: int = int(movement_metrics.get("enemy_total_count", 3))
+	var warning_active: int = int(movement_metrics.get("enemy_warning_active_count", 0))
+	var enemy_projectiles: int = int(movement_metrics.get("enemy_projectile_count", 0))
+	var enemy_states: String = String(movement_metrics.get("enemy_state_summary", "적 상태 준비"))
+	_draw_text(
+		"적 %d/%d  |  경고 %d  |  씨앗탄 %d  |  %s" % [
+			enemy_alive, enemy_total, warning_active, enemy_projectiles, enemy_states,
+		],
+		panel_rect.position + Vector2(22.0, 172.0),
+		17,
+		ACTIVE_COLOR if warning_active > 0 else TEXT_COLOR
+	)
+
 	var ultimate_gauge: int = int(movement_metrics.get("ultimate_gauge", 0))
 	var ultimate_active: bool = bool(movement_metrics.get("ultimate_active", false))
 	var ultimate_remaining: float = float(movement_metrics.get("ultimate_remaining_s", 0.0))
 	var enemy_scale: float = float(movement_metrics.get("enemy_time_scale", 1.0))
-	var enemy_count: int = int(movement_metrics.get("ultimate_enemy_actor_count", 0))
-	var projectile_count: int = int(movement_metrics.get("ultimate_enemy_projectile_count", 0))
 	_draw_text(
-		"새벽의 틈 %d%%  |  %s %.2fs  |  적 시간 %.0f%%  |  적 %d + 투사체 %d" % [
+		"새벽의 틈 %d%%  |  %s %.2fs  |  적 계열 시간 %.0f%%" % [
 			ultimate_gauge, "발동" if ultimate_active else "대기", ultimate_remaining,
-			enemy_scale * 100.0, enemy_count, projectile_count,
-		],
-		panel_rect.position + Vector2(22.0, 172.0),
-		18,
-		ACTIVE_COLOR if ultimate_active or ultimate_gauge >= 100 else TEXT_COLOR
-	)
-
-	var sword_skill_1: float = float(movement_metrics.get("sword_skill_1_cooldown_s", 0.0))
-	var sword_skill_2: float = float(movement_metrics.get("sword_skill_2_cooldown_s", 0.0))
-	var bow_skill_1: float = float(movement_metrics.get("bow_skill_1_cooldown_s", 0.0))
-	var bow_skill_2: float = float(movement_metrics.get("bow_skill_2_cooldown_s", 0.0))
-	var ultimate_log: String = String(movement_metrics.get("ultimate_last_log", "게이지 충전 대기"))
-	_draw_text(
-		"검 %.1f / %.1f  |  활 %.1f / %.1f  |  %s" % [
-			sword_skill_1, sword_skill_2, bow_skill_1, bow_skill_2, ultimate_log,
+			enemy_scale * 100.0,
 		],
 		panel_rect.position + Vector2(22.0, 205.0),
 		17,
-		PASS_COLOR
+		ACTIVE_COLOR if ultimate_active or ultimate_gauge >= 100 else TEXT_COLOR
 	)
 
 	_draw_button(fps_60_rect, "60 FPS", Engine.max_fps == 60)

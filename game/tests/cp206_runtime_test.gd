@@ -1,6 +1,7 @@
 extends SceneTree
 
 const SANDBOX_SCENE := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+const ENEMY_PROJECTILE_SCENE := preload("res://scenes/combat/enemy_seed_projectile.tscn")
 
 
 func _initialize() -> void:
@@ -16,8 +17,11 @@ func _run() -> void:
 	var ultimate := sandbox.get_node("Player/UltimateController") as UltimateController
 	var sword := sandbox.get_node("Player/SwordCombatController") as SwordCombatController
 	var player := sandbox.get_node("Player") as PrototypePlayer
-	var target := sandbox.get_node("Targets/RearTarget") as PrototypeTarget
-	var enemy_projectile := sandbox.get_node("TrainingEnemyProjectile") as TrainingEnemyProjectile
+	var target := sandbox.get_node("Targets/LeafSlime") as PrototypeEnemy
+	var enemy_projectile := ENEMY_PROJECTILE_SCENE.instantiate() as EnemySeedProjectile
+	enemy_projectile.configure("cp206:slowdown", Vector2.RIGHT)
+	sandbox.add_child(enemy_projectile)
+	enemy_projectile.global_position = Vector2(1400.0, 500.0)
 
 	for _index in 25:
 		sword.hit_registered.emit(false, target, 12)
@@ -28,7 +32,7 @@ func _run() -> void:
 	await physics_frame
 	if not _assert_equal(ultimate.gauge, 0, "발동 시 게이지 소모"):
 		return
-	if not _assert_near(float(target.get("_enemy_time_scale")), 0.15, "적 시간 15%"):
+	if not _assert_near(target.enemy_time_scale(), 0.15, "적 시간 15%"):
 		return
 	if not _assert_near(enemy_projectile.enemy_time_scale, 0.15, "적 투사체 시간 15%"):
 		return
@@ -37,7 +41,7 @@ func _run() -> void:
 
 	await create_timer(3.15).timeout
 	await physics_frame
-	if not _assert_near(float(target.get("_enemy_time_scale")), 1.0, "적 시간 정상화"):
+	if not _assert_near(target.enemy_time_scale(), 1.0, "적 시간 정상화"):
 		return
 	if not _assert_near(enemy_projectile.enemy_time_scale, 1.0, "적 투사체 시간 정상화"):
 		return

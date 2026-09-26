@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-206 공용 필살기 게이지와 선택적 시간 감속 검증을 담당한다.
+## CP-301 일반 적 세 종류의 경고, 공격과 빈틈 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -17,8 +17,9 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var target_selector: AutoTargetSelector = $Player/AutoTargetSelector
 @onready var weapon_controller: PrototypeWeaponController = $Player/PrototypeWeaponController
 @onready var ultimate_controller: UltimateController = $Player/UltimateController
-@onready var training_enemy_projectile: TrainingEnemyProjectile = $TrainingEnemyProjectile
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
+
+var _enemy_metrics_elapsed_s: float = 0.0
 
 
 func _ready() -> void:
@@ -31,9 +32,6 @@ func _ready() -> void:
 	controls.ultimate_pressed.connect(ultimate_controller.request_ultimate)
 	controls.weapon_swap_pressed.connect(weapon_controller.request_weapon_switch)
 	controls.reset_requested.connect(_reset_test)
-	training_enemy_projectile.precise_evade_registered.connect(
-		ultimate_controller.register_precise_evade
-	)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
@@ -106,7 +104,16 @@ func _ready() -> void:
 	target_selector.force_scan()
 	weapon_controller.force_emit_metrics()
 	ultimate_controller.force_emit_metrics()
+	_emit_enemy_metrics()
 	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	_enemy_metrics_elapsed_s += delta
+	if _enemy_metrics_elapsed_s < 0.10:
+		return
+	_enemy_metrics_elapsed_s = 0.0
+	_emit_enemy_metrics()
 
 
 func _draw() -> void:
@@ -186,8 +193,50 @@ func _reset_test() -> void:
 	target_selector.reset_selection()
 	weapon_controller.reset_combat()
 	ultimate_controller.reset_ultimate()
-	training_enemy_projectile.reset_projectile()
+	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
+		projectile.queue_free()
+	_enemy_metrics_elapsed_s = 0.0
+	_emit_enemy_metrics()
 	controls.release_all_inputs()
+
+
+func _emit_enemy_metrics() -> void:
+	var alive_count := 0
+	var warning_count := 0
+	var attack_count := 0
+	var hit_count := 0
+	var state_labels: Array[String] = []
+	var newest_log := "행동 대기"
+	var newest_event_msec := -1
+	for node in get_tree().get_nodes_in_group("prototype_enemy"):
+		var enemy := node as PrototypeEnemy
+		if enemy == null:
+			continue
+		var metrics := enemy.current_metrics()
+		if bool(metrics.get("enemy_alive", false)):
+			alive_count += 1
+		if bool(metrics.get("enemy_warning", false)):
+			warning_count += 1
+		attack_count += int(metrics.get("enemy_attack_count", 0))
+		hit_count += int(metrics.get("enemy_hit_count", 0))
+		state_labels.append("%s %s" % [
+			String(metrics.get("enemy_name", "적")),
+			String(metrics.get("enemy_state", "대기")),
+		])
+		var event_msec := int(metrics.get("enemy_event_msec", -1))
+		if event_msec >= newest_event_msec:
+			newest_event_msec = event_msec
+			newest_log = String(metrics.get("enemy_last_log", "행동 대기"))
+	controls.update_enemy_metrics({
+		"enemy_alive_count": alive_count,
+		"enemy_total_count": 3,
+		"enemy_warning_active_count": warning_count,
+		"enemy_attack_total_count": attack_count,
+		"enemy_hit_total_count": hit_count,
+		"enemy_projectile_count": get_tree().get_nodes_in_group("enemy_projectile").size(),
+		"enemy_state_summary": " · ".join(state_labels),
+		"enemy_last_log": newest_log,
+	})
 
 
 func _on_safe_zone_entered(

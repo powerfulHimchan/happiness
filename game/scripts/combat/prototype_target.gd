@@ -63,6 +63,10 @@ func set_enemy_time_scale(value: float) -> void:
 	_enemy_time_scale = clampf(value, 0.0, 1.0)
 
 
+func enemy_time_scale() -> float:
+	return _enemy_time_scale
+
+
 func is_targetable() -> bool:
 	return _targetable and is_visible_in_tree()
 

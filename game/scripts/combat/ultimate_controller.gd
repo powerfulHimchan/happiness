@@ -27,6 +27,7 @@ var _remaining_s: float = 0.0
 
 
 func _ready() -> void:
+	add_to_group("ultimate_controller")
 	sword_combat.hit_registered.connect(_on_weapon_hit)
 	bow_combat.hit_registered.connect(_on_weapon_hit)
 	_emit_metrics()

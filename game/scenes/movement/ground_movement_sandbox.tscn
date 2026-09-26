@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=34 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -21,8 +21,10 @@
 [ext_resource type="Resource" path="res://data/skills/bow_arrow_rain.tres" id="19_bow_rain_skill"]
 [ext_resource type="Texture2D" path="res://assets/bow_rain.svg" id="20_bow_rain_texture"]
 [ext_resource type="Script" path="res://scripts/combat/ultimate_controller.gd" id="21_ultimate_controller"]
-[ext_resource type="Script" path="res://scripts/combat/training_enemy_projectile.gd" id="22_enemy_projectile"]
-[ext_resource type="Texture2D" path="res://assets/enemy_projectile.svg" id="23_enemy_projectile_texture"]
+[ext_resource type="Script" path="res://scripts/combat/prototype_enemy.gd" id="24_enemy"]
+[ext_resource type="Texture2D" path="res://assets/leaf_slime.svg" id="25_leaf_slime"]
+[ext_resource type="Texture2D" path="res://assets/seed_sack.svg" id="26_seed_sack"]
+[ext_resource type="Texture2D" path="res://assets/wind_spirit.svg" id="27_wind_spirit"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -171,20 +173,12 @@ script = ExtResource("16_weapon_controller")
 [node name="UltimateController" type="Node" parent="Player"]
 script = ExtResource("21_ultimate_controller")
 
-[node name="TrainingEnemyProjectile" type="Node2D" parent="."]
-position = Vector2(520, 748)
-z_index = 30
-script = ExtResource("22_enemy_projectile")
-player_path = NodePath("../Player")
-
-[node name="ProjectileSprite" type="Sprite2D" parent="TrainingEnemyProjectile"]
-texture = ExtResource("23_enemy_projectile_texture")
-
 [node name="Targets" type="Node2D" parent="."]
 z_index = 40
 z_as_relative = false
 
 [node name="RearTarget" type="Node2D" parent="Targets"]
+visible = false
 position = Vector2(820, 780)
 script = ExtResource("6_target")
 target_key = "후방 표적"
@@ -226,6 +220,7 @@ text = "600/600"
 horizontal_alignment = 1
 
 [node name="CrossingTargetA" type="Node2D" parent="Targets"]
+visible = false
 position = Vector2(1065, 780)
 script = ExtResource("6_target")
 target_key = "교차 표적 A"
@@ -269,6 +264,7 @@ text = "600/600"
 horizontal_alignment = 1
 
 [node name="CrossingTargetB" type="Node2D" parent="Targets"]
+visible = false
 position = Vector2(1105, 780)
 script = ExtResource("6_target")
 target_key = "교차 표적 B"
@@ -313,6 +309,7 @@ text = "600/600"
 horizontal_alignment = 1
 
 [node name="DistantTarget" type="Node2D" parent="Targets"]
+visible = false
 position = Vector2(1600, 780)
 script = ExtResource("6_target")
 target_key = "원거리 표적"
@@ -354,6 +351,7 @@ text = "600/600"
 horizontal_alignment = 1
 
 [node name="OffscreenTarget" type="Node2D" parent="Targets"]
+visible = false
 position = Vector2(2500, 780)
 script = ExtResource("6_target")
 target_key = "화면 밖 표적"
@@ -392,6 +390,182 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(0.933333, 0.980392, 0.988235, 1)
 theme_override_font_sizes/font_size = 16
 text = "600/600"
+horizontal_alignment = 1
+
+[node name="LeafSlime" type="Node2D" parent="Targets"]
+position = Vector2(1240, 780)
+script = ExtResource("24_enemy")
+target_key = "풀잎 슬라임"
+body_color = Color(1, 1, 1, 1)
+enemy_type = 0
+player_path = NodePath("../../Player")
+
+[node name="BodySprite" type="Sprite2D" parent="Targets/LeafSlime"]
+position = Vector2(0, -42)
+texture = ExtResource("25_leaf_slime")
+
+[node name="SelectionSprite" type="Sprite2D" parent="Targets/LeafSlime"]
+visible = false
+position = Vector2(0, -42)
+z_index = 2
+texture = ExtResource("8_target_selection")
+
+[node name="WarningRing" type="Sprite2D" parent="Targets/LeafSlime"]
+visible = false
+position = Vector2(0, -42)
+z_index = 1
+scale = Vector2(1.35, 1.35)
+modulate = Color(1, 0.42, 0.32, 0.8)
+texture = ExtResource("8_target_selection")
+
+[node name="WarningLine" type="Line2D" parent="Targets/LeafSlime"]
+visible = false
+z_index = 1
+width = 8.0
+default_color = Color(1, 0.42, 0.32, 0.85)
+points = PackedVector2Array(0, -42, -220, -42)
+
+[node name="DamageReceiver" type="Node" parent="Targets/LeafSlime"]
+script = ExtResource("9_damage_receiver")
+max_health = 36
+post_hit_invulnerability_s = 0.0
+
+[node name="HealthBar" type="ProgressBar" parent="Targets/LeafSlime"]
+offset_left = -52.0
+offset_top = -118.0
+offset_right = 52.0
+offset_bottom = -102.0
+mouse_filter = 2
+max_value = 36.0
+value = 36.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="Targets/LeafSlime"]
+offset_left = -60.0
+offset_top = -101.0
+offset_right = 60.0
+offset_bottom = -78.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.933333, 0.980392, 0.988235, 1)
+theme_override_font_sizes/font_size = 16
+text = "36/36"
+horizontal_alignment = 1
+
+[node name="SeedSack" type="Node2D" parent="Targets"]
+position = Vector2(1550, 780)
+script = ExtResource("24_enemy")
+target_key = "씨앗 포대"
+body_color = Color(1, 1, 1, 1)
+enemy_type = 1
+player_path = NodePath("../../Player")
+
+[node name="BodySprite" type="Sprite2D" parent="Targets/SeedSack"]
+position = Vector2(0, -48)
+texture = ExtResource("26_seed_sack")
+
+[node name="SelectionSprite" type="Sprite2D" parent="Targets/SeedSack"]
+visible = false
+position = Vector2(0, -48)
+z_index = 2
+texture = ExtResource("8_target_selection")
+
+[node name="WarningRing" type="Sprite2D" parent="Targets/SeedSack"]
+visible = false
+position = Vector2(0, -48)
+z_index = 1
+scale = Vector2(1.35, 1.35)
+modulate = Color(1, 0.819608, 0.4, 0.8)
+texture = ExtResource("8_target_selection")
+
+[node name="WarningLine" type="Line2D" parent="Targets/SeedSack"]
+visible = false
+z_index = 1
+width = 7.0
+default_color = Color(1, 0.819608, 0.4, 0.85)
+points = PackedVector2Array(0, -48, -520, -48)
+
+[node name="DamageReceiver" type="Node" parent="Targets/SeedSack"]
+script = ExtResource("9_damage_receiver")
+max_health = 30
+post_hit_invulnerability_s = 0.0
+
+[node name="HealthBar" type="ProgressBar" parent="Targets/SeedSack"]
+offset_left = -52.0
+offset_top = -128.0
+offset_right = 52.0
+offset_bottom = -112.0
+mouse_filter = 2
+max_value = 30.0
+value = 30.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="Targets/SeedSack"]
+offset_left = -60.0
+offset_top = -111.0
+offset_right = 60.0
+offset_bottom = -88.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.933333, 0.980392, 0.988235, 1)
+theme_override_font_sizes/font_size = 16
+text = "30/30"
+horizontal_alignment = 1
+
+[node name="WindSpirit" type="Node2D" parent="Targets"]
+position = Vector2(1780, 590)
+script = ExtResource("24_enemy")
+target_key = "바람 정령"
+body_color = Color(1, 1, 1, 1)
+enemy_type = 2
+player_path = NodePath("../../Player")
+
+[node name="BodySprite" type="Sprite2D" parent="Targets/WindSpirit"]
+position = Vector2(0, -38)
+texture = ExtResource("27_wind_spirit")
+
+[node name="SelectionSprite" type="Sprite2D" parent="Targets/WindSpirit"]
+visible = false
+position = Vector2(0, -38)
+z_index = 2
+texture = ExtResource("8_target_selection")
+
+[node name="WarningRing" type="Sprite2D" parent="Targets/WindSpirit"]
+visible = false
+position = Vector2(0, -38)
+z_index = 1
+scale = Vector2(1.35, 1.35)
+texture = ExtResource("8_target_selection")
+
+[node name="WarningLine" type="Line2D" parent="Targets/WindSpirit"]
+visible = false
+z_index = 1
+width = 9.0
+default_color = Color(1, 1, 1, 0.9)
+points = PackedVector2Array(0, -38, -850, 120)
+
+[node name="DamageReceiver" type="Node" parent="Targets/WindSpirit"]
+script = ExtResource("9_damage_receiver")
+max_health = 24
+post_hit_invulnerability_s = 0.0
+
+[node name="HealthBar" type="ProgressBar" parent="Targets/WindSpirit"]
+offset_left = -52.0
+offset_top = -112.0
+offset_right = 52.0
+offset_bottom = -96.0
+mouse_filter = 2
+max_value = 24.0
+value = 24.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="Targets/WindSpirit"]
+offset_left = -60.0
+offset_top = -95.0
+offset_right = 60.0
+offset_bottom = -72.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.933333, 0.980392, 0.988235, 1)
+theme_override_font_sizes/font_size = 16
+text = "24/24"
 horizontal_alignment = 1
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]

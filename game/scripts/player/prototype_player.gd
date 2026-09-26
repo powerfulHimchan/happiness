@@ -103,6 +103,7 @@ var _combat_turn_allowed: bool = true
 
 
 func _ready() -> void:
+	add_to_group("prototype_player")
 	_last_position_x = global_position.x
 	_emit_metrics()
 

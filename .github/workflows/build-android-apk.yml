@@ -77,21 +77,21 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-cp206-dawn-gap.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-cp301-common-enemies.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-cp206-dawn-gap.apk
-          sha256sum dist/happiness-tale-cp206-dawn-gap.apk \
-            | tee dist/happiness-tale-cp206-dawn-gap.apk.sha256
+          cp "${apk_path}" dist/happiness-tale-cp301-common-enemies.apk
+          sha256sum dist/happiness-tale-cp301-common-enemies.apk \
+            | tee dist/happiness-tale-cp301-common-enemies.apk.sha256
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-cp206-dawn-gap-apk
+          name: happiness-tale-cp301-common-enemies-apk
           path: |
-            dist/happiness-tale-cp206-dawn-gap.apk
-            dist/happiness-tale-cp206-dawn-gap.apk.sha256
+            dist/happiness-tale-cp301-common-enemies.apk
+            dist/happiness-tale-cp301-common-enemies.apk.sha256
           if-no-files-found: error
           retention-days: 14
