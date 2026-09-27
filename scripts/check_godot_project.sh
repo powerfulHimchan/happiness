@@ -31,6 +31,7 @@ required_files=(
   "$game_root/tests/cp303_runtime_test.gd"
   "$game_root/tests/cp304_runtime_test.gd"
   "$game_root/tests/cp401_runtime_test.gd"
+  "$game_root/tests/cp402_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -56,6 +57,7 @@ required_files=(
   "$game_root/assets/elite_shockwave.svg"
   "$game_root/scripts/input/player_command.gd"
   "$game_root/scripts/input/player_command_buffer.gd"
+  "$game_root/scripts/input/control_layout_store.gd"
   "$game_root/assets/icon.svg"
 )
 
@@ -402,6 +404,14 @@ if ! rg -q 'func open_layout_editor' "$game_root/scripts/movement/ground_movemen
 	exit 1
 fi
 
+if ! rg -q 'class_name ControlLayoutStore' "$game_root/scripts/input/control_layout_store.gd" \
+  || ! rg -q 'SCHEMA_VERSION := 1' "$game_root/scripts/input/control_layout_store.gd" \
+  || ! rg -q 'PRESET_LEFT' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q 'layout_store\.save_layout' "$game_root/scripts/movement/ground_movement_controls.gd"; then
+	echo "CP-402 presets, versioned JSON storage, or element recovery is missing." >&2
+	exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -438,6 +448,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/cp304_runtime_test.gd
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp401_runtime_test.gd
+  timeout 45s "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp402_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

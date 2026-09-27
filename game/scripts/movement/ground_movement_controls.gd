@@ -1,7 +1,7 @@
 extends Control
 
-## CP-304용 모바일 전투 HUD와 결과 화면.
-## 안전 영역 안에 체력, 시간, 무기, 스킬, 필살기를 배치하고 완료 통계를 표시한다.
+## CP-402용 모바일 전투 HUD, 조작 프리셋과 로컬 저장.
+## 기본·왼손잡이·사용자 배치를 버전 JSON으로 저장하고 손상 요소만 복구한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -33,6 +33,9 @@ const WAIT_COLOR := Color("f7b267")
 const BACKGROUND_COLOR := Color("102636")
 
 const MOVE_CONTROL: StringName = &"move"
+const PRESET_DEFAULT := "default"
+const PRESET_LEFT := "left"
+const PRESET_CUSTOM := "custom"
 const DEFAULT_CONTROL_CENTERS := {
 	&"move": Vector2(0.15, 0.80),
 	&"jump": Vector2(0.925, 0.815),
@@ -41,6 +44,15 @@ const DEFAULT_CONTROL_CENTERS := {
 	&"skill_2": Vector2(0.905, 0.600),
 	&"ultimate": Vector2(0.680, 0.665),
 	&"weapon_swap": Vector2(0.690, 0.845),
+}
+const LEFT_CONTROL_CENTERS := {
+	&"move": Vector2(0.85, 0.80),
+	&"jump": Vector2(0.075, 0.815),
+	&"evade": Vector2(0.175, 0.830),
+	&"skill_1": Vector2(0.205, 0.650),
+	&"skill_2": Vector2(0.095, 0.600),
+	&"ultimate": Vector2(0.320, 0.665),
+	&"weapon_swap": Vector2(0.310, 0.845),
 }
 const ACTION_ORDER: Array[StringName] = [
 	&"jump",
@@ -87,6 +99,9 @@ var result_main_rect := Rect2()
 var main_start_rect := Rect2()
 var main_layout_rect := Rect2()
 var editor_toolbar_rect := Rect2()
+var editor_preset_default_rect := Rect2()
+var editor_preset_left_rect := Rect2()
+var editor_preset_custom_rect := Rect2()
 var editor_size_down_rect := Rect2()
 var editor_size_up_rect := Rect2()
 var editor_opacity_down_rect := Rect2()
@@ -105,6 +120,10 @@ var selected_layout_control: StringName = MOVE_CONTROL
 var invalid_layout_controls: Array[StringName] = []
 var editor_drag_pointer_id: int = -1
 var editor_original_layout: Dictionary = {}
+var active_preset_id: String = PRESET_DEFAULT
+var saved_custom_layout: Dictionary = {}
+var layout_store := ControlLayoutStore.new()
+var layout_store_message: String = ""
 var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
@@ -123,8 +142,9 @@ func _ready() -> void:
 	Engine.max_fps = 60
 	for control_id in _layout_control_order():
 		control_scales[control_id] = 1.0
+	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("CP-304 전투 HUD 시작")
+	_append_action_log("CP-402 조작 프리셋 로드")
 	queue_redraw()
 
 
@@ -313,7 +333,12 @@ func begin_stage_from_main() -> void:
 
 func open_layout_editor() -> void:
 	release_all_inputs()
-	editor_original_layout = _capture_control_layout()
+	editor_original_layout = {
+		"layout": _capture_control_layout(),
+		"active_preset": active_preset_id,
+		"custom_layout": saved_custom_layout.duplicate(true),
+	}
+	layout_store_message = ""
 	selected_layout_control = MOVE_CONTROL
 	editor_drag_pointer_id = -1
 	screen_mode = ScreenMode.LAYOUT_EDITOR
@@ -324,10 +349,25 @@ func open_layout_editor() -> void:
 func apply_layout_editor() -> bool:
 	_validate_control_layout()
 	if not invalid_layout_controls.is_empty():
+		layout_store_message = "겹친 터치 영역을 먼저 정리하세요"
+		queue_redraw()
+		return false
+	var current_layout := _capture_control_layout()
+	if active_preset_id == PRESET_CUSTOM:
+		saved_custom_layout = current_layout.duplicate(true)
+	var save_error := layout_store.save_layout(
+		active_preset_id,
+		current_layout,
+		saved_custom_layout,
+		_layout_control_order()
+	)
+	if save_error != OK:
+		layout_store_message = "저장 실패 · 오류 %d" % save_error
 		queue_redraw()
 		return false
 	editor_original_layout.clear()
 	editor_drag_pointer_id = -1
+	layout_store_message = "저장 완료"
 	screen_mode = ScreenMode.MAIN
 	queue_redraw()
 	return true
@@ -335,7 +375,9 @@ func apply_layout_editor() -> bool:
 
 func cancel_layout_editor() -> void:
 	if not editor_original_layout.is_empty():
-		_restore_control_layout(editor_original_layout)
+		_restore_control_layout(editor_original_layout.get("layout", {}))
+		active_preset_id = String(editor_original_layout.get("active_preset", PRESET_DEFAULT))
+		saved_custom_layout = (editor_original_layout.get("custom_layout", {}) as Dictionary).duplicate(true)
 	editor_original_layout.clear()
 	editor_drag_pointer_id = -1
 	screen_mode = ScreenMode.MAIN
@@ -343,14 +385,33 @@ func cancel_layout_editor() -> void:
 
 
 func reset_layout_editor() -> void:
-	control_centers = DEFAULT_CONTROL_CENTERS.duplicate()
-	control_scales.clear()
-	for control_id in _layout_control_order():
-		control_scales[control_id] = 1.0
-	control_opacity = 0.82
+	var preset_to_restore := active_preset_id
+	if preset_to_restore == PRESET_CUSTOM:
+		_restore_control_layout(_default_layout_snapshot(DEFAULT_CONTROL_CENTERS))
+	else:
+		_restore_control_layout(_preset_layout(preset_to_restore))
 	selected_layout_control = MOVE_CONTROL
-	_refresh_layout()
+	layout_store_message = "현재 프리셋 초기화"
 	_validate_control_layout()
+	queue_redraw()
+
+
+func select_control_preset(preset_id: String) -> void:
+	if preset_id not in [PRESET_DEFAULT, PRESET_LEFT, PRESET_CUSTOM]:
+		return
+	if active_preset_id == PRESET_CUSTOM:
+		saved_custom_layout = _capture_control_layout()
+	active_preset_id = preset_id
+	if preset_id == PRESET_CUSTOM:
+		_restore_control_layout(
+			saved_custom_layout
+			if not saved_custom_layout.is_empty()
+			else _default_layout_snapshot(DEFAULT_CONTROL_CENTERS)
+		)
+	else:
+		_restore_control_layout(_preset_layout(preset_id))
+	selected_layout_control = MOVE_CONTROL
+	layout_store_message = "%s 프리셋 미리보기" % _preset_label(preset_id)
 	queue_redraw()
 
 
@@ -365,6 +426,7 @@ func adjust_selected_control_size(delta: float) -> void:
 		return
 	var current_scale := float(control_scales.get(selected_layout_control, 1.0))
 	control_scales[selected_layout_control] = clampf(current_scale + delta, 0.70, 1.40)
+	_mark_layout_custom()
 	_refresh_layout()
 	_validate_control_layout()
 	queue_redraw()
@@ -372,6 +434,7 @@ func adjust_selected_control_size(delta: float) -> void:
 
 func set_control_opacity(value: float) -> void:
 	control_opacity = clampf(value, 0.30, 1.00)
+	_mark_layout_custom()
 	queue_redraw()
 
 
@@ -379,6 +442,7 @@ func set_control_center_normalized(control_id: StringName, normalized_center: Ve
 	if control_id not in _layout_control_order():
 		return
 	control_centers[control_id] = normalized_center
+	_mark_layout_custom()
 	_refresh_layout()
 	_validate_control_layout()
 	queue_redraw()
@@ -411,6 +475,9 @@ func control_layout_snapshot() -> Dictionary:
 		"invalid_controls": invalid_layout_controls.duplicate(),
 		"valid": invalid_layout_controls.is_empty(),
 		"touch_rects": _control_touch_rects(),
+		"active_preset": active_preset_id,
+		"has_custom_layout": not saved_custom_layout.is_empty(),
+		"store_message": layout_store_message,
 	}
 
 
@@ -452,6 +519,15 @@ func _handle_editor_touch(touch: InputEventScreenTouch) -> void:
 	if not touch.pressed:
 		if touch.index == editor_drag_pointer_id:
 			editor_drag_pointer_id = -1
+		return
+	if editor_preset_default_rect.has_point(touch.position):
+		select_control_preset(PRESET_DEFAULT)
+		return
+	if editor_preset_left_rect.has_point(touch.position):
+		select_control_preset(PRESET_LEFT)
+		return
+	if editor_preset_custom_rect.has_point(touch.position):
+		select_control_preset(PRESET_CUSTOM)
 		return
 	if editor_size_down_rect.has_point(touch.position):
 		adjust_selected_control_size(-0.10)
@@ -497,6 +573,7 @@ func _move_layout_control(control_id: StringName, position: Vector2) -> void:
 		(clamped.x - safe.position.x) / maxf(safe.size.x, 1.0),
 		(clamped.y - safe.position.y) / maxf(safe.size.y, 1.0)
 	)
+	_mark_layout_custom()
 	_refresh_layout()
 	_validate_control_layout()
 
@@ -700,13 +777,18 @@ func _refresh_layout() -> void:
 
 	editor_toolbar_rect = Rect2(
 		safe.position + Vector2(10.0, 10.0),
-		Vector2(safe.size.x - 20.0, clampf(safe.size.y * 0.18, 124.0, 154.0))
+		Vector2(safe.size.x - 20.0, clampf(safe.size.y * 0.24, 166.0, 190.0))
 	)
 	var tool_height := 50.0
 	var tool_y := editor_toolbar_rect.position.y + editor_toolbar_rect.size.y - tool_height - 14.0
 	var tool_gap := 10.0
 	var small_width := clampf(safe.size.x * 0.055, 68.0, 92.0)
 	var action_width := clampf(safe.size.x * 0.09, 118.0, 160.0)
+	var preset_width := clampf(safe.size.x * 0.085, 104.0, 148.0)
+	var preset_y := editor_toolbar_rect.position.y + 44.0
+	editor_preset_default_rect = Rect2(Vector2(editor_toolbar_rect.position.x + 20.0, preset_y), Vector2(preset_width, 44.0))
+	editor_preset_left_rect = Rect2(Vector2(editor_preset_default_rect.end.x + tool_gap, preset_y), Vector2(preset_width, 44.0))
+	editor_preset_custom_rect = Rect2(Vector2(editor_preset_left_rect.end.x + tool_gap, preset_y), Vector2(preset_width, 44.0))
 	editor_size_down_rect = Rect2(Vector2(editor_toolbar_rect.position.x + 20.0, tool_y), Vector2(small_width, tool_height))
 	editor_size_up_rect = Rect2(Vector2(editor_size_down_rect.end.x + tool_gap, tool_y), Vector2(small_width, tool_height))
 	editor_opacity_down_rect = Rect2(Vector2(editor_size_up_rect.end.x + 42.0, tool_y), Vector2(small_width, tool_height))
@@ -885,17 +967,24 @@ func _draw_layout_editor() -> void:
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), editor_toolbar_rect)
 	var selected_label := _layout_control_label(selected_layout_control)
 	var selected_scale := int(round(float(control_scales.get(selected_layout_control, 1.0)) * 100.0))
-	_draw_text("조작 배치 편집  ·  선택: %s  ·  크기 %d%%  ·  전체 불투명도 %d%%" % [
+	_draw_text("프리셋", editor_toolbar_rect.position + Vector2(20.0, 32.0), 20, MUTED_TEXT_COLOR)
+	_draw_button(editor_preset_default_rect, "기본", active_preset_id == PRESET_DEFAULT)
+	_draw_button(editor_preset_left_rect, "왼손잡이", active_preset_id == PRESET_LEFT)
+	_draw_button(editor_preset_custom_rect, "사용자", active_preset_id == PRESET_CUSTOM)
+	var info_x := editor_preset_custom_rect.end.x + 30.0
+	_draw_text("선택: %s  ·  크기 %d%%  ·  전체 불투명도 %d%%" % [
 		selected_label,
 		selected_scale,
 		int(round(control_opacity * 100.0)),
-	], editor_toolbar_rect.position + Vector2(20.0, 38.0), 22, TEXT_COLOR)
+	], Vector2(info_x, editor_toolbar_rect.position.y + 38.0), 21, TEXT_COLOR)
 	var status := "적용 가능 · 조작 요소를 드래그하세요"
 	var status_color := PASS_COLOR
 	if not invalid_layout_controls.is_empty():
 		status = "적용 불가 · 터치 영역이 30% 이상 겹칩니다"
 		status_color = Color("ff8b85")
-	_draw_text(status, editor_toolbar_rect.position + Vector2(editor_toolbar_rect.size.x * 0.58, 38.0), 18, status_color)
+	elif not layout_store_message.is_empty():
+		status = layout_store_message
+	_draw_text(status, Vector2(info_x, editor_toolbar_rect.position.y + 78.0), 17, status_color)
 	_draw_button(editor_size_down_rect, "크기 -", false)
 	_draw_button(editor_size_up_rect, "크기 +", false)
 	_draw_button(editor_opacity_down_rect, "투명 -", false)
@@ -1106,6 +1195,72 @@ func _capture_control_layout() -> Dictionary:
 		"scales": control_scales.duplicate(true),
 		"opacity": control_opacity,
 	}
+
+
+func _default_layout_snapshot(centers: Dictionary) -> Dictionary:
+	var scales := {}
+	for control_id in _layout_control_order():
+		scales[control_id] = 1.0
+	return {
+		"centers": centers.duplicate(true),
+		"scales": scales,
+		"opacity": 0.82,
+	}
+
+
+func _preset_layout(preset_id: String) -> Dictionary:
+	if preset_id == PRESET_LEFT:
+		return _default_layout_snapshot(LEFT_CONTROL_CENTERS)
+	return _default_layout_snapshot(DEFAULT_CONTROL_CENTERS)
+
+
+func _preset_layouts() -> Dictionary:
+	return {
+		PRESET_DEFAULT: _preset_layout(PRESET_DEFAULT),
+		PRESET_LEFT: _preset_layout(PRESET_LEFT),
+	}
+
+
+func _preset_label(preset_id: String) -> String:
+	match preset_id:
+		PRESET_LEFT:
+			return "왼손잡이"
+		PRESET_CUSTOM:
+			return "사용자 설정"
+		_:
+			return "기본"
+
+
+func _mark_layout_custom() -> void:
+	active_preset_id = PRESET_CUSTOM
+	saved_custom_layout = _capture_control_layout()
+	layout_store_message = "사용자 설정 · 적용 전"
+
+
+func _load_saved_control_layout() -> void:
+	var loaded := layout_store.load_layout(_preset_layouts(), _layout_control_order())
+	active_preset_id = String(loaded.get("active_preset", PRESET_DEFAULT))
+	saved_custom_layout = (loaded.get("custom_layout", {}) as Dictionary).duplicate(true)
+	_restore_control_layout(loaded.get("active_layout", _preset_layout(PRESET_DEFAULT)))
+	var recovered_controls: Array = loaded.get("recovered_controls", [])
+	var recovered_fields: Array = loaded.get("recovered_fields", [])
+	if active_preset_id == PRESET_CUSTOM and not recovered_controls.is_empty():
+		saved_custom_layout = (loaded.get("active_layout", {}) as Dictionary).duplicate(true)
+	if not recovered_controls.is_empty() or not recovered_fields.is_empty():
+		layout_store_message = "손상 설정 일부를 기본값으로 복구했습니다"
+	else:
+		layout_store_message = "저장된 %s 프리셋" % _preset_label(active_preset_id)
+
+
+func configure_layout_store_path_for_test(path: String) -> void:
+	layout_store = ControlLayoutStore.new(path)
+
+
+func reload_control_layout_from_store() -> void:
+	_load_saved_control_layout()
+	_refresh_layout()
+	_validate_control_layout()
+	queue_redraw()
 
 
 func _restore_control_layout(snapshot: Dictionary) -> void:
