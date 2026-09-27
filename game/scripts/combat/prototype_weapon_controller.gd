@@ -160,6 +160,22 @@ func _enrich_metrics(metrics: Dictionary) -> void:
 	metrics["sword_skill_2_cooldown_s"] = sword_metrics.get("skill_2_cooldown_s", 0.0)
 	metrics["bow_skill_1_cooldown_s"] = bow_metrics.get("skill_1_cooldown_s", 0.0)
 	metrics["bow_skill_2_cooldown_s"] = bow_metrics.get("skill_2_cooldown_s", 0.0)
+	var sword_hits := int(sword_metrics.get("basic_attack_count", 0)) \
+		+ int(sword_metrics.get("skill_hit_count", 0))
+	var bow_hits := int(bow_metrics.get("basic_attack_count", 0)) \
+		+ int(bow_metrics.get("skill_hit_count", 0))
+	var total_hits := sword_hits + bow_hits
+	metrics["sword_basic_attack_count"] = int(sword_metrics.get("basic_attack_count", 0))
+	metrics["sword_skill_hit_count"] = int(sword_metrics.get("skill_hit_count", 0))
+	metrics["sword_total_hits"] = sword_hits
+	metrics["sword_total_damage"] = int(sword_metrics.get("combat_total_damage", 0))
+	metrics["bow_basic_attack_count"] = int(bow_metrics.get("basic_attack_count", 0))
+	metrics["bow_skill_hit_count"] = int(bow_metrics.get("skill_hit_count", 0))
+	metrics["bow_total_hits"] = bow_hits
+	metrics["bow_total_damage"] = int(bow_metrics.get("combat_total_damage", 0))
+	metrics["weapon_usage_total_hits"] = total_hits
+	metrics["sword_usage_ratio"] = float(sword_hits) / float(total_hits) if total_hits > 0 else 0.0
+	metrics["bow_usage_ratio"] = float(bow_hits) / float(total_hits) if total_hits > 0 else 0.0
 
 
 func _weapon_name(weapon_id: String) -> String:

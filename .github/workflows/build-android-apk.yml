@@ -94,21 +94,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-cp303-stage-runner.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-cp304-combat-hud.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-cp303-stage-runner.apk
-          sha256sum dist/happiness-tale-cp303-stage-runner.apk \
-            | tee dist/happiness-tale-cp303-stage-runner.apk.sha256
+          cp "${apk_path}" dist/happiness-tale-cp304-combat-hud.apk
+          (
+            cd dist
+            sha256sum happiness-tale-cp304-combat-hud.apk \
+              | tee happiness-tale-cp304-combat-hud.apk.sha256
+          )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-cp303-stage-runner-apk
+          name: happiness-tale-cp304-combat-hud-apk
           path: |
-            dist/happiness-tale-cp303-stage-runner.apk
-            dist/happiness-tale-cp303-stage-runner.apk.sha256
+            dist/happiness-tale-cp304-combat-hud.apk
+            dist/happiness-tale-cp304-combat-hud.apk.sha256
           if-no-files-found: error
           retention-days: 14

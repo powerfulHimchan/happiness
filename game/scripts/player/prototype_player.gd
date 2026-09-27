@@ -67,6 +67,7 @@ var last_damage_log: String = "피해 기록 대기"
 var last_damage_summary: String = "없음"
 var last_damage_tags: String = "없음"
 var last_stagger_s: float = 0.0
+var damage_cause_counts: Dictionary = {}
 var combat_evade_allowed: bool = true
 var _stop_test_active: bool = false
 var _stop_elapsed_s: float = 0.0
@@ -284,6 +285,8 @@ func receive_damage(event: DamageEvent) -> int:
 	]
 
 	if result == DamageReceiver.Result.APPLIED:
+		var cause := _damage_cause_label(event)
+		damage_cause_counts[cause] = int(damage_cause_counts.get(cause, 0)) + 1
 		_hit_flash_remaining_s = POST_HIT_FLASH_S
 		_input_lock_remaining_s = maxf(_input_lock_remaining_s, event.stagger_s)
 		move_input = 0.0
@@ -323,6 +326,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	last_damage_summary = "없음"
 	last_damage_tags = "없음"
 	last_stagger_s = 0.0
+	damage_cause_counts.clear()
 	stop_test_passed = false
 	reversal_test_passed = false
 	last_stop_time_s = 0.0
@@ -712,6 +716,34 @@ func _emit_metrics() -> void:
 		"last_damage_summary": last_damage_summary,
 		"last_damage_tags": last_damage_tags,
 		"last_stagger_s": last_stagger_s,
+		"damage_cause_counts": damage_cause_counts.duplicate(),
+		"damage_cause_summary": _damage_cause_summary(),
 		"combat_action_active": _combat_action_active,
 		"combat_evade_allowed": combat_evade_allowed,
 	})
+
+
+func _damage_cause_label(event: DamageEvent) -> String:
+	if event == null:
+		return "알 수 없는 공격"
+	if event.attack_id == &"seed_volley":
+		return "씨앗탄"
+	if event.attack_id == &"boar_charge":
+		return "갑옷 멧돼지 돌진"
+	if event.attack_id == &"boar_shockwave":
+		return "갑옷 멧돼지 충격파"
+	for tag in event.tags:
+		if tag not in ["enemy", "contact", "projectile", "elite", "charge", "shockwave", "seed"]:
+			return tag
+	return String(event.attack_id) if not String(event.attack_id).is_empty() else "알 수 없는 공격"
+
+
+func _damage_cause_summary() -> String:
+	var parts: Array[String] = []
+	var keys := damage_cause_counts.keys()
+	keys.sort()
+	for cause in keys:
+		parts.append("%s %d회" % [String(cause), int(damage_cause_counts[cause])])
+	if fall_count > 0:
+		parts.append("낙하 %d회" % fall_count)
+	return "피격 없음" if parts.is_empty() else " · ".join(parts)

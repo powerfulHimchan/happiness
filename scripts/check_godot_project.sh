@@ -29,6 +29,7 @@ required_files=(
   "$game_root/tests/cp301_runtime_test.gd"
   "$game_root/tests/cp302_runtime_test.gd"
   "$game_root/tests/cp303_runtime_test.gd"
+  "$game_root/tests/cp304_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -384,6 +385,14 @@ if rg -q 'stage_elapsed_s >= STAGE_TARGET_SECONDS.*failed' "$game_root/scripts/s
 	exit 1
 fi
 
+if ! rg -q 'enum ScreenMode' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q 'damage_cause_summary' "$game_root/scripts/player/prototype_player.gd" \
+  || ! rg -q 'sword_usage_ratio' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'retry_requested\.connect\(_reset_test\)' "$game_root/scripts/movement/ground_movement_sandbox.gd"; then
+	echo "CP-304 combat HUD, result metrics, retry, or main flow is missing." >&2
+	exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -416,6 +425,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/cp302_runtime_test.gd
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp303_runtime_test.gd
+  timeout 45s "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp304_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

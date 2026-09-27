@@ -1,7 +1,7 @@
 extends Control
 
-## CP-303용 모바일 조작 HUD.
-## 현재 구간의 목표·실제 시간, 관문, 적과 기존 전투 상태를 함께 표시한다.
+## CP-304용 모바일 전투 HUD와 결과 화면.
+## 안전 영역 안에 체력, 시간, 무기, 스킬, 필살기를 배치하고 완료 통계를 표시한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -12,6 +12,13 @@ signal skill_1_pressed
 signal skill_2_pressed
 signal ultimate_pressed
 signal weapon_swap_pressed
+signal retry_requested
+
+enum ScreenMode {
+	COMBAT,
+	RESULT,
+	MAIN,
+}
 
 const PANEL_COLOR := Color("18394b")
 const PANEL_BORDER_COLOR := Color("4f7180")
@@ -63,8 +70,15 @@ var move_radius: float = 106.0
 var fps_60_rect := Rect2()
 var fps_30_rect := Rect2()
 var reset_rect := Rect2()
+var hud_rect := Rect2()
+var result_panel_rect := Rect2()
+var result_retry_rect := Rect2()
+var result_main_rect := Rect2()
+var main_start_rect := Rect2()
 var action_log: Array[String] = []
 var movement_metrics: Dictionary = {}
+var result_snapshot: Dictionary = {}
+var screen_mode: int = ScreenMode.COMBAT
 var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
@@ -82,7 +96,7 @@ var last_stage_log_seen: String = ""
 func _ready() -> void:
 	Engine.max_fps = 60
 	_refresh_layout()
-	_append_action_log("CP-303 3분 스테이지 시작")
+	_append_action_log("CP-304 전투 HUD 시작")
 	queue_redraw()
 
 
@@ -123,6 +137,11 @@ func _notification(what: int) -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
+		if screen_mode != ScreenMode.COMBAT:
+			if touch.pressed:
+				_handle_screen_touch(touch.position)
+			queue_redraw()
+			return
 		if touch.pressed:
 			_handle_touch_pressed(touch.index, touch.position)
 		else:
@@ -135,6 +154,12 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.RESULT:
+		_draw_result_screen()
+		return
+	if screen_mode == ScreenMode.MAIN:
+		_draw_main_screen()
+		return
 	_draw_header()
 	_draw_move_control()
 	_draw_action_controls()
@@ -224,7 +249,77 @@ func update_stage_metrics(metrics: Dictionary) -> void:
 	if not stage_log.is_empty() and stage_log != last_stage_log_seen:
 		last_stage_log_seen = stage_log
 		_append_action_log(stage_log)
+	if bool(metrics.get("stage_complete", false)) and screen_mode == ScreenMode.COMBAT:
+		_show_result_screen()
 	queue_redraw()
+
+
+func begin_retry() -> void:
+	release_all_inputs()
+	result_snapshot.clear()
+	screen_mode = ScreenMode.COMBAT
+	retry_requested.emit()
+	queue_redraw()
+
+
+func show_main_screen() -> void:
+	release_all_inputs()
+	screen_mode = ScreenMode.MAIN
+	queue_redraw()
+
+
+func begin_stage_from_main() -> void:
+	begin_retry()
+
+
+func current_screen_mode() -> int:
+	return screen_mode
+
+
+func current_result_snapshot() -> Dictionary:
+	return result_snapshot.duplicate(true)
+
+
+func layout_snapshot() -> Dictionary:
+	return {
+		"safe": _safe_area_in_viewport(),
+		"hud": hud_rect,
+		"move": move_zone,
+		"actions": action_rects.duplicate(),
+		"result_panel": result_panel_rect,
+	}
+
+
+func _show_result_screen() -> void:
+	release_all_inputs()
+	var sword_hits := int(movement_metrics.get("sword_total_hits", 0))
+	var bow_hits := int(movement_metrics.get("bow_total_hits", 0))
+	var total_hits := sword_hits + bow_hits
+	result_snapshot = {
+		"completion_s": float(movement_metrics.get("stage_elapsed_s", 0.0)),
+		"target_s": float(movement_metrics.get("stage_target_s", 180.0)),
+		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
+		"damage_causes": String(movement_metrics.get("damage_cause_summary", "피격 없음")),
+		"sword_hits": sword_hits,
+		"bow_hits": bow_hits,
+		"sword_damage": int(movement_metrics.get("sword_total_damage", 0)),
+		"bow_damage": int(movement_metrics.get("bow_total_damage", 0)),
+		"sword_ratio": float(sword_hits) / float(total_hits) if total_hits > 0 else 0.0,
+		"bow_ratio": float(bow_hits) / float(total_hits) if total_hits > 0 else 0.0,
+	}
+	screen_mode = ScreenMode.RESULT
+	_refresh_layout()
+	queue_redraw()
+
+
+func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.RESULT:
+		if result_retry_rect.has_point(position):
+			begin_retry()
+		elif result_main_rect.has_point(position):
+			show_main_screen()
+	elif screen_mode == ScreenMode.MAIN and main_start_rect.has_point(position):
+		begin_stage_from_main()
 
 
 func release_all_inputs() -> void:
@@ -355,11 +450,11 @@ func _update_peak_controls() -> void:
 
 func _refresh_layout() -> void:
 	var safe := _safe_area_in_viewport()
-	var button_width := clampf(safe.size.x * 0.075, 118.0, 160.0)
-	var button_height := clampf(safe.size.y * 0.052, 50.0, 62.0)
-	var gap := 14.0
-	var right := safe.end.x - 20.0
-	var top := safe.position.y + 20.0
+	var button_width := clampf(safe.size.x * 0.06, 72.0, 106.0)
+	var button_height := clampf(safe.size.y * 0.045, 34.0, 42.0)
+	var gap := 8.0
+	var right := safe.end.x - 18.0
+	var top := safe.position.y + 112.0
 	reset_rect = Rect2(right - button_width, top, button_width, button_height)
 	fps_30_rect = Rect2(reset_rect.position.x - gap - button_width, top, button_width, button_height)
 	fps_60_rect = Rect2(fps_30_rect.position.x - gap - button_width, top, button_width, button_height)
@@ -397,104 +492,91 @@ func _refresh_layout() -> void:
 		var radius: float = float(radii[action_id])
 		action_rects[action_id] = Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
 
+	hud_rect = Rect2(
+		safe.position + Vector2(10.0, 10.0),
+		Vector2(safe.size.x - 20.0, clampf(safe.size.y * 0.20, 132.0, 158.0))
+	)
+	var panel_size := Vector2(
+		clampf(safe.size.x * 0.72, 760.0, 1060.0),
+		clampf(safe.size.y * 0.68, 470.0, 650.0)
+	)
+	panel_size.x = minf(panel_size.x, safe.size.x - 32.0)
+	panel_size.y = minf(panel_size.y, safe.size.y - 32.0)
+	result_panel_rect = Rect2(safe.get_center() - panel_size * 0.5, panel_size)
+	var result_button_size := Vector2(clampf(panel_size.x * 0.30, 190.0, 280.0), 62.0)
+	var result_gap := 24.0
+	var buttons_width := result_button_size.x * 2.0 + result_gap
+	var buttons_x := result_panel_rect.get_center().x - buttons_width * 0.5
+	var buttons_y := result_panel_rect.end.y - 86.0
+	result_retry_rect = Rect2(Vector2(buttons_x, buttons_y), result_button_size)
+	result_main_rect = Rect2(
+		Vector2(buttons_x + result_button_size.x + result_gap, buttons_y),
+		result_button_size
+	)
+	main_start_rect = Rect2(
+		Vector2(result_panel_rect.get_center().x - 150.0, result_panel_rect.end.y - 106.0),
+		Vector2(300.0, 68.0)
+	)
+
 
 func _draw_header() -> void:
-	var safe := _safe_area_in_viewport()
-	var panel_rect := Rect2(
-		safe.position + Vector2(14.0, 14.0),
-		Vector2(safe.size.x - 28.0, clampf(safe.size.y * 0.235, 205.0, 245.0))
-	)
-	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), panel_rect)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), hud_rect)
 	var section_index: int = int(movement_metrics.get("stage_section_index", 1))
 	var section_count: int = int(movement_metrics.get("stage_section_count", 5))
 	var section_name: String = String(movement_metrics.get("stage_section_name", "전진 1"))
 	var stage_elapsed: float = float(movement_metrics.get("stage_elapsed_s", 0.0))
 	var stage_target: float = float(movement_metrics.get("stage_target_s", 180.0))
-	var stage_complete: bool = bool(movement_metrics.get("stage_complete", false))
-	_draw_text(
-		"CP-303 · %s %d/%d · %s / %s" % [
-			"완료" if stage_complete else section_name,
-			section_index,
-			section_count,
-			_format_clock(stage_elapsed),
-			_format_clock(stage_target),
-		],
-		panel_rect.position + Vector2(22.0, 40.0),
-		27,
-		PASS_COLOR if stage_complete else TEXT_COLOR
-	)
-	var stage_objective: String = String(movement_metrics.get("stage_objective", "첫 관문까지 전진"))
-	_draw_text(
-		stage_objective,
-		panel_rect.position + Vector2(22.0, 72.0),
-		18,
-		MUTED_TEXT_COLOR
-	)
+	var left_x := hud_rect.position.x + 20.0
+	var center_x := hud_rect.position.x + hud_rect.size.x * 0.34
+	var right_x := hud_rect.position.x + hud_rect.size.x * 0.62
+	var top_y := hud_rect.position.y + 34.0
 
 	var health: int = int(movement_metrics.get("health", 100))
-	var max_health: int = int(movement_metrics.get("max_health", 100))
-	var dead: bool = bool(movement_metrics.get("damage_dead", false))
-	var hit_invulnerable: bool = bool(movement_metrics.get("damage_post_hit_invulnerable", false))
-	var hit_invulnerable_s: float = float(movement_metrics.get("damage_post_hit_remaining_s", 0.0))
-	var state_text := "사망" if dead else ("피격 무적" if hit_invulnerable else "전투 가능")
-	_draw_text(
-		"HP %d/%d  |  상태 %s  |  무적 남음 %.2fs" % [
-			health, max_health, state_text, hit_invulnerable_s,
-		],
-		panel_rect.position + Vector2(22.0, 106.0),
-		20,
-		WAIT_COLOR if dead else (ACTIVE_COLOR if hit_invulnerable else PASS_COLOR)
+	var max_health: int = maxi(1, int(movement_metrics.get("max_health", 100)))
+	_draw_text("체력  %d / %d" % [health, max_health], Vector2(left_x, top_y), 23, TEXT_COLOR)
+	var health_bar := Rect2(Vector2(left_x, top_y + 14.0), Vector2(hud_rect.size.x * 0.27, 18.0))
+	draw_rect(health_bar, Color("0d202b"), true)
+	draw_rect(
+		Rect2(health_bar.position, Vector2(health_bar.size.x * clampf(float(health) / float(max_health), 0.0, 1.0), health_bar.size.y)),
+		Color("69d06f") if health > max_health * 0.3 else Color("ef6f6c"),
+		true
 	)
+	var target_health := String(movement_metrics.get("combat_target_health", "대상 없음"))
+	_draw_text(target_health, Vector2(left_x, top_y + 62.0), 17, MUTED_TEXT_COLOR)
 
-	var combat_action: String = String(movement_metrics.get("combat_action", "자동 공격"))
+	_draw_text(
+		"%s  %d/%d" % [
+			section_name,
+			section_index,
+			section_count,
+		],
+		Vector2(center_x, top_y),
+		22,
+		TEXT_COLOR
+	)
+	var stage_objective: String = String(movement_metrics.get("stage_objective", "첫 관문까지 전진"))
+	_draw_text("%s / %s" % [_format_clock(stage_elapsed), _format_clock(stage_target)], Vector2(center_x, top_y + 31.0), 25, ACTIVE_COLOR)
+	_draw_text(stage_objective, Vector2(center_x, top_y + 62.0), 16, MUTED_TEXT_COLOR)
+
 	var weapon_name: String = String(movement_metrics.get("weapon_name", "연습용 검"))
-	var target_health: String = String(movement_metrics.get("combat_target_health", "대상 없음"))
-	var active_weapon_id: String = String(movement_metrics.get("active_weapon_id", "sword"))
-	_draw_text(
-		"주 무기 %s(%s)  |  행동 %s  |  %s" % [
-			weapon_name, active_weapon_id, combat_action, target_health,
-		],
-		panel_rect.position + Vector2(22.0, 139.0),
-		18,
-		MUTED_TEXT_COLOR
-	)
-
-	var section_elapsed: float = float(movement_metrics.get("stage_section_elapsed_s", 0.0))
-	var section_target: float = float(movement_metrics.get("stage_section_target_s", 0.0))
-	var active_enemy_count: int = int(movement_metrics.get("stage_active_enemy_count", 0))
-	var closed_gate_count: int = int(movement_metrics.get("stage_closed_gate_count", 4))
-	var section_overtime: bool = bool(movement_metrics.get("stage_section_overtime", false))
-	_draw_text(
-		"구간 %.1f/%.0fs  |  남은 적 %d  |  닫힌 관문 %d  |  %s" % [
-			section_elapsed,
-			section_target,
-			active_enemy_count,
-			closed_gate_count,
-			"목표 초과·계속 진행" if section_overtime else "목표 이내",
-		],
-		panel_rect.position + Vector2(22.0, 172.0),
-		17,
-		WAIT_COLOR if section_overtime else TEXT_COLOR
-	)
-
+	var skill_1_name: String = String(movement_metrics.get("skill_1_name", "스킬 1"))
+	var skill_2_name: String = String(movement_metrics.get("skill_2_name", "스킬 2"))
+	var skill_1_cd: float = float(movement_metrics.get("skill_1_cooldown_s", 0.0))
+	var skill_2_cd: float = float(movement_metrics.get("skill_2_cooldown_s", 0.0))
+	_draw_text("무기  %s" % weapon_name, Vector2(right_x, top_y), 21, TEXT_COLOR)
+	_draw_text("%s %.1fs  ·  %s %.1fs" % [skill_1_name, skill_1_cd, skill_2_name, skill_2_cd], Vector2(right_x, top_y + 30.0), 16, MUTED_TEXT_COLOR)
 	var ultimate_gauge: int = int(movement_metrics.get("ultimate_gauge", 0))
 	var ultimate_active: bool = bool(movement_metrics.get("ultimate_active", false))
-	var ultimate_remaining: float = float(movement_metrics.get("ultimate_remaining_s", 0.0))
-	var enemy_scale: float = float(movement_metrics.get("enemy_time_scale", 1.0))
 	_draw_text(
-		"새벽의 틈 %d%%  |  %s %.2fs  |  적 계열 시간 %.0f%%" % [
-			ultimate_gauge, "발동" if ultimate_active else "대기", ultimate_remaining,
-			enemy_scale * 100.0,
-		],
-		panel_rect.position + Vector2(22.0, 205.0),
+		"필살기  %s" % ("발동 중" if ultimate_active else "%d%%" % ultimate_gauge),
+		Vector2(right_x, top_y + 60.0),
 		17,
 		ACTIVE_COLOR if ultimate_active or ultimate_gauge >= 100 else TEXT_COLOR
 	)
 
-	_draw_button(fps_60_rect, "60 FPS", Engine.max_fps == 60)
-	_draw_button(fps_30_rect, "30 FPS", Engine.max_fps == 30)
-	_draw_button(reset_rect, "초기화", false)
-	_draw_action_log(panel_rect)
+	_draw_button(fps_60_rect, "60", Engine.max_fps == 60)
+	_draw_button(fps_30_rect, "30", Engine.max_fps == 30)
+	_draw_button(reset_rect, "재설정", false)
 
 
 func _draw_action_log(panel_rect: Rect2) -> void:
@@ -505,6 +587,96 @@ func _draw_action_log(panel_rect: Rect2) -> void:
 		y += 24.0
 		if y > panel_rect.end.y - 14.0:
 			break
+
+
+func _draw_result_screen() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.88), true)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
+	_draw_text_centered(
+		"스테이지 완료",
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 24.0), Vector2(result_panel_rect.size.x, 58.0)),
+		36,
+		PASS_COLOR
+	)
+	var completion_s := float(result_snapshot.get("completion_s", 0.0))
+	var target_s := float(result_snapshot.get("target_s", 180.0))
+	_draw_text_centered(
+		"완료 %s  ·  목표 %s  ·  %s" % [
+			_format_clock(completion_s),
+			_format_clock(target_s),
+			"목표 이내" if completion_s <= target_s else "+%s" % _format_clock(completion_s - target_s),
+		],
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 84.0), Vector2(result_panel_rect.size.x, 42.0)),
+		24,
+		TEXT_COLOR
+	)
+	var content_x := result_panel_rect.position.x + 54.0
+	var content_width := result_panel_rect.size.x - 108.0
+	var y := result_panel_rect.position.y + 158.0
+	_draw_result_row("구간 기록", _section_time_summary(), content_x, content_width, y)
+	y += 66.0
+	_draw_result_row("피격 원인", String(result_snapshot.get("damage_causes", "피격 없음")), content_x, content_width, y)
+	y += 66.0
+	var sword_ratio := float(result_snapshot.get("sword_ratio", 0.0)) * 100.0
+	var bow_ratio := float(result_snapshot.get("bow_ratio", 0.0)) * 100.0
+	var total_hits := int(result_snapshot.get("sword_hits", 0)) + int(result_snapshot.get("bow_hits", 0))
+	var usage := "기록 없음" if total_hits == 0 else "검 %.0f%% · 활 %.0f%%" % [sword_ratio, bow_ratio]
+	_draw_result_row("무기 사용 비율", usage, content_x, content_width, y)
+	y += 66.0
+	_draw_result_row(
+		"전투 기록",
+		"검 %d회 / 피해 %d  ·  활 %d회 / 피해 %d" % [
+			int(result_snapshot.get("sword_hits", 0)),
+			int(result_snapshot.get("sword_damage", 0)),
+			int(result_snapshot.get("bow_hits", 0)),
+			int(result_snapshot.get("bow_damage", 0)),
+		],
+		content_x,
+		content_width,
+		y
+	)
+	_draw_button(result_retry_rect, "다시 도전", true)
+	_draw_button(result_main_rect, "메인 화면", false)
+
+
+func _draw_main_screen() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.92), true)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
+	_draw_text_centered(
+		"행복 이야기",
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 96.0), Vector2(result_panel_rect.size.x, 80.0)),
+		44,
+		ACTIVE_COLOR
+	)
+	_draw_text_centered(
+		"3분 전투 스테이지",
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
+		25,
+		TEXT_COLOR
+	)
+	_draw_text_centered(
+		"검과 활을 전환하며 다섯 구간을 돌파하세요.",
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
+		19,
+		MUTED_TEXT_COLOR
+	)
+	_draw_button(main_start_rect, "스테이지 시작", true)
+
+
+func _draw_result_row(label: String, value: String, x: float, width: float, y: float) -> void:
+	draw_rect(Rect2(Vector2(x, y - 26.0), Vector2(width, 52.0)), Color("102b3a"), true)
+	_draw_text(label, Vector2(x + 18.0, y + 7.0), 18, MUTED_TEXT_COLOR)
+	_draw_text(value, Vector2(x + width * 0.27, y + 7.0), 19, TEXT_COLOR)
+
+
+func _section_time_summary() -> String:
+	var actual_times: Array = result_snapshot.get("actual_times", [])
+	if actual_times.is_empty():
+		return "기록 없음"
+	var parts: Array[String] = []
+	for index in actual_times.size():
+		parts.append("%d구간 %.1fs" % [index + 1, float(actual_times[index])])
+	return " · ".join(parts)
 
 
 func _draw_move_control() -> void:

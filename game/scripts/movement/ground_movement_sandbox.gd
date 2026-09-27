@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-303 3분 스테이지의 이동, 전투, 관문과 시간 기록 검증을 담당한다.
+## CP-304 3분 스테이지의 이동, 전투 HUD와 결과 흐름 검증을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -33,6 +33,7 @@ func _ready() -> void:
 	controls.ultimate_pressed.connect(ultimate_controller.request_ultimate)
 	controls.weapon_swap_pressed.connect(weapon_controller.request_weapon_switch)
 	controls.reset_requested.connect(_reset_test)
+	controls.retry_requested.connect(_reset_test)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
@@ -102,6 +103,8 @@ func _ready() -> void:
 		"last_damage_summary": "없음",
 		"last_damage_tags": "없음",
 		"last_stagger_s": 0.0,
+		"damage_cause_counts": {},
+		"damage_cause_summary": "피격 없음",
 	})
 	target_selector.force_scan()
 	weapon_controller.force_emit_metrics()
