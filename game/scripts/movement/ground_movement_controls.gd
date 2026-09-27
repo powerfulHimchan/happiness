@@ -18,6 +18,7 @@ enum ScreenMode {
 	COMBAT,
 	RESULT,
 	MAIN,
+	LAYOUT_EDITOR,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -32,6 +33,15 @@ const WAIT_COLOR := Color("f7b267")
 const BACKGROUND_COLOR := Color("102636")
 
 const MOVE_CONTROL: StringName = &"move"
+const DEFAULT_CONTROL_CENTERS := {
+	&"move": Vector2(0.15, 0.80),
+	&"jump": Vector2(0.925, 0.815),
+	&"evade": Vector2(0.825, 0.830),
+	&"skill_1": Vector2(0.795, 0.650),
+	&"skill_2": Vector2(0.905, 0.600),
+	&"ultimate": Vector2(0.680, 0.665),
+	&"weapon_swap": Vector2(0.690, 0.845),
+}
 const ACTION_ORDER: Array[StringName] = [
 	&"jump",
 	&"evade",
@@ -75,10 +85,26 @@ var result_panel_rect := Rect2()
 var result_retry_rect := Rect2()
 var result_main_rect := Rect2()
 var main_start_rect := Rect2()
+var main_layout_rect := Rect2()
+var editor_toolbar_rect := Rect2()
+var editor_size_down_rect := Rect2()
+var editor_size_up_rect := Rect2()
+var editor_opacity_down_rect := Rect2()
+var editor_opacity_up_rect := Rect2()
+var editor_reset_rect := Rect2()
+var editor_cancel_rect := Rect2()
+var editor_apply_rect := Rect2()
 var action_log: Array[String] = []
 var movement_metrics: Dictionary = {}
 var result_snapshot: Dictionary = {}
-var screen_mode: int = ScreenMode.COMBAT
+var screen_mode: int = ScreenMode.MAIN
+var control_centers: Dictionary = DEFAULT_CONTROL_CENTERS.duplicate()
+var control_scales: Dictionary = {}
+var control_opacity: float = 0.82
+var selected_layout_control: StringName = MOVE_CONTROL
+var invalid_layout_controls: Array[StringName] = []
+var editor_drag_pointer_id: int = -1
+var editor_original_layout: Dictionary = {}
 var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
@@ -95,6 +121,8 @@ var last_stage_log_seen: String = ""
 
 func _ready() -> void:
 	Engine.max_fps = 60
+	for control_id in _layout_control_order():
+		control_scales[control_id] = 1.0
 	_refresh_layout()
 	_append_action_log("CP-304 전투 HUD 시작")
 	queue_redraw()
@@ -128,6 +156,7 @@ func _physics_process(_delta: float) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_refresh_layout()
+		_validate_control_layout()
 		queue_redraw()
 	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
 		release_all_inputs()
@@ -137,6 +166,10 @@ func _notification(what: int) -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
+		if screen_mode == ScreenMode.LAYOUT_EDITOR:
+			_handle_editor_touch(touch)
+			queue_redraw()
+			return
 		if screen_mode != ScreenMode.COMBAT:
 			if touch.pressed:
 				_handle_screen_touch(touch.position)
@@ -149,7 +182,10 @@ func _input(event: InputEvent) -> void:
 		queue_redraw()
 	elif event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
-		_handle_touch_dragged(drag.index, drag.position)
+		if screen_mode == ScreenMode.LAYOUT_EDITOR:
+			_handle_editor_drag(drag.index, drag.position)
+		elif screen_mode == ScreenMode.COMBAT:
+			_handle_touch_dragged(drag.index, drag.position)
 		queue_redraw()
 
 
@@ -159,6 +195,9 @@ func _draw() -> void:
 		return
 	if screen_mode == ScreenMode.MAIN:
 		_draw_main_screen()
+		return
+	if screen_mode == ScreenMode.LAYOUT_EDITOR:
+		_draw_layout_editor()
 		return
 	_draw_header()
 	_draw_move_control()
@@ -272,6 +311,79 @@ func begin_stage_from_main() -> void:
 	begin_retry()
 
 
+func open_layout_editor() -> void:
+	release_all_inputs()
+	editor_original_layout = _capture_control_layout()
+	selected_layout_control = MOVE_CONTROL
+	editor_drag_pointer_id = -1
+	screen_mode = ScreenMode.LAYOUT_EDITOR
+	_validate_control_layout()
+	queue_redraw()
+
+
+func apply_layout_editor() -> bool:
+	_validate_control_layout()
+	if not invalid_layout_controls.is_empty():
+		queue_redraw()
+		return false
+	editor_original_layout.clear()
+	editor_drag_pointer_id = -1
+	screen_mode = ScreenMode.MAIN
+	queue_redraw()
+	return true
+
+
+func cancel_layout_editor() -> void:
+	if not editor_original_layout.is_empty():
+		_restore_control_layout(editor_original_layout)
+	editor_original_layout.clear()
+	editor_drag_pointer_id = -1
+	screen_mode = ScreenMode.MAIN
+	queue_redraw()
+
+
+func reset_layout_editor() -> void:
+	control_centers = DEFAULT_CONTROL_CENTERS.duplicate()
+	control_scales.clear()
+	for control_id in _layout_control_order():
+		control_scales[control_id] = 1.0
+	control_opacity = 0.82
+	selected_layout_control = MOVE_CONTROL
+	_refresh_layout()
+	_validate_control_layout()
+	queue_redraw()
+
+
+func select_layout_control(control_id: StringName) -> void:
+	if control_id in _layout_control_order():
+		selected_layout_control = control_id
+		queue_redraw()
+
+
+func adjust_selected_control_size(delta: float) -> void:
+	if selected_layout_control == &"":
+		return
+	var current_scale := float(control_scales.get(selected_layout_control, 1.0))
+	control_scales[selected_layout_control] = clampf(current_scale + delta, 0.70, 1.40)
+	_refresh_layout()
+	_validate_control_layout()
+	queue_redraw()
+
+
+func set_control_opacity(value: float) -> void:
+	control_opacity = clampf(value, 0.30, 1.00)
+	queue_redraw()
+
+
+func set_control_center_normalized(control_id: StringName, normalized_center: Vector2) -> void:
+	if control_id not in _layout_control_order():
+		return
+	control_centers[control_id] = normalized_center
+	_refresh_layout()
+	_validate_control_layout()
+	queue_redraw()
+
+
 func current_screen_mode() -> int:
 	return screen_mode
 
@@ -287,6 +399,18 @@ func layout_snapshot() -> Dictionary:
 		"move": move_zone,
 		"actions": action_rects.duplicate(),
 		"result_panel": result_panel_rect,
+	}
+
+
+func control_layout_snapshot() -> Dictionary:
+	return {
+		"centers": control_centers.duplicate(true),
+		"scales": control_scales.duplicate(true),
+		"opacity": control_opacity,
+		"selected": selected_layout_control,
+		"invalid_controls": invalid_layout_controls.duplicate(),
+		"valid": invalid_layout_controls.is_empty(),
+		"touch_rects": _control_touch_rects(),
 	}
 
 
@@ -320,6 +444,61 @@ func _handle_screen_touch(position: Vector2) -> void:
 			show_main_screen()
 	elif screen_mode == ScreenMode.MAIN and main_start_rect.has_point(position):
 		begin_stage_from_main()
+	elif screen_mode == ScreenMode.MAIN and main_layout_rect.has_point(position):
+		open_layout_editor()
+
+
+func _handle_editor_touch(touch: InputEventScreenTouch) -> void:
+	if not touch.pressed:
+		if touch.index == editor_drag_pointer_id:
+			editor_drag_pointer_id = -1
+		return
+	if editor_size_down_rect.has_point(touch.position):
+		adjust_selected_control_size(-0.10)
+		return
+	if editor_size_up_rect.has_point(touch.position):
+		adjust_selected_control_size(0.10)
+		return
+	if editor_opacity_down_rect.has_point(touch.position):
+		set_control_opacity(control_opacity - 0.10)
+		return
+	if editor_opacity_up_rect.has_point(touch.position):
+		set_control_opacity(control_opacity + 0.10)
+		return
+	if editor_reset_rect.has_point(touch.position):
+		reset_layout_editor()
+		return
+	if editor_cancel_rect.has_point(touch.position):
+		cancel_layout_editor()
+		return
+	if editor_apply_rect.has_point(touch.position):
+		apply_layout_editor()
+		return
+	var hit_control := _layout_control_at(touch.position)
+	if hit_control != &"":
+		selected_layout_control = hit_control
+		editor_drag_pointer_id = touch.index
+		_move_layout_control(hit_control, touch.position)
+
+
+func _handle_editor_drag(pointer_id: int, position: Vector2) -> void:
+	if pointer_id == editor_drag_pointer_id and selected_layout_control != &"":
+		_move_layout_control(selected_layout_control, position)
+
+
+func _move_layout_control(control_id: StringName, position: Vector2) -> void:
+	var safe := _safe_area_in_viewport()
+	var half_size := _control_touch_rect(control_id).size * 0.5
+	var clamped := Vector2(
+		clampf(position.x, safe.position.x + half_size.x, safe.end.x - half_size.x),
+		clampf(position.y, safe.position.y + half_size.y, safe.end.y - half_size.y)
+	)
+	control_centers[control_id] = Vector2(
+		(clamped.x - safe.position.x) / maxf(safe.size.x, 1.0),
+		(clamped.y - safe.position.y) / maxf(safe.size.y, 1.0)
+	)
+	_refresh_layout()
+	_validate_control_layout()
 
 
 func release_all_inputs() -> void:
@@ -459,24 +638,19 @@ func _refresh_layout() -> void:
 	fps_30_rect = Rect2(reset_rect.position.x - gap - button_width, top, button_width, button_height)
 	fps_60_rect = Rect2(fps_30_rect.position.x - gap - button_width, top, button_width, button_height)
 
-	move_zone = Rect2(
-		safe.position.x + 20.0,
-		safe.end.y - clampf(safe.size.y * 0.38, 285.0, 370.0),
+	var move_scale := float(control_scales.get(MOVE_CONTROL, 1.0))
+	var move_size := Vector2(
 		clampf(safe.size.x * 0.30, 420.0, 570.0),
 		clampf(safe.size.y * 0.34, 260.0, 340.0)
-	)
+	) * move_scale
+	var move_center := safe.position + Vector2(control_centers.get(MOVE_CONTROL, DEFAULT_CONTROL_CENTERS[MOVE_CONTROL])) * safe.size
+	move_center = _clamp_control_center(move_center, move_size * 0.5, safe)
+	control_centers[MOVE_CONTROL] = (move_center - safe.position) / safe.size
+	move_zone = Rect2(move_center - move_size * 0.5, move_size)
 	move_radius = clampf(minf(move_zone.size.x, move_zone.size.y) * 0.31, 82.0, 110.0)
 	if move_pointer_id < 0:
 		move_origin = move_zone.get_center()
 
-	var centers := {
-		&"jump": Vector2(0.925, 0.815),
-		&"evade": Vector2(0.825, 0.830),
-		&"skill_1": Vector2(0.795, 0.650),
-		&"skill_2": Vector2(0.905, 0.600),
-		&"ultimate": Vector2(0.680, 0.665),
-		&"weapon_swap": Vector2(0.690, 0.845),
-	}
 	var radii := {
 		&"jump": 84.0,
 		&"evade": 72.0,
@@ -487,9 +661,11 @@ func _refresh_layout() -> void:
 	}
 	action_rects.clear()
 	for action_id in ACTION_ORDER:
-		var normalized: Vector2 = centers[action_id]
+		var normalized: Vector2 = control_centers.get(action_id, DEFAULT_CONTROL_CENTERS[action_id])
 		var center := safe.position + normalized * safe.size
-		var radius: float = float(radii[action_id])
+		var radius: float = float(radii[action_id]) * float(control_scales.get(action_id, 1.0))
+		center = _clamp_control_center(center, Vector2.ONE * radius, safe)
+		control_centers[action_id] = (center - safe.position) / safe.size
 		action_rects[action_id] = Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
 
 	hud_rect = Rect2(
@@ -514,9 +690,30 @@ func _refresh_layout() -> void:
 		result_button_size
 	)
 	main_start_rect = Rect2(
-		Vector2(result_panel_rect.get_center().x - 150.0, result_panel_rect.end.y - 106.0),
-		Vector2(300.0, 68.0)
+		Vector2(result_panel_rect.get_center().x - 310.0, result_panel_rect.end.y - 106.0),
+		Vector2(280.0, 68.0)
 	)
+	main_layout_rect = Rect2(
+		Vector2(result_panel_rect.get_center().x + 30.0, result_panel_rect.end.y - 106.0),
+		Vector2(280.0, 68.0)
+	)
+
+	editor_toolbar_rect = Rect2(
+		safe.position + Vector2(10.0, 10.0),
+		Vector2(safe.size.x - 20.0, clampf(safe.size.y * 0.18, 124.0, 154.0))
+	)
+	var tool_height := 50.0
+	var tool_y := editor_toolbar_rect.position.y + editor_toolbar_rect.size.y - tool_height - 14.0
+	var tool_gap := 10.0
+	var small_width := clampf(safe.size.x * 0.055, 68.0, 92.0)
+	var action_width := clampf(safe.size.x * 0.09, 118.0, 160.0)
+	editor_size_down_rect = Rect2(Vector2(editor_toolbar_rect.position.x + 20.0, tool_y), Vector2(small_width, tool_height))
+	editor_size_up_rect = Rect2(Vector2(editor_size_down_rect.end.x + tool_gap, tool_y), Vector2(small_width, tool_height))
+	editor_opacity_down_rect = Rect2(Vector2(editor_size_up_rect.end.x + 42.0, tool_y), Vector2(small_width, tool_height))
+	editor_opacity_up_rect = Rect2(Vector2(editor_opacity_down_rect.end.x + tool_gap, tool_y), Vector2(small_width, tool_height))
+	editor_apply_rect = Rect2(Vector2(editor_toolbar_rect.end.x - action_width - 20.0, tool_y), Vector2(action_width, tool_height))
+	editor_cancel_rect = Rect2(Vector2(editor_apply_rect.position.x - action_width - tool_gap, tool_y), Vector2(action_width, tool_height))
+	editor_reset_rect = Rect2(Vector2(editor_cancel_rect.position.x - action_width - tool_gap, tool_y), Vector2(action_width, tool_height))
 
 
 func _draw_header() -> void:
@@ -661,6 +858,51 @@ func _draw_main_screen() -> void:
 		MUTED_TEXT_COLOR
 	)
 	_draw_button(main_start_rect, "스테이지 시작", true)
+	_draw_button(main_layout_rect, "조작 배치", false)
+
+
+func _draw_layout_editor() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.78), true)
+	var safe := _safe_area_in_viewport()
+	draw_rect(safe, Color("4bd49b", 0.05), true)
+	draw_rect(safe, Color("65e6ae"), false, 4.0)
+	_draw_text("SAFE AREA", safe.position + Vector2(16.0, safe.size.y - 18.0), 16, Color("65e6ae"))
+
+	_draw_move_control()
+	_draw_action_controls()
+	var touch_rects := _control_touch_rects()
+	for control_id in _layout_control_order():
+		var rect: Rect2 = touch_rects[control_id]
+		var invalid := control_id in invalid_layout_controls
+		var selected := control_id == selected_layout_control
+		var outline := Color("f05d5e") if invalid else (ACTIVE_COLOR if selected else Color(TEXT_COLOR, 0.72))
+		draw_rect(rect, Color(outline, 0.10 if invalid else 0.035), true)
+		draw_rect(rect, outline, false, 6.0 if selected else 3.0)
+		if invalid:
+			draw_line(rect.position, rect.end, outline, 4.0)
+			draw_line(Vector2(rect.end.x, rect.position.y), Vector2(rect.position.x, rect.end.y), outline, 4.0)
+
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), editor_toolbar_rect)
+	var selected_label := _layout_control_label(selected_layout_control)
+	var selected_scale := int(round(float(control_scales.get(selected_layout_control, 1.0)) * 100.0))
+	_draw_text("조작 배치 편집  ·  선택: %s  ·  크기 %d%%  ·  전체 불투명도 %d%%" % [
+		selected_label,
+		selected_scale,
+		int(round(control_opacity * 100.0)),
+	], editor_toolbar_rect.position + Vector2(20.0, 38.0), 22, TEXT_COLOR)
+	var status := "적용 가능 · 조작 요소를 드래그하세요"
+	var status_color := PASS_COLOR
+	if not invalid_layout_controls.is_empty():
+		status = "적용 불가 · 터치 영역이 30% 이상 겹칩니다"
+		status_color = Color("ff8b85")
+	_draw_text(status, editor_toolbar_rect.position + Vector2(editor_toolbar_rect.size.x * 0.58, 38.0), 18, status_color)
+	_draw_button(editor_size_down_rect, "크기 -", false)
+	_draw_button(editor_size_up_rect, "크기 +", false)
+	_draw_button(editor_opacity_down_rect, "투명 -", false)
+	_draw_button(editor_opacity_up_rect, "투명 +", false)
+	_draw_button(editor_reset_rect, "초기화", false)
+	_draw_button(editor_cancel_rect, "취소", false)
+	_draw_button(editor_apply_rect, "적용", invalid_layout_controls.is_empty())
 
 
 func _draw_result_row(label: String, value: String, x: float, width: float, y: float) -> void:
@@ -681,15 +923,17 @@ func _section_time_summary() -> String:
 
 func _draw_move_control() -> void:
 	var active := move_pointer_id >= 0
-	draw_rect(move_zone, Color(MOVE_COLOR, 0.14 if active else 0.08), true)
-	draw_rect(move_zone, ACTIVE_COLOR if active else MOVE_COLOR, false, 4.0)
-	_draw_text("이동", move_zone.position + Vector2(18.0, 30.0), 20, MUTED_TEXT_COLOR)
+	var outline := ACTIVE_COLOR if active else MOVE_COLOR
+	draw_rect(move_zone, Color(MOVE_COLOR, (0.14 if active else 0.08) * control_opacity), true)
+	draw_rect(move_zone, Color(outline, control_opacity), false, 4.0)
+	_draw_text("이동", move_zone.position + Vector2(18.0, 30.0), 20, Color(MUTED_TEXT_COLOR, control_opacity))
 	var knob := move_origin + move_vector * move_radius
-	draw_circle(move_origin, move_radius, Color(MOVE_COLOR, 0.11))
-	draw_arc(move_origin, move_radius, 0.0, TAU, 48, MOVE_COLOR, 4.0, true)
-	draw_line(move_origin, knob, ACTIVE_COLOR if active else MOVE_COLOR, 7.0)
-	draw_circle(knob, 45.0, Color(ACTIVE_COLOR if active else MOVE_COLOR, 0.31))
-	draw_arc(knob, 45.0, 0.0, TAU, 40, ACTIVE_COLOR if active else MOVE_COLOR, 5.0, true)
+	draw_circle(move_origin, move_radius, Color(MOVE_COLOR, 0.11 * control_opacity))
+	draw_arc(move_origin, move_radius, 0.0, TAU, 48, Color(MOVE_COLOR, control_opacity), 4.0, true)
+	draw_line(move_origin, knob, Color(outline, control_opacity), 7.0)
+	var knob_radius := 45.0 * float(control_scales.get(MOVE_CONTROL, 1.0))
+	draw_circle(knob, knob_radius, Color(outline, 0.31 * control_opacity))
+	draw_arc(knob, knob_radius, 0.0, TAU, 40, Color(outline, control_opacity), 5.0, true)
 
 
 func _draw_action_controls() -> void:
@@ -701,8 +945,8 @@ func _draw_action_controls() -> void:
 		var ultimate_active := action_id == &"ultimate" \
 			and bool(movement_metrics.get("ultimate_active", false))
 		var color := ACTIVE_COLOR if pressed or ultimate_ready or ultimate_active else ACTION_COLOR
-		draw_circle(rect.get_center(), rect.size.x * 0.5, Color(color, 0.30 if pressed else 0.20))
-		draw_arc(rect.get_center(), rect.size.x * 0.5, 0.0, TAU, 44, color, 5.0, true)
+		draw_circle(rect.get_center(), rect.size.x * 0.5, Color(color, (0.30 if pressed else 0.20) * control_opacity))
+		draw_arc(rect.get_center(), rect.size.x * 0.5, 0.0, TAU, 44, Color(color, control_opacity), 5.0, true)
 		if action_id == &"ultimate":
 			var ratio: float = float(movement_metrics.get("ultimate_gauge_ratio", 0.0))
 			if ultimate_active:
@@ -712,9 +956,9 @@ func _draw_action_controls() -> void:
 			draw_arc(
 				rect.get_center(), rect.size.x * 0.5 - 10.0,
 				-PI * 0.5, -PI * 0.5 + TAU * clampf(ratio, 0.0, 1.0),
-				48, ACTIVE_COLOR, 9.0, true
+				48, Color(ACTIVE_COLOR, control_opacity), 9.0, true
 			)
-		_draw_text_centered(_action_label(action_id), rect, 18, TEXT_COLOR)
+		_draw_text_centered(_action_label(action_id), rect, 18, Color(TEXT_COLOR, control_opacity))
 
 
 func _action_label(action_id: StringName) -> String:
@@ -794,6 +1038,88 @@ func _clamp_move_origin(position: Vector2) -> Vector2:
 	return Vector2(
 		clampf(position.x, move_zone.position.x + move_radius, move_zone.end.x - move_radius),
 		clampf(position.y, move_zone.position.y + move_radius, move_zone.end.y - move_radius)
+	)
+
+
+func _layout_control_order() -> Array[StringName]:
+	var order: Array[StringName] = [MOVE_CONTROL]
+	order.append_array(ACTION_ORDER)
+	return order
+
+
+func _layout_control_label(control_id: StringName) -> String:
+	if control_id == MOVE_CONTROL:
+		return "이동 패드"
+	return String(ACTION_LABELS.get(control_id, control_id))
+
+
+func _control_touch_rect(control_id: StringName) -> Rect2:
+	if control_id == MOVE_CONTROL:
+		return move_zone
+	return action_rects.get(control_id, Rect2())
+
+
+func _control_touch_rects() -> Dictionary:
+	var rects := {}
+	for control_id in _layout_control_order():
+		rects[control_id] = _control_touch_rect(control_id)
+	return rects
+
+
+func _layout_control_at(position: Vector2) -> StringName:
+	var order := _layout_control_order()
+	order.reverse()
+	for control_id in order:
+		if _control_touch_rect(control_id).has_point(position):
+			return control_id
+	return &""
+
+
+func _validate_control_layout() -> void:
+	invalid_layout_controls.clear()
+	var order := _layout_control_order()
+	for first_index in order.size():
+		var first_id := order[first_index]
+		var first_rect := _control_touch_rect(first_id)
+		for second_index in range(first_index + 1, order.size()):
+			var second_id := order[second_index]
+			var second_rect := _control_touch_rect(second_id)
+			if _touch_overlap_ratio(first_rect, second_rect) >= 0.30:
+				if first_id not in invalid_layout_controls:
+					invalid_layout_controls.append(first_id)
+				if second_id not in invalid_layout_controls:
+					invalid_layout_controls.append(second_id)
+
+
+func _touch_overlap_ratio(first: Rect2, second: Rect2) -> float:
+	var intersection := first.intersection(second)
+	if intersection.size.x <= 0.0 or intersection.size.y <= 0.0:
+		return 0.0
+	var overlap_area := intersection.size.x * intersection.size.y
+	var smaller_area := minf(first.size.x * first.size.y, second.size.x * second.size.y)
+	return overlap_area / maxf(smaller_area, 1.0)
+
+
+func _capture_control_layout() -> Dictionary:
+	return {
+		"centers": control_centers.duplicate(true),
+		"scales": control_scales.duplicate(true),
+		"opacity": control_opacity,
+	}
+
+
+func _restore_control_layout(snapshot: Dictionary) -> void:
+	control_centers = (snapshot.get("centers", DEFAULT_CONTROL_CENTERS) as Dictionary).duplicate(true)
+	control_scales = (snapshot.get("scales", {}) as Dictionary).duplicate(true)
+	control_opacity = clampf(float(snapshot.get("opacity", 0.82)), 0.30, 1.00)
+	_refresh_layout()
+	_validate_control_layout()
+
+
+func _clamp_control_center(center: Vector2, half_size: Vector2, safe: Rect2) -> Vector2:
+	return Vector2(
+		clampf(center.x, safe.position.x + half_size.x, safe.end.x - half_size.x),
+		clampf(center.y, safe.position.y + half_size.y, safe.end.y - half_size.y)
 	)
 
 

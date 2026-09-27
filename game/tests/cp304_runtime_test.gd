@@ -16,6 +16,8 @@ func _run() -> void:
 	var sword := sandbox.get_node("Player/SwordCombatController") as SwordCombatController
 	var bow := sandbox.get_node("Player/BowCombatController") as BowCombatController
 	await process_frame
+	controls.begin_stage_from_main()
+	await process_frame
 
 	# 1280x720 소형 화면에서도 상단 HUD가 이동/전투 조작 영역과 분리된다.
 	controls.size = Vector2(1280.0, 720.0)

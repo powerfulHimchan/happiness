@@ -30,6 +30,7 @@ required_files=(
   "$game_root/tests/cp302_runtime_test.gd"
   "$game_root/tests/cp303_runtime_test.gd"
   "$game_root/tests/cp304_runtime_test.gd"
+  "$game_root/tests/cp401_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -393,6 +394,14 @@ if ! rg -q 'enum ScreenMode' "$game_root/scripts/movement/ground_movement_contro
 	exit 1
 fi
 
+if ! rg -q 'func open_layout_editor' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q '0\.70, 1\.40' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q '0\.30, 1\.00' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q '_touch_overlap_ratio' "$game_root/scripts/movement/ground_movement_controls.gd"; then
+	echo "CP-401 control layout editor, size, opacity, or overlap validation is missing." >&2
+	exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -427,6 +436,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/cp303_runtime_test.gd
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp304_runtime_test.gd
+  timeout 45s "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp401_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"
