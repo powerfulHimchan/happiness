@@ -28,6 +28,8 @@ const SLIME_DAMAGE := 8
 const SEED_DAMAGE := 7
 const WIND_DAMAGE := 10
 const CONTACT_RADIUS_PX := 68.0
+const DANGER_RING_COLOR := Color("ff5f56")
+const DANGER_LINE_COLOR := Color("ff7043")
 
 @export_enum("풀잎 슬라임", "씨앗 포대", "바람 정령") var enemy_type: int = EnemyType.LEAF_SLIME
 @export var player_path: NodePath
@@ -60,6 +62,8 @@ func _ready() -> void:
 	add_to_group("combat_enemy")
 	warning_ring.visible = false
 	warning_line.visible = false
+	warning_ring.modulate = DANGER_RING_COLOR
+	warning_line.default_color = DANGER_LINE_COLOR
 	_set_state(State.IDLE, "%s 등장" % enemy_name())
 
 
@@ -141,6 +145,14 @@ func current_metrics() -> Dictionary:
 	}
 
 
+func warning_feedback_snapshot() -> Dictionary:
+	return {
+		"color": DANGER_LINE_COLOR if enemy_type == EnemyType.WIND_SPIRIT else DANGER_RING_COLOR,
+		"shape": "직선" if enemy_type == EnemyType.WIND_SPIRIT else "원형",
+		"uses_color_and_shape": true,
+	}
+
+
 func enemy_name() -> String:
 	match enemy_type:
 		EnemyType.LEAF_SLIME:
@@ -207,7 +219,7 @@ func _update_seed_sack(delta: float) -> void:
 			elif _attack_cooldown_s <= 0.0:
 				_begin_warning("씨앗 포대 조준 경고 · 1.0초")
 		State.WARNING:
-			_update_aim_line(520.0, Color("ffd166"))
+			_update_aim_line(520.0, DANGER_LINE_COLOR)
 			if _state_elapsed_s >= SEED_WARNING_S:
 				_fire_seed_volley()
 				_begin_recovery("씨앗탄 3발 발사 · 반격 1.0초")
@@ -230,7 +242,7 @@ func _update_wind_spirit(delta: float) -> void:
 				).normalized()
 				_begin_warning("바람 정령 직선 경고 · 0.6초")
 		State.WARNING:
-			_update_fixed_warning_line(_attack_direction * 850.0, Color.WHITE)
+			_update_fixed_warning_line(_attack_direction * 850.0, DANGER_LINE_COLOR)
 			if _state_elapsed_s >= WIND_WARNING_S:
 				_begin_attack("바람 정령 돌진")
 		State.ATTACK:
@@ -269,8 +281,10 @@ func _set_state(new_state: int, message: String) -> void:
 	last_event_msec = Time.get_ticks_msec()
 	if warning_ring != null:
 		warning_ring.visible = new_state == State.WARNING and enemy_type != EnemyType.WIND_SPIRIT
+		warning_ring.modulate = DANGER_RING_COLOR
 	if warning_line != null:
 		warning_line.visible = new_state == State.WARNING
+		warning_line.default_color = DANGER_LINE_COLOR
 
 
 func _fire_seed_volley() -> void:

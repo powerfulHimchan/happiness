@@ -41,6 +41,8 @@ const SWORD_STUN_MULTIPLIER := 1.75
 const LEFT_WALL_X := 120.0
 const RIGHT_WALL_X := 4880.0
 const CONTACT_RADIUS_PX := 86.0
+const DANGER_RING_COLOR := Color("ff5f56")
+const DANGER_LINE_COLOR := Color("ff7043")
 
 @export var player_path: NodePath
 
@@ -77,6 +79,8 @@ func _ready() -> void:
 	add_to_group("elite_enemy")
 	warning_ring.visible = false
 	warning_line.visible = false
+	warning_ring.modulate = DANGER_RING_COLOR
+	warning_line.default_color = DANGER_LINE_COLOR
 	_set_state(State.IDLE, "갑옷 멧돼지 등장 · 활 약점")
 
 
@@ -178,6 +182,14 @@ func current_metrics() -> Dictionary:
 		"elite_max_health": damage_receiver.max_health,
 		"elite_last_multiplier": last_damage_multiplier,
 		"elite_last_adjusted_damage": last_adjusted_damage,
+	}
+
+
+func warning_feedback_snapshot() -> Dictionary:
+	return {
+		"color": DANGER_LINE_COLOR if current_pattern == Pattern.CHARGE else DANGER_RING_COLOR,
+		"shape": "직선" if current_pattern == Pattern.CHARGE else "원형",
+		"uses_color_and_shape": true,
 	}
 
 
@@ -284,8 +296,10 @@ func _set_state(new_state: int, message: String) -> void:
 	last_event_msec = Time.get_ticks_msec()
 	if warning_ring != null:
 		warning_ring.visible = new_state == State.WARNING or new_state == State.PHASE_TRANSITION
+		warning_ring.modulate = DANGER_RING_COLOR
 	if warning_line != null:
 		warning_line.visible = new_state == State.WARNING and current_pattern == Pattern.CHARGE
+		warning_line.default_color = DANGER_LINE_COLOR
 
 
 func _spawn_shockwaves() -> void:

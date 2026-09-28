@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인과 `CP-101~105` 이동 샌드박스, `CP-201~304` 전투·스테이지·결과, `CP-401~402` 배치 편집·저장을 거쳐 `CP-403 배치 테스트 모드`를 검증하는 프로젝트다. 저장 전 배치로 10초간 실제 이동과 멀티터치 액션을 확인한다.
+`CP-001`, `CP-002` 기술 확인과 `CP-101~304` 전투 프로토타입, `CP-401~403` 조작 배치 기능을 거쳐 `CP-404 타격 피드백`을 검증하는 프로젝트다. 연출은 피해 판정과 분리되며 진동과 화면 흔들기를 각각 끌 수 있다.
 
 ## 기준 환경
 
@@ -37,11 +37,11 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp403-layout-test-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp404-hit-feedback-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
-`CP-403` 기기 테스트에서는 기존 이동·대상·피해·검·활·필살기·적 항목과 함께 아래를 확인한다.
+`CP-404` 기기 테스트에서는 기존 이동·대상·피해·검·활·필살기·적·조작 배치 항목과 함께 아래를 확인한다.
 
 - 화면이 가로 방향으로 고정되는가?
 - 카메라 홀과 둥근 모서리가 녹색 안전 영역 밖에 있는가?
@@ -133,6 +133,11 @@ godot --path game --editor
 - 눌린 실제 터치 영역과 겹침 상태가 테스트 화면에 즉시 표시되는가?
 - 테스트 종료 후 편집 화면으로 돌아오며 저장 파일이 바뀌지 않는가?
 - 전투 중 배치 적용·취소 후 3초 카운트다운 동안 적과 피해가 정지하는가?
+- 기본 타격은 0.04초, 강한 타격은 0.07초 정지한 듯한 시각 피드백이 나는가?
+- 플레이어 피격 점멸이 0.12초 안에 끝나며 화면 전체가 하얗게 번쩍이지 않는가?
+- 진동과 화면 흔들기를 각각 꺼도 피해량과 타격 판정은 그대로인가?
+- 진동은 강한 공격, 정확한 회피와 필살기에만 발생하는가?
+- 위험 공격이 붉은 계열 색상과 원형·직선 도형을 함께 사용하는가?
 
 ## 현재 파일
 
@@ -157,6 +162,7 @@ game/
 ├── scripts/combat/bow_projectile.gd
 ├── scripts/combat/prototype_weapon_controller.gd
 ├── scripts/combat/ultimate_controller.gd
+├── scripts/combat/combat_feedback_controller.gd
 ├── scripts/combat/prototype_enemy.gd
 ├── scripts/combat/enemy_seed_projectile.gd
 ├── scripts/combat/elite_armored_boar.gd
@@ -172,7 +178,7 @@ game/
 
 ## 아직 포함하지 않은 것
 
-- 실제 전투 UI와 버튼 배치 편집
+- 로컬 테스트 JSON Lines 기록
 - 주먹·지팡이·봉·방패 공격과 스킬
 
-다음 구현 티켓은 `CP-304 전투 HUD와 결과 화면`이다.
+다음 구현 티켓은 `CP-405 로컬 테스트 기록`이다.

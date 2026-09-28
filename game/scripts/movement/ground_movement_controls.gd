@@ -1,7 +1,6 @@
 extends Control
 
-## CP-403용 모바일 전투 HUD와 조작 배치 테스트 모드.
-## 편집 중인 배치를 저장하지 않고 10초간 멀티터치로 확인한다.
+## CP-404용 모바일 전투 HUD, 조작 배치 테스트와 타격 피드백 설정.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -17,6 +16,11 @@ signal layout_test_started
 signal layout_test_finished
 signal combat_configuration_started
 signal combat_configuration_finished
+signal feedback_settings_changed(
+	sound_volume: float,
+	vibration_enabled: bool,
+	screen_shake_enabled: bool
+)
 
 enum ScreenMode {
 	COMBAT,
@@ -25,6 +29,7 @@ enum ScreenMode {
 	LAYOUT_EDITOR,
 	LAYOUT_TEST,
 	COMBAT_RESUME_COUNTDOWN,
+	FEEDBACK_SETTINGS,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -105,6 +110,13 @@ var result_retry_rect := Rect2()
 var result_main_rect := Rect2()
 var main_start_rect := Rect2()
 var main_layout_rect := Rect2()
+var main_feedback_rect := Rect2()
+var feedback_panel_rect := Rect2()
+var feedback_sound_down_rect := Rect2()
+var feedback_sound_up_rect := Rect2()
+var feedback_vibration_rect := Rect2()
+var feedback_shake_rect := Rect2()
+var feedback_back_rect := Rect2()
 var editor_toolbar_rect := Rect2()
 var editor_preset_default_rect := Rect2()
 var editor_preset_left_rect := Rect2()
@@ -138,6 +150,9 @@ var layout_test_remaining_s: float = 0.0
 var layout_test_input_counts: Dictionary = {}
 var layout_test_peak_controls: int = 0
 var combat_resume_remaining_s: float = 0.0
+var feedback_sound_volume: float = 0.80
+var feedback_vibration_enabled: bool = true
+var feedback_screen_shake_enabled: bool = true
 var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
@@ -158,7 +173,7 @@ func _ready() -> void:
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("CP-403 배치 테스트 준비")
+	_append_action_log("CP-404 타격 피드백 준비")
 	queue_redraw()
 
 
@@ -245,6 +260,9 @@ func _draw() -> void:
 		return
 	if screen_mode == ScreenMode.COMBAT_RESUME_COUNTDOWN:
 		_draw_combat_resume_countdown()
+		return
+	if screen_mode == ScreenMode.FEEDBACK_SETTINGS:
+		_draw_feedback_settings()
 		return
 	_draw_header()
 	_draw_move_control()
@@ -352,6 +370,46 @@ func show_main_screen() -> void:
 	release_all_inputs()
 	screen_mode = ScreenMode.MAIN
 	queue_redraw()
+
+
+func show_feedback_settings() -> void:
+	release_all_inputs()
+	screen_mode = ScreenMode.FEEDBACK_SETTINGS
+	queue_redraw()
+
+
+func set_feedback_sound_volume(value: float) -> void:
+	feedback_sound_volume = clampf(value, 0.0, 1.0)
+	_emit_feedback_settings()
+	queue_redraw()
+
+
+func set_feedback_vibration_enabled(enabled: bool) -> void:
+	feedback_vibration_enabled = enabled
+	_emit_feedback_settings()
+	queue_redraw()
+
+
+func set_feedback_screen_shake_enabled(enabled: bool) -> void:
+	feedback_screen_shake_enabled = enabled
+	_emit_feedback_settings()
+	queue_redraw()
+
+
+func feedback_settings_snapshot() -> Dictionary:
+	return {
+		"sound_volume": feedback_sound_volume,
+		"vibration_enabled": feedback_vibration_enabled,
+		"screen_shake_enabled": feedback_screen_shake_enabled,
+	}
+
+
+func _emit_feedback_settings() -> void:
+	feedback_settings_changed.emit(
+		feedback_sound_volume,
+		feedback_vibration_enabled,
+		feedback_screen_shake_enabled
+	)
 
 
 func begin_stage_from_main() -> void:
@@ -613,6 +671,19 @@ func _handle_screen_touch(position: Vector2) -> void:
 		begin_stage_from_main()
 	elif screen_mode == ScreenMode.MAIN and main_layout_rect.has_point(position):
 		open_layout_editor()
+	elif screen_mode == ScreenMode.MAIN and main_feedback_rect.has_point(position):
+		show_feedback_settings()
+	elif screen_mode == ScreenMode.FEEDBACK_SETTINGS:
+		if feedback_sound_down_rect.has_point(position):
+			set_feedback_sound_volume(feedback_sound_volume - 0.10)
+		elif feedback_sound_up_rect.has_point(position):
+			set_feedback_sound_volume(feedback_sound_volume + 0.10)
+		elif feedback_vibration_rect.has_point(position):
+			set_feedback_vibration_enabled(not feedback_vibration_enabled)
+		elif feedback_shake_rect.has_point(position):
+			set_feedback_screen_shake_enabled(not feedback_screen_shake_enabled)
+		elif feedback_back_rect.has_point(position):
+			show_main_screen()
 
 
 func _handle_editor_touch(touch: InputEventScreenTouch) -> void:
@@ -902,6 +973,34 @@ func _refresh_layout() -> void:
 		Vector2(result_panel_rect.get_center().x + 30.0, result_panel_rect.end.y - 106.0),
 		Vector2(280.0, 68.0)
 	)
+	main_feedback_rect = Rect2(
+		Vector2(result_panel_rect.get_center().x - 140.0, result_panel_rect.end.y - 190.0),
+		Vector2(280.0, 56.0)
+	)
+	feedback_panel_rect = result_panel_rect
+	var feedback_row_x := feedback_panel_rect.position.x + 310.0
+	var feedback_row_width := feedback_panel_rect.size.x - 380.0
+	var feedback_button_width := 150.0
+	feedback_sound_down_rect = Rect2(
+		Vector2(feedback_row_x, feedback_panel_rect.position.y + 174.0),
+		Vector2(feedback_button_width, 54.0)
+	)
+	feedback_sound_up_rect = Rect2(
+		Vector2(feedback_sound_down_rect.end.x + 18.0, feedback_sound_down_rect.position.y),
+		Vector2(feedback_button_width, 54.0)
+	)
+	feedback_vibration_rect = Rect2(
+		Vector2(feedback_row_x, feedback_panel_rect.position.y + 254.0),
+		Vector2(feedback_row_width, 56.0)
+	)
+	feedback_shake_rect = Rect2(
+		Vector2(feedback_row_x, feedback_panel_rect.position.y + 334.0),
+		Vector2(feedback_row_width, 56.0)
+	)
+	feedback_back_rect = Rect2(
+		Vector2(feedback_panel_rect.get_center().x - 120.0, feedback_panel_rect.end.y - 82.0),
+		Vector2(240.0, 54.0)
+	)
 
 	editor_toolbar_rect = Rect2(
 		safe.position + Vector2(10.0, 10.0),
@@ -1073,8 +1172,64 @@ func _draw_main_screen() -> void:
 		19,
 		MUTED_TEXT_COLOR
 	)
+	_draw_button(main_feedback_rect, "피드백 설정", false)
 	_draw_button(main_start_rect, "스테이지 시작", true)
 	_draw_button(main_layout_rect, "조작 배치", false)
+
+
+func _draw_feedback_settings() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.92), true)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), feedback_panel_rect)
+	_draw_text_centered(
+		"타격 피드백 설정",
+		Rect2(
+			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.position.y + 42.0),
+			Vector2(feedback_panel_rect.size.x, 58.0)
+		),
+		34,
+		ACTIVE_COLOR
+	)
+	var label_x := feedback_panel_rect.position.x + 70.0
+	_draw_text(
+		"효과음  %d%%" % int(round(feedback_sound_volume * 100.0)),
+		Vector2(label_x, feedback_sound_down_rect.position.y + 35.0),
+		22,
+		TEXT_COLOR
+	)
+	_draw_button(feedback_sound_down_rect, "소리 -", false)
+	_draw_button(feedback_sound_up_rect, "소리 +", false)
+	_draw_text(
+		"진동",
+		Vector2(label_x, feedback_vibration_rect.position.y + 36.0),
+		22,
+		TEXT_COLOR
+	)
+	_draw_button(
+		feedback_vibration_rect,
+		"켜짐" if feedback_vibration_enabled else "꺼짐",
+		feedback_vibration_enabled
+	)
+	_draw_text(
+		"화면 흔들기",
+		Vector2(label_x, feedback_shake_rect.position.y + 36.0),
+		22,
+		TEXT_COLOR
+	)
+	_draw_button(
+		feedback_shake_rect,
+		"켜짐" if feedback_screen_shake_enabled else "꺼짐",
+		feedback_screen_shake_enabled
+	)
+	_draw_text_centered(
+		"설정을 꺼도 피해량과 판정은 바뀌지 않습니다.",
+		Rect2(
+			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.end.y - 142.0),
+			Vector2(feedback_panel_rect.size.x, 36.0)
+		),
+		17,
+		MUTED_TEXT_COLOR
+	)
+	_draw_button(feedback_back_rect, "메인으로", false)
 
 
 func _draw_layout_editor() -> void:

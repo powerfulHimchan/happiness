@@ -94,24 +94,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-cp403-layout-test.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-cp404-hit-feedback.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-cp403-layout-test.apk
+          cp "${apk_path}" dist/happiness-tale-cp404-hit-feedback.apk
           (
             cd dist
-            sha256sum happiness-tale-cp403-layout-test.apk \
-              | tee happiness-tale-cp403-layout-test.apk.sha256
+            sha256sum happiness-tale-cp404-hit-feedback.apk \
+              | tee happiness-tale-cp404-hit-feedback.apk.sha256
           )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-cp403-layout-test-apk
+          name: happiness-tale-cp404-hit-feedback-apk
           path: |
-            dist/happiness-tale-cp403-layout-test.apk
-            dist/happiness-tale-cp403-layout-test.apk.sha256
+            dist/happiness-tale-cp404-hit-feedback.apk
+            dist/happiness-tale-cp404-hit-feedback.apk.sha256
           if-no-files-found: error
           retention-days: 14

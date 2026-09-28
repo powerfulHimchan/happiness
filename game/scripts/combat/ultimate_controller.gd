@@ -4,6 +4,8 @@ extends Node
 ## CP-206 공용 필살기 새벽의 틈의 게이지와 선택적 시간 감속을 관리한다.
 
 signal ultimate_metrics_changed(metrics: Dictionary)
+signal precise_evade_registered
+signal ultimate_activated
 
 const MAX_GAUGE := 100
 const BASIC_HIT_GAIN := 4
@@ -62,6 +64,7 @@ func request_ultimate() -> void:
 	activation_count += 1
 	last_ultimate_log = "새벽의 틈 발동 · 적 시간 15%%"
 	_apply_enemy_time_scale(ENEMY_TIME_SCALE)
+	ultimate_activated.emit()
 	_emit_metrics()
 
 
@@ -69,6 +72,7 @@ func register_precise_evade() -> void:
 	if not player.invincible:
 		return
 	precise_evade_count += 1
+	precise_evade_registered.emit()
 	_add_gauge(PRECISE_EVADE_GAIN, "정확한 회피")
 
 

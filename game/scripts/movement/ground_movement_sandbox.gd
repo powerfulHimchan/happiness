@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-403 3분 스테이지와 안전한 조작 배치 테스트 환경을 담당한다.
+## CP-404 3분 스테이지와 판정 독립형 타격 피드백 환경을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -17,6 +17,7 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var target_selector: AutoTargetSelector = $Player/AutoTargetSelector
 @onready var weapon_controller: PrototypeWeaponController = $Player/PrototypeWeaponController
 @onready var ultimate_controller: UltimateController = $Player/UltimateController
+@onready var feedback_controller: CombatFeedbackController = $CombatFeedbackController
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
 @onready var stage_runner: PrototypeStageRunner = $StageRunner
 
@@ -40,6 +41,7 @@ func _ready() -> void:
 	controls.layout_test_finished.connect(_on_layout_test_finished)
 	controls.combat_configuration_started.connect(_suspend_combat_environment)
 	controls.combat_configuration_finished.connect(_restore_combat_environment)
+	controls.feedback_settings_changed.connect(feedback_controller.configure)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
@@ -57,6 +59,12 @@ func _ready() -> void:
 		_on_safe_zone_entered.bind(RIGHT_SAFE_SPAWN, "오른쪽 평지")
 	)
 	player.set_safe_spawn(TRACK_START, "시작 평지")
+	var feedback_settings: Dictionary = controls.feedback_settings_snapshot()
+	feedback_controller.configure(
+		float(feedback_settings["sound_volume"]),
+		bool(feedback_settings["vibration_enabled"]),
+		bool(feedback_settings["screen_shake_enabled"])
+	)
 	controls.update_movement_metrics({
 		"speed_mps": 0.0,
 		"target_speed_mps": 0.0,

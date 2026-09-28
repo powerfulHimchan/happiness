@@ -8,6 +8,7 @@ signal movement_metrics_changed(metrics: Dictionary)
 signal fall_recovery_started
 signal player_died
 signal evade_started
+signal damage_received(event: DamageEvent)
 
 enum MobilityAction {
 	NONE,
@@ -291,12 +292,21 @@ func receive_damage(event: DamageEvent) -> int:
 		_input_lock_remaining_s = maxf(_input_lock_remaining_s, event.stagger_s)
 		move_input = 0.0
 		move_input_vector = Vector2.ZERO
+		damage_received.emit(event)
 		if damage_receiver.dead:
 			_cancel_actions_for_recovery()
 			velocity = Vector2.ZERO
 			player_died.emit()
 	_emit_metrics()
 	return result
+
+
+func feedback_snapshot() -> Dictionary:
+	return {
+		"hit_flash_remaining_s": _hit_flash_remaining_s,
+		"post_hit_invulnerable": damage_receiver.is_post_hit_invulnerable(),
+		"health": damage_receiver.health,
+	}
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:

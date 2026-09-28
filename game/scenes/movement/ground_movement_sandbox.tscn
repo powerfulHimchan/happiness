@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3]
+[gd_scene load_steps=39 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -28,6 +28,7 @@
 [ext_resource type="Script" path="res://scripts/combat/elite_armored_boar.gd" id="28_elite_boar"]
 [ext_resource type="Texture2D" path="res://assets/armored_boar.svg" id="29_armored_boar"]
 [ext_resource type="Script" path="res://scripts/stage/prototype_stage_runner.gd" id="30_stage_runner"]
+[ext_resource type="Script" path="res://scripts/combat/combat_feedback_controller.gd" id="31_feedback"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -684,6 +685,9 @@ color = Color(1, 0.419608, 0.368627, 0.78)
 
 [node name="StageRunner" type="Node" parent="."]
 script = ExtResource("30_stage_runner")
+
+[node name="CombatFeedbackController" type="Node2D" parent="."]
+script = ExtResource("31_feedback")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 layer = 10
