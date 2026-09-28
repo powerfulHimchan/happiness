@@ -1,6 +1,6 @@
 extends Control
 
-## CP-404용 모바일 전투 HUD, 조작 배치 테스트와 타격 피드백 설정.
+## CP-405용 모바일 전투 HUD, 타격 피드백 설정과 로컬 기록 집계.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -21,6 +21,7 @@ signal feedback_settings_changed(
 	vibration_enabled: bool,
 	screen_shake_enabled: bool
 )
+signal test_records_clear_requested
 
 enum ScreenMode {
 	COMBAT,
@@ -117,6 +118,7 @@ var feedback_sound_up_rect := Rect2()
 var feedback_vibration_rect := Rect2()
 var feedback_shake_rect := Rect2()
 var feedback_back_rect := Rect2()
+var feedback_records_clear_rect := Rect2()
 var editor_toolbar_rect := Rect2()
 var editor_preset_default_rect := Rect2()
 var editor_preset_left_rect := Rect2()
@@ -153,6 +155,7 @@ var combat_resume_remaining_s: float = 0.0
 var feedback_sound_volume: float = 0.80
 var feedback_vibration_enabled: bool = true
 var feedback_screen_shake_enabled: bool = true
+var test_record_summary: Dictionary = {}
 var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
@@ -173,7 +176,7 @@ func _ready() -> void:
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("CP-404 타격 피드백 준비")
+	_append_action_log("CP-405 로컬 테스트 기록 준비")
 	queue_redraw()
 
 
@@ -358,6 +361,11 @@ func update_stage_metrics(metrics: Dictionary) -> void:
 	queue_redraw()
 
 
+func update_test_record_summary(summary: Dictionary) -> void:
+	test_record_summary = summary.duplicate(true)
+	queue_redraw()
+
+
 func begin_retry() -> void:
 	release_all_inputs()
 	result_snapshot.clear()
@@ -402,6 +410,10 @@ func feedback_settings_snapshot() -> Dictionary:
 		"vibration_enabled": feedback_vibration_enabled,
 		"screen_shake_enabled": feedback_screen_shake_enabled,
 	}
+
+
+func test_record_summary_snapshot() -> Dictionary:
+	return test_record_summary.duplicate(true)
 
 
 func _emit_feedback_settings() -> void:
@@ -655,6 +667,7 @@ func _show_result_screen() -> void:
 		"bow_damage": int(movement_metrics.get("bow_total_damage", 0)),
 		"sword_ratio": float(sword_hits) / float(total_hits) if total_hits > 0 else 0.0,
 		"bow_ratio": float(bow_hits) / float(total_hits) if total_hits > 0 else 0.0,
+		"record_summary": test_record_summary.duplicate(true),
 	}
 	screen_mode = ScreenMode.RESULT
 	_refresh_layout()
@@ -682,6 +695,8 @@ func _handle_screen_touch(position: Vector2) -> void:
 			set_feedback_vibration_enabled(not feedback_vibration_enabled)
 		elif feedback_shake_rect.has_point(position):
 			set_feedback_screen_shake_enabled(not feedback_screen_shake_enabled)
+		elif feedback_records_clear_rect.has_point(position):
+			test_records_clear_requested.emit()
 		elif feedback_back_rect.has_point(position):
 			show_main_screen()
 
@@ -950,7 +965,7 @@ func _refresh_layout() -> void:
 	)
 	var panel_size := Vector2(
 		clampf(safe.size.x * 0.72, 760.0, 1060.0),
-		clampf(safe.size.y * 0.68, 470.0, 650.0)
+		clampf(safe.size.y * 0.82, 580.0, 650.0)
 	)
 	panel_size.x = minf(panel_size.x, safe.size.x - 32.0)
 	panel_size.y = minf(panel_size.y, safe.size.y - 32.0)
@@ -996,6 +1011,10 @@ func _refresh_layout() -> void:
 	feedback_shake_rect = Rect2(
 		Vector2(feedback_row_x, feedback_panel_rect.position.y + 334.0),
 		Vector2(feedback_row_width, 56.0)
+	)
+	feedback_records_clear_rect = Rect2(
+		Vector2(feedback_row_x, feedback_panel_rect.position.y + 400.0),
+		Vector2(feedback_row_width, 54.0)
 	)
 	feedback_back_rect = Rect2(
 		Vector2(feedback_panel_rect.get_center().x - 120.0, feedback_panel_rect.end.y - 82.0),
@@ -1147,6 +1166,19 @@ func _draw_result_screen() -> void:
 		content_width,
 		y
 	)
+	y += 58.0
+	var record_summary: Dictionary = result_snapshot.get("record_summary", {})
+	var completed_runs := int(record_summary.get("completed_run_count", 0))
+	var incomplete_runs := int(record_summary.get("incomplete_run_count", 0))
+	var best_s := float(record_summary.get("best_completion_s", 0.0))
+	var average_s := float(record_summary.get("average_completion_s", 0.0))
+	var record_text := "완주 %d · 중단 %d · 최고 %s · 평균 %s" % [
+		completed_runs,
+		incomplete_runs,
+		_format_clock(best_s) if best_s > 0.0 else "--:--",
+		_format_clock(average_s) if average_s > 0.0 else "--:--",
+	]
+	_draw_result_row("로컬 테스트", record_text, content_x, content_width, y)
 	_draw_button(result_retry_rect, "다시 도전", true)
 	_draw_button(result_main_rect, "메인 화면", false)
 
@@ -1172,7 +1204,7 @@ func _draw_main_screen() -> void:
 		19,
 		MUTED_TEXT_COLOR
 	)
-	_draw_button(main_feedback_rect, "피드백 설정", false)
+	_draw_button(main_feedback_rect, "설정", false)
 	_draw_button(main_start_rect, "스테이지 시작", true)
 	_draw_button(main_layout_rect, "조작 배치", false)
 
@@ -1181,7 +1213,7 @@ func _draw_feedback_settings() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.92), true)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), feedback_panel_rect)
 	_draw_text_centered(
-		"타격 피드백 설정",
+		"설정",
 		Rect2(
 			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.position.y + 42.0),
 			Vector2(feedback_panel_rect.size.x, 58.0)
@@ -1220,10 +1252,17 @@ func _draw_feedback_settings() -> void:
 		"켜짐" if feedback_screen_shake_enabled else "꺼짐",
 		feedback_screen_shake_enabled
 	)
+	_draw_text(
+		"로컬 테스트 기록",
+		Vector2(label_x, feedback_records_clear_rect.position.y + 35.0),
+		22,
+		TEXT_COLOR
+	)
+	_draw_button(feedback_records_clear_rect, "기록 초기화", false)
 	_draw_text_centered(
-		"설정을 꺼도 피해량과 판정은 바뀌지 않습니다.",
+		"기록은 기기에만 저장되며 네트워크로 전송되지 않습니다.",
 		Rect2(
-			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.end.y - 142.0),
+			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.end.y - 130.0),
 			Vector2(feedback_panel_rect.size.x, 36.0)
 		),
 		17,

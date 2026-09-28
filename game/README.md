@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인과 `CP-101~304` 전투 프로토타입, `CP-401~403` 조작 배치 기능을 거쳐 `CP-404 타격 피드백`을 검증하는 프로젝트다. 연출은 피해 판정과 분리되며 진동과 화면 흔들기를 각각 끌 수 있다.
+`CP-001`, `CP-002` 기술 확인과 `CP-101~304` 전투 프로토타입, `CP-401~404` 조작·타격 피드백을 거쳐 `CP-405 로컬 테스트 기록`을 검증하는 프로젝트다. 실행과 구간 이벤트를 기기 내부 JSON Lines로 즉시 저장한다.
 
 ## 기준 환경
 
@@ -37,11 +37,11 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp404-hit-feedback-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp405-local-test-log-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
-`CP-404` 기기 테스트에서는 기존 이동·대상·피해·검·활·필살기·적·조작 배치 항목과 함께 아래를 확인한다.
+`CP-405` 기기 테스트에서는 기존 이동·전투·조작·피드백 항목과 함께 아래를 확인한다.
 
 - 화면이 가로 방향으로 고정되는가?
 - 카메라 홀과 둥근 모서리가 녹색 안전 영역 밖에 있는가?
@@ -138,6 +138,10 @@ godot --path game --editor
 - 진동과 화면 흔들기를 각각 꺼도 피해량과 타격 판정은 그대로인가?
 - 진동은 강한 공격, 정확한 회피와 필살기에만 발생하는가?
 - 위험 공격이 붉은 계열 색상과 원형·직선 도형을 함께 사용하는가?
+- 완주 뒤 결과 화면에 누적 완주 횟수와 최고 시간이 표시되는가?
+- 앱을 구간 도중 종료한 뒤 재실행해도 이전의 완성된 기록 줄을 읽는가?
+- 설정의 기록 초기화로 로컬 테스트 집계가 0이 되는가?
+- 네트워크 연결 없이 동일하게 기록되는가?
 
 ## 현재 파일
 
@@ -170,6 +174,7 @@ game/
 ├── scripts/combat/auto_target_selector.gd
 ├── scripts/combat/prototype_target.gd
 ├── scripts/stage/prototype_stage_runner.gd
+├── scripts/telemetry/local_test_recorder.gd
 ├── scripts/input/input_command_sandbox.gd
 ├── scripts/input/player_command.gd
 ├── scripts/input/player_command_buffer.gd
@@ -178,7 +183,7 @@ game/
 
 ## 아직 포함하지 않은 것
 
-- 로컬 테스트 JSON Lines 기록
+- 두 화면 비율 실기기 안전 영역 검증
 - 주먹·지팡이·봉·방패 공격과 스킬
 
-다음 구현 티켓은 `CP-405 로컬 테스트 기록`이다.
+다음 구현 티켓은 `CP-406 Android 검증 APK`다.

@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-404 3분 스테이지와 판정 독립형 타격 피드백 환경을 담당한다.
+## CP-405 3분 스테이지, 타격 피드백과 로컬 테스트 기록 환경을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -18,6 +18,7 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var weapon_controller: PrototypeWeaponController = $Player/PrototypeWeaponController
 @onready var ultimate_controller: UltimateController = $Player/UltimateController
 @onready var feedback_controller: CombatFeedbackController = $CombatFeedbackController
+@onready var test_recorder: LocalTestRecorder = $LocalTestRecorder
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
 @onready var stage_runner: PrototypeStageRunner = $StageRunner
 
@@ -42,12 +43,15 @@ func _ready() -> void:
 	controls.combat_configuration_started.connect(_suspend_combat_environment)
 	controls.combat_configuration_finished.connect(_restore_combat_environment)
 	controls.feedback_settings_changed.connect(feedback_controller.configure)
+	controls.test_records_clear_requested.connect(test_recorder.clear_records)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
 	weapon_controller.combat_metrics_changed.connect(controls.update_combat_metrics)
 	ultimate_controller.ultimate_metrics_changed.connect(controls.update_ultimate_metrics)
+	test_recorder.summary_changed.connect(controls.update_test_record_summary)
+	stage_runner.stage_metrics_changed.connect(test_recorder.record_stage_metrics)
 	stage_runner.stage_metrics_changed.connect(controls.update_stage_metrics)
 	$LeftSafeZone.body_entered.connect(
 		_on_safe_zone_entered.bind(TRACK_START, "시작 평지")
@@ -65,6 +69,7 @@ func _ready() -> void:
 		bool(feedback_settings["vibration_enabled"]),
 		bool(feedback_settings["screen_shake_enabled"])
 	)
+	controls.update_test_record_summary(test_recorder.summary_snapshot())
 	controls.update_movement_metrics({
 		"speed_mps": 0.0,
 		"target_speed_mps": 0.0,
@@ -213,6 +218,7 @@ func _reset_test() -> void:
 	target_selector.reset_selection()
 	weapon_controller.reset_combat()
 	ultimate_controller.reset_ultimate()
+	test_recorder.start_run()
 	stage_runner.reset_stage()
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()

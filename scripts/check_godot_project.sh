@@ -26,6 +26,7 @@ required_files=(
   "$game_root/scripts/combat/elite_armored_boar.gd"
   "$game_root/scripts/combat/elite_shockwave.gd"
   "$game_root/scripts/stage/prototype_stage_runner.gd"
+  "$game_root/scripts/telemetry/local_test_recorder.gd"
   "$game_root/tests/cp206_runtime_test.gd"
   "$game_root/tests/cp301_runtime_test.gd"
   "$game_root/tests/cp302_runtime_test.gd"
@@ -35,6 +36,7 @@ required_files=(
   "$game_root/tests/cp402_runtime_test.gd"
   "$game_root/tests/cp403_runtime_test.gd"
   "$game_root/tests/cp404_runtime_test.gd"
+  "$game_root/tests/cp405_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -437,6 +439,20 @@ if ! rg -q 'uses_color_and_shape.*true' "$game_root/scripts/combat/prototype_ene
 	exit 1
 fi
 
+if ! rg -q 'class_name LocalTestRecorder' "$game_root/scripts/telemetry/local_test_recorder.gd" \
+  || ! rg -q 'local_test_records\.jsonl' "$game_root/scripts/telemetry/local_test_recorder.gd" \
+  || ! rg -q 'file\.flush\(\)' "$game_root/scripts/telemetry/local_test_recorder.gd" \
+  || ! rg -q 'test_records_clear_requested' "$game_root/scripts/movement/ground_movement_controls.gd"; then
+	echo "CP-405 JSON Lines recorder, immediate flush, or settings reset is missing." >&2
+	exit 1
+fi
+
+if ! rg -q 'permissions/internet=false' "$game_root/export_presets.cfg" \
+  || rg -q 'HTTPRequest|HTTPClient|WebSocketPeer' "$game_root/scripts/telemetry/local_test_recorder.gd"; then
+	echo "CP-405 local records must not require network permission or network clients." >&2
+	exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -479,6 +495,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/cp403_runtime_test.gd
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp404_runtime_test.gd
+  timeout 45s "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp405_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"
