@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-304 3분 스테이지의 이동, 전투 HUD와 결과 흐름 검증을 담당한다.
+## CP-403 3분 스테이지와 안전한 조작 배치 테스트 환경을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -21,6 +21,8 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var stage_runner: PrototypeStageRunner = $StageRunner
 
 var _enemy_metrics_elapsed_s: float = 0.0
+var _combat_environment_suspended: bool = false
+var _suspended_node_states: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -34,6 +36,10 @@ func _ready() -> void:
 	controls.weapon_swap_pressed.connect(weapon_controller.request_weapon_switch)
 	controls.reset_requested.connect(_reset_test)
 	controls.retry_requested.connect(_reset_test)
+	controls.layout_test_started.connect(_on_layout_test_started)
+	controls.layout_test_finished.connect(_on_layout_test_finished)
+	controls.combat_configuration_started.connect(_suspend_combat_environment)
+	controls.combat_configuration_finished.connect(_restore_combat_environment)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
@@ -205,6 +211,64 @@ func _reset_test() -> void:
 	_enemy_metrics_elapsed_s = 0.0
 	_emit_enemy_metrics()
 	controls.release_all_inputs()
+
+
+func _on_layout_test_started() -> void:
+	_suspend_combat_environment()
+
+
+func _on_layout_test_finished() -> void:
+	if not controls.layout_editor_returns_to_combat():
+		_restore_combat_environment()
+
+
+func _suspend_combat_environment() -> void:
+	if _combat_environment_suspended:
+		return
+	_combat_environment_suspended = true
+	_suspended_node_states.clear()
+	var nodes: Array[Node] = [stage_runner, target_selector]
+	for group_name in [&"combat_enemy", &"enemy_projectile", &"targetable"]:
+		for candidate in get_tree().get_nodes_in_group(group_name):
+			var candidate_node := candidate as Node
+			if candidate_node != null and candidate_node not in nodes:
+				nodes.append(candidate_node)
+	for suspended_node in nodes:
+		var state := {
+			"node": suspended_node,
+			"process_mode": suspended_node.process_mode,
+			"was_targetable": suspended_node.is_in_group("targetable"),
+			"visible": null,
+		}
+		if suspended_node is CanvasItem:
+			state["visible"] = (suspended_node as CanvasItem).visible
+			(suspended_node as CanvasItem).visible = false
+		if bool(state["was_targetable"]):
+			suspended_node.remove_from_group("targetable")
+		suspended_node.process_mode = Node.PROCESS_MODE_DISABLED
+		_suspended_node_states.append(state)
+	target_selector.reset_selection()
+
+
+func _restore_combat_environment() -> void:
+	if not _combat_environment_suspended:
+		return
+	for state in _suspended_node_states:
+		var suspended_node := state.get("node") as Node
+		if not is_instance_valid(suspended_node):
+			continue
+		suspended_node.process_mode = int(state.get("process_mode", Node.PROCESS_MODE_INHERIT))
+		if state.get("visible") != null and suspended_node is CanvasItem:
+			(suspended_node as CanvasItem).visible = bool(state["visible"])
+		if bool(state.get("was_targetable", false)):
+			suspended_node.add_to_group("targetable")
+	_suspended_node_states.clear()
+	_combat_environment_suspended = false
+	target_selector.force_scan()
+
+
+func is_combat_environment_suspended() -> bool:
+	return _combat_environment_suspended
 
 
 func _emit_enemy_metrics() -> void:

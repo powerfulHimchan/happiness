@@ -1,7 +1,7 @@
 extends Control
 
-## CP-402용 모바일 전투 HUD, 조작 프리셋과 로컬 저장.
-## 기본·왼손잡이·사용자 배치를 버전 JSON으로 저장하고 손상 요소만 복구한다.
+## CP-403용 모바일 전투 HUD와 조작 배치 테스트 모드.
+## 편집 중인 배치를 저장하지 않고 10초간 멀티터치로 확인한다.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -13,12 +13,18 @@ signal skill_2_pressed
 signal ultimate_pressed
 signal weapon_swap_pressed
 signal retry_requested
+signal layout_test_started
+signal layout_test_finished
+signal combat_configuration_started
+signal combat_configuration_finished
 
 enum ScreenMode {
 	COMBAT,
 	RESULT,
 	MAIN,
 	LAYOUT_EDITOR,
+	LAYOUT_TEST,
+	COMBAT_RESUME_COUNTDOWN,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -92,6 +98,7 @@ var move_radius: float = 106.0
 var fps_60_rect := Rect2()
 var fps_30_rect := Rect2()
 var reset_rect := Rect2()
+var combat_layout_rect := Rect2()
 var hud_rect := Rect2()
 var result_panel_rect := Rect2()
 var result_retry_rect := Rect2()
@@ -106,9 +113,11 @@ var editor_size_down_rect := Rect2()
 var editor_size_up_rect := Rect2()
 var editor_opacity_down_rect := Rect2()
 var editor_opacity_up_rect := Rect2()
+var editor_test_rect := Rect2()
 var editor_reset_rect := Rect2()
 var editor_cancel_rect := Rect2()
 var editor_apply_rect := Rect2()
+var layout_test_exit_rect := Rect2()
 var action_log: Array[String] = []
 var movement_metrics: Dictionary = {}
 var result_snapshot: Dictionary = {}
@@ -120,10 +129,15 @@ var selected_layout_control: StringName = MOVE_CONTROL
 var invalid_layout_controls: Array[StringName] = []
 var editor_drag_pointer_id: int = -1
 var editor_original_layout: Dictionary = {}
+var editor_return_mode: int = ScreenMode.MAIN
 var active_preset_id: String = PRESET_DEFAULT
 var saved_custom_layout: Dictionary = {}
 var layout_store := ControlLayoutStore.new()
 var layout_store_message: String = ""
+var layout_test_remaining_s: float = 0.0
+var layout_test_input_counts: Dictionary = {}
+var layout_test_peak_controls: int = 0
+var combat_resume_remaining_s: float = 0.0
 var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
@@ -144,11 +158,12 @@ func _ready() -> void:
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("CP-402 조작 프리셋 로드")
+	_append_action_log("CP-403 배치 테스트 준비")
 	queue_redraw()
 
 
 func _process(delta: float) -> void:
+	_update_mode_timer(delta)
 	redraw_accumulator += delta
 	if redraw_accumulator >= 0.05:
 		redraw_accumulator = 0.0
@@ -190,6 +205,10 @@ func _input(event: InputEvent) -> void:
 			_handle_editor_touch(touch)
 			queue_redraw()
 			return
+		if screen_mode == ScreenMode.LAYOUT_TEST:
+			_handle_layout_test_touch(touch)
+			queue_redraw()
+			return
 		if screen_mode != ScreenMode.COMBAT:
 			if touch.pressed:
 				_handle_screen_touch(touch.position)
@@ -204,6 +223,8 @@ func _input(event: InputEvent) -> void:
 		var drag := event as InputEventScreenDrag
 		if screen_mode == ScreenMode.LAYOUT_EDITOR:
 			_handle_editor_drag(drag.index, drag.position)
+		elif screen_mode == ScreenMode.LAYOUT_TEST:
+			_handle_touch_dragged(drag.index, drag.position)
 		elif screen_mode == ScreenMode.COMBAT:
 			_handle_touch_dragged(drag.index, drag.position)
 		queue_redraw()
@@ -218,6 +239,12 @@ func _draw() -> void:
 		return
 	if screen_mode == ScreenMode.LAYOUT_EDITOR:
 		_draw_layout_editor()
+		return
+	if screen_mode == ScreenMode.LAYOUT_TEST:
+		_draw_layout_test()
+		return
+	if screen_mode == ScreenMode.COMBAT_RESUME_COUNTDOWN:
+		_draw_combat_resume_countdown()
 		return
 	_draw_header()
 	_draw_move_control()
@@ -332,6 +359,7 @@ func begin_stage_from_main() -> void:
 
 
 func open_layout_editor() -> void:
+	editor_return_mode = screen_mode if screen_mode == ScreenMode.COMBAT else ScreenMode.MAIN
 	release_all_inputs()
 	editor_original_layout = {
 		"layout": _capture_control_layout(),
@@ -342,6 +370,8 @@ func open_layout_editor() -> void:
 	selected_layout_control = MOVE_CONTROL
 	editor_drag_pointer_id = -1
 	screen_mode = ScreenMode.LAYOUT_EDITOR
+	if editor_return_mode == ScreenMode.COMBAT:
+		combat_configuration_started.emit()
 	_validate_control_layout()
 	queue_redraw()
 
@@ -368,7 +398,10 @@ func apply_layout_editor() -> bool:
 	editor_original_layout.clear()
 	editor_drag_pointer_id = -1
 	layout_store_message = "저장 완료"
-	screen_mode = ScreenMode.MAIN
+	if editor_return_mode == ScreenMode.COMBAT:
+		_start_combat_resume_countdown()
+	else:
+		screen_mode = ScreenMode.MAIN
 	queue_redraw()
 	return true
 
@@ -380,8 +413,56 @@ func cancel_layout_editor() -> void:
 		saved_custom_layout = (editor_original_layout.get("custom_layout", {}) as Dictionary).duplicate(true)
 	editor_original_layout.clear()
 	editor_drag_pointer_id = -1
-	screen_mode = ScreenMode.MAIN
+	if editor_return_mode == ScreenMode.COMBAT:
+		_start_combat_resume_countdown()
+	else:
+		screen_mode = ScreenMode.MAIN
 	queue_redraw()
+
+
+func start_layout_test() -> bool:
+	if screen_mode != ScreenMode.LAYOUT_EDITOR:
+		return false
+	release_all_inputs()
+	layout_test_remaining_s = 10.0
+	layout_test_input_counts.clear()
+	layout_test_peak_controls = 0
+	screen_mode = ScreenMode.LAYOUT_TEST
+	layout_test_started.emit()
+	queue_redraw()
+	return true
+
+
+func finish_layout_test() -> void:
+	if screen_mode != ScreenMode.LAYOUT_TEST:
+		return
+	release_all_inputs()
+	layout_test_remaining_s = 0.0
+	screen_mode = ScreenMode.LAYOUT_EDITOR
+	layout_test_finished.emit()
+	_validate_control_layout()
+	queue_redraw()
+
+
+func _start_combat_resume_countdown() -> void:
+	release_all_inputs()
+	combat_resume_remaining_s = 3.0
+	screen_mode = ScreenMode.COMBAT_RESUME_COUNTDOWN
+	queue_redraw()
+
+
+func _update_mode_timer(delta: float) -> void:
+	if screen_mode == ScreenMode.LAYOUT_TEST:
+		layout_test_remaining_s = maxf(0.0, layout_test_remaining_s - delta)
+		if is_zero_approx(layout_test_remaining_s):
+			finish_layout_test()
+	elif screen_mode == ScreenMode.COMBAT_RESUME_COUNTDOWN:
+		combat_resume_remaining_s = maxf(0.0, combat_resume_remaining_s - delta)
+		if is_zero_approx(combat_resume_remaining_s):
+			screen_mode = ScreenMode.COMBAT
+			editor_return_mode = ScreenMode.MAIN
+			combat_configuration_finished.emit()
+			queue_redraw()
 
 
 func reset_layout_editor() -> void:
@@ -452,8 +533,27 @@ func current_screen_mode() -> int:
 	return screen_mode
 
 
+func layout_editor_returns_to_combat() -> bool:
+	return editor_return_mode == ScreenMode.COMBAT
+
+
 func current_result_snapshot() -> Dictionary:
 	return result_snapshot.duplicate(true)
+
+
+func layout_test_snapshot() -> Dictionary:
+	return {
+		"remaining_s": layout_test_remaining_s,
+		"input_counts": layout_test_input_counts.duplicate(true),
+		"active_controls": control_pointers.keys(),
+		"peak_controls": layout_test_peak_controls,
+		"invalid_controls": invalid_layout_controls.duplicate(),
+		"resume_remaining_s": combat_resume_remaining_s,
+	}
+
+
+func advance_mode_timer_for_test(delta: float) -> void:
+	_update_mode_timer(delta)
 
 
 func layout_snapshot() -> Dictionary:
@@ -541,6 +641,9 @@ func _handle_editor_touch(touch: InputEventScreenTouch) -> void:
 	if editor_opacity_up_rect.has_point(touch.position):
 		set_control_opacity(control_opacity + 0.10)
 		return
+	if editor_test_rect.has_point(touch.position):
+		start_layout_test()
+		return
 	if editor_reset_rect.has_point(touch.position):
 		reset_layout_editor()
 		return
@@ -555,6 +658,16 @@ func _handle_editor_touch(touch: InputEventScreenTouch) -> void:
 		selected_layout_control = hit_control
 		editor_drag_pointer_id = touch.index
 		_move_layout_control(hit_control, touch.position)
+
+
+func _handle_layout_test_touch(touch: InputEventScreenTouch) -> void:
+	if touch.pressed and layout_test_exit_rect.has_point(touch.position):
+		finish_layout_test()
+		return
+	if touch.pressed:
+		_handle_touch_pressed(touch.index, touch.position)
+	else:
+		_handle_touch_released(touch.index)
 
 
 func _handle_editor_drag(pointer_id: int, position: Vector2) -> void:
@@ -593,8 +706,9 @@ func release_all_inputs() -> void:
 
 func _handle_touch_pressed(pointer_id: int, position: Vector2) -> void:
 	pointer_positions[pointer_id] = position
-	if _handle_header_action(position):
-		pointer_controls[pointer_id] = &"header"
+	if screen_mode == ScreenMode.COMBAT and _handle_header_action(position):
+		if screen_mode == ScreenMode.COMBAT:
+			pointer_controls[pointer_id] = &"header"
 		return
 
 	if move_zone.has_point(position) and move_pointer_id < 0:
@@ -603,6 +717,7 @@ func _handle_touch_pressed(pointer_id: int, position: Vector2) -> void:
 		move_vector = Vector2.ZERO
 		pointer_controls[pointer_id] = MOVE_CONTROL
 		control_pointers[MOVE_CONTROL] = pointer_id
+		_record_layout_test_input(MOVE_CONTROL)
 		_update_peak_controls()
 		move_vector_changed.emit(move_vector)
 		return
@@ -611,6 +726,7 @@ func _handle_touch_pressed(pointer_id: int, position: Vector2) -> void:
 	if action_id != &"" and not control_pointers.has(action_id):
 		pointer_controls[pointer_id] = action_id
 		control_pointers[action_id] = pointer_id
+		_record_layout_test_input(action_id)
 		_submit_action(action_id, PlayerCommand.Phase.PRESSED, pointer_id)
 		_update_peak_controls()
 		return
@@ -676,6 +792,9 @@ func _dispatch_action_command(command: PlayerCommand) -> void:
 
 
 func _handle_header_action(position: Vector2) -> bool:
+	if combat_layout_rect.has_point(position):
+		open_layout_editor()
+		return true
 	if fps_60_rect.has_point(position):
 		Engine.max_fps = 60
 		_append_action_log("60 FPS로 변경")
@@ -702,6 +821,14 @@ func _action_at(position: Vector2) -> StringName:
 
 func _update_peak_controls() -> void:
 	peak_simultaneous_controls = maxi(peak_simultaneous_controls, control_pointers.size())
+	if screen_mode == ScreenMode.LAYOUT_TEST:
+		layout_test_peak_controls = maxi(layout_test_peak_controls, control_pointers.size())
+
+
+func _record_layout_test_input(control_id: StringName) -> void:
+	if screen_mode != ScreenMode.LAYOUT_TEST:
+		return
+	layout_test_input_counts[control_id] = int(layout_test_input_counts.get(control_id, 0)) + 1
 
 
 func _refresh_layout() -> void:
@@ -714,6 +841,7 @@ func _refresh_layout() -> void:
 	reset_rect = Rect2(right - button_width, top, button_width, button_height)
 	fps_30_rect = Rect2(reset_rect.position.x - gap - button_width, top, button_width, button_height)
 	fps_60_rect = Rect2(fps_30_rect.position.x - gap - button_width, top, button_width, button_height)
+	combat_layout_rect = Rect2(fps_60_rect.position.x - gap - button_width, top, button_width, button_height)
 
 	var move_scale := float(control_scales.get(MOVE_CONTROL, 1.0))
 	var move_size := Vector2(
@@ -796,6 +924,11 @@ func _refresh_layout() -> void:
 	editor_apply_rect = Rect2(Vector2(editor_toolbar_rect.end.x - action_width - 20.0, tool_y), Vector2(action_width, tool_height))
 	editor_cancel_rect = Rect2(Vector2(editor_apply_rect.position.x - action_width - tool_gap, tool_y), Vector2(action_width, tool_height))
 	editor_reset_rect = Rect2(Vector2(editor_cancel_rect.position.x - action_width - tool_gap, tool_y), Vector2(action_width, tool_height))
+	editor_test_rect = Rect2(Vector2(editor_reset_rect.position.x - action_width - tool_gap, tool_y), Vector2(action_width, tool_height))
+	layout_test_exit_rect = Rect2(
+		Vector2(safe.end.x - action_width - 20.0, safe.position.y + 20.0),
+		Vector2(action_width, 54.0)
+	)
 
 
 func _draw_header() -> void:
@@ -856,6 +989,7 @@ func _draw_header() -> void:
 	_draw_button(fps_60_rect, "60", Engine.max_fps == 60)
 	_draw_button(fps_30_rect, "30", Engine.max_fps == 30)
 	_draw_button(reset_rect, "재설정", false)
+	_draw_button(combat_layout_rect, "배치", false)
 
 
 func _draw_action_log(panel_rect: Rect2) -> void:
@@ -989,9 +1123,71 @@ func _draw_layout_editor() -> void:
 	_draw_button(editor_size_up_rect, "크기 +", false)
 	_draw_button(editor_opacity_down_rect, "투명 -", false)
 	_draw_button(editor_opacity_up_rect, "투명 +", false)
+	_draw_button(editor_test_rect, "10초 테스트", true)
 	_draw_button(editor_reset_rect, "초기화", false)
 	_draw_button(editor_cancel_rect, "취소", false)
 	_draw_button(editor_apply_rect, "적용", invalid_layout_controls.is_empty())
+
+
+func _draw_layout_test() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.24), true)
+	_draw_move_control()
+	_draw_action_controls()
+	var touch_rects := _control_touch_rects()
+	for control_id in _layout_control_order():
+		var rect: Rect2 = touch_rects[control_id]
+		var active := control_pointers.has(control_id)
+		var invalid := control_id in invalid_layout_controls
+		var outline := Color("f05d5e") if invalid else (ACTIVE_COLOR if active else Color(TEXT_COLOR, 0.68))
+		draw_rect(rect, Color(outline, 0.16 if active else 0.04), true)
+		draw_rect(rect, outline, false, 7.0 if active else 3.0)
+	var safe := _safe_area_in_viewport()
+	var countdown_rect := Rect2(
+		Vector2(safe.get_center().x - 210.0, safe.position.y + 18.0),
+		Vector2(420.0, 60.0)
+	)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.97)), countdown_rect)
+	_draw_text_centered(
+		"배치 테스트  %.1f초" % maxf(layout_test_remaining_s, 0.0),
+		countdown_rect,
+		25,
+		ACTIVE_COLOR
+	)
+	_draw_button(layout_test_exit_rect, "테스트 종료", false)
+	var status := "동시 입력 최고 %d개" % layout_test_peak_controls
+	if not invalid_layout_controls.is_empty():
+		status += " · 겹침 %d개" % invalid_layout_controls.size()
+	_draw_text(
+		status,
+		Vector2(countdown_rect.position.x, countdown_rect.end.y + 26.0),
+		17,
+		Color("ff8b85") if not invalid_layout_controls.is_empty() else TEXT_COLOR
+	)
+	_draw_pointer_markers()
+
+
+func _draw_combat_resume_countdown() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.72), true)
+	var safe := _safe_area_in_viewport()
+	var count := maxi(1, int(ceil(combat_resume_remaining_s)))
+	_draw_text_centered(
+		"전투 복귀",
+		Rect2(Vector2(safe.position.x, safe.get_center().y - 110.0), Vector2(safe.size.x, 52.0)),
+		28,
+		TEXT_COLOR
+	)
+	_draw_text_centered(
+		str(count),
+		Rect2(Vector2(safe.position.x, safe.get_center().y - 48.0), Vector2(safe.size.x, 110.0)),
+		72,
+		ACTIVE_COLOR
+	)
+	_draw_text_centered(
+		"새 배치로 곧 시작합니다",
+		Rect2(Vector2(safe.position.x, safe.get_center().y + 72.0), Vector2(safe.size.x, 42.0)),
+		19,
+		MUTED_TEXT_COLOR
+	)
 
 
 func _draw_result_row(label: String, value: String, x: float, width: float, y: float) -> void:

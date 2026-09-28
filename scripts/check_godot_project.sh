@@ -32,6 +32,7 @@ required_files=(
   "$game_root/tests/cp304_runtime_test.gd"
   "$game_root/tests/cp401_runtime_test.gd"
   "$game_root/tests/cp402_runtime_test.gd"
+  "$game_root/tests/cp403_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -412,6 +413,13 @@ if ! rg -q 'class_name ControlLayoutStore' "$game_root/scripts/input/control_lay
 	exit 1
 fi
 
+if ! rg -q 'func start_layout_test' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q 'COMBAT_RESUME_COUNTDOWN' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q 'layout_test_started' "$game_root/scripts/movement/ground_movement_sandbox.gd"; then
+	echo "CP-403 ten-second layout test or combat resume countdown is missing." >&2
+	exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -450,6 +458,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/cp401_runtime_test.gd
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp402_runtime_test.gd
+  timeout 45s "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp403_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"
