@@ -1,6 +1,6 @@
 extends Control
 
-## CP-405용 모바일 전투 HUD, 타격 피드백 설정과 로컬 기록 집계.
+## CP-406용 모바일 전투 HUD와 Android 실기기 검증 상태 표시.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -43,6 +43,8 @@ const ACTIVE_COLOR := Color("ffd166")
 const PASS_COLOR := Color("9be564")
 const WAIT_COLOR := Color("f7b267")
 const BACKGROUND_COLOR := Color("102636")
+const ANDROID_VALIDATION_TARGET_RUNS := 10
+const ANDROID_VALIDATION_TARGET_SESSION_S := 20.0 * 60.0
 
 const MOVE_CONTROL: StringName = &"move"
 const PRESET_DEFAULT := "default"
@@ -156,6 +158,9 @@ var feedback_sound_volume: float = 0.80
 var feedback_vibration_enabled: bool = true
 var feedback_screen_shake_enabled: bool = true
 var test_record_summary: Dictionary = {}
+var android_validation_session_s: float = 0.0
+var android_validation_resume_count: int = 0
+var android_validation_pause_count: int = 0
 var last_latency_msec: int = 0
 var peak_simultaneous_controls: int = 0
 var redraw_accumulator: float = 0.0
@@ -176,12 +181,13 @@ func _ready() -> void:
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("CP-405 로컬 테스트 기록 준비")
+	_append_action_log("CP-406 Android 검증 준비")
 	queue_redraw()
 
 
 func _process(delta: float) -> void:
 	_update_mode_timer(delta)
+	android_validation_session_s += delta
 	redraw_accumulator += delta
 	if redraw_accumulator >= 0.05:
 		redraw_accumulator = 0.0
@@ -212,8 +218,12 @@ func _notification(what: int) -> void:
 		_validate_control_layout()
 		queue_redraw()
 	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
+		android_validation_pause_count += 1
 		release_all_inputs()
 		_append_action_log("앱 비활성화 · 입력 초기화")
+	elif what == NOTIFICATION_APPLICATION_RESUMED:
+		android_validation_resume_count += 1
+		_append_action_log("앱 복귀 · 입력 상태 정상")
 
 
 func _input(event: InputEvent) -> void:
@@ -414,6 +424,35 @@ func feedback_settings_snapshot() -> Dictionary:
 
 func test_record_summary_snapshot() -> Dictionary:
 	return test_record_summary.duplicate(true)
+
+
+func android_validation_snapshot() -> Dictionary:
+	var safe := _safe_area_in_viewport()
+	var touch_rects := _control_touch_rects()
+	var safe_area_pass := safe.encloses(hud_rect) and safe.encloses(result_panel_rect)
+	for rect in touch_rects.values():
+		if not safe.encloses(rect):
+			safe_area_pass = false
+			break
+	var completed_runs := int(test_record_summary.get("completed_run_count", 0))
+	return {
+		"viewport_size": size,
+		"aspect_ratio": size.x / maxf(size.y, 1.0),
+		"safe_area": safe,
+		"safe_area_pass": safe_area_pass,
+		"session_elapsed_s": android_validation_session_s,
+		"continuous_20m_reached": android_validation_session_s >= ANDROID_VALIDATION_TARGET_SESSION_S,
+		"pause_count": android_validation_pause_count,
+		"resume_count": android_validation_resume_count,
+		"background_resume_pass": android_validation_resume_count > 0,
+		"completed_runs": completed_runs,
+		"ten_runs_reached": completed_runs >= ANDROID_VALIDATION_TARGET_RUNS,
+		"best_completion_s": float(test_record_summary.get("best_completion_s", 0.0)),
+	}
+
+
+func advance_android_validation_time_for_test(delta: float) -> void:
+	android_validation_session_s += maxf(0.0, delta)
 
 
 func _emit_feedback_settings() -> void:
@@ -1252,10 +1291,15 @@ func _draw_feedback_settings() -> void:
 		"켜짐" if feedback_screen_shake_enabled else "꺼짐",
 		feedback_screen_shake_enabled
 	)
+	var validation := android_validation_snapshot()
 	_draw_text(
-		"로컬 테스트 기록",
+		"Android 검증 %d/10 · 연속 %s · 복귀 %d" % [
+			int(validation["completed_runs"]),
+			_format_clock(float(validation["session_elapsed_s"])),
+			int(validation["resume_count"]),
+		],
 		Vector2(label_x, feedback_records_clear_rect.position.y + 35.0),
-		22,
+		18,
 		TEXT_COLOR
 	)
 	_draw_button(feedback_records_clear_rect, "기록 초기화", false)

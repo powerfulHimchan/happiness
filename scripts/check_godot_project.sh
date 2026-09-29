@@ -37,6 +37,7 @@ required_files=(
   "$game_root/tests/cp403_runtime_test.gd"
   "$game_root/tests/cp404_runtime_test.gd"
   "$game_root/tests/cp405_runtime_test.gd"
+  "$game_root/tests/cp406_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -453,6 +454,14 @@ if ! rg -q 'permissions/internet=false' "$game_root/export_presets.cfg" \
 	exit 1
 fi
 
+if ! rg -q 'ANDROID_VALIDATION_TARGET_RUNS := 10' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q 'ANDROID_VALIDATION_TARGET_SESSION_S := 20\.0 \* 60\.0' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q 'background_resume_pass' "$game_root/scripts/movement/ground_movement_controls.gd" \
+  || ! rg -q '2400\.0, 1080\.0' "$game_root/tests/cp406_runtime_test.gd"; then
+	echo "CP-406 Android validation counters or two-aspect safe-area check is missing." >&2
+	exit 1
+fi
+
 if ! rg -q 'class_name PlayerCommand' "$game_root/scripts/input/player_command.gd"; then
   echo "PlayerCommand type is missing." >&2
   exit 1
@@ -497,6 +506,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/cp404_runtime_test.gd
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp405_runtime_test.gd
+  timeout 45s "$godot_command" --headless --path "$game_root" \
+    --script res://tests/cp406_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"
