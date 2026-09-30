@@ -42,6 +42,26 @@ func start_run() -> void:
 	_append_section_started(0)
 
 
+func checkpoint_snapshot() -> Dictionary:
+	return {"id": _active_run_id}
+
+
+func restore_checkpoint(state: Dictionary, stage_number: int) -> void:
+	_active_run_id = String(state.id)
+	_recorded_stage_number = stage_number
+	_recorded_section_count = SECTION_NAMES.size()
+	_recorded_stage_completed = true
+	_active_run_completed = false
+	_append_event("run_resumed", {"run_id": _active_run_id, "stage_number": stage_number})
+
+
+func has_completed_run(run_id: String) -> bool:
+	for event in _read_valid_events():
+		if event.get("event") == "run_completed" and event.get("run_id") == run_id:
+			return true
+	return false
+
+
 func record_stage_metrics(metrics: Dictionary) -> void:
 	if _active_run_id.is_empty() or _active_run_completed:
 		return
