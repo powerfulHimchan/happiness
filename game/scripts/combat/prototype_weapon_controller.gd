@@ -103,8 +103,10 @@ func restore_checkpoint(state: Dictionary) -> void:
 	_apply_active_weapon()
 
 
-func reset_combat() -> void:
-	active_weapon_id = SWORD_ID
+func reset_combat(starting_weapon: String = SWORD_ID) -> bool:
+	if starting_weapon not in [SWORD_ID, BOW_ID]:
+		return false
+	active_weapon_id = starting_weapon
 	switch_count = 0
 	blocked_switch_count = 0
 	reserved_switch_count = 0
@@ -115,6 +117,7 @@ func reset_combat() -> void:
 	sword_combat.reset_combat()
 	bow_combat.reset_combat()
 	_apply_active_weapon()
+	return true
 
 
 func force_emit_metrics() -> void:
