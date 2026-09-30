@@ -37,7 +37,7 @@ func _ready() -> void:
 	growth.choices_requested.connect(_on_growth_choices_requested)
 	growth.selection_finished.connect(_finish_growth_selection)
 	growth.job_manifested.connect(_on_job_manifested)
-	controls.job_confirmed.connect(growth.acknowledge_job)
+	controls.job_confirmed.connect(growth.choose_job_ultimate)
 	controls.growth_card_selected.connect(growth.choose_card)
 	controls.growth_reroll_requested.connect(growth.reroll)
 	stage_runner.stage_metrics_changed.connect(_on_growth_stage_metrics)

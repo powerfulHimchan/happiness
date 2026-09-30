@@ -1,7 +1,7 @@
 class_name PrototypeGrowthController
 extends Node
 
-## GP-102: 런 단위 능력 선택과 기본 직업 성향·발현.
+## GP-103: 직업 전용 카드와 필살기 발현 보상을 포함하는 런 성장.
 signal metrics_changed(metrics: Dictionary)
 signal choices_requested(cards: Array[Dictionary], level: int, rerolls: int)
 signal selection_finished
@@ -37,6 +37,7 @@ var _last_scored_evade: int = -1
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
 @onready var weapons: PrototypeWeaponController = get_node("../Player/PrototypeWeaponController") as PrototypeWeaponController
+@onready var ultimate: UltimateController = get_node("../Player/UltimateController") as UltimateController
 
 
 func _ready() -> void:
@@ -143,6 +144,10 @@ func choose_card(index: int) -> bool:
 		"power": player.growth_common_bonus += 0.10
 		"vitality": player.apply_growth_health(20, 20)
 		"recovery": player.apply_growth_health(10, 40)
+		"vanguard_edge": player.growth_sword_bonus += 0.20
+		"vanguard_vigor": player.apply_growth_health(30, 30)
+		"tracker_focus": player.growth_bow_bonus += 0.20
+		"tracker_breath": player.apply_growth_health(20, 35)
 	choosing = false
 	offered_cards.clear()
 	if jobs_enabled:
@@ -193,7 +198,7 @@ func _try_manifest_job() -> bool:
 
 
 func acknowledge_job() -> bool:
-	if not awaiting_job_confirmation or not run_active:
+	if not awaiting_job_confirmation or not run_active or ultimate.selected_profile.is_empty():
 		return false
 	awaiting_job_confirmation = false
 	if choosing:
@@ -205,17 +210,33 @@ func acknowledge_job() -> bool:
 	return true
 
 
+func choose_job_ultimate(index: int) -> bool:
+	if not awaiting_job_confirmation or not run_active:
+		return false
+	var candidates := PrototypeJobRewards.ultimates_for(jobs.job_id)
+	if index < 0 or index >= candidates.size():
+		return false
+	if not ultimate.select_job_ultimate(jobs.job_id, String(candidates[index]["id"])):
+		return false
+	return acknowledge_job()
+
+
 func _draw_cards() -> Array[Dictionary]:
 	var related: Array[Dictionary] = []
 	var common: Array[Dictionary] = []
+	var pool: Array[Dictionary] = CARDS.duplicate(true)
+	var job_cards := PrototypeJobRewards.cards_for(jobs.job_id)
+	pool.append_array(job_cards)
 	for card in CARDS:
 		if card["category"] == weapons.active_weapon_id:
 			related.append(card)
 		elif card["category"] == "common":
 			common.append(card)
+	if not job_cards.is_empty():
+		related = job_cards
 	var result: Array[Dictionary] = [related[rng.randi_range(0, related.size() - 1)], common[rng.randi_range(0, common.size() - 1)]]
 	var random_pool: Array[Dictionary] = []
-	for card in CARDS:
+	for card in pool:
 		if card not in result:
 			random_pool.append(card)
 	result.append(random_pool[rng.randi_range(0, random_pool.size() - 1)])

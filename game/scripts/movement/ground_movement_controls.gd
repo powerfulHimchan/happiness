@@ -1,6 +1,6 @@
 extends Control
 
-## GP-102 직업 발현·성장 선택, 모바일 전투 HUD와 Android 검증 상태 표시.
+## GP-103 직업 필살기·성장 선택, 모바일 전투 HUD와 Android 검증 표시.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -24,7 +24,7 @@ signal feedback_settings_changed(
 signal test_records_clear_requested
 signal growth_card_selected(index: int)
 signal growth_reroll_requested
-signal job_confirmed
+signal job_confirmed(ultimate_index: int)
 
 enum ScreenMode {
 	COMBAT,
@@ -186,6 +186,9 @@ var growth_choice_rerolls: int = 1
 var manifested_job: Dictionary = {}
 var job_panel_rect := Rect2()
 var job_confirm_rect := Rect2()
+var job_ultimate_rects: Array[Rect2] = []
+var job_ultimates: Array[Dictionary] = []
+var selected_job_ultimate: int = -1
 
 
 func _ready() -> void:
@@ -194,7 +197,7 @@ func _ready() -> void:
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("GP-102 직업 발현 시제품 준비")
+	_append_action_log("GP-103 직업 보상 시제품 준비")
 	queue_redraw()
 
 
@@ -321,6 +324,8 @@ func show_growth_choices(cards: Array[Dictionary], level: int, rerolls: int) -> 
 func show_job_manifestation(job: Dictionary) -> void:
 	release_all_inputs()
 	manifested_job = job.duplicate()
+	job_ultimates = PrototypeJobRewards.ultimates_for(String(job["id"]))
+	selected_job_ultimate = -1
 	screen_mode = ScreenMode.JOB_MANIFESTATION
 	_refresh_job_layout()
 	queue_redraw()
@@ -328,10 +333,14 @@ func show_job_manifestation(job: Dictionary) -> void:
 
 func _refresh_job_layout() -> void:
 	var safe := _safe_area_in_viewport()
-	var panel_size := Vector2(minf(920.0, safe.size.x * 0.85), safe.size.y * 0.70)
+	var panel_size := Vector2(minf(1080.0, safe.size.x * 0.94), safe.size.y * 0.90)
 	job_panel_rect = Rect2(safe.get_center() - panel_size * 0.5, panel_size)
 	var button_size := Vector2(minf(320.0, panel_size.x * 0.60), minf(68.0, panel_size.y * 0.14))
-	job_confirm_rect = Rect2(job_panel_rect.position + Vector2((panel_size.x - button_size.x) * 0.5, panel_size.y * 0.80), button_size)
+	job_confirm_rect = Rect2(job_panel_rect.position + Vector2((panel_size.x - button_size.x) * 0.5, panel_size.y * 0.84), button_size)
+	job_ultimate_rects.clear()
+	var card_width := (panel_size.x - 72.0) * 0.5
+	for index in 2:
+		job_ultimate_rects.append(Rect2(job_panel_rect.position + Vector2(24.0 + index * (card_width + 24.0), panel_size.y * 0.43), Vector2(card_width, panel_size.y * 0.34)))
 
 
 func _draw_job_manifestation() -> void:
@@ -339,12 +348,19 @@ func _draw_job_manifestation() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	draw_style_box(_panel_style(PANEL_COLOR), job_panel_rect)
 	var color: Color = manifested_job.get("color", ACTIVE_COLOR)
-	var headings := ["직업이 발현되었습니다", String(manifested_job.get("name", "")), String(manifested_job.get("passive", "")), "이 직업은 이번 도전 동안 유지됩니다"]
-	var sizes := [24, 44, 22, 20]
-	var offsets := [0.12, 0.28, 0.49, 0.64]
+	var headings := ["직업이 발현되었습니다", String(manifested_job.get("name", "")), String(manifested_job.get("passive", "")), "이번 도전의 필살기를 하나 선택하세요"]
+	var sizes := [20, 34, 19, 18]
+	var offsets := [0.02, 0.12, 0.23, 0.32]
 	for index in headings.size():
 		_draw_text_centered(headings[index], Rect2(job_panel_rect.position + Vector2(0.0, job_panel_rect.size.y * offsets[index]), Vector2(job_panel_rect.size.x, 50.0)), sizes[index], color if index == 1 else TEXT_COLOR)
-	_draw_button(job_confirm_rect, "확인 · 계속하기", true)
+	for index in job_ultimates.size():
+		var rect := job_ultimate_rects[index]
+		var candidate := job_ultimates[index]
+		draw_style_box(_panel_style(Color("254f51") if selected_job_ultimate == index else PANEL_COLOR), rect)
+		_draw_text_centered(("✓ " if selected_job_ultimate == index else "") + String(candidate["name"]), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.10), Vector2(rect.size.x, 34.0)), 22, color)
+		for line_index in candidate["lines"].size():
+			_draw_text_centered(String(candidate["lines"][line_index]), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.40 + line_index * 32.0), Vector2(rect.size.x, 30.0)), 17, TEXT_COLOR)
+	_draw_button(job_confirm_rect, "확인 · 계속하기" if selected_job_ultimate >= 0 else "필살기를 선택하세요", selected_job_ultimate >= 0)
 
 
 func finish_growth_selection() -> void:
@@ -353,6 +369,8 @@ func finish_growth_selection() -> void:
 	if screen_mode == ScreenMode.GROWTH_SELECTION or screen_mode == ScreenMode.JOB_MANIFESTATION:
 		screen_mode = ScreenMode.COMBAT
 	manifested_job.clear()
+	job_ultimates.clear()
+	selected_job_ultimate = -1
 	queue_redraw()
 
 
@@ -375,7 +393,7 @@ func _draw_growth_choices() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	_draw_text_centered("레벨 %d · 능력 하나를 선택하세요" % growth_choice_level, Rect2(safe.position + Vector2(0.0, safe.size.y * 0.08), Vector2(safe.size.x, 60.0)), 30, ACTIVE_COLOR)
 	_draw_text_centered("전투는 잠시 멈춥니다 · 선택하면 바로 재개", Rect2(safe.position + Vector2(0.0, safe.size.y * 0.18), Vector2(safe.size.x, 40.0)), 20, MUTED_TEXT_COLOR)
-	var slot_labels := ["현재 무기", "공용", "무작위"]
+	var slot_labels := ["직업 전용" if not growth_cards.is_empty() and growth_cards[0].get("category", "") == "job" else "현재 무기", "공용", "무작위"]
 	for index in growth_cards.size():
 		var rect := growth_card_rects[index]
 		var card := growth_cards[index]
@@ -788,6 +806,7 @@ func layout_snapshot() -> Dictionary:
 		"growth_reroll": growth_reroll_rect,
 		"job_panel": job_panel_rect,
 		"job_confirm": job_confirm_rect,
+		"job_ultimates": job_ultimate_rects.duplicate(),
 	}
 
 
@@ -831,8 +850,13 @@ func _show_result_screen() -> void:
 
 func _handle_screen_touch(position: Vector2) -> void:
 	if screen_mode == ScreenMode.JOB_MANIFESTATION:
-		if job_confirm_rect.has_point(position):
-			job_confirmed.emit()
+		for index in job_ultimate_rects.size():
+			if job_ultimate_rects[index].has_point(position) and index < job_ultimates.size():
+				selected_job_ultimate = index
+				queue_redraw()
+				return
+		if job_confirm_rect.has_point(position) and selected_job_ultimate >= 0:
+			job_confirmed.emit(selected_job_ultimate)
 		return
 	if screen_mode == ScreenMode.GROWTH_SELECTION:
 		if growth_reroll_rect.has_point(position):
@@ -1267,7 +1291,7 @@ func _draw_header() -> void:
 	var ultimate_gauge: int = int(movement_metrics.get("ultimate_gauge", 0))
 	var ultimate_active: bool = bool(movement_metrics.get("ultimate_active", false))
 	_draw_text(
-		"필살기  %s" % ("발동 중" if ultimate_active else "%d%%" % ultimate_gauge),
+		"%s  %s" % [String(movement_metrics.get("ultimate_name", "새벽의 틈")), "발동 중" if ultimate_active else "%d%%" % ultimate_gauge],
 		Vector2(right_x, top_y + 60.0),
 		17,
 		ACTIVE_COLOR if ultimate_active or ultimate_gauge >= 100 else TEXT_COLOR
@@ -1362,7 +1386,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-102 · 직업 발현 시제품",
+		"GP-103 · 직업 보상 시제품",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR

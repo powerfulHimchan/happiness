@@ -52,6 +52,7 @@ func _run() -> void:
 		controls.notification(Control.NOTIFICATION_APPLICATION_RESUMED)
 		if not _check(paused and controls.current_screen_mode() == 8, "발현 화면 백그라운드 복귀 유지"):
 			return
+		_tap(controls, controls.job_ultimate_rects[0].get_center())
 		_tap(controls, controls.job_confirm_rect.get_center())
 		if not _check(not paused and not growth.awaiting_job_confirmation and not growth.acknowledge_job(), "확인 터치·중복 확인 차단·재개"):
 			return
@@ -95,7 +96,7 @@ func _run() -> void:
 		weapons.sword_combat.hit_registered.emit(false, slime, 12)
 	if not _check(growth.awaiting_job_confirmation and growth.choosing and paused and controls.current_screen_mode() == 8 and not growth.choose_card(0) and not growth.reroll(), "대기 카드 보존·발현 중 카드/재추첨 차단"):
 		return
-	growth.acknowledge_job()
+	growth.choose_job_ultimate(0)
 	if not _check(paused and controls.current_screen_mode() == 7 and growth.offered_cards == offered_before, "직업 확인 뒤 기존 선택 복원"):
 		return
 	growth.choose_card(0)
@@ -106,7 +107,7 @@ func _run() -> void:
 		_offer_card(sandbox, growth, PrototypeGrowthController.CARDS[1])
 		growth.choose_card(0)
 	growth.experience = 20
-	growth.acknowledge_job()
+	growth.choose_job_ultimate(0)
 	if not _check(paused and growth.choosing and growth.level == 2 and controls.current_screen_mode() == 7, "발현 알림 중 쌓인 경험치 선택 이어가기"):
 		return
 	growth.choose_card(0)
@@ -134,7 +135,7 @@ func _run() -> void:
 	growth.choose_card(0)
 	if not _check(paused and growth.awaiting_job_confirmation and not runner.stage_complete, "최종 카드 발현을 결과 화면보다 먼저 확인"):
 		return
-	growth.acknowledge_job()
+	growth.choose_job_ultimate(0)
 	await process_frame
 	await physics_frame
 	if not _check(not paused and runner.stage_complete and controls.current_screen_mode() == 1, "직업 확인 뒤 스테이지 완료·결과 표시"):
