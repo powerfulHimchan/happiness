@@ -347,6 +347,30 @@ func feedback_snapshot() -> Dictionary:
 	}
 
 
+func prepare_next_stage(spawn_position: Vector2) -> void:
+	# 런 성장·체력·피격 집계는 보존하고 이동·낙하·행동 상태만 정리한다.
+	_cancel_actions_for_recovery()
+	global_position = spawn_position
+	velocity = Vector2.ZERO
+	facing_direction = 1
+	avatar_sprite.flip_h = false
+	air_dash_available = true
+	_coyote_remaining_s = 0.0
+	_jump_start_y = spawn_position.y
+	_jump_peak_height_m = 0.0
+	_last_position_x = spawn_position.x
+	_last_input_sign = 0
+	_stop_test_active = false
+	_reversal_test_active = false
+	_fall_recovery_active = false
+	_fall_recovery_remaining_s = 0.0
+	_input_lock_remaining_s = 0.0
+	last_safe_position = spawn_position
+	last_safe_label = "시작 평지"
+	(get_node("Camera2D") as Camera2D).reset_smoothing()
+	_emit_metrics()
+
+
 func reset_movement_test(spawn_position: Vector2) -> void:
 	set_job_emblem("", Color.WHITE)
 	growth_common_bonus = 0.0

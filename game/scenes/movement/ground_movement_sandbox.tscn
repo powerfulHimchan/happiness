@@ -687,6 +687,7 @@ color = Color(1, 0.419608, 0.368627, 0.78)
 
 [node name="StageRunner" type="Node" parent="."]
 script = ExtResource("30_stage_runner")
+stage_limit = 3
 
 [node name="CombatFeedbackController" type="Node2D" parent="."]
 script = ExtResource("31_feedback")

@@ -90,6 +90,13 @@ func configure(
 		_stop_camera_shake()
 
 
+func prepare_next_stage() -> void:
+	_visual_hit_stop_remaining_s = 0.0
+	_impact_remaining_s = 0.0
+	_stop_camera_shake()
+	queue_redraw()
+
+
 func feedback_snapshot() -> Dictionary:
 	return {
 		"sound_volume": sound_volume,

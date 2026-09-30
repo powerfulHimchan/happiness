@@ -9,6 +9,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var sandbox := SANDBOX_SCENE.instantiate()
+	(sandbox.get_node("StageRunner") as PrototypeStageRunner).stage_limit = 1
 	root.add_child(sandbox)
 	var runner := sandbox.get_node("StageRunner") as PrototypeStageRunner
 	var player := sandbox.get_node("Player") as PrototypePlayer

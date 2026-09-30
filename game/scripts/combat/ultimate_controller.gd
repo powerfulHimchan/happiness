@@ -131,6 +131,18 @@ func register_precise_evade() -> void:
 	_add_gauge(PRECISE_EVADE_GAIN, "정확한 회피")
 
 
+func finish_stage_effect() -> void:
+	if _active:
+		_finish_ultimate()
+	else:
+		_apply_enemy_time_scale(1.0)
+	_emit_metrics()
+
+
+func grant_stage_gauge(amount: int) -> void:
+	_add_gauge(amount, "경로 보상")
+
+
 func reset_ultimate() -> void:
 	gauge = 0
 	activation_count = 0

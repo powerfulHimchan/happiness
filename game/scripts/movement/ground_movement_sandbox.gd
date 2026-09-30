@@ -26,6 +26,7 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 var _growth_pause_owned: bool = false
 var _growth_previous_tree_pause: bool = false
 var _growth_previous_controls_mode: int = Node.PROCESS_MODE_INHERIT
+var _intermission_stage: int = 0
 
 var _enemy_metrics_elapsed_s: float = 0.0
 var _combat_environment_suspended: bool = false
@@ -38,6 +39,7 @@ func _ready() -> void:
 	growth.selection_finished.connect(_finish_growth_selection)
 	growth.job_manifested.connect(_on_job_manifested)
 	controls.job_confirmed.connect(growth.choose_job_ultimate)
+	controls.stage_route_selected.connect(_continue_stage)
 	controls.growth_card_selected.connect(growth.choose_card)
 	controls.growth_reroll_requested.connect(growth.reroll)
 	stage_runner.stage_metrics_changed.connect(_on_growth_stage_metrics)
@@ -60,6 +62,7 @@ func _ready() -> void:
 	controls.test_records_clear_requested.connect(test_recorder.clear_records)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
+	player.player_died.connect(_finish_growth_selection)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
 	weapon_controller.combat_metrics_changed.connect(controls.update_combat_metrics)
@@ -224,6 +227,8 @@ func _draw_track_markers() -> void:
 
 
 func _reset_test() -> void:
+	_finish_growth_selection()
+	_intermission_stage = 0
 	player.reset_movement_test(TRACK_START)
 	growth.reset_run()
 	for node in get_tree().get_nodes_in_group("targetable"):
@@ -234,7 +239,7 @@ func _reset_test() -> void:
 	weapon_controller.reset_combat()
 	ultimate_controller.reset_ultimate()
 	test_recorder.start_run()
-	stage_runner.reset_stage()
+	stage_runner.reset_run()
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	_enemy_metrics_elapsed_s = 0.0
@@ -271,8 +276,40 @@ func _finish_growth_selection() -> void:
 
 
 func _on_growth_stage_metrics(metrics: Dictionary) -> void:
-	if bool(metrics.get("stage_complete", false)):
+	if not bool(metrics.get("stage_complete", false)):
+		return
+	if bool(metrics.get("run_complete", true)):
 		growth.stop_run()
+	elif growth.run_active and not player.damage_receiver.dead and _intermission_stage != stage_runner.stage_number:
+		_intermission_stage = stage_runner.stage_number
+		controls.release_all_inputs()
+		var healing := ceili(player.damage_receiver.max_health * 0.20)
+		var before := player.damage_receiver.health
+		player.apply_growth_health(0, healing)
+		_begin_growth_pause()
+		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, player.damage_receiver.health - before)
+
+
+func _continue_stage(route: String) -> void:
+	if not stage_runner.has_next_stage() or not growth.run_active or player.damage_receiver.dead or route not in ["meadow", "wind"] or controls.current_screen_mode() != 9:
+		return
+	controls.release_all_inputs()
+	weapon_controller.prepare_next_stage()
+	feedback_controller.prepare_next_stage()
+	player.prepare_next_stage(TRACK_START)
+	ultimate_controller.finish_stage_effect()
+	for group in ["enemy_projectile", "bow_projectile"]:
+		for projectile in get_tree().get_nodes_in_group(group):
+			projectile.free()
+	if route == "meadow":
+		player.apply_growth_health(0, 20)
+	else:
+		ultimate_controller.grant_stage_gauge(25)
+	target_selector.reset_selection()
+	growth.begin_next_stage()
+	stage_runner.next_stage(route)
+	_finish_growth_selection()
+	_emit_enemy_metrics()
 
 
 func _exit_tree() -> void:

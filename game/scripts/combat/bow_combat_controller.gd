@@ -85,6 +85,11 @@ func request_skill_2() -> void:
 		_start_skill(Action.ARROW_RAIN, skill_2, _skill_2_cooldown_s)
 
 
+func prepare_next_stage() -> void:
+	_finish_action("스테이지 이동 · 활 행동 정리")
+	_emit_metrics()
+
+
 func reset_combat() -> void:
 	basic_attack_count = 0
 	skill_hit_count = 0

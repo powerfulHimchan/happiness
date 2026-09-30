@@ -74,6 +74,11 @@ func reset_run() -> void:
 	_emit_metrics()
 
 
+func begin_next_stage() -> void:
+	rerolls_remaining = 1
+	_emit_metrics()
+
+
 func stop_run() -> void:
 	run_active = false
 	if choosing or awaiting_job_confirmation:

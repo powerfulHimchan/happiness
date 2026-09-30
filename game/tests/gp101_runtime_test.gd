@@ -11,6 +11,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var sandbox := SANDBOX.instantiate()
+	# GP-101의 단일 스테이지 성장 회귀 경로. 연속 진행은 GP-104에서 검사한다.
+	(sandbox.get_node("StageRunner") as PrototypeStageRunner).stage_limit = 1
 	root.add_child(sandbox)
 	current_scene = sandbox
 	var controls := sandbox.get_node("CanvasLayer/GroundMovementControls") as Control

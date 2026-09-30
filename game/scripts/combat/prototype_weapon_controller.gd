@@ -73,6 +73,14 @@ func request_weapon_switch() -> void:
 	_emit_active_metrics()
 
 
+func prepare_next_stage() -> void:
+	_switch_buffered = false
+	_switch_buffer_remaining_s = 0.0
+	sword_combat.prepare_next_stage()
+	bow_combat.prepare_next_stage()
+	_emit_active_metrics()
+
+
 func reset_combat() -> void:
 	active_weapon_id = SWORD_ID
 	switch_count = 0

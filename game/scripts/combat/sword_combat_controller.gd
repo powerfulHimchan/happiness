@@ -93,6 +93,14 @@ func set_active(enabled: bool) -> void:
 	_emit_metrics()
 
 
+func prepare_next_stage() -> void:
+	_finish_action("스테이지 이동 · 검 행동 정리")
+	combo_index = 0
+	_slash_remaining_s = 0.0
+	slash_sprite.visible = false
+	_emit_metrics()
+
+
 func reset_combat() -> void:
 	combo_index = 0
 	basic_attack_count = 0

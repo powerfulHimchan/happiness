@@ -44,6 +44,7 @@ required_files=(
   "$game_root/tests/gp102_runtime_test.gd"
   "$game_root/scripts/growth/prototype_job_rewards.gd"
   "$game_root/tests/gp103_runtime_test.gd"
+  "$game_root/tests/gp104_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -520,6 +521,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/gp102_runtime_test.gd
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/gp103_runtime_test.gd
+  timeout 45s "$godot_command" --headless --path "$game_root" \
+    --script res://tests/gp104_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

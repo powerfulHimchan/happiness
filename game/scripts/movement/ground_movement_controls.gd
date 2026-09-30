@@ -25,6 +25,7 @@ signal test_records_clear_requested
 signal growth_card_selected(index: int)
 signal growth_reroll_requested
 signal job_confirmed(ultimate_index: int)
+signal stage_route_selected(route: String)
 
 enum ScreenMode {
 	COMBAT,
@@ -36,6 +37,7 @@ enum ScreenMode {
 	FEEDBACK_SETTINGS,
 	GROWTH_SELECTION,
 	JOB_MANIFESTATION,
+	STAGE_ROUTE,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -189,6 +191,10 @@ var job_confirm_rect := Rect2()
 var job_ultimate_rects: Array[Rect2] = []
 var job_ultimates: Array[Dictionary] = []
 var selected_job_ultimate: int = -1
+var stage_route_rects: Array[Rect2] = []
+var cleared_stage: int = 1
+var run_stage_count: int = 3
+var stage_recovered_health: int = 0
 
 
 func _ready() -> void:
@@ -197,7 +203,7 @@ func _ready() -> void:
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("GP-103 직업 보상 시제품 준비")
+	_append_action_log("GP-104 연속 스테이지 시제품 준비")
 	queue_redraw()
 
 
@@ -275,6 +281,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.STAGE_ROUTE:
+		_draw_stage_routes()
+		return
 	if screen_mode == ScreenMode.JOB_MANIFESTATION:
 		_draw_job_manifestation()
 		return
@@ -366,12 +375,48 @@ func _draw_job_manifestation() -> void:
 func finish_growth_selection() -> void:
 	release_all_inputs()
 	growth_cards.clear()
-	if screen_mode == ScreenMode.GROWTH_SELECTION or screen_mode == ScreenMode.JOB_MANIFESTATION:
+	if screen_mode in [ScreenMode.GROWTH_SELECTION, ScreenMode.JOB_MANIFESTATION, ScreenMode.STAGE_ROUTE]:
 		screen_mode = ScreenMode.COMBAT
 	manifested_job.clear()
 	job_ultimates.clear()
 	selected_job_ultimate = -1
 	queue_redraw()
+
+
+func show_stage_routes(stage: int, stage_count: int, recovered_health: int) -> void:
+	release_all_inputs()
+	cleared_stage = stage
+	run_stage_count = stage_count
+	stage_recovered_health = recovered_health
+	screen_mode = ScreenMode.STAGE_ROUTE
+	_refresh_stage_routes()
+	queue_redraw()
+
+
+func _refresh_stage_routes() -> void:
+	var safe := _safe_area_in_viewport()
+	var gap := minf(32.0, safe.size.x * 0.03)
+	var card_width := (safe.size.x * 0.90 - gap) * 0.5
+	stage_route_rects.clear()
+	for index in 2:
+		stage_route_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.43), Vector2(card_width, safe.size.y * 0.35)))
+
+
+func _draw_stage_routes() -> void:
+	_refresh_stage_routes()
+	var safe := _safe_area_in_viewport()
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
+	_draw_text_centered("스테이지 %d/%d 완료" % [cleared_stage, run_stage_count], Rect2(safe.position + Vector2(0, safe.size.y * 0.08), Vector2(safe.size.x, 50)), 32, PASS_COLOR)
+	_draw_text_centered("체력 +%d 회복 · 현재 %d/%d" % [stage_recovered_health, int(movement_metrics.get("health", 0)), int(movement_metrics.get("max_health", 100))], Rect2(safe.position + Vector2(0, safe.size.y * 0.20), Vector2(safe.size.x, 40)), 22, TEXT_COLOR)
+	_draw_text_centered("성장을 유지하고 다음 경로를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.30), Vector2(safe.size.x, 40)), 20, MUTED_TEXT_COLOR)
+	for index in PrototypeStageRunner.ROUTES.size():
+		var rect := stage_route_rects[index]
+		var route := PrototypeStageRunner.ROUTES[index]
+		draw_style_box(_panel_style(PANEL_COLOR), rect)
+		_draw_text_centered(String(route["name"]), Rect2(rect.position + Vector2(0, rect.size.y * 0.12), Vector2(rect.size.x, 40)), 28, ACTIVE_COLOR)
+		for line_index in route["lines"].size():
+			_draw_text_centered(String(route["lines"][line_index]), Rect2(rect.position + Vector2(0, rect.size.y * 0.44 + 36 * line_index), Vector2(rect.size.x, 32)), 18, TEXT_COLOR)
+	_draw_text_centered("카드를 누르면 다음 스테이지를 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.84), Vector2(safe.size.x, 36)), 18, MUTED_TEXT_COLOR)
 
 
 func _refresh_growth_layout() -> void:
@@ -496,7 +541,7 @@ func update_stage_metrics(metrics: Dictionary) -> void:
 	if not stage_log.is_empty() and stage_log != last_stage_log_seen:
 		last_stage_log_seen = stage_log
 		_append_action_log(stage_log)
-	if bool(metrics.get("stage_complete", false)) and screen_mode == ScreenMode.COMBAT:
+	if bool(metrics.get("run_complete", metrics.get("stage_complete", false))) and screen_mode == ScreenMode.COMBAT:
 		_show_result_screen()
 	queue_redraw()
 
@@ -807,6 +852,7 @@ func layout_snapshot() -> Dictionary:
 		"job_panel": job_panel_rect,
 		"job_confirm": job_confirm_rect,
 		"job_ultimates": job_ultimate_rects.duplicate(),
+		"stage_routes": stage_route_rects.duplicate(),
 	}
 
 
@@ -831,8 +877,10 @@ func _show_result_screen() -> void:
 	var bow_hits := int(movement_metrics.get("bow_total_hits", 0))
 	var total_hits := sword_hits + bow_hits
 	result_snapshot = {
-		"completion_s": float(movement_metrics.get("stage_elapsed_s", 0.0)),
-		"target_s": float(movement_metrics.get("stage_target_s", 180.0)),
+		"completion_s": float(movement_metrics.get("run_elapsed_s", movement_metrics.get("stage_elapsed_s", 0.0))),
+		"target_s": float(movement_metrics.get("stage_target_s", 180.0)) * int(movement_metrics.get("run_stage_count", 1)),
+		"stage_count": int(movement_metrics.get("run_stage_count", 1)),
+		"stage_history": movement_metrics.get("run_stage_history", []).duplicate(true),
 		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
 		"damage_causes": String(movement_metrics.get("damage_cause_summary", "피격 없음")),
 		"sword_hits": sword_hits,
@@ -841,7 +889,7 @@ func _show_result_screen() -> void:
 		"bow_damage": int(movement_metrics.get("bow_total_damage", 0)),
 		"sword_ratio": float(sword_hits) / float(total_hits) if total_hits > 0 else 0.0,
 		"bow_ratio": float(bow_hits) / float(total_hits) if total_hits > 0 else 0.0,
-		"record_summary": test_record_summary.duplicate(true),
+		"record_summary": _current_record_summary(),
 	}
 	screen_mode = ScreenMode.RESULT
 	_refresh_layout()
@@ -849,6 +897,12 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.STAGE_ROUTE:
+		for index in stage_route_rects.size():
+			if stage_route_rects[index].has_point(position):
+				stage_route_selected.emit(String(PrototypeStageRunner.ROUTES[index]["id"]))
+				return
+		return
 	if screen_mode == ScreenMode.JOB_MANIFESTATION:
 		for index in job_ultimate_rects.size():
 			if job_ultimate_rects[index].has_point(position) and index < job_ultimates.size():
@@ -1268,13 +1322,15 @@ func _draw_header() -> void:
 	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")), Vector2(left_x, top_y + 86.0), 15, MUTED_TEXT_COLOR)
 
 	_draw_text(
-		"%s  %d/%d" % [
-			section_name,
+		"%d/%d · %s  %d/%d" % [
+			int(movement_metrics.get("run_stage_number", 1)),
+			int(movement_metrics.get("run_stage_count", 1)),
+			section_name.split(" · ")[0],
 			section_index,
 			section_count,
 		],
 		Vector2(center_x, top_y),
-		22,
+		18,
 		TEXT_COLOR
 	)
 	var stage_objective: String = String(movement_metrics.get("stage_objective", "첫 관문까지 전진"))
@@ -1317,7 +1373,7 @@ func _draw_result_screen() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.88), true)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
 	_draw_text_centered(
-		"스테이지 완료",
+		"도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 24.0), Vector2(result_panel_rect.size.x, 58.0)),
 		36,
 		PASS_COLOR
@@ -1337,7 +1393,7 @@ func _draw_result_screen() -> void:
 	var content_x := result_panel_rect.position.x + 54.0
 	var content_width := result_panel_rect.size.x - 108.0
 	var y := result_panel_rect.position.y + 158.0
-	_draw_result_row("구간 기록", _section_time_summary(), content_x, content_width, y)
+	_draw_result_row("스테이지 기록" if int(result_snapshot.get("stage_count", 1)) > 1 else "구간 기록", _section_time_summary(), content_x, content_width, y)
 	y += 66.0
 	_draw_result_row("피격 원인", String(result_snapshot.get("damage_causes", "피격 없음")), content_x, content_width, y)
 	y += 66.0
@@ -1386,13 +1442,13 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-103 · 직업 보상 시제품",
+		"GP-104 · 3스테이지 성장 시제품",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
 	)
 	_draw_text_centered(
-		"능력과 무기 사용으로 자신의 직업을 발현하세요.",
+		"직업과 필살기를 유지하며 두 경로를 선택하세요.",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
 		19,
 		MUTED_TEXT_COLOR
@@ -1588,7 +1644,22 @@ func _draw_result_row(label: String, value: String, x: float, width: float, y: f
 	_draw_text(value, Vector2(x + width * 0.27, y + 7.0), 19, TEXT_COLOR)
 
 
+func _current_record_summary() -> Dictionary:
+	var summary := test_record_summary.duplicate(true)
+	var stage_count := int(movement_metrics.get("run_stage_count", 1))
+	if stage_count > 1:
+		var stats: Dictionary = summary.get("completion_by_stage_count", {}).get(str(stage_count), {})
+		for key in ["completed_run_count", "best_completion_s", "average_completion_s"]:
+			summary[key] = stats.get(key, 0)
+	return summary
+
+
 func _section_time_summary() -> String:
+	if int(result_snapshot.get("stage_count", 1)) > 1:
+		var stage_parts: Array[String] = []
+		for entry in result_snapshot.get("stage_history", []):
+			stage_parts.append("%d %.1fs" % [int(entry["stage"]), float(entry["elapsed_s"])])
+		return " · ".join(stage_parts)
 	var actual_times: Array = result_snapshot.get("actual_times", [])
 	if actual_times.is_empty():
 		return "기록 없음"

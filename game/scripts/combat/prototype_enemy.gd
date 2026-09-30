@@ -295,7 +295,7 @@ func _fire_seed_volley() -> void:
 		_projectile_sequence += 1
 		var projectile := SEED_PROJECTILE_SCENE.instantiate() as EnemySeedProjectile
 		projectile.configure(
-			"seed_sack:%d:%d" % [attack_count, _projectile_sequence],
+			"%s:volley:%d:%d" % [attack_life_key(), attack_count, _projectile_sequence],
 			base_direction.rotated(deg_to_rad(angle_degrees)),
 			SEED_DAMAGE
 		)
@@ -314,7 +314,7 @@ func _try_contact_damage(amount: int, attack_id: StringName) -> void:
 	_attack_hit_consumed = true
 	var was_evading := player.invincible
 	var event := DamageEvent.new()
-	event.event_id = StringName("%s:%d:player" % [target_key, attack_count])
+	event.event_id = StringName("%s:%d:player" % [attack_life_key(), attack_count])
 	event.attacker_id = StringName(target_key)
 	event.attack_id = attack_id
 	event.damage = amount

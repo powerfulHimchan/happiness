@@ -80,6 +80,10 @@ func closest_hit_point(from_global: Vector2) -> Vector2:
 	return center - toward_center.normalized() * HIT_RADIUS_PX
 
 
+func attack_life_key() -> String:
+	return "%s:%d:%d" % [target_key, get_instance_id(), spawn_generation]
+
+
 func receive_damage(event: DamageEvent) -> int:
 	var result := damage_receiver.try_receive(event)
 	last_damage_log = "%s · %s · HP %d/%d" % [

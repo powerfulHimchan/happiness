@@ -307,7 +307,7 @@ func _spawn_shockwaves() -> void:
 		_shockwave_sequence += 1
 		var wave := SHOCKWAVE_SCENE.instantiate() as EliteShockwave
 		wave.configure(
-			"armored_boar:%d:%d" % [attack_count, _shockwave_sequence],
+			"%s:wave:%d:%d" % [attack_life_key(), attack_count, _shockwave_sequence],
 			direction,
 			_shockwave_damage(),
 			7.8 if phase == 2 else 6.5
@@ -327,7 +327,7 @@ func _try_charge_damage() -> void:
 	_charge_hit_consumed = true
 	var was_evading := player.invincible
 	var event := DamageEvent.new()
-	event.event_id = StringName("armored_boar:%d:charge" % attack_count)
+	event.event_id = StringName("%s:%d:charge" % [attack_life_key(), attack_count])
 	event.attacker_id = &"armored_boar"
 	event.attack_id = &"boar_charge"
 	event.damage = _charge_damage()

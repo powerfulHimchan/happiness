@@ -35,6 +35,16 @@ const ADVANCE_ONE_X := 1230.0
 const ADVANCE_TWO_X := 3830.0
 
 @export var stage_enabled: bool = true
+@export_range(1, 3) var stage_limit: int = 1
+
+const ROUTES: Array[Dictionary] = [
+	{"id": "meadow", "name": "풀숲 길", "lines": ["첫 웨이브 · 슬라임 + 씨앗 포대", "기본 회복 후 체력 20 추가 회복"]},
+	{"id": "wind", "name": "바람 길", "lines": ["첫 웨이브 · 슬라임 + 바람 정령", "필살기 게이지 +25"]},
+]
+var stage_number: int = 1
+var route_id: String = "meadow"
+var completed_elapsed_s: float = 0.0
+var stage_history: Array[Dictionary] = []
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
 @onready var leaf_slime: PrototypeEnemy = get_node("../Targets/LeafSlime") as PrototypeEnemy
@@ -58,13 +68,15 @@ var _active_enemies: Array[PrototypeTarget] = []
 var _metric_elapsed_s: float = 0.0
 var _last_stage_log: String = "스테이지 시작"
 var _initial_positions: Dictionary = {}
+var _initial_health: Dictionary = {}
 
 
 func _ready() -> void:
 	for enemy in _all_combat_enemies():
 		_initial_positions[enemy.get_path()] = enemy.position
+		_initial_health[enemy.get_path()] = enemy.damage_receiver.max_health
 	if stage_enabled:
-		reset_stage()
+		reset_run()
 	else:
 		_restore_combat_sandbox()
 
@@ -98,6 +110,8 @@ func reset_stage() -> void:
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	for enemy in _all_combat_enemies():
+		enemy.damage_receiver.max_health = roundi(float(_initial_health[enemy.get_path()]) * (1.0 + 0.25 * (stage_number - 1)))
+		enemy.reset_target()
 		_deactivate_enemy(enemy)
 	for gate_index in gates.size():
 		_set_gate_closed(gate_index, true)
@@ -111,6 +125,28 @@ func reset_stage() -> void:
 	_metric_elapsed_s = 0.0
 	_last_stage_log = "구간 1/5 시작 · 첫 관문까지 전진"
 	_emit_metrics()
+
+
+func reset_run() -> void:
+	stage_number = 1
+	route_id = "meadow"
+	completed_elapsed_s = 0.0
+	stage_history.clear()
+	reset_stage()
+
+
+func has_next_stage() -> bool:
+	return stage_enabled and stage_complete and stage_number < stage_limit
+
+
+func next_stage(next_route: String) -> bool:
+	if not has_next_stage() or next_route not in ["meadow", "wind"]:
+		return false
+	completed_elapsed_s += stage_elapsed_s
+	stage_number += 1
+	route_id = next_route
+	reset_stage()
+	return true
 
 
 func set_stage_enabled(enabled: bool) -> void:
@@ -148,6 +184,12 @@ func current_metrics() -> Dictionary:
 		if is_gate_closed(gate_index):
 			closed_gate_count += 1
 	return {
+		"run_stage_number": stage_number,
+		"run_stage_count": stage_limit,
+		"run_route_id": route_id,
+		"run_complete": stage_complete and stage_number >= stage_limit,
+		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s,
+		"run_stage_history": stage_history.duplicate(true),
 		"stage_enabled": stage_enabled,
 		"stage_complete": stage_complete,
 		"stage_failed": failed,
@@ -193,6 +235,7 @@ func _finish_current_section() -> void:
 			_deactivate_all_combat_enemies()
 			_set_gate_closed(3, false)
 			stage_complete = true
+			stage_history.append({"stage": stage_number, "route": route_id, "elapsed_s": stage_elapsed_s})
 
 	if stage_complete:
 		_last_stage_log = "스테이지 완료 · %s" % _format_seconds(stage_elapsed_s)
@@ -206,8 +249,12 @@ func _finish_current_section() -> void:
 
 func _activate_wave_one() -> void:
 	_activate_enemy(leaf_slime, Vector2(1510.0, 780.0))
-	_activate_enemy(seed_sack, Vector2(1900.0, 780.0))
-	_active_enemies.assign([leaf_slime, seed_sack])
+	if route_id == "wind":
+		_activate_enemy(wind_spirit, Vector2(1850.0, 590.0))
+		_active_enemies.assign([leaf_slime, wind_spirit])
+	else:
+		_activate_enemy(seed_sack, Vector2(1900.0, 780.0))
+		_active_enemies.assign([leaf_slime, seed_sack])
 
 
 func _activate_wave_two() -> void:
@@ -224,6 +271,7 @@ func _activate_elite() -> void:
 
 func _activate_enemy(enemy: PrototypeTarget, spawn_position: Vector2) -> void:
 	enemy.set_stage_spawn(spawn_position)
+	enemy.damage_receiver.max_health = roundi(float(_initial_health[enemy.get_path()]) * (1.0 + 0.25 * (stage_number - 1)))
 	enemy.reset_target()
 	enemy.visible = true
 	enemy.set_process(true)
@@ -245,6 +293,7 @@ func _restore_combat_sandbox() -> void:
 		_set_gate_closed(gate_index, false)
 	for enemy in _all_combat_enemies():
 		var initial_position: Vector2 = _initial_positions.get(enemy.get_path(), enemy.position)
+		enemy.damage_receiver.max_health = int(_initial_health.get(enemy.get_path(), enemy.damage_receiver.max_health))
 		enemy.set_stage_spawn(initial_position)
 		enemy.reset_target()
 		enemy.visible = true

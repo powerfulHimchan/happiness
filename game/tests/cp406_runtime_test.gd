@@ -12,6 +12,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_remove_test_files()
 	var first := SANDBOX_SCENE.instantiate()
+	(first.get_node("StageRunner") as PrototypeStageRunner).stage_limit = 1
 	root.add_child(first)
 	var controls := first.get_node("CanvasLayer/GroundMovementControls") as Control
 	var recorder := first.get_node("LocalTestRecorder") as LocalTestRecorder
@@ -53,6 +54,7 @@ func _run() -> void:
 	first.queue_free()
 	await process_frame
 	var second := SANDBOX_SCENE.instantiate()
+	(second.get_node("StageRunner") as PrototypeStageRunner).stage_limit = 1
 	root.add_child(second)
 	var second_controls := second.get_node("CanvasLayer/GroundMovementControls") as Control
 	var second_recorder := second.get_node("LocalTestRecorder") as LocalTestRecorder
