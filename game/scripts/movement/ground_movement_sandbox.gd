@@ -36,6 +36,8 @@ func _ready() -> void:
 	growth.metrics_changed.connect(controls.update_growth_metrics)
 	growth.choices_requested.connect(_on_growth_choices_requested)
 	growth.selection_finished.connect(_finish_growth_selection)
+	growth.job_manifested.connect(_on_job_manifested)
+	controls.job_confirmed.connect(growth.acknowledge_job)
 	controls.growth_card_selected.connect(growth.choose_card)
 	controls.growth_reroll_requested.connect(growth.reroll)
 	stage_runner.stage_metrics_changed.connect(_on_growth_stage_metrics)
@@ -240,14 +242,23 @@ func _reset_test() -> void:
 	controls.release_all_inputs()
 
 
-func _on_growth_choices_requested(cards: Array[Dictionary], level: int, rerolls: int) -> void:
+func _begin_growth_pause() -> void:
 	if not _growth_pause_owned:
 		_growth_previous_tree_pause = get_tree().paused
 		_growth_previous_controls_mode = controls.process_mode
 		_growth_pause_owned = true
-	controls.show_growth_choices(cards, level, rerolls)
 	controls.process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().paused = true
+
+
+func _on_growth_choices_requested(cards: Array[Dictionary], level: int, rerolls: int) -> void:
+	_begin_growth_pause()
+	controls.show_growth_choices(cards, level, rerolls)
+
+
+func _on_job_manifested(job: Dictionary) -> void:
+	_begin_growth_pause()
+	controls.show_job_manifestation(job)
 
 
 func _finish_growth_selection() -> void:

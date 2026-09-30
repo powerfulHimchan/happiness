@@ -1,6 +1,6 @@
 extends Control
 
-## GP-101 성장 선택, 모바일 전투 HUD와 Android 검증 상태 표시.
+## GP-102 직업 발현·성장 선택, 모바일 전투 HUD와 Android 검증 상태 표시.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -24,6 +24,7 @@ signal feedback_settings_changed(
 signal test_records_clear_requested
 signal growth_card_selected(index: int)
 signal growth_reroll_requested
+signal job_confirmed
 
 enum ScreenMode {
 	COMBAT,
@@ -34,6 +35,7 @@ enum ScreenMode {
 	COMBAT_RESUME_COUNTDOWN,
 	FEEDBACK_SETTINGS,
 	GROWTH_SELECTION,
+	JOB_MANIFESTATION,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -181,6 +183,9 @@ var growth_card_rects: Array[Rect2] = []
 var growth_reroll_rect := Rect2()
 var growth_choice_level: int = 1
 var growth_choice_rerolls: int = 1
+var manifested_job: Dictionary = {}
+var job_panel_rect := Rect2()
+var job_confirm_rect := Rect2()
 
 
 func _ready() -> void:
@@ -189,7 +194,7 @@ func _ready() -> void:
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("GP-101 레벨업 시제품 준비")
+	_append_action_log("GP-102 직업 발현 시제품 준비")
 	queue_redraw()
 
 
@@ -267,6 +272,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.JOB_MANIFESTATION:
+		_draw_job_manifestation()
+		return
 	if screen_mode == ScreenMode.GROWTH_SELECTION:
 		_draw_growth_choices()
 		return
@@ -310,11 +318,41 @@ func show_growth_choices(cards: Array[Dictionary], level: int, rerolls: int) -> 
 	queue_redraw()
 
 
+func show_job_manifestation(job: Dictionary) -> void:
+	release_all_inputs()
+	manifested_job = job.duplicate()
+	screen_mode = ScreenMode.JOB_MANIFESTATION
+	_refresh_job_layout()
+	queue_redraw()
+
+
+func _refresh_job_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	var panel_size := Vector2(minf(920.0, safe.size.x * 0.85), safe.size.y * 0.70)
+	job_panel_rect = Rect2(safe.get_center() - panel_size * 0.5, panel_size)
+	var button_size := Vector2(minf(320.0, panel_size.x * 0.60), minf(68.0, panel_size.y * 0.14))
+	job_confirm_rect = Rect2(job_panel_rect.position + Vector2((panel_size.x - button_size.x) * 0.5, panel_size.y * 0.80), button_size)
+
+
+func _draw_job_manifestation() -> void:
+	_refresh_job_layout()
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
+	draw_style_box(_panel_style(PANEL_COLOR), job_panel_rect)
+	var color: Color = manifested_job.get("color", ACTIVE_COLOR)
+	var headings := ["직업이 발현되었습니다", String(manifested_job.get("name", "")), String(manifested_job.get("passive", "")), "이 직업은 이번 도전 동안 유지됩니다"]
+	var sizes := [24, 44, 22, 20]
+	var offsets := [0.12, 0.28, 0.49, 0.64]
+	for index in headings.size():
+		_draw_text_centered(headings[index], Rect2(job_panel_rect.position + Vector2(0.0, job_panel_rect.size.y * offsets[index]), Vector2(job_panel_rect.size.x, 50.0)), sizes[index], color if index == 1 else TEXT_COLOR)
+	_draw_button(job_confirm_rect, "확인 · 계속하기", true)
+
+
 func finish_growth_selection() -> void:
 	release_all_inputs()
 	growth_cards.clear()
-	if screen_mode == ScreenMode.GROWTH_SELECTION:
+	if screen_mode == ScreenMode.GROWTH_SELECTION or screen_mode == ScreenMode.JOB_MANIFESTATION:
 		screen_mode = ScreenMode.COMBAT
+	manifested_job.clear()
 	queue_redraw()
 
 
@@ -349,6 +387,11 @@ func _draw_growth_choices() -> void:
 		for line in card["lines"]:
 			_draw_text_centered(String(line), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.56 + line_index * 38.0), Vector2(rect.size.x, 32.0)), font_size - 3, PASS_COLOR)
 			line_index += 1
+		var tag_labels: Array[String] = []
+		var tags: Dictionary = card.get("tags", {})
+		for tag in tags:
+			tag_labels.append("%s +%.2f" % [PrototypeJobProgress.TAG_NAMES[tag], float(tags[tag]) * 0.70])
+		_draw_text_centered(" · ".join(tag_labels), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.85), Vector2(rect.size.x, 26.0)), font_size - 7, MUTED_TEXT_COLOR)
 	_draw_button(growth_reroll_rect, "재추첨 %d회 남음" % growth_choice_rerolls, growth_choice_rerolls > 0)
 
 
@@ -743,6 +786,8 @@ func layout_snapshot() -> Dictionary:
 		"result_panel": result_panel_rect,
 		"growth_cards": growth_card_rects.duplicate(),
 		"growth_reroll": growth_reroll_rect,
+		"job_panel": job_panel_rect,
+		"job_confirm": job_confirm_rect,
 	}
 
 
@@ -785,6 +830,10 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.JOB_MANIFESTATION:
+		if job_confirm_rect.has_point(position):
+			job_confirmed.emit()
+		return
 	if screen_mode == ScreenMode.GROWTH_SELECTION:
 		if growth_reroll_rect.has_point(position):
 			if growth_choice_rerolls > 0:
@@ -1192,6 +1241,7 @@ func _draw_header() -> void:
 		true
 	)
 	_draw_text("Lv.%d · 경험치 %d/%d" % [int(movement_metrics.get("growth_level", 1)), int(movement_metrics.get("growth_xp", 0)), int(movement_metrics.get("growth_next_xp", 20))], Vector2(left_x, top_y + 62.0), 17, ACTIVE_COLOR)
+	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")), Vector2(left_x, top_y + 86.0), 15, MUTED_TEXT_COLOR)
 
 	_draw_text(
 		"%s  %d/%d" % [
@@ -1312,13 +1362,13 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-101 · 성장 시제품",
+		"GP-102 · 직업 발현 시제품",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
 	)
 	_draw_text_centered(
-		"몬스터를 처치하고 능력 카드를 선택하세요.",
+		"능력과 무기 사용으로 자신의 직업을 발현하세요.",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
 		19,
 		MUTED_TEXT_COLOR

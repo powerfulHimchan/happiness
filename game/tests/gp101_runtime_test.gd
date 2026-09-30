@@ -15,6 +15,8 @@ func _run() -> void:
 	current_scene = sandbox
 	var controls := sandbox.get_node("CanvasLayer/GroundMovementControls") as Control
 	var growth := sandbox.get_node("PrototypeGrowthController") as PrototypeGrowthController
+	# 성장 선택 자체의 회귀 검사는 직업 보상을 분리해 검증한다.
+	growth.jobs_enabled = false
 	var player := sandbox.get_node("Player") as PrototypePlayer
 	var runner := sandbox.get_node("StageRunner") as PrototypeStageRunner
 	var sword := sandbox.get_node("Player/SwordCombatController") as SwordCombatController

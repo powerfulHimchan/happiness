@@ -45,6 +45,8 @@ const STOP_EPSILON_MPS := 0.02
 var growth_common_bonus: float = 0.0
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
+var job_emblem_id: String = ""
+var job_emblem_color := Color.WHITE
 var move_input: float = 0.0
 var move_input_vector: Vector2 = Vector2.ZERO
 var facing_direction: int = 1
@@ -304,6 +306,26 @@ func receive_damage(event: DamageEvent) -> int:
 	return result
 
 
+func set_job_emblem(job_id: String, color: Color) -> void:
+	job_emblem_id = job_id
+	job_emblem_color = color
+	queue_redraw()
+
+
+func _draw() -> void:
+	if job_emblem_id.is_empty():
+		return
+	# 색뿐 아니라 선봉대의 마름모와 추적자의 원형 표식으로 구분한다.
+	var center := Vector2(0.0, -160.0)
+	if job_emblem_id == "vanguard":
+		var points := PackedVector2Array([center + Vector2(0, -18), center + Vector2(16, 0), center + Vector2(0, 18), center + Vector2(-16, 0), center + Vector2(0, -18)])
+		draw_polyline(points, job_emblem_color, 4.0, true)
+	else:
+		draw_arc(center, 17.0, 0.0, TAU, 24, job_emblem_color, 4.0, true)
+		draw_line(center + Vector2(-8, 0), center + Vector2(8, 0), job_emblem_color, 3.0)
+		draw_line(center + Vector2(0, -8), center + Vector2(0, 8), job_emblem_color, 3.0)
+
+
 func growth_damage(base_damage: int, weapon_id: String) -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
 	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus))
@@ -326,6 +348,7 @@ func feedback_snapshot() -> Dictionary:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	set_job_emblem("", Color.WHITE)
 	growth_common_bonus = 0.0
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
