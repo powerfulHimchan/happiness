@@ -22,6 +22,7 @@ var _targetable: bool = true
 var _hit_flash_remaining_s: float = 0.0
 var _enemy_time_scale: float = 1.0
 var last_damage_log: String = "피해 기록 대기"
+var spawn_generation: int = 0
 
 @onready var body_sprite: Sprite2D = $BodySprite
 @onready var selection_sprite: Sprite2D = $SelectionSprite
@@ -111,6 +112,7 @@ func set_stage_spawn(spawn_position: Vector2) -> void:
 
 
 func reset_target() -> void:
+	spawn_generation += 1
 	_elapsed_s = 0.0
 	position = _origin_position
 	_targetable = true

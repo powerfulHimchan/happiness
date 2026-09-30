@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3]
+[gd_scene load_steps=41 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -30,6 +30,7 @@
 [ext_resource type="Script" path="res://scripts/stage/prototype_stage_runner.gd" id="30_stage_runner"]
 [ext_resource type="Script" path="res://scripts/combat/combat_feedback_controller.gd" id="31_feedback"]
 [ext_resource type="Script" path="res://scripts/telemetry/local_test_recorder.gd" id="32_recorder"]
+[ext_resource type="Script" path="res://scripts/growth/prototype_growth_controller.gd" id="33_growth"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -692,6 +693,9 @@ script = ExtResource("31_feedback")
 
 [node name="LocalTestRecorder" type="Node" parent="."]
 script = ExtResource("32_recorder")
+
+[node name="PrototypeGrowthController" type="Node" parent="."]
+script = ExtResource("33_growth")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 layer = 10

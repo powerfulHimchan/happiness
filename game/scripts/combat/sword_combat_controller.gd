@@ -145,7 +145,7 @@ func _update_basic_attack(delta: float) -> void:
 		_show_slash(BASIC_FLASH_S, hit_index)
 	last_combat_log = "기본 %d타 · 피해 %d · %s" % [
 		hit_index + 1,
-		damage,
+		player.growth_damage(damage, "sword"),
 		DamageReceiver.result_name(result),
 	]
 
@@ -260,7 +260,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	last_combat_log = "%s %d타 · 피해 %d · %d개체" % [
 		definition.display_name,
 		hit_index + 1,
-		int(definition.damage[hit_index]),
+		player.growth_damage(int(definition.damage[hit_index]), "sword"),
 		applied_targets,
 	]
 
@@ -273,6 +273,7 @@ func _damage_target(
 	tags: PackedStringArray,
 	hit_index: int
 ) -> int:
+	damage = player.growth_damage(damage, "sword")
 	var event := DamageEvent.new()
 	event.event_id = StringName("player:%s:%d:%d:%s" % [
 		String(attack_id),

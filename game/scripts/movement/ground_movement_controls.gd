@@ -1,6 +1,6 @@
 extends Control
 
-## CP-406용 모바일 전투 HUD와 Android 실기기 검증 상태 표시.
+## GP-101 성장 선택, 모바일 전투 HUD와 Android 검증 상태 표시.
 
 signal move_vector_changed(input_vector: Vector2)
 signal jump_pressed
@@ -22,6 +22,8 @@ signal feedback_settings_changed(
 	screen_shake_enabled: bool
 )
 signal test_records_clear_requested
+signal growth_card_selected(index: int)
+signal growth_reroll_requested
 
 enum ScreenMode {
 	COMBAT,
@@ -31,6 +33,7 @@ enum ScreenMode {
 	LAYOUT_TEST,
 	COMBAT_RESUME_COUNTDOWN,
 	FEEDBACK_SETTINGS,
+	GROWTH_SELECTION,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -173,6 +176,11 @@ var last_weapon_switch_log_seen: String = ""
 var last_ultimate_log_seen: String = ""
 var last_enemy_log_seen: String = ""
 var last_stage_log_seen: String = ""
+var growth_cards: Array[Dictionary] = []
+var growth_card_rects: Array[Rect2] = []
+var growth_reroll_rect := Rect2()
+var growth_choice_level: int = 1
+var growth_choice_rerolls: int = 1
 
 
 func _ready() -> void:
@@ -181,7 +189,7 @@ func _ready() -> void:
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
 	_refresh_layout()
-	_append_action_log("CP-406 Android 검증 준비")
+	_append_action_log("GP-101 레벨업 시제품 준비")
 	queue_redraw()
 
 
@@ -259,6 +267,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.GROWTH_SELECTION:
+		_draw_growth_choices()
+		return
 	if screen_mode == ScreenMode.RESULT:
 		_draw_result_screen()
 		return
@@ -281,6 +292,64 @@ func _draw() -> void:
 	_draw_move_control()
 	_draw_action_controls()
 	_draw_pointer_markers()
+
+
+func update_growth_metrics(metrics: Dictionary) -> void:
+	for key in metrics:
+		movement_metrics[key] = metrics[key]
+	queue_redraw()
+
+
+func show_growth_choices(cards: Array[Dictionary], level: int, rerolls: int) -> void:
+	release_all_inputs()
+	growth_cards = cards.duplicate(true)
+	growth_choice_level = level
+	growth_choice_rerolls = rerolls
+	screen_mode = ScreenMode.GROWTH_SELECTION
+	_refresh_growth_layout()
+	queue_redraw()
+
+
+func finish_growth_selection() -> void:
+	release_all_inputs()
+	growth_cards.clear()
+	if screen_mode == ScreenMode.GROWTH_SELECTION:
+		screen_mode = ScreenMode.COMBAT
+	queue_redraw()
+
+
+func _refresh_growth_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	var margin := minf(40.0, safe.size.x * 0.04)
+	var gap := minf(24.0, safe.size.x * 0.025)
+	var card_width := (safe.size.x - margin * 2.0 - gap * 2.0) / 3.0
+	var card_height := safe.size.y * 0.40
+	growth_card_rects.clear()
+	for index in 3:
+		growth_card_rects.append(Rect2(safe.position + Vector2(margin + index * (card_width + gap), safe.size.y * 0.30), Vector2(card_width, card_height)))
+	var button_size := Vector2(minf(340.0, safe.size.x * 0.5), minf(68.0, safe.size.y * 0.12))
+	growth_reroll_rect = Rect2(safe.position + Vector2((safe.size.x - button_size.x) * 0.5, safe.size.y * 0.78), button_size)
+
+
+func _draw_growth_choices() -> void:
+	_refresh_growth_layout()
+	var safe := _safe_area_in_viewport()
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
+	_draw_text_centered("레벨 %d · 능력 하나를 선택하세요" % growth_choice_level, Rect2(safe.position + Vector2(0.0, safe.size.y * 0.08), Vector2(safe.size.x, 60.0)), 30, ACTIVE_COLOR)
+	_draw_text_centered("전투는 잠시 멈춥니다 · 선택하면 바로 재개", Rect2(safe.position + Vector2(0.0, safe.size.y * 0.18), Vector2(safe.size.x, 40.0)), 20, MUTED_TEXT_COLOR)
+	var slot_labels := ["현재 무기", "공용", "무작위"]
+	for index in growth_cards.size():
+		var rect := growth_card_rects[index]
+		var card := growth_cards[index]
+		draw_style_box(_panel_style(PANEL_COLOR), rect)
+		var font_size := mini(26, int(rect.size.x / 12.0))
+		_draw_text_centered(slot_labels[index], Rect2(rect.position + Vector2(0.0, rect.size.y * 0.12), Vector2(rect.size.x, 32.0)), font_size - 4, MUTED_TEXT_COLOR)
+		_draw_text_centered(String(card["title"]), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.32), Vector2(rect.size.x, 44.0)), font_size, TEXT_COLOR)
+		var line_index := 0
+		for line in card["lines"]:
+			_draw_text_centered(String(line), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.56 + line_index * 38.0), Vector2(rect.size.x, 32.0)), font_size - 3, PASS_COLOR)
+			line_index += 1
+	_draw_button(growth_reroll_rect, "재추첨 %d회 남음" % growth_choice_rerolls, growth_choice_rerolls > 0)
 
 
 func update_movement_metrics(metrics: Dictionary) -> void:
@@ -672,6 +741,8 @@ func layout_snapshot() -> Dictionary:
 		"move": move_zone,
 		"actions": action_rects.duplicate(),
 		"result_panel": result_panel_rect,
+		"growth_cards": growth_card_rects.duplicate(),
+		"growth_reroll": growth_reroll_rect,
 	}
 
 
@@ -714,6 +785,16 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.GROWTH_SELECTION:
+		if growth_reroll_rect.has_point(position):
+			if growth_choice_rerolls > 0:
+				growth_reroll_requested.emit()
+			return
+		for index in growth_card_rects.size():
+			if growth_card_rects[index].has_point(position):
+				growth_card_selected.emit(index)
+				return
+		return
 	if screen_mode == ScreenMode.RESULT:
 		if result_retry_rect.has_point(position):
 			begin_retry()
@@ -1110,8 +1191,7 @@ func _draw_header() -> void:
 		Color("69d06f") if health > max_health * 0.3 else Color("ef6f6c"),
 		true
 	)
-	var target_health := String(movement_metrics.get("combat_target_health", "대상 없음"))
-	_draw_text(target_health, Vector2(left_x, top_y + 62.0), 17, MUTED_TEXT_COLOR)
+	_draw_text("Lv.%d · 경험치 %d/%d" % [int(movement_metrics.get("growth_level", 1)), int(movement_metrics.get("growth_xp", 0)), int(movement_metrics.get("growth_next_xp", 20))], Vector2(left_x, top_y + 62.0), 17, ACTIVE_COLOR)
 
 	_draw_text(
 		"%s  %d/%d" % [
@@ -1232,13 +1312,13 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"3분 전투 스테이지",
+		"GP-101 · 성장 시제품",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
 	)
 	_draw_text_centered(
-		"검과 활을 전환하며 다섯 구간을 돌파하세요.",
+		"몬스터를 처치하고 능력 카드를 선택하세요.",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
 		19,
 		MUTED_TEXT_COLOR

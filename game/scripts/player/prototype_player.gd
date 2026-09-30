@@ -42,6 +42,9 @@ const POST_HIT_FLASH_S := 0.12
 const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
+var growth_common_bonus: float = 0.0
+var growth_sword_bonus: float = 0.0
+var growth_bow_bonus: float = 0.0
 var move_input: float = 0.0
 var move_input_vector: Vector2 = Vector2.ZERO
 var facing_direction: int = 1
@@ -301,6 +304,19 @@ func receive_damage(event: DamageEvent) -> int:
 	return result
 
 
+func growth_damage(base_damage: int, weapon_id: String) -> int:
+	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus))
+
+
+func apply_growth_health(maximum_bonus: int, healing: int) -> void:
+	if damage_receiver.dead:
+		return
+	damage_receiver.max_health += maximum_bonus
+	damage_receiver.health = mini(damage_receiver.max_health, damage_receiver.health + healing)
+	_emit_metrics()
+
+
 func feedback_snapshot() -> Dictionary:
 	return {
 		"hit_flash_remaining_s": _hit_flash_remaining_s,
@@ -310,6 +326,10 @@ func feedback_snapshot() -> Dictionary:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	growth_common_bonus = 0.0
+	growth_sword_bonus = 0.0
+	growth_bow_bonus = 0.0
+	damage_receiver.max_health = MAX_HEALTH
 	global_position = spawn_position
 	velocity = Vector2.ZERO
 	move_input = 0.0

@@ -1,6 +1,6 @@
 # Godot 전투 프로토타입
 
-`CP-001`, `CP-002` 기술 확인과 `CP-101~405` 전투·조작·로컬 기록을 거쳐 `CP-406 Android 검증 APK`를 만드는 프로젝트다. 앱에서 완주 횟수, 연속 실행 시간과 백그라운드 복귀 횟수를 확인할 수 있다.
+`CP-001~406` 전투·조작·로컬 기록과 Android 진단에 이어 `GP-101` 경험치·레벨업 선택을 구현한 개발용 프로젝트다. 몬스터 처치 후 능력 카드 3장 중 하나를 선택하고 스테이지당 1회 재추첨할 수 있다. 실제 기기 사용자 검증은 아직 확인 대기다.
 
 ## 기준 환경
 
@@ -37,7 +37,7 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-cp406-android-validation-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 `game` 변경이 `main`에 반영될 때 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-gp101-growth-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 

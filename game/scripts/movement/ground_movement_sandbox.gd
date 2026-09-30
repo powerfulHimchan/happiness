@@ -1,6 +1,6 @@
 extends Node2D
 
-## CP-405 3분 스테이지, 타격 피드백과 로컬 테스트 기록 환경을 담당한다.
+## GP-101 성장 선택과 CP 전투·타격 피드백·로컬 기록 환경을 담당한다.
 
 const TRACK_START := Vector2(960.0, 780.0)
 const TRACK_LEFT := 100.0
@@ -21,6 +21,11 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var test_recorder: LocalTestRecorder = $LocalTestRecorder
 @onready var controls: Control = $CanvasLayer/GroundMovementControls
 @onready var stage_runner: PrototypeStageRunner = $StageRunner
+@onready var growth: PrototypeGrowthController = $PrototypeGrowthController
+
+var _growth_pause_owned: bool = false
+var _growth_previous_tree_pause: bool = false
+var _growth_previous_controls_mode: int = Node.PROCESS_MODE_INHERIT
 
 var _enemy_metrics_elapsed_s: float = 0.0
 var _combat_environment_suspended: bool = false
@@ -28,6 +33,13 @@ var _suspended_node_states: Array[Dictionary] = []
 
 
 func _ready() -> void:
+	growth.metrics_changed.connect(controls.update_growth_metrics)
+	growth.choices_requested.connect(_on_growth_choices_requested)
+	growth.selection_finished.connect(_finish_growth_selection)
+	controls.growth_card_selected.connect(growth.choose_card)
+	controls.growth_reroll_requested.connect(growth.reroll)
+	stage_runner.stage_metrics_changed.connect(_on_growth_stage_metrics)
+	controls.update_growth_metrics(growth.metrics_snapshot())
 	controls.move_vector_changed.connect(player.set_move_vector)
 	controls.jump_pressed.connect(player.request_jump)
 	controls.jump_released.connect(player.release_jump)
@@ -211,6 +223,7 @@ func _draw_track_markers() -> void:
 
 func _reset_test() -> void:
 	player.reset_movement_test(TRACK_START)
+	growth.reset_run()
 	for node in get_tree().get_nodes_in_group("targetable"):
 		var target := node as PrototypeTarget
 		if target != null:
@@ -225,6 +238,35 @@ func _reset_test() -> void:
 	_enemy_metrics_elapsed_s = 0.0
 	_emit_enemy_metrics()
 	controls.release_all_inputs()
+
+
+func _on_growth_choices_requested(cards: Array[Dictionary], level: int, rerolls: int) -> void:
+	if not _growth_pause_owned:
+		_growth_previous_tree_pause = get_tree().paused
+		_growth_previous_controls_mode = controls.process_mode
+		_growth_pause_owned = true
+	controls.show_growth_choices(cards, level, rerolls)
+	controls.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().paused = true
+
+
+func _finish_growth_selection() -> void:
+	if not _growth_pause_owned:
+		return
+	controls.finish_growth_selection()
+	controls.process_mode = _growth_previous_controls_mode
+	get_tree().paused = _growth_previous_tree_pause
+	_growth_pause_owned = false
+
+
+func _on_growth_stage_metrics(metrics: Dictionary) -> void:
+	if bool(metrics.get("stage_complete", false)):
+		growth.stop_run()
+
+
+func _exit_tree() -> void:
+	if _growth_pause_owned:
+		get_tree().paused = _growth_previous_tree_pause
 
 
 func _on_layout_test_started() -> void:

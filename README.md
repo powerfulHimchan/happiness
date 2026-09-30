@@ -6,10 +6,11 @@
 
 - 게임 기획서 버전: `0.1`
 - 전투 프로토타입 명세 버전: `0.1`
-- 단계: `CP-406` Android 실기기 검증판
+- 단계: `GP-101` 경험치·레벨업 능력 선택 개발용 시제품
 - 주인공: 로안 / 루미
 - 미소의 여왕: 세라
-- 구현 소스: 16:9·20:9 안전 영역, 20분 실행·백그라운드 복귀와 10회 완주 진단 구현 완료
+- 구현 소스: 경험치, 레벨업 전투 정지, 카드 3장 선택·1회 재추첨과 런 단위 피해·체력 성장
+- 검증 상태: 자동 검사와 실제 기기 사용자 검증을 구분하며 CP-406 실기기 검증은 확인 대기
 
 ## 문서
 
@@ -23,11 +24,12 @@
 - [조작 배치 편집 화면 와이어프레임](docs/prototype/control-layout-editor-wireframe.svg)
 - [프로토타입 테스트 계획](docs/prototype/PROTOTYPE_TEST_PLAN.md)
 - [CP-406 Android 실기기 검증표](docs/prototype/CP406_DEVICE_VALIDATION.md)
+- [GP-101 성장 구현·검증 범위](docs/prototype/GP101_GROWTH_STATUS.md)
 - [CP-001/002 구현 상태](docs/prototype/CP001_CP002_STATUS.md)
 
 ## 프로토타입 실행
 
-Godot 4.7.2 stable에서 [`game/project.godot`](game/project.godot)를 엽니다. 현재 `CP-406` 빌드는 설정 화면에 완주 횟수, 연속 실행 시간과 백그라운드 복귀 횟수를 표시합니다. 자동 검사는 16:9·20:9 안전 영역과 10회 완주 뒤 조작 설정·최고 기록 보존을 검증하며, 실제 기기에서는 별도 검증표에 따라 20분 연속 플레이를 확인합니다.
+Godot 4.7.2 stable에서 [`game/project.godot`](game/project.godot)를 엽니다. 현재 `GP-101` 빌드는 몬스터 처치로 경험치를 얻고 레벨업마다 전투를 멈춰 능력 카드 세 장 중 하나를 선택합니다. 현재 스테이지의 전체 적 처치로 레벨업 3회를 경험할 수 있습니다. CP-406의 진단·로컬 기록·조작 설정 기능도 유지하며, 실제 기기 20분 플레이는 별도 검증표로 확인합니다.
 
 ```bash
 ./scripts/check_godot_project.sh
