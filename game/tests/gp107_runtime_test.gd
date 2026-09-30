@@ -43,7 +43,7 @@ func _run() -> void:
 		if not _finish_stage():
 			return
 		for stage in [2, 3]:
-			var route_index := (order + stage) % 2
+			var route_index: int = (order + stage) % 2
 			var route := "meadow" if route_index == 0 else "wind"
 			_tap(controls.stage_route_rects[route_index].get_center())
 			var expected_count := 1 if route == "meadow" else 3
