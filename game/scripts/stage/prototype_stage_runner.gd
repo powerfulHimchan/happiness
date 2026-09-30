@@ -139,6 +139,29 @@ func has_next_stage() -> bool:
 	return stage_enabled and stage_complete and stage_number < stage_limit
 
 
+func checkpoint_snapshot() -> Dictionary:
+	return {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate()}
+
+
+func restore_checkpoint(state: Dictionary) -> void:
+	stage_number = int(state.number)
+	stage_limit = int(state.limit)
+	route_id = String(state.route)
+	stage_history.assign(state.history)
+	completed_elapsed_s = 0.0
+	for entry in stage_history.slice(0, -1):
+		completed_elapsed_s += float(entry.elapsed_s)
+	reset_stage()
+	stage_elapsed_s = float(state.elapsed)
+	section_actual_times.assign(state.sections)
+	current_section = Section.COMPLETE
+	stage_complete = true
+	for index in gates.size():
+		_set_gate_closed(index, false)
+	_last_stage_log = "중간 저장에서 복귀 · 다음 경로를 선택하세요"
+	_emit_metrics()
+
+
 func next_stage(next_route: String) -> bool:
 	if not has_next_stage() or next_route not in ["meadow", "wind"]:
 		return false

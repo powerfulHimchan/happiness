@@ -9,6 +9,7 @@ const SWORD_ID := "sword"
 const BOW_ID := "bow"
 const SWITCH_COOLDOWN_S := 0.50
 const SWITCH_BUFFER_S := 0.20
+const CHECKPOINT_FIELDS := ["_basic_remaining_s", "_skill_1_cooldown_s", "_skill_2_cooldown_s", "basic_attack_count", "skill_hit_count", "total_damage"]
 
 var active_weapon_id: String = SWORD_ID
 var switch_count: int = 0
@@ -79,6 +80,27 @@ func prepare_next_stage() -> void:
 	sword_combat.prepare_next_stage()
 	bow_combat.prepare_next_stage()
 	_emit_active_metrics()
+
+
+func checkpoint_snapshot() -> Dictionary:
+	var state := {"active": active_weapon_id}
+	for weapon_id in [SWORD_ID, BOW_ID]:
+		var combat: Node = sword_combat if weapon_id == SWORD_ID else bow_combat
+		var values := {}
+		for field in CHECKPOINT_FIELDS:
+			values[field] = combat.get(field)
+		state[weapon_id] = values
+	return state
+
+
+func restore_checkpoint(state: Dictionary) -> void:
+	reset_combat()
+	active_weapon_id = String(state.active)
+	for weapon_id in [SWORD_ID, BOW_ID]:
+		var combat: Node = sword_combat if weapon_id == SWORD_ID else bow_combat
+		for field in CHECKPOINT_FIELDS:
+			combat.set(field, state[weapon_id][field])
+	_apply_active_weapon()
 
 
 func reset_combat() -> void:

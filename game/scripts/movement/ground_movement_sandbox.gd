@@ -27,6 +27,9 @@ var _growth_pause_owned: bool = false
 var _growth_previous_tree_pause: bool = false
 var _growth_previous_controls_mode: int = Node.PROCESS_MODE_INHERIT
 var _intermission_stage: int = 0
+var checkpoint_store := RunCheckpointStore.new()
+var _restoring_checkpoint: bool = false
+var _available_checkpoint: Dictionary = {}
 
 var _enemy_metrics_elapsed_s: float = 0.0
 var _combat_environment_suspended: bool = false
@@ -40,6 +43,7 @@ func _ready() -> void:
 	growth.job_manifested.connect(_on_job_manifested)
 	controls.job_confirmed.connect(growth.choose_job_ultimate)
 	controls.stage_route_selected.connect(_continue_stage)
+	controls.continue_requested.connect(continue_saved_run)
 	controls.growth_card_selected.connect(growth.choose_card)
 	controls.growth_reroll_requested.connect(growth.reroll)
 	stage_runner.stage_metrics_changed.connect(_on_growth_stage_metrics)
@@ -63,12 +67,13 @@ func _ready() -> void:
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.player_died.connect(controls.release_all_inputs)
 	player.player_died.connect(_finish_growth_selection)
+	player.player_died.connect(_discard_checkpoint)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
 	weapon_controller.combat_metrics_changed.connect(controls.update_combat_metrics)
 	ultimate_controller.ultimate_metrics_changed.connect(controls.update_ultimate_metrics)
 	test_recorder.summary_changed.connect(controls.update_test_record_summary)
-	stage_runner.stage_metrics_changed.connect(test_recorder.record_stage_metrics)
+	stage_runner.stage_metrics_changed.connect(_record_stage_metrics)
 	stage_runner.stage_metrics_changed.connect(controls.update_stage_metrics)
 	$LeftSafeZone.body_entered.connect(
 		_on_safe_zone_entered.bind(TRACK_START, "시작 평지")
@@ -148,6 +153,9 @@ func _ready() -> void:
 	stage_runner.force_emit_metrics()
 	_emit_enemy_metrics()
 	queue_redraw()
+	_refresh_checkpoint()
+	if not _available_checkpoint.is_empty():
+		controls.show_main_screen()
 
 
 func _process(delta: float) -> void:
@@ -227,6 +235,7 @@ func _draw_track_markers() -> void:
 
 
 func _reset_test() -> void:
+	_discard_checkpoint()
 	_finish_growth_selection()
 	_intermission_stage = 0
 	player.reset_movement_test(TRACK_START)
@@ -276,10 +285,13 @@ func _finish_growth_selection() -> void:
 
 
 func _on_growth_stage_metrics(metrics: Dictionary) -> void:
+	if _restoring_checkpoint:
+		return
 	if not bool(metrics.get("stage_complete", false)):
 		return
 	if bool(metrics.get("run_complete", true)):
 		growth.stop_run()
+		_discard_checkpoint()
 	elif growth.run_active and not player.damage_receiver.dead and _intermission_stage != stage_runner.stage_number:
 		_intermission_stage = stage_runner.stage_number
 		controls.release_all_inputs()
@@ -288,6 +300,74 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		player.apply_growth_health(0, healing)
 		_begin_growth_pause()
 		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, player.damage_receiver.health - before)
+		_save_checkpoint(metrics)
+
+
+func _save_checkpoint(metrics: Dictionary) -> void:
+	if growth.choosing or growth.awaiting_job_confirmation:
+		return
+	test_recorder.record_stage_metrics(metrics)
+	var state := {
+		"stage": stage_runner.checkpoint_snapshot(),
+		"growth": growth.checkpoint_snapshot(),
+		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus},
+		"weapons": weapon_controller.checkpoint_snapshot(),
+		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
+		"recorder": test_recorder.checkpoint_snapshot(),
+	}
+	var error := checkpoint_store.save_checkpoint(state)
+	if error == OK:
+		_available_checkpoint = state.duplicate(true)
+	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message if error == OK else "중간 저장 실패 · 오류 %d" % error)
+
+
+func _record_stage_metrics(metrics: Dictionary) -> void:
+	if not _restoring_checkpoint:
+		test_recorder.record_stage_metrics(metrics)
+
+
+func _refresh_checkpoint() -> void:
+	_available_checkpoint = checkpoint_store.load_checkpoint()
+	if not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+		_discard_checkpoint()
+	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message)
+
+
+func _discard_checkpoint() -> void:
+	checkpoint_store.clear_checkpoint()
+	_available_checkpoint.clear()
+	controls.update_checkpoint_status(false, checkpoint_store.message)
+
+
+func continue_saved_run() -> bool:
+	_refresh_checkpoint()
+	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2:
+		return false
+	var state := _available_checkpoint.duplicate(true)
+	_restoring_checkpoint = true
+	_finish_growth_selection()
+	controls.release_all_inputs()
+	player.reset_movement_test(TRACK_START)
+	player.damage_receiver.max_health = int(state.player.max_health)
+	player.damage_receiver.health = int(state.player.health)
+	player.growth_common_bonus = float(state.player.common)
+	player.growth_sword_bonus = float(state.player.sword)
+	player.growth_bow_bonus = float(state.player.bow)
+	growth.restore_checkpoint(state.growth)
+	weapon_controller.restore_checkpoint(state.weapons)
+	ultimate_controller.reset_ultimate()
+	ultimate_controller.gauge = int(state.ultimate.gauge)
+	if not String(state.ultimate.profile).is_empty():
+		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
+	_intermission_stage = int(state.stage.number)
+	stage_runner.restore_checkpoint(state.stage)
+	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number)
+	_restoring_checkpoint = false
+	player.apply_growth_health(0, 0)
+	ultimate_controller.force_emit_metrics()
+	_begin_growth_pause()
+	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, 0)
+	return true
 
 
 func _continue_stage(route: String) -> void:

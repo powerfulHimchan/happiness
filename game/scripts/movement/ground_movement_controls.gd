@@ -26,6 +26,7 @@ signal growth_card_selected(index: int)
 signal growth_reroll_requested
 signal job_confirmed(ultimate_index: int)
 signal stage_route_selected(route: String)
+signal continue_requested
 
 enum ScreenMode {
 	COMBAT,
@@ -119,6 +120,9 @@ var result_panel_rect := Rect2()
 var result_retry_rect := Rect2()
 var result_main_rect := Rect2()
 var main_start_rect := Rect2()
+var main_continue_rect := Rect2()
+var checkpoint_available: bool = false
+var checkpoint_message: String = ""
 var main_layout_rect := Rect2()
 var main_feedback_rect := Rect2()
 var feedback_panel_rect := Rect2()
@@ -417,6 +421,8 @@ func _draw_stage_routes() -> void:
 		for line_index in route["lines"].size():
 			_draw_text_centered(String(route["lines"][line_index]), Rect2(rect.position + Vector2(0, rect.size.y * 0.44 + 36 * line_index), Vector2(rect.size.x, 32)), 18, TEXT_COLOR)
 	_draw_text_centered("카드를 누르면 다음 스테이지를 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.84), Vector2(safe.size.x, 36)), 18, MUTED_TEXT_COLOR)
+	if not checkpoint_message.is_empty():
+		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.91), Vector2(safe.size.x, 28)), 16, PASS_COLOR if checkpoint_available else WAIT_COLOR)
 
 
 func _refresh_growth_layout() -> void:
@@ -640,6 +646,12 @@ func _emit_feedback_settings() -> void:
 
 func begin_stage_from_main() -> void:
 	begin_retry()
+
+
+func update_checkpoint_status(available: bool, message: String) -> void:
+	checkpoint_available = available
+	checkpoint_message = message
+	queue_redraw()
 
 
 func open_layout_editor() -> void:
@@ -929,6 +941,8 @@ func _handle_screen_touch(position: Vector2) -> void:
 			show_main_screen()
 	elif screen_mode == ScreenMode.MAIN and main_start_rect.has_point(position):
 		begin_stage_from_main()
+	elif screen_mode == ScreenMode.MAIN and checkpoint_available and main_continue_rect.has_point(position):
+		continue_requested.emit()
 	elif screen_mode == ScreenMode.MAIN and main_layout_rect.has_point(position):
 		open_layout_editor()
 	elif screen_mode == ScreenMode.MAIN and main_feedback_rect.has_point(position):
@@ -1239,6 +1253,10 @@ func _refresh_layout() -> void:
 		Vector2(result_panel_rect.get_center().x - 140.0, result_panel_rect.end.y - 190.0),
 		Vector2(280.0, 56.0)
 	)
+	main_continue_rect = Rect2(
+		Vector2(result_panel_rect.get_center().x - 140.0, result_panel_rect.end.y - 274.0),
+		Vector2(280.0, 56.0)
+	)
 	feedback_panel_rect = result_panel_rect
 	var feedback_row_x := feedback_panel_rect.position.x + 310.0
 	var feedback_row_width := feedback_panel_rect.size.x - 380.0
@@ -1442,19 +1460,23 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-104 · 3스테이지 성장 시제품",
+		"GP-105 · 중간 저장과 이어하기",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
 	)
 	_draw_text_centered(
-		"직업과 필살기를 유지하며 두 경로를 선택하세요.",
+		"스테이지 완료 시 저장 · 재실행 후 경로 선택부터 이어하기",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
 		19,
 		MUTED_TEXT_COLOR
 	)
 	_draw_button(main_feedback_rect, "설정", false)
-	_draw_button(main_start_rect, "스테이지 시작", true)
+	if checkpoint_available:
+		_draw_button(main_continue_rect, "이어하기", true)
+	if not checkpoint_message.is_empty():
+		_draw_text_centered(checkpoint_message, Rect2(Vector2(result_panel_rect.position.x, main_continue_rect.position.y - 30.0), Vector2(result_panel_rect.size.x, 26.0)), 15, MUTED_TEXT_COLOR)
+	_draw_button(main_start_rect, "새 도전" if checkpoint_available else "스테이지 시작", not checkpoint_available)
 	_draw_button(main_layout_rect, "조작 배치", false)
 
 

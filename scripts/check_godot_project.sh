@@ -45,6 +45,8 @@ required_files=(
   "$game_root/scripts/growth/prototype_job_rewards.gd"
   "$game_root/tests/gp103_runtime_test.gd"
   "$game_root/tests/gp104_runtime_test.gd"
+  "$game_root/scripts/stage/run_checkpoint_store.gd"
+  "$game_root/tests/gp105_runtime_test.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -492,6 +494,11 @@ elif command -v godot4 >/dev/null 2>&1; then
 fi
 
 if [[ -n "$godot_command" ]]; then
+  check_data_dir="$(mktemp -d)"
+  export XDG_DATA_HOME="$check_data_dir/data"
+  export XDG_CONFIG_HOME="$check_data_dir/config"
+  mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"
+  trap 'rm -rf "$check_data_dir"' EXIT
   timeout 120s "$godot_command" --headless --path "$game_root" --import
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/cp206_runtime_test.gd
@@ -523,6 +530,18 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/gp103_runtime_test.gd
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/gp104_runtime_test.gd
+  for checkpoint_phase in seed resume finish empty seed-bow resume finish empty; do
+    timeout 45s "$godot_command" --headless --path "$game_root" \
+      --script res://tests/gp105_runtime_test.gd -- "$checkpoint_phase"
+  done
+  for checkpoint_phase in seed resume corrupt recover empty; do
+    timeout 45s "$godot_command" --headless --path "$game_root" \
+      --script res://tests/gp105_runtime_test.gd -- "$checkpoint_phase"
+  done
+  for checkpoint_phase in seed death empty seed new empty; do
+    timeout 45s "$godot_command" --headless --path "$game_root" \
+      --script res://tests/gp105_runtime_test.gd -- "$checkpoint_phase"
+  done
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

@@ -94,24 +94,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-gp104-run.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-gp105-checkpoint.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-gp104-run.apk
+          cp "${apk_path}" dist/happiness-tale-gp105-checkpoint.apk
           (
             cd dist
-            sha256sum happiness-tale-gp104-run.apk \
-              | tee happiness-tale-gp104-run.apk.sha256
+            sha256sum happiness-tale-gp105-checkpoint.apk \
+              | tee happiness-tale-gp105-checkpoint.apk.sha256
           )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-gp104-run-apk
+          name: happiness-tale-gp105-checkpoint-apk
           path: |
-            dist/happiness-tale-gp104-run.apk
-            dist/happiness-tale-gp104-run.apk.sha256
+            dist/happiness-tale-gp105-checkpoint.apk
+            dist/happiness-tale-gp105-checkpoint.apk.sha256
           if-no-files-found: error
           retention-days: 14

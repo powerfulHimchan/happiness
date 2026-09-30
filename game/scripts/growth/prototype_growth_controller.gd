@@ -79,6 +79,28 @@ func begin_next_stage() -> void:
 	_emit_metrics()
 
 
+func checkpoint_snapshot() -> Dictionary:
+	return {"level": level, "xp": experience, "total_xp": total_experience, "rerolls": rerolls_remaining, "ranks": ranks.duplicate(true), "job": jobs.job_id, "contributions": jobs.contributions.duplicate(true), "recent": jobs.recent_ability.duplicate(true)}
+
+
+func restore_checkpoint(state: Dictionary) -> void:
+	reset_run()
+	level = int(state.level)
+	experience = int(state.xp)
+	total_experience = int(state.total_xp)
+	rerolls_remaining = int(state.rerolls)
+	ranks = state.ranks.duplicate(true)
+	jobs.job_id = String(state.job)
+	jobs.contributions = state.contributions.duplicate(true)
+	jobs.recent_ability = state.recent.duplicate(true)
+	_job_passive_applied = not jobs.job_id.is_empty()
+	# 이미 저장된 피해 보너스를 사용한다. 발현 보상을 다시 더하지 않는다.
+	var job := jobs.current_job()
+	if not job.is_empty():
+		player.set_job_emblem(jobs.job_id, job.color)
+	_emit_metrics()
+
+
 func stop_run() -> void:
 	run_active = false
 	if choosing or awaiting_job_confirmation:
