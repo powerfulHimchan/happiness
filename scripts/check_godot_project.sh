@@ -48,6 +48,8 @@ required_files=(
   "$game_root/scripts/stage/run_checkpoint_store.gd"
   "$game_root/tests/gp105_runtime_test.gd"
   "$game_root/tests/gp106_runtime_test.gd"
+  "$game_root/tests/gp107_runtime_test.gd"
+  "$game_root/scripts/stage/prototype_route_terrain.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
   "$game_root/data/weapons/sword_basic.tres"
@@ -545,6 +547,8 @@ if [[ -n "$godot_command" ]]; then
   done
   timeout 45s "$godot_command" --headless --path "$game_root" \
     --script res://tests/gp106_runtime_test.gd
+  timeout 90s "$godot_command" --headless --path "$game_root" \
+    --script res://tests/gp107_runtime_test.gd
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3]
+[gd_scene load_steps=42 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -31,6 +31,8 @@
 [ext_resource type="Script" path="res://scripts/combat/combat_feedback_controller.gd" id="31_feedback"]
 [ext_resource type="Script" path="res://scripts/telemetry/local_test_recorder.gd" id="32_recorder"]
 [ext_resource type="Script" path="res://scripts/growth/prototype_growth_controller.gd" id="33_growth"]
+
+[ext_resource type="Script" path="res://scripts/stage/prototype_route_terrain.gd" id="34_route_terrain"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -684,6 +686,9 @@ shape = SubResource("StageGateShape")
 [node name="GateVisual" type="Polygon2D" parent="StageGates/FinalGate"]
 polygon = PackedVector2Array(-14, -540, 14, -540, 14, 540, -14, 540)
 color = Color(1, 0.419608, 0.368627, 0.78)
+
+[node name="RouteTerrain" type="Node2D" parent="."]
+script = ExtResource("34_route_terrain")
 
 [node name="StageRunner" type="Node" parent="."]
 script = ExtResource("30_stage_runner")

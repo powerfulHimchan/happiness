@@ -38,8 +38,8 @@ const ADVANCE_TWO_X := 3830.0
 @export_range(1, 3) var stage_limit: int = 1
 
 const ROUTES: Array[Dictionary] = [
-	{"id": "meadow", "name": "풀숲 길", "lines": ["첫 웨이브 · 슬라임 + 씨앗 포대", "기본 회복 후 체력 20 추가 회복"]},
-	{"id": "wind", "name": "바람 길", "lines": ["첫 웨이브 · 슬라임 + 바람 정령", "필살기 게이지 +25"]},
+	{"id": "meadow", "name": "풀숲 길", "lines": ["다리로 전진 · 가까운 혼합 전투", "첫 웨이브 · 슬라임 + 씨앗 포대", "체력 20 추가 회복"]},
+	{"id": "wind", "name": "바람 길", "lines": ["징검 발판 · 흩어진 원거리 전투", "첫 웨이브 · 슬라임 + 바람 정령", "필살기 게이지 +25"]},
 ]
 var stage_number: int = 1
 var route_id: String = "meadow"
@@ -47,6 +47,7 @@ var completed_elapsed_s: float = 0.0
 var stage_history: Array[Dictionary] = []
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
+@onready var route_terrain: PrototypeRouteTerrain = get_node("../RouteTerrain") as PrototypeRouteTerrain
 @onready var leaf_slime: PrototypeEnemy = get_node("../Targets/LeafSlime") as PrototypeEnemy
 @onready var seed_sack: PrototypeEnemy = get_node("../Targets/SeedSack") as PrototypeEnemy
 @onready var wind_spirit: PrototypeEnemy = get_node("../Targets/WindSpirit") as PrototypeEnemy
@@ -107,6 +108,7 @@ func _process(delta: float) -> void:
 func reset_stage() -> void:
 	if not stage_enabled:
 		return
+	route_terrain.configure(stage_number, route_id)
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	for enemy in _all_combat_enemies():
@@ -201,6 +203,14 @@ func current_metrics() -> Dictionary:
 	var display_index := mini(current_section, Section.ELITE)
 	var section_name := "완료" if stage_complete else SECTION_NAMES[display_index]
 	var objective := "출구 개방 · 완료 시간 기록" if stage_complete else SECTION_OBJECTIVES[display_index]
+	if stage_number > 1 and not stage_complete:
+		match current_section:
+			Section.ADVANCE_TWO:
+				objective = "풀숲 다리를 건너 전진" if route_id == "meadow" else "길게 점프해 바람 발판 건너기"
+			Section.WAVE_ONE:
+				objective = "슬라임과 씨앗 포대 처치" if route_id == "meadow" else "슬라임과 바람 정령 처치"
+			Section.WAVE_TWO:
+				objective = "가까운 혼합 웨이브 처치" if route_id == "meadow" else "활·점프로 흩어진 적 처치"
 	var target_s := 0.0 if stage_complete else float(SECTION_TARGET_SECONDS[display_index])
 	var closed_gate_count := 0
 	for gate_index in gates.size():
@@ -210,6 +220,8 @@ func current_metrics() -> Dictionary:
 		"run_stage_number": stage_number,
 		"run_stage_count": stage_limit,
 		"run_route_id": route_id,
+		"run_route_name": "풀숲 길" if route_id == "meadow" else "바람 길",
+		"run_route_terrain": "연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판"),
 		"run_complete": stage_complete and stage_number >= stage_limit,
 		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s,
 		"run_stage_history": stage_history.duplicate(true),
@@ -281,9 +293,18 @@ func _activate_wave_one() -> void:
 
 
 func _activate_wave_two() -> void:
-	_activate_enemy(leaf_slime, Vector2(4020.0, 780.0))
-	_activate_enemy(seed_sack, Vector2(4380.0, 780.0))
-	_activate_enemy(wind_spirit, Vector2(4200.0, 590.0))
+	if stage_number == 1:
+		_activate_enemy(leaf_slime, Vector2(4020.0, 780.0))
+		_activate_enemy(seed_sack, Vector2(4380.0, 780.0))
+		_activate_enemy(wind_spirit, Vector2(4200.0, 590.0))
+	elif route_id == "meadow":
+		_activate_enemy(leaf_slime, Vector2(4000.0, 780.0))
+		_activate_enemy(seed_sack, Vector2(4180.0, 780.0))
+		_activate_enemy(wind_spirit, Vector2(4380.0, 620.0))
+	else:
+		_activate_enemy(leaf_slime, Vector2(4050.0, 780.0))
+		_activate_enemy(seed_sack, Vector2(4650.0, 780.0))
+		_activate_enemy(wind_spirit, Vector2(4320.0, 540.0))
 	_active_enemies.assign([leaf_slime, seed_sack, wind_spirit])
 
 
@@ -312,6 +333,7 @@ func _deactivate_all_combat_enemies() -> void:
 
 
 func _restore_combat_sandbox() -> void:
+	route_terrain.configure(1, "meadow", false)
 	for gate_index in gates.size():
 		_set_gate_closed(gate_index, false)
 	for enemy in _all_combat_enemies():
