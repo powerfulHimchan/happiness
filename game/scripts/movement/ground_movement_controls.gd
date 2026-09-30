@@ -39,6 +39,7 @@ enum ScreenMode {
 	GROWTH_SELECTION,
 	JOB_MANIFESTATION,
 	STAGE_ROUTE,
+	START_WEAPON,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -199,6 +200,12 @@ var stage_route_rects: Array[Rect2] = []
 var cleared_stage: int = 1
 var run_stage_count: int = 3
 var stage_recovered_health: int = 0
+var selected_starting_weapon: String = "sword"
+var start_weapon_previous_selection: String = "sword"
+var start_weapon_return_mode: int = ScreenMode.MAIN
+var start_weapon_card_rects: Array[Rect2] = []
+var start_weapon_confirm_rect := Rect2()
+var start_weapon_cancel_rect := Rect2()
 
 
 func _ready() -> void:
@@ -285,6 +292,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.START_WEAPON:
+		_draw_start_weapon_selection()
+		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
 		_draw_stage_routes()
 		return
@@ -557,12 +567,16 @@ func update_test_record_summary(summary: Dictionary) -> void:
 	queue_redraw()
 
 
-func begin_retry() -> void:
+func begin_retry(starting_weapon: String = "sword") -> bool:
+	if starting_weapon not in ["sword", "bow"]:
+		return false
+	selected_starting_weapon = starting_weapon
 	release_all_inputs()
 	result_snapshot.clear()
 	screen_mode = ScreenMode.COMBAT
 	retry_requested.emit()
 	queue_redraw()
+	return true
 
 
 func show_main_screen() -> void:
@@ -644,8 +658,56 @@ func _emit_feedback_settings() -> void:
 	)
 
 
-func begin_stage_from_main() -> void:
-	begin_retry()
+func begin_stage_from_main(starting_weapon: String = "sword") -> bool:
+	return begin_retry(starting_weapon)
+
+
+func show_start_weapon_selection() -> void:
+	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT]:
+		return
+	start_weapon_return_mode = screen_mode
+	start_weapon_previous_selection = selected_starting_weapon
+	release_all_inputs()
+	screen_mode = ScreenMode.START_WEAPON
+	_refresh_start_weapon_layout()
+	queue_redraw()
+
+
+func _refresh_start_weapon_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	var gap := minf(32.0, safe.size.x * 0.03)
+	var card_width := (safe.size.x * 0.90 - gap) * 0.5
+	start_weapon_card_rects.clear()
+	for index in 2:
+		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.25), Vector2(card_width, safe.size.y * 0.40)))
+	var button_width := minf(280.0, safe.size.x * 0.27)
+	start_weapon_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - gap * 0.5 - button_width, safe.size.y * 0.83), Vector2(button_width, minf(64.0, safe.size.y * 0.11)))
+	start_weapon_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 + gap * 0.5, safe.size.y * 0.83), start_weapon_cancel_rect.size)
+
+
+func _draw_start_weapon_selection() -> void:
+	_refresh_start_weapon_layout()
+	var safe := _safe_area_in_viewport()
+	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
+	_draw_text_centered("시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 54)), 32, ACTIVE_COLOR)
+	_draw_text_centered("선택한 무기를 주 무기로 장착하고 새 도전을 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, 34)), 19, TEXT_COLOR)
+	var ids := ["sword", "bow"]
+	var names := ["검", "활"]
+	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m"]
+	var skills := ["돌진 베기 · 회전 베기", "관통 화살 · 화살비"]
+	for index in 2:
+		var rect := start_weapon_card_rects[index]
+		var selected: bool = selected_starting_weapon == ids[index]
+		draw_style_box(_panel_style(Color("254f51") if selected else PANEL_COLOR), rect)
+		if selected:
+			draw_rect(rect.grow(-3.0), ACTIVE_COLOR, false, 3.0)
+		var labels := [names[index] + (" · 선택됨" if selected else ""), descriptions[index], skills[index], "보조 무기 · " + names[1 - index]]
+		var offsets := [0.07, 0.32, 0.52, 0.73]
+		for line_index in labels.size():
+			_draw_text_centered(labels[line_index], Rect2(rect.position + Vector2(0, rect.size.y * offsets[line_index]), Vector2(rect.size.x, 38)), 28 if line_index == 0 else 18, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
+	_draw_text_centered("직업은 시작 무기로 고정되지 않고 능력 선택과 전투로 발현됩니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.70), Vector2(safe.size.x, 34)), 18, MUTED_TEXT_COLOR)
+	_draw_button(start_weapon_cancel_rect, "돌아가기", false)
+	_draw_button(start_weapon_confirm_rect, "이 무기로 시작", true)
 
 
 func update_checkpoint_status(available: bool, message: String) -> void:
@@ -865,6 +927,9 @@ func layout_snapshot() -> Dictionary:
 		"job_confirm": job_confirm_rect,
 		"job_ultimates": job_ultimate_rects.duplicate(),
 		"stage_routes": stage_route_rects.duplicate(),
+		"start_weapon_cards": start_weapon_card_rects.duplicate(),
+		"start_weapon_confirm": start_weapon_confirm_rect,
+		"start_weapon_cancel": start_weapon_cancel_rect,
 	}
 
 
@@ -909,6 +974,18 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.START_WEAPON:
+		_refresh_start_weapon_layout()
+		for index in start_weapon_card_rects.size():
+			if start_weapon_card_rects[index].has_point(position):
+				selected_starting_weapon = "sword" if index == 0 else "bow"
+				return
+		if start_weapon_cancel_rect.has_point(position):
+			selected_starting_weapon = start_weapon_previous_selection
+			screen_mode = start_weapon_return_mode
+		elif start_weapon_confirm_rect.has_point(position):
+			begin_retry(selected_starting_weapon)
+		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
 		for index in stage_route_rects.size():
 			if stage_route_rects[index].has_point(position):
@@ -936,11 +1013,11 @@ func _handle_screen_touch(position: Vector2) -> void:
 		return
 	if screen_mode == ScreenMode.RESULT:
 		if result_retry_rect.has_point(position):
-			begin_retry()
+			show_start_weapon_selection()
 		elif result_main_rect.has_point(position):
 			show_main_screen()
 	elif screen_mode == ScreenMode.MAIN and main_start_rect.has_point(position):
-		begin_stage_from_main()
+		show_start_weapon_selection()
 	elif screen_mode == ScreenMode.MAIN and checkpoint_available and main_continue_rect.has_point(position):
 		continue_requested.emit()
 	elif screen_mode == ScreenMode.MAIN and main_layout_rect.has_point(position):
@@ -1460,7 +1537,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-105 · 중간 저장과 이어하기",
+		"GP-106 · 시작 무기 선택",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR

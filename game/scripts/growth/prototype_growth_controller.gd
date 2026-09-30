@@ -53,7 +53,7 @@ func _ready() -> void:
 	_emit_metrics()
 
 
-func reset_run() -> void:
+func reset_run(starting_weapon: String = "sword") -> void:
 	var was_choosing := choosing or awaiting_job_confirmation
 	level = 1
 	experience = 0
@@ -64,7 +64,7 @@ func reset_run() -> void:
 	offered_cards.clear()
 	ranks.clear()
 	_rewarded_lives.clear()
-	jobs.reset("sword")
+	jobs.reset(starting_weapon)
 	awaiting_job_confirmation = false
 	_job_passive_applied = false
 	_evade_sequence = 0

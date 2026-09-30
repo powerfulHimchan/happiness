@@ -49,10 +49,8 @@ func _run() -> void:
 	weapons.sword_combat.set_process(false)
 	weapons.bow_combat.set_process(false)
 	if mode in ["seed", "seed-bow"]:
-		controls.begin_stage_from_main()
+		controls.begin_stage_from_main("bow" if mode == "seed-bow" else "sword")
 		# 성향 누적과 실제 처치·카드 선택으로 직업을 발현한다.
-		if mode == "seed-bow":
-			weapons.request_weapon_switch()
 		for ignored in 100:
 			growth.jobs.add_weapon_hit(weapons.active_weapon_id)
 		weapons.sword_combat._skill_1_cooldown_s = 3.5

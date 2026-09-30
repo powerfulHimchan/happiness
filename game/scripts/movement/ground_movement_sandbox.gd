@@ -239,13 +239,13 @@ func _reset_test() -> void:
 	_finish_growth_selection()
 	_intermission_stage = 0
 	player.reset_movement_test(TRACK_START)
-	growth.reset_run()
+	weapon_controller.reset_combat(controls.selected_starting_weapon)
+	growth.reset_run(weapon_controller.active_weapon_id)
 	for node in get_tree().get_nodes_in_group("targetable"):
 		var target := node as PrototypeTarget
 		if target != null:
 			target.reset_target()
 	target_selector.reset_selection()
-	weapon_controller.reset_combat()
 	ultimate_controller.reset_ultimate()
 	test_recorder.start_run()
 	stage_runner.reset_run()
