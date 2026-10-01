@@ -120,14 +120,19 @@ func _cross_terrain(route: String) -> bool:
 		# 실제 낙하 판정·회복을 발생시켜 마지막 착지한 새 발판으로 복귀한다.
 		var safe := player.last_safe_position
 		var health := player.damage_receiver.health
+		var original_max_health := player.damage_receiver.max_health
+		# 카드 추첨과 무관하게 증가한 최대 체력의 낙하 피해를 검증한다.
+		player.damage_receiver.max_health = maxi(130, original_max_health)
+		var expected_damage := ceili(player.damage_receiver.max_health * player.FALL_DAMAGE_RATIO)
 		player.global_position = Vector2(3380, 1120)
 		player.velocity = Vector2.ZERO
 		for ignored in 90:
 			await physics_frame
 			if player.fall_count > falls and not player._fall_recovery_active:
 				break
-		if not _check(player.fall_count == falls + 1 and player.global_position.distance_to(safe) < 4 and player.damage_receiver.health == health - ceili(player.damage_receiver.max_health * player.FALL_DAMAGE_RATIO), "바람 길 낙하 시 마지막 안전 발판 복귀·정상 피해"):
+		if not _check(player.fall_count == falls + 1 and player.global_position.distance_to(safe) < 4 and player.damage_receiver.health == health - expected_damage, "바람 길 낙하 시 마지막 안전 발판 복귀·최대 체력 10%% 피해: 위치 %s / 복귀 %s / HP %d→%d / 피해 %d" % [player.global_position, safe, health, player.damage_receiver.health, expected_damage]):
 			return false
+		player.damage_receiver.max_health = original_max_health
 	return true
 
 func _jump_to(destination: Vector2) -> bool:
