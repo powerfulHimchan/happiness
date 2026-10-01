@@ -43,7 +43,7 @@ func _run() -> void:
 		if not _finish_stage():
 			return
 		var saved := store.load_checkpoint()
-		if not _check(paused and controls.current_screen_mode() == 11 and not saved.is_empty() and not saved.stage.reward_claimed and saved.weapons.equipment == {"sword": 0, "bow": 0}, "정예 처치 후 보상 대기 저장: pause=%s mode=%d saved=%s message=%s choosing=%s job_wait=%s active=%s" % [paused, controls.current_screen_mode(), saved, controls.checkpoint_message, growth.choosing, growth.awaiting_job_confirmation, growth.run_active]):
+		if not _check(paused and controls.current_screen_mode() == 11 and not saved.is_empty() and not saved.stage.reward_claimed and int(saved.weapons.equipment.sword) == 0 and int(saved.weapons.equipment.bow) == 0, "정예 처치 후 보상 대기 저장: pause=%s mode=%d saved=%s message=%s choosing=%s job_wait=%s active=%s" % [paused, controls.current_screen_mode(), saved, controls.checkpoint_message, growth.choosing, growth.awaiting_job_confirmation, growth.run_active]):
 			return
 		for bad in [null, {}, {"sword": -1, "bow": 0}, {"sword": 0.5, "bow": 0}, {"sword": 3, "bow": 0}, {"sword": "1", "bow": 0}, {"sword": NAN, "bow": 0}, {"sword": 1, "bow": 0}]:
 			var invalid := saved.duplicate(true)
@@ -115,7 +115,7 @@ func _run() -> void:
 			_tap(controls.weapon_reward_rects[1].get_center())
 			_tap(controls.weapon_reward_confirm_rect.get_center())
 			var backup := store._read(SAVE_PATH + ".bak")
-			if not _check(weapons.equipment == {"sword": 1, "bow": 2} and backup.stage.number == 1 and backup.weapons.equipment == {"sword": 1, "bow": 0}, "영웅 활 교체·이전 스테이지 복구 파일 보존"):
+			if not _check(weapons.equipment == {"sword": 1, "bow": 2} and backup.stage.number == 1 and int(backup.weapons.equipment.sword) == 1 and int(backup.weapons.equipment.bow) == 0, "영웅 활 교체·이전 스테이지 복구 파일 보존"):
 				return
 			var before := weapons.checkpoint_snapshot()
 			weapons._switch_cooldown_remaining_s = 0
@@ -184,7 +184,7 @@ func _test_damage_paths() -> bool:
 		var projectile := get_nodes_in_group("bow_projectile")[-1] as BowProjectile
 		projectile._physics_process(0.2)
 		var expected := 135 if is_skill else 150
-		if not _check(projectile.damage == expected and target.damage_receiver.health == 5000 - expected, "활 실제 투사체: 영웅 고유 효과·희귀 보조 검 효과 구분"):
+		if not _check(projectile.damage == expected and target.damage_receiver.health == 5000 - expected, "활 실제 투사체: 피해 %d 기대 %d / HP %d" % [projectile.damage, expected, target.damage_receiver.health]):
 			return false
 		projectile.free()
 	target.reset_target()
@@ -194,7 +194,7 @@ func _test_damage_paths() -> bool:
 	weapons.bow_combat._action_sequence += 1
 	weapons.bow_combat._execute_skill_hit(weapons.bow_combat.skill_2, 0)
 	weapons.bow_combat._action = BowCombatController.Action.NONE
-	if not _check(target.damage_receiver.health == 4989, "화살비 실제 영역 타격에 등급과 보조 검 스킬 효과 적용"):
+	if not _check(target.damage_receiver.health == 4989, "화살비 실제 영역 타격: HP %d 기대 4989" % target.damage_receiver.health):
 		return false
 	target.visible = false
 	if not _check(player.growth_damage(100, "bow", "ultimate") == 100 and not weapons.equip_reward("bow", 1) and not weapons.equip_reward("axe", 2), "필살기 제외·장비 하향과 미지원 무기 거부"):
