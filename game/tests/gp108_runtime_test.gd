@@ -43,7 +43,7 @@ func _run() -> void:
 		if not _finish_stage():
 			return
 		var saved := store.load_checkpoint()
-		if not _check(paused and controls.current_screen_mode() == 11 and not saved.is_empty() and not saved.stage.reward_claimed and saved.weapons.equipment == {"sword": 0, "bow": 0}, "정예 처치 후 보상 대기 저장"):
+		if not _check(paused and controls.current_screen_mode() == 11 and not saved.is_empty() and not saved.stage.reward_claimed and saved.weapons.equipment == {"sword": 0, "bow": 0}, "정예 처치 후 보상 대기 저장: pause=%s mode=%d saved=%s message=%s choosing=%s job_wait=%s active=%s" % [paused, controls.current_screen_mode(), saved, controls.checkpoint_message, growth.choosing, growth.awaiting_job_confirmation, growth.run_active]):
 			return
 		for bad in [null, {}, {"sword": -1, "bow": 0}, {"sword": 0.5, "bow": 0}, {"sword": 3, "bow": 0}, {"sword": "1", "bow": 0}, {"sword": NAN, "bow": 0}, {"sword": 1, "bow": 0}]:
 			var invalid := saved.duplicate(true)
