@@ -614,7 +614,7 @@ func _begin_fall_recovery() -> void:
 	if _fall_recovery_active:
 		return
 	fall_count += 1
-	last_fall_damage = int(round(MAX_HEALTH * FALL_DAMAGE_RATIO))
+	last_fall_damage = ceili(damage_receiver.max_health * FALL_DAMAGE_RATIO)
 	last_fall_damage = damage_receiver.apply_environmental_damage(last_fall_damage, 1)
 	last_fall_log = "낙하 %d회 · HP -%d" % [fall_count, last_fall_damage]
 	_fall_recovery_active = true
