@@ -111,7 +111,7 @@ func _apply_job_effect() -> void:
 		event.event_id = StringName("ultimate:%s:%d" % [get_instance_id(), activation_count])
 		event.attacker_id = &"player"
 		event.attack_id = StringName(_active_profile["id"])
-		event.damage = player.growth_damage(base_damage, weapon)
+		event.damage = player.growth_damage(base_damage, weapon, "ultimate")
 		event.stagger_s = 0.30
 		event.tags = PackedStringArray([weapon, "ultimate"])
 		event.source_position = player.global_position

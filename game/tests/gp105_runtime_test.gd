@@ -165,6 +165,9 @@ func _finish_stage() -> bool:
 		return false
 	_before_clear_health = player.damage_receiver.health
 	runner._process(0.1)
+	# 기존 회귀 검사는 현재 무기 유지 후 경로 선택을 이어간다.
+	if controls.current_screen_mode() == 11:
+		_tap(controls.weapon_reward_skip_rect.get_center())
 	return true
 
 

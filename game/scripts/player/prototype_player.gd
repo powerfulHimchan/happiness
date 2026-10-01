@@ -45,6 +45,7 @@ const STOP_EPSILON_MPS := 0.02
 var growth_common_bonus: float = 0.0
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
+var weapon_equipment: Dictionary = {"sword": 0, "bow": 0}
 var job_emblem_id: String = ""
 var job_emblem_color := Color.WHITE
 var move_input: float = 0.0
@@ -326,9 +327,9 @@ func _draw() -> void:
 		draw_line(center + Vector2(0, -8), center + Vector2(0, 8), job_emblem_color, 3.0)
 
 
-func growth_damage(base_damage: int, weapon_id: String) -> int:
+func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus))
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind))
 
 
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
@@ -376,6 +377,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	growth_common_bonus = 0.0
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
+	weapon_equipment = {"sword": 0, "bow": 0}
 	damage_receiver.max_health = MAX_HEALTH
 	global_position = spawn_position
 	velocity = Vector2.ZERO

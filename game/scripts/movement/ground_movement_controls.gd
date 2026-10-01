@@ -27,6 +27,7 @@ signal growth_reroll_requested
 signal job_confirmed(ultimate_index: int)
 signal stage_route_selected(route: String)
 signal continue_requested
+signal weapon_reward_selected(weapon_id: String)
 
 enum ScreenMode {
 	COMBAT,
@@ -40,6 +41,7 @@ enum ScreenMode {
 	JOB_MANIFESTATION,
 	STAGE_ROUTE,
 	START_WEAPON,
+	WEAPON_REWARD,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -206,6 +208,12 @@ var start_weapon_return_mode: int = ScreenMode.MAIN
 var start_weapon_card_rects: Array[Rect2] = []
 var start_weapon_confirm_rect := Rect2()
 var start_weapon_cancel_rect := Rect2()
+var weapon_reward_cards: Array[Dictionary] = []
+var weapon_reward_rects: Array[Rect2] = []
+var weapon_reward_confirm_rect := Rect2()
+var weapon_reward_skip_rect := Rect2()
+var selected_weapon_reward: int = -1
+var weapon_reward_stage: int = 1
 
 
 func _ready() -> void:
@@ -292,6 +300,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.WEAPON_REWARD:
+		_draw_weapon_rewards()
+		return
 	if screen_mode == ScreenMode.START_WEAPON:
 		_draw_start_weapon_selection()
 		return
@@ -389,12 +400,56 @@ func _draw_job_manifestation() -> void:
 func finish_growth_selection() -> void:
 	release_all_inputs()
 	growth_cards.clear()
-	if screen_mode in [ScreenMode.GROWTH_SELECTION, ScreenMode.JOB_MANIFESTATION, ScreenMode.STAGE_ROUTE]:
+	if screen_mode in [ScreenMode.GROWTH_SELECTION, ScreenMode.JOB_MANIFESTATION, ScreenMode.STAGE_ROUTE, ScreenMode.WEAPON_REWARD]:
 		screen_mode = ScreenMode.COMBAT
 	manifested_job.clear()
 	job_ultimates.clear()
 	selected_job_ultimate = -1
 	queue_redraw()
+
+
+func show_weapon_rewards(stage: int, cards: Array[Dictionary]) -> void:
+	release_all_inputs()
+	weapon_reward_stage = stage
+	weapon_reward_cards = cards.duplicate(true)
+	selected_weapon_reward = -1
+	screen_mode = ScreenMode.WEAPON_REWARD
+	_refresh_weapon_reward_layout()
+	queue_redraw()
+
+
+func _refresh_weapon_reward_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	var gap := minf(32.0, safe.size.x * 0.03)
+	var width := (safe.size.x * 0.90 - gap) * 0.5
+	weapon_reward_rects.clear()
+	for index in 2:
+		weapon_reward_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (width + gap), safe.size.y * 0.27), Vector2(width, safe.size.y * 0.42)))
+	var button_width := minf(360.0, safe.size.x * 0.55)
+	weapon_reward_confirm_rect = Rect2(safe.position + Vector2((safe.size.x - button_width) * 0.5, safe.size.y * 0.80), Vector2(button_width, safe.size.y * 0.08))
+	weapon_reward_skip_rect = Rect2(safe.position + Vector2((safe.size.x - button_width) * 0.5, safe.size.y * 0.91), Vector2(button_width, safe.size.y * 0.06))
+
+
+func _draw_weapon_rewards() -> void:
+	_refresh_weapon_reward_layout()
+	var safe := _safe_area_in_viewport()
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
+	_draw_text_centered("정예 처치 · 무기 보상", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 50)), 32, PASS_COLOR)
+	_draw_text_centered("검·활 중 하나 교체 · 무기와 스킬 대기시간 유지", Rect2(safe.position + Vector2(0, safe.size.y * 0.17), Vector2(safe.size.x, 36)), 20, MUTED_TEXT_COLOR)
+	for index in weapon_reward_cards.size():
+		var item := weapon_reward_cards[index]
+		var rect := weapon_reward_rects[index]
+		draw_style_box(_panel_style(PANEL_COLOR), rect)
+		if selected_weapon_reward == index:
+			draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 4)
+		_draw_text_centered(String(item.name), Rect2(rect.position + Vector2(0, rect.size.y * 0.10), Vector2(rect.size.x, 40)), 27, ACTIVE_COLOR)
+		_draw_text_centered("현재: %s" % String(item.previous_name), Rect2(rect.position + Vector2(0, rect.size.y * 0.27), Vector2(rect.size.x, 30)), 17, MUTED_TEXT_COLOR)
+		for line in item.lines.size():
+			_draw_text_centered(String(item.lines[line]), Rect2(rect.position + Vector2(0, rect.size.y * (0.44 + line * 0.16)), Vector2(rect.size.x, 30)), 18, TEXT_COLOR)
+	var reward_note := checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "보조 무기의 고유 효과는 50% 적용 · 등급 피해는 주 무기만"
+	_draw_text_centered(reward_note, Rect2(safe.position + Vector2(0, safe.size.y * 0.72), Vector2(safe.size.x, 30)), 18, MUTED_TEXT_COLOR)
+	_draw_button(weapon_reward_confirm_rect, "선택한 무기로 교체" if selected_weapon_reward >= 0 else "무기를 선택하세요", selected_weapon_reward >= 0)
+	_draw_button(weapon_reward_skip_rect, "현재 무기 유지", false)
 
 
 func show_stage_routes(stage: int, stage_count: int, recovered_health: int) -> void:
@@ -930,6 +985,9 @@ func layout_snapshot() -> Dictionary:
 		"start_weapon_cards": start_weapon_card_rects.duplicate(),
 		"start_weapon_confirm": start_weapon_confirm_rect,
 		"start_weapon_cancel": start_weapon_cancel_rect,
+		"weapon_reward_cards": weapon_reward_rects.duplicate(),
+		"weapon_reward_confirm": weapon_reward_confirm_rect,
+		"weapon_reward_skip": weapon_reward_skip_rect,
 	}
 
 
@@ -974,6 +1032,17 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.WEAPON_REWARD:
+		_refresh_weapon_reward_layout()
+		for index in weapon_reward_rects.size():
+			if weapon_reward_rects[index].has_point(position):
+				selected_weapon_reward = index
+				return
+		if weapon_reward_skip_rect.has_point(position):
+			weapon_reward_selected.emit("")
+		elif weapon_reward_confirm_rect.has_point(position) and selected_weapon_reward >= 0:
+			weapon_reward_selected.emit(String(weapon_reward_cards[selected_weapon_reward].id))
+		return
 	if screen_mode == ScreenMode.START_WEAPON:
 		_refresh_start_weapon_layout()
 		for index in start_weapon_card_rects.size():
@@ -1448,6 +1517,7 @@ func _draw_header() -> void:
 		17,
 		ACTIVE_COLOR if ultimate_active or ultimate_gauge >= 100 else TEXT_COLOR
 	)
+	_draw_text(String(movement_metrics.get("weapon_backup_effect", "")), Vector2(right_x, top_y + 86.0), 15, MUTED_TEXT_COLOR)
 
 	_draw_button(fps_60_rect, "60", Engine.max_fps == 60)
 	_draw_button(fps_30_rect, "30", Engine.max_fps == 30)
@@ -1538,7 +1608,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-107 · 경로별 지형과 전투",
+		"GP-108 · 무기 보상과 등급",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR

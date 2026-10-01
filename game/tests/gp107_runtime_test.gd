@@ -157,6 +157,8 @@ func _jump_to(destination: Vector2) -> bool:
 func _finish_stage() -> bool:
 	for ignored in 10:
 		if runner.stage_complete:
+			if controls.current_screen_mode() == 11:
+				_tap(controls.weapon_reward_skip_rect.get_center())
 			return true
 		match runner.current_section:
 			PrototypeStageRunner.Section.ADVANCE_ONE:

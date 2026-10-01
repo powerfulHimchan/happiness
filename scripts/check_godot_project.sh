@@ -49,6 +49,8 @@ required_files=(
   "$game_root/tests/gp105_runtime_test.gd"
   "$game_root/tests/gp106_runtime_test.gd"
   "$game_root/tests/gp107_runtime_test.gd"
+  "$game_root/tests/gp108_runtime_test.gd"
+  "$game_root/scripts/combat/prototype_weapon_rewards.gd"
   "$game_root/scripts/stage/prototype_route_terrain.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
   "$game_root/scripts/combat/prototype_target.gd"
@@ -549,6 +551,10 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/gp106_runtime_test.gd
   timeout 90s "$godot_command" --headless --path "$game_root" \
     --script res://tests/gp107_runtime_test.gd
+  for reward_phase in seed claim finish legacy-seed legacy-resume; do
+    timeout 45s "$godot_command" --headless --path "$game_root" \
+      --script res://tests/gp108_runtime_test.gd -- "$reward_phase"
+  done
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

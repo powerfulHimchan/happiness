@@ -28,7 +28,9 @@ func save_checkpoint(state: Dictionary) -> Error:
 	if error != OK:
 		return error
 	# 손상된 주 파일로 정상 백업을 덮어쓰지 않는다.
-	if not _read(save_path).is_empty():
+	var previous := _read(save_path)
+	# 같은 정예의 보상 확정은 이전 스테이지 백업을 유지한다.
+	if not previous.is_empty() and (not state.stage.has("reward_claimed") or previous.stage.number != state.stage.number):
 		error = _write(save_path + ".bak", FileAccess.get_file_as_string(save_path))
 		if error != OK:
 			return error
@@ -88,8 +90,20 @@ static func valid_state(state: Dictionary) -> bool:
 		if not state.get(key) is Dictionary:
 			return false
 	var stage: Dictionary = state.stage
+	if stage.has("reward_claimed") and not stage.reward_claimed is bool:
+		return false
+	# GP-105~107 저장은 추가 필드가 없으면 일반 등급·보상 완료로 해석한다.
+	if state.weapons.has("equipment") and not PrototypeWeaponRewards.valid_equipment(state.weapons.equipment):
+		return false
+	if stage.has("reward_claimed") != state.weapons.has("equipment"):
+		return false
 	if not _number(stage.get("number"), 1, 2, true) or stage.get("limit") != 3 or stage.get("route") not in ["meadow", "wind"] or not _number(stage.get("elapsed"), 0, 1000000):
 		return false
+	if state.weapons.has("equipment"):
+		var maximum_grade := int(stage.get("number", 0)) - (0 if stage.reward_claimed else 1)
+		for grade in state.weapons.equipment.values():
+			if float(grade) > maximum_grade:
+				return false
 	if not stage.get("history") is Array or stage.history.size() != int(stage.number) or not stage.get("sections") is Array or stage.sections.size() != 5:
 		return false
 	for index in stage.history.size():

@@ -43,6 +43,7 @@ const ROUTES: Array[Dictionary] = [
 ]
 var stage_number: int = 1
 var route_id: String = "meadow"
+var reward_claimed: bool = false
 var completed_elapsed_s: float = 0.0
 var stage_history: Array[Dictionary] = []
 
@@ -109,6 +110,7 @@ func reset_stage() -> void:
 	if not stage_enabled:
 		return
 	route_terrain.configure(stage_number, route_id)
+	reward_claimed = false
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	for enemy in _all_combat_enemies():
@@ -142,7 +144,7 @@ func has_next_stage() -> bool:
 
 
 func checkpoint_snapshot() -> Dictionary:
-	return {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate()}
+	return {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed}
 
 
 func restore_checkpoint(state: Dictionary) -> void:
@@ -154,6 +156,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	for entry in stage_history.slice(0, -1):
 		completed_elapsed_s += float(entry.elapsed_s)
 	reset_stage()
+	reward_claimed = bool(state.get("reward_claimed", true))
 	stage_elapsed_s = float(state.elapsed)
 	section_actual_times.assign(state.sections)
 	current_section = Section.COMPLETE

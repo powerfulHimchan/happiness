@@ -230,7 +230,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			direction,
 			PackedStringArray(["bow", "skill", "piercing"])
 		)
-		last_combat_log = "관통 화살 발사 · 피해 %d · 최대 3개체" % player.growth_damage(int(definition.damage[hit_index]), "bow")
+		last_combat_log = "관통 화살 발사 · 피해 %d · 최대 3개체" % player.growth_damage(int(definition.damage[hit_index]), "bow", "skill")
 		return
 
 	var applied_targets := 0
@@ -251,7 +251,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		])
 		event.attacker_id = &"player"
 		event.attack_id = definition.skill_id
-		event.damage = player.growth_damage(int(definition.damage[hit_index]), "bow")
+		event.damage = player.growth_damage(int(definition.damage[hit_index]), "bow", "skill")
 		event.stagger_s = 0.04
 		event.tags = PackedStringArray(["bow", "skill", "area", "rain_hit"])
 		event.source_position = _rain_anchor
@@ -264,7 +264,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			hit_registered.emit(true, rain_target, event.damage)
 	last_combat_log = "화살비 %d/6 · 피해 %d · %d개체" % [
 		hit_index + 1,
-		player.growth_damage(int(definition.damage[hit_index]), "bow"),
+		player.growth_damage(int(definition.damage[hit_index]), "bow", "skill"),
 		applied_targets,
 	]
 
@@ -281,7 +281,7 @@ func _spawn_projectile(
 	projectile.configure(
 		projectile_id,
 		attack_id,
-		player.growth_damage(damage, "bow"),
+		player.growth_damage(damage, "bow", "skill" if tags.has("skill") else "basic"),
 		weapon.projectile_speed_mps,
 		weapon.attack_range_m,
 		max_hits,
