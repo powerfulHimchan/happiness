@@ -136,7 +136,7 @@ func _append_section_started(section_index: int) -> void:
 		"run_id": _active_run_id,
 		"section_index": section_index + 1,
 		"stage_number": _recorded_stage_number,
-		"section_name": "보스" if section_index == 4 and not String(metrics.get("boss_name", "")).is_empty() else SECTION_NAMES[section_index],
+		"section_name": SECTION_NAMES[section_index],
 	})
 
 
