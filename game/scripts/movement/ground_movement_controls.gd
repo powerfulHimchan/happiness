@@ -429,7 +429,7 @@ func _draw_stage_routes() -> void:
 		draw_style_box(_panel_style(PANEL_COLOR), rect)
 		_draw_text_centered(String(route["name"]), Rect2(rect.position + Vector2(0, rect.size.y * 0.12), Vector2(rect.size.x, 40)), 28, ACTIVE_COLOR)
 		for line_index in route["lines"].size():
-			_draw_text_centered(String(route["lines"][line_index]), Rect2(rect.position + Vector2(0, rect.size.y * 0.44 + 36 * line_index), Vector2(rect.size.x, 32)), 18, TEXT_COLOR)
+			_draw_text_centered(String(route["lines"][line_index]), Rect2(rect.position + Vector2(0, rect.size.y * (0.40 + 0.18 * line_index)), Vector2(rect.size.x, 32)), 18, TEXT_COLOR)
 	_draw_text_centered("카드를 누르면 다음 스테이지를 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.84), Vector2(safe.size.x, 36)), 18, MUTED_TEXT_COLOR)
 	if not checkpoint_message.is_empty():
 		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.91), Vector2(safe.size.x, 28)), 16, PASS_COLOR if checkpoint_available else WAIT_COLOR)
@@ -1431,6 +1431,7 @@ func _draw_header() -> void:
 	var stage_objective: String = String(movement_metrics.get("stage_objective", "첫 관문까지 전진"))
 	_draw_text("%s / %s" % [_format_clock(stage_elapsed), _format_clock(stage_target)], Vector2(center_x, top_y + 31.0), 25, ACTIVE_COLOR)
 	_draw_text(stage_objective, Vector2(center_x, top_y + 62.0), 16, MUTED_TEXT_COLOR)
+	_draw_text("%s · %s" % [String(movement_metrics.get("run_route_name", "풀숲 길")), String(movement_metrics.get("run_route_terrain", "연습 지형"))], Vector2(center_x, top_y + 86.0), 15, ACTIVE_COLOR)
 
 	var weapon_name: String = String(movement_metrics.get("weapon_name", "연습용 검"))
 	var skill_1_name: String = String(movement_metrics.get("skill_1_name", "스킬 1"))
@@ -1537,7 +1538,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-106 · 시작 무기 선택",
+		"GP-107 · 경로별 지형과 전투",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
