@@ -268,7 +268,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	last_combat_log = "%s %d타 · 피해 %d · %d개체" % [
 		definition.display_name,
 		hit_index + 1,
-		player.growth_damage(int(definition.damage[hit_index]), "sword"),
+		player.growth_damage(int(definition.damage[hit_index]), "sword", "skill"),
 		applied_targets,
 	]
 
@@ -281,7 +281,7 @@ func _damage_target(
 	tags: PackedStringArray,
 	hit_index: int
 ) -> int:
-	damage = player.growth_damage(damage, "sword")
+	damage = player.growth_damage(damage, "sword", "basic" if attack_id == &"sword_basic" else "skill")
 	var event := DamageEvent.new()
 	event.event_id = StringName("player:%s:%d:%d:%s" % [
 		String(attack_id),

@@ -27,6 +27,7 @@ var _growth_pause_owned: bool = false
 var _growth_previous_tree_pause: bool = false
 var _growth_previous_controls_mode: int = Node.PROCESS_MODE_INHERIT
 var _intermission_stage: int = 0
+var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
 var _restoring_checkpoint: bool = false
 var _available_checkpoint: Dictionary = {}
@@ -43,6 +44,7 @@ func _ready() -> void:
 	growth.job_manifested.connect(_on_job_manifested)
 	controls.job_confirmed.connect(growth.choose_job_ultimate)
 	controls.stage_route_selected.connect(_continue_stage)
+	controls.weapon_reward_selected.connect(_claim_weapon_reward)
 	controls.continue_requested.connect(continue_saved_run)
 	controls.growth_card_selected.connect(growth.choose_card)
 	controls.growth_reroll_requested.connect(growth.reroll)
@@ -298,14 +300,15 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		var healing := ceili(player.damage_receiver.max_health * 0.20)
 		var before := player.damage_receiver.health
 		player.apply_growth_health(0, healing)
+		_stage_recovered_health = player.damage_receiver.health - before
 		_begin_growth_pause()
-		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, player.damage_receiver.health - before)
+		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment))
 		_save_checkpoint(metrics)
 
 
-func _save_checkpoint(metrics: Dictionary) -> void:
+func _save_checkpoint(metrics: Dictionary) -> Error:
 	if growth.choosing or growth.awaiting_job_confirmation:
-		return
+		return ERR_BUSY
 	test_recorder.record_stage_metrics(metrics)
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
@@ -319,6 +322,22 @@ func _save_checkpoint(metrics: Dictionary) -> void:
 	if error == OK:
 		_available_checkpoint = state.duplicate(true)
 	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message if error == OK else "중간 저장 실패 · 오류 %d" % error)
+	return error
+
+
+func _claim_weapon_reward(id: String) -> bool:
+	if controls.current_screen_mode() != 11 or not stage_runner.has_next_stage() or stage_runner.reward_claimed or not growth.run_active or player.damage_receiver.dead:
+		return false
+	var previous := weapon_controller.equipment.duplicate()
+	if not id.is_empty() and not weapon_controller.equip_reward(id, stage_runner.stage_number):
+		return false
+	stage_runner.reward_claimed = true
+	if _save_checkpoint(stage_runner.current_metrics()) != OK:
+		stage_runner.reward_claimed = false
+		weapon_controller.set_equipment(previous)
+		return false
+	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health)
+	return true
 
 
 func _record_stage_metrics(metrics: Dictionary) -> void:
@@ -366,12 +385,16 @@ func continue_saved_run() -> bool:
 	player.apply_growth_health(0, 0)
 	ultimate_controller.force_emit_metrics()
 	_begin_growth_pause()
-	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, 0)
+	_stage_recovered_health = 0
+	if stage_runner.reward_claimed:
+		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, 0)
+	else:
+		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment))
 	return true
 
 
 func _continue_stage(route: String) -> void:
-	if not stage_runner.has_next_stage() or not growth.run_active or player.damage_receiver.dead or route not in ["meadow", "wind"] or controls.current_screen_mode() != 9:
+	if not stage_runner.has_next_stage() or not stage_runner.reward_claimed or not growth.run_active or player.damage_receiver.dead or route not in ["meadow", "wind"] or controls.current_screen_mode() != 9:
 		return
 	controls.release_all_inputs()
 	weapon_controller.prepare_next_stage()
