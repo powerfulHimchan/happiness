@@ -29,6 +29,7 @@ var _growth_previous_controls_mode: int = Node.PROCESS_MODE_INHERIT
 var _intermission_stage: int = 0
 var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
+var boss_legacy_store := BossLegacyStore.new()
 var _restoring_checkpoint: bool = false
 var _available_checkpoint: Dictionary = {}
 
@@ -38,6 +39,8 @@ var _suspended_node_states: Array[Dictionary] = []
 
 
 func _ready() -> void:
+	player.boss_legacy_store = boss_legacy_store
+	_update_boss_legacy_status()
 	growth.metrics_changed.connect(controls.update_growth_metrics)
 	growth.choices_requested.connect(_on_growth_choices_requested)
 	growth.selection_finished.connect(_finish_growth_selection)
@@ -238,19 +241,34 @@ func _draw_track_markers() -> void:
 
 
 func _reset_test() -> void:
+	# 확정 저장을 먼저 회수하고 보상 소비 저장 실패 시 새 도전을 시작하지 않는다.
+	_refresh_checkpoint()
+	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)):
+		controls.show_main_screen()
+		return
+	var run_id := "%d-%d-%d" % [int(Time.get_unix_time_from_system() * 1000), Time.get_ticks_usec(), randi()]
+	var claimed := boss_legacy_store.claim(run_id, controls.use_boss_legacy)
+	if claimed.error != OK:
+		controls.show_main_screen()
+		controls.update_checkpoint_status(not _available_checkpoint.is_empty(), "보상 저장 실패 · 다시 시작하세요")
+		return
 	_discard_checkpoint()
 	_finish_growth_selection()
 	_intermission_stage = 0
 	player.reset_movement_test(TRACK_START)
 	weapon_controller.reset_combat(controls.selected_starting_weapon)
 	growth.reset_run(weapon_controller.active_weapon_id)
+	player.boss_legacy = claimed.state
+	if player.boss_legacy.get("choice") == "rescue":
+		player.apply_growth_health(10, 10)
+	_update_boss_legacy_status()
 	for node in get_tree().get_nodes_in_group("targetable"):
 		var target := node as PrototypeTarget
 		if target != null:
 			target.reset_target()
 	target_selector.reset_selection()
 	ultimate_controller.reset_ultimate()
-	test_recorder.start_run()
+	test_recorder.start_run(run_id)
 	stage_runner.reset_run()
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
@@ -291,12 +309,22 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 	if _restoring_checkpoint:
 		return
 	if not bool(metrics.get("stage_complete", false)):
+		if growth.run_active and int(metrics.get("stage_section_index", 0)) == 5 and boss_legacy_store.spend_assist(player.boss_legacy, stage_runner.stage_number):
+			var event := DamageEvent.new()
+			event.event_id = StringName("helper:%s:%d" % [player.boss_legacy.run_id, stage_runner.stage_number])
+			event.attacker_id = &"clockwork_helper"
+			event.attack_id = &"clockwork_support"
+			event.damage = 20
+			event.tags = PackedStringArray(["helper"])
+			stage_runner.final_enemy().receive_damage(event)
+		_update_boss_legacy_status()
 		return
 	if bool(metrics.get("run_complete", true)):
 		_finish_growth_selection()
 		growth.stop_run()
+		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")))
 		test_recorder.record_stage_metrics(metrics)
-		if test_recorder.has_completed_run(String(test_recorder.checkpoint_snapshot().id)):
+		if reward_saved and test_recorder.has_completed_run(String(test_recorder.checkpoint_snapshot().id)):
 			_discard_checkpoint()
 	elif stage_runner.awaiting_boss_choice() and growth.run_active and not player.damage_receiver.dead:
 		if controls.current_screen_mode() != 12:
@@ -328,6 +356,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
+		"boss_legacy": player.boss_legacy.duplicate(true),
 	}
 	var error := checkpoint_store.save_checkpoint(state)
 	if error == OK:
@@ -373,8 +402,12 @@ func _record_stage_metrics(metrics: Dictionary) -> void:
 
 func _refresh_checkpoint() -> void:
 	_available_checkpoint = checkpoint_store.load_checkpoint()
-	if not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
+		if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+			_discard_checkpoint()
+	elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 		_discard_checkpoint()
+	_update_boss_legacy_status()
 	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message)
 
 
@@ -398,6 +431,8 @@ func continue_saved_run() -> bool:
 	player.growth_common_bonus = float(state.player.common)
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)
+	player.boss_legacy = boss_legacy_store.restore_active(state.get("boss_legacy", {}))
+	_update_boss_legacy_status()
 	growth.restore_checkpoint(state.growth)
 	weapon_controller.restore_checkpoint(state.weapons)
 	ultimate_controller.reset_ultimate()
@@ -568,3 +603,17 @@ func _on_safe_zone_entered(
 	if body != player:
 		return
 	player.set_safe_spawn(spawn_position, safe_label)
+
+
+func _grant_boss_legacy(source: String, choice: String) -> bool:
+	if choice.is_empty():
+		return true
+	var error := boss_legacy_store.grant(source, choice)
+	_update_boss_legacy_status()
+	if error != OK:
+		controls.update_checkpoint_status(true, "보상 저장 실패 · 이어하기로 다시 저장하세요")
+	return error == OK
+
+
+func _update_boss_legacy_status() -> void:
+	controls.update_boss_legacy_status(boss_legacy_store.pending_reward(), player.boss_legacy)

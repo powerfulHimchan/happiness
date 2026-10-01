@@ -42,6 +42,9 @@ const POST_HIT_FLASH_S := 0.12
 const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
+var boss_legacy: Dictionary = {}
+var boss_legacy_store := BossLegacyStore.new()
+
 var growth_common_bonus: float = 0.0
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
@@ -280,7 +283,20 @@ func set_combat_evade_allowed(allowed: bool) -> void:
 
 
 func receive_damage(event: DamageEvent) -> int:
+	# 원본 이벤트는 공유될 수 있으므로 핵의 위험 보상은 복사본에만 적용한다.
+	if event != null and boss_legacy.get("choice") == "destroy":
+		var incoming := DamageEvent.new()
+		incoming.event_id = event.event_id
+		incoming.attacker_id = event.attacker_id
+		incoming.attack_id = event.attack_id
+		incoming.damage = roundi(event.damage * 1.10)
+		incoming.stagger_s = event.stagger_s
+		incoming.tags = event.tags.duplicate()
+		incoming.source_position = event.source_position
+		event = incoming
 	var result := damage_receiver.try_receive(event, invincible or _fall_recovery_active)
+	if result == DamageReceiver.Result.APPLIED and not damage_receiver.dead and damage_receiver.health <= floori(damage_receiver.max_health * 0.25) and boss_legacy_store.spend_rescue(boss_legacy):
+		apply_growth_health(0, ceili(damage_receiver.max_health * 0.30))
 	last_damage_summary = event.summary() if event != null else "잘못된 이벤트"
 	last_damage_tags = ", ".join(event.tags) if event != null else "없음"
 	last_stagger_s = event.stagger_s if event != null else 0.0
@@ -329,7 +345,7 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind))
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0))
 
 
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
@@ -373,6 +389,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	boss_legacy = {}
 	set_job_emblem("", Color.WHITE)
 	growth_common_bonus = 0.0
 	growth_sword_bonus = 0.0

@@ -100,24 +100,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-gp109-boss-choice.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-gp110-next-run-legacy.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-gp109-boss-choice.apk
+          cp "${apk_path}" dist/happiness-tale-gp110-next-run-legacy.apk
           (
             cd dist
-            sha256sum happiness-tale-gp109-boss-choice.apk \
-              | tee happiness-tale-gp109-boss-choice.apk.sha256
+            sha256sum happiness-tale-gp110-next-run-legacy.apk \
+              | tee happiness-tale-gp110-next-run-legacy.apk.sha256
           )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-gp109-boss-choice-apk
+          name: happiness-tale-gp110-next-run-legacy-apk
           path: |
-            dist/happiness-tale-gp109-boss-choice.apk
-            dist/happiness-tale-gp109-boss-choice.apk.sha256
+            dist/happiness-tale-gp110-next-run-legacy.apk
+            dist/happiness-tale-gp110-next-run-legacy.apk.sha256
           if-no-files-found: error
           retention-days: 14
