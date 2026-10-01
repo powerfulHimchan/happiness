@@ -97,7 +97,13 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	if stage.has("reward_claimed") != state.weapons.has("equipment"):
 		return false
-	if not _number(stage.get("number"), 1, 2, true) or stage.get("limit") != 3 or stage.get("route") not in ["meadow", "wind"] or not _number(stage.get("elapsed"), 0, 1000000):
+	if not _number(stage.get("number"), 1, 3, true) or stage.get("limit") != 3 or stage.get("route") not in ["meadow", "wind"] or not _number(stage.get("elapsed"), 0, 1000000):
+		return false
+	if stage.has("boss_choice") and (not stage.boss_choice is String or stage.boss_choice not in ["", "rescue", "destroy"]):
+		return false
+	if int(stage.number) < 3 and stage.get("boss_choice", "") != "":
+		return false
+	if int(stage.number) == 3 and (not stage.has("boss_choice") or not state.weapons.has("equipment") or stage.get("reward_claimed") != true):
 		return false
 	if state.weapons.has("equipment"):
 		var maximum_grade := int(stage.get("number", 0)) - (0 if stage.reward_claimed else 1)
@@ -110,6 +116,8 @@ static func valid_state(state: Dictionary) -> bool:
 		var entry: Variant = stage.history[index]
 		if not entry is Dictionary or entry.get("stage") != index + 1 or entry.get("route") not in ["meadow", "wind"] or not _number(entry.get("elapsed_s"), 0, 1000000):
 			return false
+	if int(stage.number) == 3 and stage.history[-1].get("boss_choice") != stage.boss_choice:
+		return false
 	for duration in stage.sections:
 		if not _number(duration, 0, 1000000):
 			return false

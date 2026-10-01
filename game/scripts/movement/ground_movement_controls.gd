@@ -28,6 +28,7 @@ signal job_confirmed(ultimate_index: int)
 signal stage_route_selected(route: String)
 signal continue_requested
 signal weapon_reward_selected(weapon_id: String)
+signal boss_choice_confirmed(choice: String)
 
 enum ScreenMode {
 	COMBAT,
@@ -42,6 +43,7 @@ enum ScreenMode {
 	STAGE_ROUTE,
 	START_WEAPON,
 	WEAPON_REWARD,
+	BOSS_CHOICE,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -214,6 +216,9 @@ var weapon_reward_confirm_rect := Rect2()
 var weapon_reward_skip_rect := Rect2()
 var selected_weapon_reward: int = -1
 var weapon_reward_stage: int = 1
+var boss_choice_rects: Array[Rect2] = []
+var boss_choice_confirm_rect := Rect2()
+var selected_boss_choice: int = -1
 
 
 func _ready() -> void:
@@ -300,6 +305,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.BOSS_CHOICE:
+		_draw_boss_choice()
+		return
 	if screen_mode == ScreenMode.WEAPON_REWARD:
 		_draw_weapon_rewards()
 		return
@@ -400,12 +408,53 @@ func _draw_job_manifestation() -> void:
 func finish_growth_selection() -> void:
 	release_all_inputs()
 	growth_cards.clear()
-	if screen_mode in [ScreenMode.GROWTH_SELECTION, ScreenMode.JOB_MANIFESTATION, ScreenMode.STAGE_ROUTE, ScreenMode.WEAPON_REWARD]:
+	if screen_mode in [ScreenMode.GROWTH_SELECTION, ScreenMode.JOB_MANIFESTATION, ScreenMode.STAGE_ROUTE, ScreenMode.WEAPON_REWARD, ScreenMode.BOSS_CHOICE]:
 		screen_mode = ScreenMode.COMBAT
 	manifested_job.clear()
 	job_ultimates.clear()
 	selected_job_ultimate = -1
 	queue_redraw()
+
+
+func show_boss_choice() -> void:
+	release_all_inputs()
+	selected_boss_choice = -1
+	screen_mode = ScreenMode.BOSS_CHOICE
+	_refresh_boss_choice_layout()
+	queue_redraw()
+
+
+func _refresh_boss_choice_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	var gap := minf(32.0, safe.size.x * 0.03)
+	var width := (safe.size.x * 0.90 - gap) * 0.5
+	boss_choice_rects.clear()
+	for index in 2:
+		boss_choice_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (width + gap), safe.size.y * 0.31), Vector2(width, safe.size.y * 0.39)))
+	var button_width := minf(360.0, safe.size.x * 0.55)
+	boss_choice_confirm_rect = Rect2(safe.position + Vector2((safe.size.x - button_width) * 0.5, safe.size.y * 0.84), Vector2(button_width, safe.size.y * 0.09))
+
+
+func _draw_boss_choice() -> void:
+	_refresh_boss_choice_layout()
+	var safe := _safe_area_in_viewport()
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
+	_draw_text_centered("보스 승리 · 웃는 태엽 기사", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 48)), 30, PASS_COLOR)
+	_draw_text_centered("기사는 사람들을 돌려보내라는 태엽 명령에 묶여 있었습니다.", Rect2(safe.position + Vector2(0, safe.size.y * 0.18), Vector2(safe.size.x, 32)), 20, TEXT_COLOR)
+	_draw_text_centered("이제 기사의 운명을 선택하세요.", Rect2(safe.position + Vector2(0, safe.size.y * 0.24), Vector2(safe.size.x, 30)), 19, MUTED_TEXT_COLOR)
+	var cards := [{"title": "구출", "lines": ["태엽 명령을 해제하고", "기사를 자유롭게 합니다.", "도전 결과에 구출을 기록합니다."]}, {"title": "파괴", "lines": ["기사의 태엽핵을 파괴하고", "길목의 위협을 없앱니다.", "도전 결과에 파괴를 기록합니다."]}]
+	for index in cards.size():
+		var card: Dictionary = cards[index]
+		var rect := boss_choice_rects[index]
+		draw_style_box(_panel_style(PANEL_COLOR), rect)
+		if selected_boss_choice == index:
+			draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 4)
+		_draw_text_centered(String(card.title), Rect2(rect.position + Vector2(0, rect.size.y * 0.10), Vector2(rect.size.x, 42)), 28, ACTIVE_COLOR)
+		for line in card.lines.size():
+			_draw_text_centered(String(card.lines[line]), Rect2(rect.position + Vector2(0, rect.size.y * (0.40 + line * 0.17)), Vector2(rect.size.x, 30)), 19, TEXT_COLOR)
+	var note := checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "선택 후 확정하세요 · 다른 도전에서는 다시 선택할 수 있습니다."
+	_draw_text_centered(note, Rect2(safe.position + Vector2(0, safe.size.y * 0.75), Vector2(safe.size.x, 32)), 18, MUTED_TEXT_COLOR)
+	_draw_button(boss_choice_confirm_rect, "선택 확정 · 도전 완료" if selected_boss_choice >= 0 else "구출 또는 파괴를 선택하세요", selected_boss_choice >= 0)
 
 
 func show_weapon_rewards(stage: int, cards: Array[Dictionary]) -> void:
@@ -985,6 +1034,8 @@ func layout_snapshot() -> Dictionary:
 		"start_weapon_cards": start_weapon_card_rects.duplicate(),
 		"start_weapon_confirm": start_weapon_confirm_rect,
 		"start_weapon_cancel": start_weapon_cancel_rect,
+		"boss_choice_cards": boss_choice_rects.duplicate(),
+		"boss_choice_confirm": boss_choice_confirm_rect,
 		"weapon_reward_cards": weapon_reward_rects.duplicate(),
 		"weapon_reward_confirm": weapon_reward_confirm_rect,
 		"weapon_reward_skip": weapon_reward_skip_rect,
@@ -1016,6 +1067,8 @@ func _show_result_screen() -> void:
 		"target_s": float(movement_metrics.get("stage_target_s", 180.0)) * int(movement_metrics.get("run_stage_count", 1)),
 		"stage_count": int(movement_metrics.get("run_stage_count", 1)),
 		"stage_history": movement_metrics.get("run_stage_history", []).duplicate(true),
+		"boss_choice": String(movement_metrics.get("boss_choice", "")),
+		"boss_name": String(movement_metrics.get("boss_name", "")),
 		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
 		"damage_causes": String(movement_metrics.get("damage_cause_summary", "피격 없음")),
 		"sword_hits": sword_hits,
@@ -1032,6 +1085,15 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.BOSS_CHOICE:
+		_refresh_boss_choice_layout()
+		for index in boss_choice_rects.size():
+			if boss_choice_rects[index].has_point(position):
+				selected_boss_choice = index
+				return
+		if boss_choice_confirm_rect.has_point(position) and selected_boss_choice >= 0:
+			boss_choice_confirmed.emit("rescue" if selected_boss_choice == 0 else "destroy")
+		return
 	if screen_mode == ScreenMode.WEAPON_REWARD:
 		_refresh_weapon_reward_layout()
 		for index in weapon_reward_rects.size():
@@ -1556,6 +1618,9 @@ func _draw_result_screen() -> void:
 		24,
 		TEXT_COLOR
 	)
+	var choice := String(result_snapshot.get("boss_choice", ""))
+	if choice in ["rescue", "destroy"]:
+		_draw_text_centered("웃는 태엽 기사 · %s" % ("구출" if choice == "rescue" else "파괴"), Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
 	var content_x := result_panel_rect.position.x + 54.0
 	var content_width := result_panel_rect.size.x - 108.0
 	var y := result_panel_rect.position.y + 158.0
@@ -1608,17 +1673,19 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-108 · 무기 보상과 등급",
+		"GP-109 · 보스전과 구출·파괴 선택",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
 	)
 	_draw_text_centered(
-		"스테이지 완료 시 저장 · 재실행 후 경로 선택부터 이어하기",
+		"완료 지점 저장 · 보상·보스 선택 화면에서 이어하기",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
 		19,
 		MUTED_TEXT_COLOR
 	)
+	if not checkpoint_available:
+		_draw_text_centered("태엽 기사 기록 · 구출 %d회 · 파괴 %d회" % [int(test_record_summary.get("boss_rescue_count", 0)), int(test_record_summary.get("boss_destroy_count", 0))], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	_draw_button(main_feedback_rect, "설정", false)
 	if checkpoint_available:
 		_draw_button(main_continue_rect, "이어하기", true)

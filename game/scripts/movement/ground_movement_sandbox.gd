@@ -45,6 +45,7 @@ func _ready() -> void:
 	controls.job_confirmed.connect(growth.choose_job_ultimate)
 	controls.stage_route_selected.connect(_continue_stage)
 	controls.weapon_reward_selected.connect(_claim_weapon_reward)
+	controls.boss_choice_confirmed.connect(_resolve_boss_choice)
 	controls.continue_requested.connect(continue_saved_run)
 	controls.growth_card_selected.connect(growth.choose_card)
 	controls.growth_reroll_requested.connect(growth.reroll)
@@ -292,8 +293,17 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 	if not bool(metrics.get("stage_complete", false)):
 		return
 	if bool(metrics.get("run_complete", true)):
+		_finish_growth_selection()
 		growth.stop_run()
-		_discard_checkpoint()
+		test_recorder.record_stage_metrics(metrics)
+		if test_recorder.has_completed_run(String(test_recorder.checkpoint_snapshot().id)):
+			_discard_checkpoint()
+	elif stage_runner.awaiting_boss_choice() and growth.run_active and not player.damage_receiver.dead:
+		if controls.current_screen_mode() != 12:
+			controls.release_all_inputs()
+			_begin_growth_pause()
+			controls.show_boss_choice()
+			_save_checkpoint(metrics)
 	elif growth.run_active and not player.damage_receiver.dead and _intermission_stage != stage_runner.stage_number:
 		_intermission_stage = stage_runner.stage_number
 		controls.release_all_inputs()
@@ -306,10 +316,11 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		_save_checkpoint(metrics)
 
 
-func _save_checkpoint(metrics: Dictionary) -> Error:
+func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error:
 	if growth.choosing or growth.awaiting_job_confirmation:
 		return ERR_BUSY
-	test_recorder.record_stage_metrics(metrics)
+	if record_metrics:
+		test_recorder.record_stage_metrics(metrics)
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
@@ -337,6 +348,21 @@ func _claim_weapon_reward(id: String) -> bool:
 		weapon_controller.set_equipment(previous)
 		return false
 	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health)
+	return true
+
+
+func _resolve_boss_choice(choice: String) -> bool:
+	if controls.current_screen_mode() != 12 or not stage_runner.awaiting_boss_choice() or not growth.run_active or player.damage_receiver.dead or choice not in ["rescue", "destroy"]:
+		return false
+	stage_runner.boss_choice = choice
+	stage_runner.stage_history[-1]["boss_choice"] = choice
+	# 완료 기록보다 선택을 먼저 저장하여 실패 시 다시 선택할 수 있다.
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		stage_runner.boss_choice = ""
+		stage_runner.stage_history[-1]["boss_choice"] = ""
+		return false
+	_finish_growth_selection()
+	stage_runner.force_emit_metrics()
 	return true
 
 
@@ -386,7 +412,12 @@ func continue_saved_run() -> bool:
 	ultimate_controller.force_emit_metrics()
 	_begin_growth_pause()
 	_stage_recovered_health = 0
-	if stage_runner.reward_claimed:
+	if stage_runner.uses_boss():
+		controls.show_boss_choice()
+		if not stage_runner.boss_choice.is_empty():
+			_finish_growth_selection()
+			stage_runner.force_emit_metrics()
+	elif stage_runner.reward_claimed:
 		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, 0)
 	else:
 		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment))
@@ -488,6 +519,10 @@ func _emit_enemy_metrics() -> void:
 	var newest_event_msec := -1
 	var elite_metrics: Dictionary = {}
 	for enemy in get_tree().get_nodes_in_group("combat_enemy"):
+		if enemy == stage_runner.boss and not stage_runner.uses_boss():
+			continue
+		if enemy == stage_runner.armored_boar and stage_runner.uses_boss():
+			continue
 		if not enemy.has_method("current_metrics"):
 			continue
 		var metrics: Dictionary = enemy.current_metrics()
