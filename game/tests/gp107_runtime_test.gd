@@ -157,6 +157,9 @@ func _jump_to(destination: Vector2) -> bool:
 func _finish_stage() -> bool:
 	for ignored in 10:
 		if runner.stage_complete:
+			if controls.current_screen_mode() == 12:
+				_tap(controls.boss_choice_rects[0].get_center())
+				_tap(controls.boss_choice_confirm_rect.get_center())
 			if controls.current_screen_mode() == 11:
 				_tap(controls.weapon_reward_skip_rect.get_center())
 			return true
@@ -170,7 +173,7 @@ func _finish_stage() -> bool:
 					_defeat(enemy)
 			PrototypeStageRunner.Section.ELITE:
 				player.damage_receiver.health = 35
-				_defeat(runner.armored_boar)
+				_defeat(runner.final_enemy())
 		if not _resolve_growth():
 			return false
 		runner._process(0.1)

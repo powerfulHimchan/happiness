@@ -79,7 +79,7 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 			"run_id": _active_run_id,
 			"section_index": section_index + 1,
 			"stage_number": stage_number,
-			"section_name": SECTION_NAMES[section_index],
+			"section_name": "보스" if section_index == 4 and not String(metrics.get("boss_name", "")).is_empty() else SECTION_NAMES[section_index],
 			"duration_s": float(actual_times[section_index]),
 			"stage_elapsed_s": float(metrics.get("stage_elapsed_s", 0.0)),
 		})
@@ -92,14 +92,15 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 		_recorded_stage_completed = true
 		_append_event("stage_completed", {"run_id": _active_run_id, "stage_number": stage_number, "duration_s": metrics.get("stage_elapsed_s", 0.0), "route": metrics.get("run_route_id", "meadow")})
 	if bool(metrics.get("run_complete", metrics.get("stage_complete", false))):
-		_active_run_completed = true
-		_append_event("run_completed", {
+		_active_run_completed = _append_event("run_completed", {
 			"run_id": _active_run_id,
 			"completion_s": float(metrics.get("run_elapsed_s", metrics.get("stage_elapsed_s", 0.0))),
 			"target_s": float(metrics.get("stage_target_s", 180.0)) * int(metrics.get("run_stage_count", 1)),
 			"stage_count": int(metrics.get("run_stage_count", 1)),
 			"stage_history": metrics.get("run_stage_history", []).duplicate(true),
 			"section_times": actual_times.duplicate(),
+			"boss_choice": String(metrics.get("boss_choice", "")),
+			"boss_name": String(metrics.get("boss_name", "")),
 		})
 
 
@@ -139,7 +140,7 @@ func _append_section_started(section_index: int) -> void:
 	})
 
 
-func _append_event(event_name: String, fields: Dictionary) -> void:
+func _append_event(event_name: String, fields: Dictionary) -> bool:
 	var event := {
 		"schema_version": SCHEMA_VERSION,
 		"event": event_name,
@@ -151,7 +152,7 @@ func _append_event(event_name: String, fields: Dictionary) -> void:
 	var file := FileAccess.open(record_path, mode)
 	if file == null:
 		push_error("로컬 테스트 기록 파일을 열 수 없습니다: %s" % record_path)
-		return
+		return false
 	file.seek_end()
 	var end_position := file.get_position()
 	if end_position > 0:
@@ -162,7 +163,10 @@ func _append_event(event_name: String, fields: Dictionary) -> void:
 			file.store_string("\n")
 	file.store_line(JSON.stringify(event))
 	file.flush()
+	var succeeded := file.get_error() == OK
+	file.close()
 	_reload_summary()
+	return succeeded
 
 
 func _reload_summary() -> void:
@@ -173,6 +177,8 @@ func _reload_summary() -> void:
 	var section_completion_count := 0
 	var last_event := "기록 없음"
 	var completion_by_stage_count: Dictionary = {}
+	var boss_rescue_count := 0
+	var boss_destroy_count := 0
 	for event in events:
 		var event_name := String(event.get("event", ""))
 		var run_id := String(event.get("run_id", ""))
@@ -184,6 +190,10 @@ func _reload_summary() -> void:
 			if completed_run_ids.has(run_id):
 				continue
 			completed_run_ids[run_id] = true
+			if event.get("boss_choice") == "rescue":
+				boss_rescue_count += 1
+			elif event.get("boss_choice") == "destroy":
+				boss_destroy_count += 1
 			var completion := float(event.get("completion_s", 0.0))
 			completed_times.append(completion)
 			var count_key := str(int(event.get("stage_count", 1)))
@@ -204,6 +214,8 @@ func _reload_summary() -> void:
 			best_completion_s = completion_s
 	_summary = {
 		"completion_by_stage_count": completion_by_stage_count,
+		"boss_rescue_count": boss_rescue_count,
+		"boss_destroy_count": boss_destroy_count,
 		"event_count": events.size(),
 		"run_count": run_ids.size(),
 		"completed_run_count": completed_run_ids.size(),
@@ -241,6 +253,8 @@ func _read_valid_events() -> Array[Dictionary]:
 func _empty_summary() -> Dictionary:
 	return {
 		"completion_by_stage_count": {},
+		"boss_rescue_count": 0,
+		"boss_destroy_count": 0,
 		"event_count": 0,
 		"run_count": 0,
 		"completed_run_count": 0,

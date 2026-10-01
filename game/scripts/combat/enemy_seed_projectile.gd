@@ -7,6 +7,10 @@ const HIT_RADIUS_PX := 48.0
 
 var projectile_id: String = ""
 var direction: Vector2 = Vector2.LEFT
+var attacker_id: StringName = &"seed_sack"
+var attack_id: StringName = &"seed_volley"
+var damage_tags := PackedStringArray(["enemy", "projectile", "seed"])
+var base_color := Color.WHITE
 var damage: int = 7
 var speed_px_s: float = 550.0
 var max_distance_px: float = 900.0
@@ -64,11 +68,11 @@ func _try_hit_player(segment_start: Vector2, segment_end: Vector2) -> bool:
 	var was_evading := player.invincible
 	var event := DamageEvent.new()
 	event.event_id = StringName("%s:player" % projectile_id)
-	event.attacker_id = &"seed_sack"
-	event.attack_id = &"seed_volley"
+	event.attacker_id = attacker_id
+	event.attack_id = attack_id
 	event.damage = damage
 	event.stagger_s = 0.10
-	event.tags = PackedStringArray(["enemy", "projectile", "seed"])
+	event.tags = damage_tags
 	event.source_position = segment_start
 	var result := player.receive_damage(event)
 	if was_evading and result == DamageReceiver.Result.INVULNERABLE_BLOCKED:
@@ -97,4 +101,4 @@ func _is_near_screen() -> bool:
 
 func _update_visual() -> void:
 	if projectile_sprite != null:
-		projectile_sprite.modulate = Color("b8e8ff") if enemy_time_scale < 1.0 else Color.WHITE
+		projectile_sprite.modulate = Color("b8e8ff") if enemy_time_scale < 1.0 else base_color

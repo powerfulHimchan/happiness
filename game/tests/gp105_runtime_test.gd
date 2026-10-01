@@ -160,7 +160,7 @@ func _finish_stage() -> bool:
 		return false
 	runner._process(0.1)
 	player.damage_receiver.health = 35
-	_defeat(runner.armored_boar)
+	_defeat(runner.final_enemy())
 	if not _resolve_growth():
 		return false
 	_before_clear_health = player.damage_receiver.health
@@ -168,6 +168,9 @@ func _finish_stage() -> bool:
 	# 기존 회귀 검사는 현재 무기 유지 후 경로 선택을 이어간다.
 	if controls.current_screen_mode() == 11:
 		_tap(controls.weapon_reward_skip_rect.get_center())
+	if controls.current_screen_mode() == 12:
+		_tap(controls.boss_choice_rects[0].get_center())
+		_tap(controls.boss_choice_confirm_rect.get_center())
 	return true
 
 

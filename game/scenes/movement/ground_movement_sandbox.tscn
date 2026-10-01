@@ -1,4 +1,4 @@
-[gd_scene load_steps=42 format=3]
+[gd_scene load_steps=44 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
@@ -33,6 +33,9 @@
 [ext_resource type="Script" path="res://scripts/growth/prototype_growth_controller.gd" id="33_growth"]
 
 [ext_resource type="Script" path="res://scripts/stage/prototype_route_terrain.gd" id="34_route_terrain"]
+
+[ext_resource type="Script" path="res://scripts/combat/boss_clockwork_knight.gd" id="35_boss"]
+[ext_resource type="Texture2D" path="res://assets/clockwork_knight.svg" id="36_boss_texture"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -642,6 +645,72 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.819608, 0.4, 1)
 theme_override_font_sizes/font_size = 17
 text = "정예 180/180"
+horizontal_alignment = 1
+
+[node name="ClockworkKnight" type="Node2D" parent="Targets"]
+visible = false
+position = Vector2(4450, 780)
+script = ExtResource("35_boss")
+target_key = "웃는 태엽 기사"
+body_color = Color(1, 1, 1, 1)
+player_path = NodePath("../../Player")
+
+[node name="BodySprite" type="Sprite2D" parent="Targets/ClockworkKnight"]
+position = Vector2(0, -48)
+texture = ExtResource("36_boss_texture")
+
+[node name="SelectionSprite" type="Sprite2D" parent="Targets/ClockworkKnight"]
+visible = false
+position = Vector2(0, -48)
+z_index = 3
+scale = Vector2(1.8, 1.45)
+texture = ExtResource("8_target_selection")
+
+[node name="WarningRing" type="Sprite2D" parent="Targets/ClockworkKnight"]
+visible = false
+position = Vector2(0, -48)
+z_index = 2
+scale = Vector2(2.0, 1.6)
+modulate = Color(1, 0.42, 0.32, 0.85)
+texture = ExtResource("8_target_selection")
+
+[node name="WarningLine" type="Line2D" parent="Targets/ClockworkKnight"]
+visible = false
+z_index = 1
+width = 13.0
+default_color = Color(1, 0.42, 0.32, 0.88)
+points = PackedVector2Array(0, -42, -1100, -42)
+
+[node name="ArmorMarker" type="Polygon2D" parent="Targets/ClockworkKnight"]
+position = Vector2(0, -126)
+z_index = 4
+polygon = PackedVector2Array(-18, 0, -10, -13, 0, -19, 10, -13, 18, 0, 0, 18)
+color = Color(0.568627, 0.717647, 0.780392, 1)
+
+[node name="DamageReceiver" type="Node" parent="Targets/ClockworkKnight"]
+script = ExtResource("9_damage_receiver")
+max_health = 480
+post_hit_invulnerability_s = 0.0
+
+[node name="HealthBar" type="ProgressBar" parent="Targets/ClockworkKnight"]
+offset_left = -88.0
+offset_top = -154.0
+offset_right = 88.0
+offset_bottom = -136.0
+mouse_filter = 2
+max_value = 480.0
+value = 480.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="Targets/ClockworkKnight"]
+offset_left = -170.0
+offset_top = -208.0
+offset_right = 170.0
+offset_bottom = -166.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.819608, 0.4, 1)
+theme_override_font_sizes/font_size = 17
+text = "보스 480/480"
 horizontal_alignment = 1
 
 [node name="StageGates" type="Node2D" parent="."]

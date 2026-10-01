@@ -44,6 +44,7 @@ const ROUTES: Array[Dictionary] = [
 var stage_number: int = 1
 var route_id: String = "meadow"
 var reward_claimed: bool = false
+var boss_choice: String = ""
 var completed_elapsed_s: float = 0.0
 var stage_history: Array[Dictionary] = []
 
@@ -53,6 +54,7 @@ var stage_history: Array[Dictionary] = []
 @onready var seed_sack: PrototypeEnemy = get_node("../Targets/SeedSack") as PrototypeEnemy
 @onready var wind_spirit: PrototypeEnemy = get_node("../Targets/WindSpirit") as PrototypeEnemy
 @onready var armored_boar: EliteArmoredBoar = get_node("../Targets/ArmoredBoar") as EliteArmoredBoar
+@onready var boss: BossClockworkKnight = get_node("../Targets/ClockworkKnight") as BossClockworkKnight
 @onready var gates: Array[StaticBody2D] = [
 	get_node("../StageGates/GateA") as StaticBody2D,
 	get_node("../StageGates/GateB") as StaticBody2D,
@@ -111,10 +113,11 @@ func reset_stage() -> void:
 		return
 	route_terrain.configure(stage_number, route_id)
 	reward_claimed = false
+	boss_choice = ""
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	for enemy in _all_combat_enemies():
-		enemy.damage_receiver.max_health = roundi(float(_initial_health[enemy.get_path()]) * (1.0 + 0.25 * (stage_number - 1)))
+		enemy.damage_receiver.max_health = BossClockworkKnight.BOSS_HEALTH if enemy == boss else roundi(float(_initial_health[enemy.get_path()]) * (1.0 + 0.25 * (stage_number - 1)))
 		enemy.reset_target()
 		_deactivate_enemy(enemy)
 	for gate_index in gates.size():
@@ -143,8 +146,20 @@ func has_next_stage() -> bool:
 	return stage_enabled and stage_complete and stage_number < stage_limit
 
 
+func uses_boss() -> bool:
+	return stage_enabled and stage_limit == 3 and stage_number == 3
+
+
+func awaiting_boss_choice() -> bool:
+	return uses_boss() and stage_complete and boss_choice.is_empty()
+
+
+func final_enemy() -> PrototypeTarget:
+	return boss if uses_boss() else armored_boar
+
+
 func checkpoint_snapshot() -> Dictionary:
-	return {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed}
+	return {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed, "boss_choice": boss_choice}
 
 
 func restore_checkpoint(state: Dictionary) -> void:
@@ -157,6 +172,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 		completed_elapsed_s += float(entry.elapsed_s)
 	reset_stage()
 	reward_claimed = bool(state.get("reward_claimed", true))
+	boss_choice = String(state.get("boss_choice", ""))
 	stage_elapsed_s = float(state.elapsed)
 	section_actual_times.assign(state.sections)
 	current_section = Section.COMPLETE
@@ -214,6 +230,11 @@ func current_metrics() -> Dictionary:
 				objective = "슬라임과 씨앗 포대 처치" if route_id == "meadow" else "슬라임과 바람 정령 처치"
 			Section.WAVE_TWO:
 				objective = "가까운 혼합 웨이브 처치" if route_id == "meadow" else "활·점프로 흩어진 적 처치"
+	if uses_boss() and current_section == Section.ELITE:
+		section_name = "보스 · 웃는 태엽 기사"
+		objective = "돌진·충격파·탄막 회피 · 벽 충돌 시 검 공격"
+	if awaiting_boss_choice():
+		objective = "승리 · 구출 또는 파괴를 선택하세요"
 	var target_s := 0.0 if stage_complete else float(SECTION_TARGET_SECONDS[display_index])
 	var closed_gate_count := 0
 	for gate_index in gates.size():
@@ -225,7 +246,10 @@ func current_metrics() -> Dictionary:
 		"run_route_id": route_id,
 		"run_route_name": "풀숲 길" if route_id == "meadow" else "바람 길",
 		"run_route_terrain": "연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판"),
-		"run_complete": stage_complete and stage_number >= stage_limit,
+		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
+		"boss_choice_pending": awaiting_boss_choice(),
+		"boss_choice": boss_choice,
+		"boss_name": BossClockworkKnight.BOSS_NAME if uses_boss() else "",
 		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s,
 		"run_stage_history": stage_history.duplicate(true),
 		"stage_enabled": stage_enabled,
@@ -273,8 +297,12 @@ func _finish_current_section() -> void:
 			_deactivate_all_combat_enemies()
 			_set_gate_closed(3, false)
 			stage_complete = true
+			if uses_boss():
+				reward_claimed = true
 			stage_history.append({"stage": stage_number, "route": route_id, "elapsed_s": stage_elapsed_s})
 
+	if uses_boss() and stage_complete:
+		stage_history[-1]["boss_choice"] = boss_choice
 	if stage_complete:
 		_last_stage_log = "스테이지 완료 · %s" % _format_seconds(stage_elapsed_s)
 	else:
@@ -312,13 +340,14 @@ func _activate_wave_two() -> void:
 
 
 func _activate_elite() -> void:
-	_activate_enemy(armored_boar, Vector2(4450.0, 780.0))
-	_active_enemies.assign([armored_boar])
+	var enemy := final_enemy()
+	_activate_enemy(enemy, Vector2(4450.0, 780.0))
+	_active_enemies.assign([enemy])
 
 
 func _activate_enemy(enemy: PrototypeTarget, spawn_position: Vector2) -> void:
 	enemy.set_stage_spawn(spawn_position)
-	enemy.damage_receiver.max_health = roundi(float(_initial_health[enemy.get_path()]) * (1.0 + 0.25 * (stage_number - 1)))
+	enemy.damage_receiver.max_health = BossClockworkKnight.BOSS_HEALTH if enemy == boss else roundi(float(_initial_health[enemy.get_path()]) * (1.0 + 0.25 * (stage_number - 1)))
 	enemy.reset_target()
 	enemy.visible = true
 	enemy.set_process(true)
@@ -340,6 +369,9 @@ func _restore_combat_sandbox() -> void:
 	for gate_index in gates.size():
 		_set_gate_closed(gate_index, false)
 	for enemy in _all_combat_enemies():
+		if enemy == boss:
+			_deactivate_enemy(enemy)
+			continue
 		var initial_position: Vector2 = _initial_positions.get(enemy.get_path(), enemy.position)
 		enemy.damage_receiver.max_health = int(_initial_health.get(enemy.get_path(), enemy.damage_receiver.max_health))
 		enemy.set_stage_spawn(initial_position)
@@ -354,7 +386,7 @@ func _restore_combat_sandbox() -> void:
 
 
 func _all_combat_enemies() -> Array[PrototypeTarget]:
-	return [leaf_slime, seed_sack, wind_spirit, armored_boar]
+	return [leaf_slime, seed_sack, wind_spirit, armored_boar, boss]
 
 
 func _active_enemy_count() -> int:

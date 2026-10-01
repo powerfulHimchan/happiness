@@ -208,6 +208,9 @@ func _test_damage_paths() -> bool:
 func _finish_stage() -> bool:
 	for ignored in 10:
 		if runner.stage_complete:
+			if controls.current_screen_mode() == 12:
+				_tap(controls.boss_choice_rects[0].get_center())
+				_tap(controls.boss_choice_confirm_rect.get_center())
 			return true
 		match runner.current_section:
 			PrototypeStageRunner.Section.ADVANCE_ONE:
@@ -218,7 +221,7 @@ func _finish_stage() -> bool:
 				for enemy in runner._active_enemies.duplicate():
 					_defeat(enemy)
 			PrototypeStageRunner.Section.ELITE:
-				_defeat(runner.armored_boar)
+				_defeat(runner.final_enemy())
 		if not _resolve_growth():
 			return false
 		runner._process(0.1)

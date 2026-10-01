@@ -50,6 +50,9 @@ required_files=(
   "$game_root/tests/gp106_runtime_test.gd"
   "$game_root/tests/gp107_runtime_test.gd"
   "$game_root/tests/gp108_runtime_test.gd"
+  "$game_root/tests/gp109_runtime_test.gd"
+  "$game_root/scripts/combat/boss_clockwork_knight.gd"
+  "$game_root/assets/clockwork_knight.svg"
   "$game_root/scripts/combat/prototype_weapon_rewards.gd"
   "$game_root/scripts/stage/prototype_route_terrain.gd"
   "$game_root/scripts/combat/auto_target_selector.gd"
@@ -504,56 +507,70 @@ if [[ -n "$godot_command" ]]; then
   export XDG_CONFIG_HOME="$check_data_dir/config"
   mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"
   trap 'rm -rf "$check_data_dir"' EXIT
-  timeout 120s "$godot_command" --headless --path "$game_root" --import
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  # Godot import는 스크립트 오류에도 종료 코드 0을 반환할 수 있다.
+  checked_godot() {
+    local check_timeout="$1"
+    shift
+    timeout "$check_timeout" "$godot_command" "$@" 2>&1 | tee "$check_data_dir/runtime.log"
+    if rg -q 'SCRIPT ERROR:|Parse Error:' "$check_data_dir/runtime.log"; then
+      echo "Godot script error detected." >&2
+      return 1
+    fi
+  }
+  checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp206_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp301_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp302_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp303_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp304_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp401_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp402_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp403_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp404_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp405_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/cp406_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/gp101_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/gp102_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/gp103_runtime_test.gd
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/gp104_runtime_test.gd
   for checkpoint_phase in seed resume finish empty seed-bow resume finish empty; do
-    timeout 45s "$godot_command" --headless --path "$game_root" \
+    checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp105_runtime_test.gd -- "$checkpoint_phase"
   done
   for checkpoint_phase in seed resume corrupt recover empty; do
-    timeout 45s "$godot_command" --headless --path "$game_root" \
+    checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp105_runtime_test.gd -- "$checkpoint_phase"
   done
   for checkpoint_phase in seed death empty seed new empty; do
-    timeout 45s "$godot_command" --headless --path "$game_root" \
+    checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp105_runtime_test.gd -- "$checkpoint_phase"
   done
-  timeout 45s "$godot_command" --headless --path "$game_root" \
+  checked_godot 45s --headless --path "$game_root" \
     --script res://tests/gp106_runtime_test.gd
-  timeout 90s "$godot_command" --headless --path "$game_root" \
+  checked_godot 90s --headless --path "$game_root" \
     --script res://tests/gp107_runtime_test.gd
   for reward_phase in seed claim finish legacy-seed legacy-resume; do
-    timeout 45s "$godot_command" --headless --path "$game_root" \
+    checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp108_runtime_test.gd -- "$reward_phase"
+  done
+  for boss_phase in seed resolve empty resolved-seed resolved-resume empty-resolved; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp109_runtime_test.gd -- "$boss_phase"
   done
   echo "Godot headless project check: OK"
 else
