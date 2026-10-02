@@ -67,6 +67,8 @@ func _run() -> void:
 			if not _check(elite.damage_receiver.health == elite.damage_receiver.max_health - 20, "정예 지원 중복 없음"): return
 			if not _finish_stage(): return
 			var saved := store.load_checkpoint()
+			if saved.is_empty():
+				print("GP-110 save diagnostic: ", controls.checkpoint_message, " legacy=", player.boss_legacy, " player=", [player.damage_receiver.health, player.damage_receiver.max_health, player.growth_common_bonus, player.growth_sword_bonus, player.growth_bow_bonus], " growth=", growth.checkpoint_snapshot(), " recorder=", recorder.checkpoint_snapshot())
 			if not _check(not saved.is_empty() and saved.boss_legacy.choice == "rescue" and not saved.boss_legacy.rescue_used, "보너스 포함 정상 중간 저장"): return
 			for malformed in [null, [], {"choice": "invalid"}, {"choice": "rescue", "source_run": "x", "run_id": "wrong", "rescue_used": false, "assisted_stages": []}]:
 				var bad := saved.duplicate(true)

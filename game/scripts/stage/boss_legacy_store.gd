@@ -32,6 +32,9 @@ func restore_active(state: Dictionary) -> Dictionary:
 	if state.is_empty():
 		return {}
 	var restored := state.duplicate(true)
+	restored.assisted_stages = []
+	for stage in state.assisted_stages:
+		restored.assisted_stages.append(int(stage))
 	var usage: Dictionary = _load().usage.get(state.run_id, {})
 	restored.rescue_used = state.rescue_used or usage.get("rescue", false)
 	for stage in usage.get("stages", []):
@@ -86,10 +89,18 @@ func _load() -> Dictionary:
 	if file == null:
 		return result
 	while not file.eof_reached():
-		var envelope: Variant = JSON.parse_string(file.get_line())
+		var line := file.get_line().strip_edges()
+		if line.is_empty():
+			continue
+		var parser := JSON.new()
+		if parser.parse(line) != OK:
+			continue
+		var envelope: Variant = parser.data
 		if not envelope is Dictionary or envelope.get("version") != 1 or not envelope.get("payload") is String or envelope.get("sha256") != String(envelope.payload).sha256_text():
 			continue
-		var event: Variant = JSON.parse_string(envelope.payload)
+		if parser.parse(envelope.payload) != OK:
+			continue
+		var event: Variant = parser.data
 		if not event is Dictionary:
 			continue
 		var source: String = event.get("source", "") if event.get("source", "") is String else ""
@@ -109,8 +120,8 @@ func _load() -> Dictionary:
 				var usage: Dictionary = result.usage.get(run_id, {"rescue": false, "stages": []})
 				if event.event == "rescue":
 					usage.rescue = true
-				elif event.get("stage") in [1, 2, 3] and event.stage not in usage.stages:
-					usage.stages.append(event.stage)
+				elif _valid_stage(event.get("stage")) and int(event.stage) not in usage.stages:
+					usage.stages.append(int(event.stage))
 				result.usage[run_id] = usage
 	file.close()
 	return result
@@ -123,10 +134,14 @@ static func valid_active(state: Dictionary, run_id: String) -> bool:
 		return false
 	var seen: Array = []
 	for stage in state.assisted_stages:
-		if stage not in [1, 2, 3] or stage in seen:
+		if not _valid_stage(stage) or int(stage) in seen:
 			return false
-		seen.append(stage)
+		seen.append(int(stage))
 	return state.choice == "rescue" or (not state.rescue_used and seen.is_empty())
+
+
+static func _valid_stage(value: Variant) -> bool:
+	return (value is int or value is float) and is_finite(float(value)) and float(value) == floorf(float(value)) and float(value) >= 1 and float(value) <= 3
 
 
 static func description(choice: String) -> String:
