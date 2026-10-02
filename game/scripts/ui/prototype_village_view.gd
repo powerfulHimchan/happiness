@@ -40,7 +40,7 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				var profile := PrototypeMemoryAbilities.profile(id)
 				result.append({"name": profile.name, "open": bool(memories.get(id, false)), "lines": [profile.effect, profile.condition, "새 도전 준비에서 하나를 선택"]})
 		"records":
-			result.append({"name": "도전 이력", "open": true, "lines": ["총 도전 %d회" % int(summary.get("run_count", 0)), "완주 %d회" % int(summary.get("completed_run_count", 0)), "중단 %d회" % int(summary.get("incomplete_run_count", 0)), "진행 중 도전은 집계 전"]})
+			result.append({"name": "도전 이력", "open": true, "lines": ["총 도전 %d회" % int(summary.get("run_count", 0)), "완주 %d회" % int(summary.get("completed_run_count", 0)), "미완료 %d회" % int(summary.get("incomplete_run_count", 0)), "미완료에는 진행 중 도전도 포함"]})
 			for key in ["best_completion_s", "average_completion_s"]:
 				var seconds := float(summary.get(key, 0.0))
 				result.append({"name": "최고 완주" if key == "best_completion_s" else "평균 완주", "open": true, "lines": ["%.1f초" % seconds if seconds > 0 else "아직 완주 기록 없음", "로컬에 저장한 모든 완주 기준"]})
@@ -48,6 +48,6 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 			result.assign([
 				{"name": "대장간", "open": not blueprints.is_empty(), "lines": ["무기 설계도 %d/2" % blueprints.size(), "태엽 검 · 태엽 활", "설계와 등급별 효과 살펴보기"]},
 				{"name": "기억의 쉼터", "open": not memories.is_empty(), "lines": ["영구 기억 %d/2" % memories.size(), "태엽 수호 · 핵의 잔향", "기억의 능력과 해금 조건"]},
-				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 중단 · 소요 시간", "이 기기에 저장된 도전 기록"]},
+				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
 			])
 	return result
