@@ -50,6 +50,7 @@ func _ready() -> void:
 	controls.job_confirmed.connect(growth.choose_job_ultimate)
 	controls.stage_route_selected.connect(_continue_stage)
 	controls.weapon_reward_selected.connect(_claim_weapon_reward)
+	controls.skill_reward_selected.connect(_claim_skill_reward)
 	controls.boss_choice_confirmed.connect(_resolve_boss_choice)
 	controls.continue_requested.connect(continue_saved_run)
 	controls.growth_card_selected.connect(growth.choose_card)
@@ -387,7 +388,7 @@ func _claim_weapon_reward(id: String) -> bool:
 		stage_runner.reward_claimed = false
 		weapon_controller.set_loadout(previous, previous_blueprints)
 		return false
-	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health, stage_runner.available_routes())
+	_show_intermission_routes()
 	return true
 
 
@@ -466,7 +467,7 @@ func continue_saved_run() -> bool:
 			_finish_growth_selection()
 			stage_runner.force_emit_metrics()
 	elif stage_runner.reward_claimed:
-		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, 0, stage_runner.available_routes())
+		_show_intermission_routes()
 	else:
 		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints))
 	return true
@@ -645,3 +646,29 @@ func _update_boss_legacy_status() -> void:
 
 func _on_boss_legacy_damage(_event: DamageEvent) -> void:
 	_update_boss_legacy_status()
+
+
+func _show_intermission_routes() -> void:
+	controls.update_skill_reward_status(weapon_controller.skills, stage_runner.skills_claimed)
+	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health, stage_runner.available_routes())
+
+
+func _claim_skill_reward(id: String, slot: int) -> bool:
+	if controls.current_screen_mode() != 14 or not stage_runner.has_next_stage() or not stage_runner.reward_claimed or stage_runner.skills_claimed or not growth.run_active or player.damage_receiver.dead:
+		return false
+	var previous := weapon_controller.checkpoint_snapshot()
+	if not weapon_controller.replace_skill(id, slot):
+		return false
+	stage_runner.skills_claimed = true
+	if _save_checkpoint(stage_runner.current_metrics()) != OK:
+		stage_runner.skills_claimed = false
+		weapon_controller.set_skill_loadout(previous.skills)
+		for weapon in ["sword", "bow"]:
+			var combat: Node = weapon_controller.sword_combat if weapon == "sword" else weapon_controller.bow_combat
+			for field in ["_skill_1_cooldown_s", "_skill_2_cooldown_s"]:
+				combat.set(field, previous[weapon][field])
+		weapon_controller.force_emit_metrics()
+		return false
+	weapon_controller.prepare_next_stage()
+	_show_intermission_routes()
+	return true

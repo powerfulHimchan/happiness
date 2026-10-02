@@ -44,6 +44,7 @@ const ROUTES: Array[Dictionary] = [
 const RISK_ROUTE := {"id": "clockwork", "name": "태엽 폐허 · 위험", "lines": ["좁은 발판 · 적 체력 +20%", "첫 웨이브 · 세 종류의 적", "통과: 체력 +20 · 필살기 +50"]}
 var stage_number: int = 1
 var route_id: String = "meadow"
+var skills_claimed: bool = false
 var reward_claimed: bool = false
 var boss_choice: String = ""
 var completed_elapsed_s: float = 0.0
@@ -114,6 +115,7 @@ func reset_stage() -> void:
 		return
 	route_terrain.configure(stage_number, route_id)
 	reward_claimed = false
+	skills_claimed = false
 	boss_choice = ""
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
@@ -181,7 +183,7 @@ func final_enemy() -> PrototypeTarget:
 
 
 func checkpoint_snapshot() -> Dictionary:
-	return {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed, "boss_choice": boss_choice}
+	return {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed, "skills_claimed": skills_claimed, "boss_choice": boss_choice}
 
 
 func restore_checkpoint(state: Dictionary) -> void:
@@ -194,6 +196,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 		completed_elapsed_s += float(entry.elapsed_s)
 	reset_stage()
 	reward_claimed = bool(state.get("reward_claimed", true))
+	skills_claimed = bool(state.get("skills_claimed", true))
 	boss_choice = String(state.get("boss_choice", ""))
 	stage_elapsed_s = float(state.elapsed)
 	section_actual_times.assign(state.sections)
@@ -323,6 +326,7 @@ func _finish_current_section() -> void:
 			stage_complete = true
 			if uses_boss():
 				reward_claimed = true
+				skills_claimed = true
 			stage_history.append({"stage": stage_number, "route": route_id, "elapsed_s": stage_elapsed_s})
 
 	if uses_boss() and stage_complete:

@@ -31,6 +31,7 @@ var _basic_remaining_s: float = 0.0
 var _combo_idle_s: float = 0.0
 var _skill_1_cooldown_s: float = 0.0
 var _skill_2_cooldown_s: float = 0.0
+var _action_slot: int = 0
 var _action: int = Action.NONE
 var _action_elapsed_s: float = 0.0
 var _next_skill_hit_index: int = 0
@@ -73,13 +74,13 @@ func _physics_process(delta: float) -> void:
 func request_skill_1() -> void:
 	if not active:
 		return
-	_start_skill(Action.DASH_SLASH, skill_1, _skill_1_cooldown_s)
+	_start_skill(Action.DASH_SLASH if skill_1.skill_id == &"sword_dash" else Action.SPIN_SLASH, skill_1, _skill_1_cooldown_s, 1)
 
 
 func request_skill_2() -> void:
 	if not active:
 		return
-	_start_skill(Action.SPIN_SLASH, skill_2, _skill_2_cooldown_s)
+	_start_skill(Action.DASH_SLASH if skill_2.skill_id == &"sword_dash" else Action.SPIN_SLASH, skill_2, _skill_2_cooldown_s, 2)
 
 
 func set_active(enabled: bool) -> void:
@@ -170,7 +171,7 @@ func _update_combo_timeout(delta: float) -> void:
 	last_combat_log = "대상 없음 · 3연격 초기화"
 
 
-func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s: float) -> void:
+func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s: float, slot: int = 1) -> void:
 	if definition == null:
 		last_combat_log = "스킬 데이터 없음"
 		return
@@ -184,6 +185,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 		last_combat_log = "%s · 현재 사용 불가" % definition.display_name
 		return
 
+	_action_slot = slot
 	_action = action
 	_action_elapsed_s = 0.0
 	_next_skill_hit_index = 0
@@ -191,7 +193,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 	_captured_target = target_selector.current_target
 	_basic_remaining_s = maxf(_basic_remaining_s, definition.duration_s)
 	_combo_idle_s = 0.0
-	if action == Action.DASH_SLASH:
+	if slot == 1:
 		_skill_1_cooldown_s = definition.cooldown_s
 	else:
 		_skill_2_cooldown_s = definition.cooldown_s
@@ -326,10 +328,8 @@ func _update_slash_visual() -> void:
 
 
 func _current_skill() -> SkillDefinition:
-	if _action == Action.DASH_SLASH:
-		return skill_1
-	if _action == Action.SPIN_SLASH:
-		return skill_2
+	if _action != Action.NONE:
+		return skill_1 if _action_slot == 1 else skill_2
 	return null
 
 

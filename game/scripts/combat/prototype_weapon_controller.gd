@@ -12,6 +12,7 @@ const SWITCH_BUFFER_S := 0.20
 const CHECKPOINT_FIELDS := ["_basic_remaining_s", "_skill_1_cooldown_s", "_skill_2_cooldown_s", "basic_attack_count", "skill_hit_count", "total_damage"]
 
 var active_weapon_id: String = SWORD_ID
+var skills: Dictionary = PrototypeSkillRewards.defaults()
 var equipment: Dictionary = {"sword": 0, "bow": 0}
 var blueprints: Dictionary = {"sword": "", "bow": ""}
 var unlocked_blueprints: Dictionary = {}
@@ -86,7 +87,7 @@ func prepare_next_stage() -> void:
 
 
 func checkpoint_snapshot() -> Dictionary:
-	var state := {"active": active_weapon_id, "equipment": equipment.duplicate(), "blueprints": blueprints.duplicate()}
+	var state := {"active": active_weapon_id, "equipment": equipment.duplicate(), "blueprints": blueprints.duplicate(), "skills": skills.duplicate(true)}
 	for weapon_id in [SWORD_ID, BOW_ID]:
 		var combat: Node = sword_combat if weapon_id == SWORD_ID else bow_combat
 		var values := {}
@@ -99,6 +100,7 @@ func checkpoint_snapshot() -> Dictionary:
 func restore_checkpoint(state: Dictionary) -> void:
 	reset_combat()
 	set_loadout(state.get("equipment", {"sword": 0, "bow": 0}), state.get("blueprints", {"sword": "", "bow": ""}))
+	set_skill_loadout(state.get("skills", PrototypeSkillRewards.defaults()))
 	active_weapon_id = String(state.active)
 	for weapon_id in [SWORD_ID, BOW_ID]:
 		var combat: Node = sword_combat if weapon_id == SWORD_ID else bow_combat
@@ -120,6 +122,7 @@ func reset_combat(starting_weapon: String = SWORD_ID) -> bool:
 	_switch_cooldown_remaining_s = 0.0
 	_switch_buffer_remaining_s = 0.0
 	_switch_buffered = false
+	set_skill_loadout(PrototypeSkillRewards.defaults())
 	sword_combat.reset_combat()
 	bow_combat.reset_combat()
 	_apply_active_weapon()
@@ -228,8 +231,8 @@ func _enrich_metrics(metrics: Dictionary) -> void:
 		if _switch_cooldown_remaining_s > 0.0
 		else "%s 전환" % _weapon_name(BOW_ID if active_weapon_id == SWORD_ID else SWORD_ID)
 	)
-	metrics["skill_1_button_label"] = "돌진" if active_weapon_id == SWORD_ID else "관통"
-	metrics["skill_2_button_label"] = "회전" if active_weapon_id == SWORD_ID else "화살비"
+	metrics["skill_1_button_label"] = PrototypeSkillRewards.LABELS[skills[active_weapon_id][0]]
+	metrics["skill_2_button_label"] = PrototypeSkillRewards.LABELS[skills[active_weapon_id][1]]
 	metrics["weapon_switch_mode"] = "0.50초 연속 제한"
 	metrics["weapon_switch_remaining_s"] = _switch_cooldown_remaining_s
 	metrics["weapon_switch_buffered"] = _switch_buffered
@@ -264,3 +267,30 @@ func _enrich_metrics(metrics: Dictionary) -> void:
 
 func _weapon_name(weapon_id: String) -> String:
 	return "검" if weapon_id == SWORD_ID else "활"
+
+
+func set_skill_loadout(value: Dictionary) -> bool:
+	if not PrototypeSkillRewards.valid_loadout(value):
+		return false
+	skills = value.duplicate(true)
+	for weapon_id in [SWORD_ID, BOW_ID]:
+		var combat: Node = sword_combat if weapon_id == SWORD_ID else bow_combat
+		combat.set("skill_1", PrototypeSkillRewards.SKILLS[skills[weapon_id][0]])
+		combat.set("skill_2", PrototypeSkillRewards.SKILLS[skills[weapon_id][1]])
+	_emit_active_metrics()
+	return true
+
+
+func replace_skill(id: String, slot: int) -> bool:
+	var weapon := PrototypeSkillRewards.weapon_for(id)
+	if weapon.is_empty() or slot not in [0, 1] or id in skills[weapon]:
+		return false
+	var next := skills.duplicate(true)
+	next[weapon][slot] = id
+	if not set_skill_loadout(next):
+		return false
+	var combat: Node = sword_combat if weapon == SWORD_ID else bow_combat
+	var field := "_skill_%d_cooldown_s" % (slot + 1)
+	combat.set(field, maxf(float(combat.get(field)), PrototypeSkillRewards.SKILLS[id].cooldown_s))
+	_emit_active_metrics()
+	return true
