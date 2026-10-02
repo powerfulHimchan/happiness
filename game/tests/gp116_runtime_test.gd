@@ -98,10 +98,13 @@ func _run() -> void:
 			if not _check(growth.jobs.job_id == "vanguard", "이전 저장의 실제 발현 직업 준비"): return
 			# GP-115 이전 보상 저널 형식만 남긴다.
 			var lines: Array[String] = []
+			var parser := JSON.new()
 			for line in FileAccess.get_file_as_string(GP116_META).split("\n"):
-				var envelope: Variant = JSON.parse_string(line)
+				if parser.parse(line) != OK: continue
+				var envelope: Variant = parser.data
 				if not envelope is Dictionary or not envelope.get("payload") is String: continue
-				var event: Variant = JSON.parse_string(envelope.payload)
+				if parser.parse(envelope.payload) != OK: continue
+				var event: Variant = parser.data
 				if event is Dictionary and event.get("event") != "job": lines.append(line)
 			file = FileAccess.open(GP116_META, FileAccess.WRITE)
 			file.store_string("\n".join(lines) + "\n")
