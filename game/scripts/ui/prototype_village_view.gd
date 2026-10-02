@@ -2,8 +2,8 @@ class_name PrototypeVillageView
 extends RefCounted
 
 ## GP-114: 기존 영구 해금과 로컬 기록을 읽는 마을. 방문으로 저장을 변경하지 않는다.
-const FACILITIES := ["forge", "memories", "records"]
-const TITLES := {"village": "시간의 닻 마을", "forge": "대장간 · 설계도", "memories": "기억의 쉼터", "records": "광장 · 도전 기록"}
+const FACILITIES := ["forge", "memories", "records", "jobs"]
+const TITLES := {"village": "시간의 닻 마을", "forge": "대장간 · 설계도", "memories": "기억의 쉼터", "records": "광장 · 도전 기록", "jobs": "직업 도감"}
 
 static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictionary:
 	var cards: Array[Rect2] = []
@@ -18,9 +18,18 @@ static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictiona
 		buttons.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (button_width + gap), safe.size.y * 0.85), Vector2(button_width, safe.size.y * 0.09)))
 	return {"cards": cards, "back": buttons[0], "start": buttons[1], "continue": buttons[2] if can_continue else Rect2()}
 
-static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary) -> Array[Dictionary]:
+static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary, discovered_jobs: Dictionary = {}, current_job: String = "") -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	match page:
+		"jobs":
+			for job in PrototypeJobProgress.JOBS:
+				var discovered := bool(discovered_jobs.get(job.id, false))
+				var abilities := PrototypeJobRewards.cards_for(job.id)
+				var ultimates := PrototypeJobRewards.ultimates_for(job.id)
+				var conditions := "%s %.0f · %s %.0f" % [PrototypeJobProgress.TAG_NAMES[job.primary], PrototypeJobProgress.PRIMARY_THRESHOLD, PrototypeJobProgress.TAG_NAMES[job.secondary], PrototypeJobProgress.SECONDARY_THRESHOLD]
+				var lines: Array[String] = [conditions, job.passive, "능력: %s · %s" % [abilities[0].title, abilities[1].title], "필살기: " + String(ultimates[0].name), "필살기: " + String(ultimates[1].name), "능력 70% · 무기 20% · 특수 10%"]
+				var status := "발견 · 현재 도전" if discovered and current_job == job.id else "영구 발견" if discovered else "미발견 · 성향을 채워 발현"
+				result.append({"id": job.id, "name": job.name, "open": discovered, "status": status, "lines": lines})
 		"forge":
 			for id in ["clockwork_sword", "clockwork_bow"]:
 				var unlocked := bool(blueprints.get(id, false))
@@ -49,5 +58,6 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				{"name": "대장간", "open": not blueprints.is_empty(), "lines": ["무기 설계도 %d/2" % blueprints.size(), "태엽 검 · 태엽 활", "설계와 등급별 효과 살펴보기"]},
 				{"name": "기억의 쉼터", "open": not memories.is_empty(), "lines": ["영구 기억 %d/2" % memories.size(), "태엽 수호 · 핵의 잔향", "기억의 능력과 해금 조건"]},
 				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
+				{"name": "직업 도감", "open": true, "status": "언제든 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자", "조건 · 전용 능력 · 필살기"]},
 			])
 	return result

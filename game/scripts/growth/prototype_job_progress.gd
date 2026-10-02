@@ -84,8 +84,12 @@ func _prefer(candidate: Dictionary, previous: Dictionary) -> bool:
 
 
 func current_job() -> Dictionary:
+	return profile(job_id)
+
+
+static func profile(id: String) -> Dictionary:
 	for job in JOBS:
-		if job["id"] == job_id:
+		if job["id"] == id:
 			return job.duplicate()
 	return {}
 

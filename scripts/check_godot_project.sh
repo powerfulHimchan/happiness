@@ -57,6 +57,7 @@ required_files=(
   "$game_root/tests/gp113_runtime_test.gd"
   "$game_root/tests/gp114_runtime_test.gd"
   "$game_root/tests/gp115_runtime_test.gd"
+  "$game_root/tests/gp116_runtime_test.gd"
   "$game_root/scripts/combat/prototype_skill_rewards.gd"
   "$game_root/data/skills/sword_crescent.tres"
   "$game_root/data/skills/bow_volley.tres"
@@ -607,6 +608,10 @@ if [[ -n "$godot_command" ]]; then
   for skill_phase in seed resume finish legacy-resume combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp115_runtime_test.gd -- "$skill_phase"
+  done
+  for codex_phase in seed resume finish legacy-fail legacy-resume; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp116_runtime_test.gd -- "$codex_phase"
   done
   echo "Godot headless project check: OK"
 else

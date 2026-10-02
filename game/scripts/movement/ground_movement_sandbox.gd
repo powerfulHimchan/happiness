@@ -30,6 +30,7 @@ var _intermission_stage: int = 0
 var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
 var boss_legacy_store := BossLegacyStore.new()
+var _job_codex_message: String = ""
 var _last_legacy_grant_source: String = ""
 var _last_legacy_grant_path: String = ""
 var _restoring_checkpoint: bool = false
@@ -47,7 +48,7 @@ func _ready() -> void:
 	growth.choices_requested.connect(_on_growth_choices_requested)
 	growth.selection_finished.connect(_finish_growth_selection)
 	growth.job_manifested.connect(_on_job_manifested)
-	controls.job_confirmed.connect(growth.choose_job_ultimate)
+	controls.job_confirmed.connect(_confirm_job)
 	controls.stage_route_selected.connect(_continue_stage)
 	controls.weapon_reward_selected.connect(_claim_weapon_reward)
 	controls.skill_reward_selected.connect(_claim_skill_reward)
@@ -247,6 +248,9 @@ func _draw_track_markers() -> void:
 func _reset_test() -> void:
 	# 확정 저장을 먼저 회수하고 보상 소비 저장 실패 시 새 도전을 시작하지 않는다.
 	_refresh_checkpoint()
+	if not _available_checkpoint.is_empty() and not _job_codex_message.is_empty():
+		controls.show_main_screen()
+		return
 	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)):
 		controls.show_main_screen()
 		return
@@ -301,6 +305,7 @@ func _on_growth_choices_requested(cards: Array[Dictionary], level: int, rerolls:
 func _on_job_manifested(job: Dictionary) -> void:
 	_begin_growth_pause()
 	controls.show_job_manifestation(job)
+	_discover_job(String(job.id))
 
 
 func _finish_growth_selection() -> void:
@@ -357,6 +362,10 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error:
 	if growth.choosing or growth.awaiting_job_confirmation:
 		return ERR_BUSY
+	var job_error := _discover_job(growth.jobs.job_id)
+	if job_error != OK:
+		controls.update_checkpoint_status(not _available_checkpoint.is_empty(), "중간 저장 실패 · 직업 기록을 다시 저장해야 합니다")
+		return job_error
 	if record_metrics:
 		test_recorder.record_stage_metrics(metrics)
 	var state := {
@@ -414,13 +423,17 @@ func _record_stage_metrics(metrics: Dictionary) -> void:
 
 func _refresh_checkpoint() -> void:
 	_available_checkpoint = checkpoint_store.load_checkpoint()
-	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
-		if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+	var job_error: Error = OK
+	if not _available_checkpoint.is_empty():
+		job_error = _discover_job(String(_available_checkpoint.growth.job))
+	if job_error == OK:
+		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
+			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+				_discard_checkpoint()
+		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
-	elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
-		_discard_checkpoint()
 	_update_boss_legacy_status()
-	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message)
+	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
 
 
 func _discard_checkpoint() -> void:
@@ -434,6 +447,8 @@ func continue_saved_run() -> bool:
 	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2:
 		return false
 	var state := _available_checkpoint.duplicate(true)
+	if _discover_job(String(state.growth.job)) != OK:
+		return false
 	_restoring_checkpoint = true
 	_finish_growth_selection()
 	controls.release_all_inputs()
@@ -642,6 +657,7 @@ func _update_boss_legacy_status() -> void:
 	controls.update_memory_status(progress.unlocked, progress.selected_memory, player.memory_id)
 	weapon_controller.unlocked_blueprints = progress.blueprints.duplicate()
 	controls.update_weapon_blueprints(progress.blueprints)
+	controls.update_job_codex_status(progress.jobs, _job_codex_message)
 
 
 func _on_boss_legacy_damage(_event: DamageEvent) -> void:
@@ -672,3 +688,18 @@ func _claim_skill_reward(id: String, slot: int) -> bool:
 	weapon_controller.prepare_next_stage()
 	_show_intermission_routes()
 	return true
+
+
+func _discover_job(id: String) -> Error:
+	var error: Error = OK if id.is_empty() else boss_legacy_store.discover_job(id)
+	_job_codex_message = "직업 기록 저장 실패 · 확인을 눌러 다시 시도하세요" if error != OK else ""
+	controls.update_job_codex_status(boss_legacy_store.progress_snapshot().jobs, _job_codex_message)
+	return error
+
+
+func _confirm_job(index: int) -> bool:
+	if not growth.awaiting_job_confirmation or not growth.run_active or index < 0 or index >= PrototypeJobRewards.ultimates_for(growth.jobs.job_id).size():
+		return false
+	if _discover_job(growth.jobs.job_id) != OK:
+		return false
+	return growth.choose_job_ultimate(index)

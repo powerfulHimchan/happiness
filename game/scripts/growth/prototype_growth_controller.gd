@@ -108,6 +108,7 @@ func stop_run() -> void:
 		awaiting_job_confirmation = false
 		offered_cards.clear()
 		selection_finished.emit()
+	_emit_metrics()
 
 
 func next_level_experience() -> int:
@@ -271,7 +272,7 @@ func _draw_cards() -> Array[Dictionary]:
 
 
 func metrics_snapshot() -> Dictionary:
-	return {"growth_level": level, "growth_xp": experience, "growth_next_xp": next_level_experience(), "growth_total_xp": total_experience, "growth_rerolls": rerolls_remaining, "growth_ranks": ranks.duplicate(), "growth_job_id": jobs.job_id, "growth_job_hud": jobs.hud_text(), "growth_job_contributions": jobs.contributions.duplicate(true)}
+	return {"growth_level": level, "growth_xp": experience, "growth_next_xp": next_level_experience(), "growth_total_xp": total_experience, "growth_rerolls": rerolls_remaining, "growth_ranks": ranks.duplicate(), "growth_job_id": jobs.job_id, "growth_run_active": run_active, "growth_job_hud": jobs.hud_text(), "growth_job_contributions": jobs.contributions.duplicate(true)}
 
 
 func _emit_metrics() -> void:
