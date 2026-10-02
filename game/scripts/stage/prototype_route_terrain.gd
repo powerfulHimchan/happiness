@@ -9,6 +9,11 @@ const WIND_STEPS: Array[Rect2] = [
 	Rect2(3720, 720, 260, 32),
 ]
 const PLAYER_HALF_HEIGHT := 60.0
+const CLOCKWORK_STEPS: Array[Rect2] = [
+	Rect2(3080, 720, 200, 32),
+	Rect2(3400, 600, 200, 32),
+	Rect2(3720, 720, 220, 32),
+]
 const SAFE_EDGE_MARGIN := 40.0
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
@@ -31,6 +36,8 @@ func configure(stage: int, route: String, enabled: bool = true) -> void:
 			platforms.append(MEADOW_BRIDGE)
 		elif route == "wind":
 			platforms.assign(WIND_STEPS)
+		elif route == "clockwork":
+			platforms.assign(CLOCKWORK_STEPS)
 	for index in platforms.size():
 		var rect := platforms[index]
 		var body := StaticBody2D.new()
@@ -54,7 +61,8 @@ func _physics_process(_delta: float) -> void:
 		if absf(feet_y - rect.position.y) <= 3.0 and player.global_position.x >= rect.position.x + SAFE_EDGE_MARGIN and player.global_position.x <= rect.end.x - SAFE_EDGE_MARGIN:
 			if index != _last_landed_platform:
 				_last_landed_platform = index
-				player.set_safe_spawn(Vector2(rect.get_center().x, rect.position.y - PLAYER_HALF_HEIGHT), "풀숲 다리" if route_id == "meadow" else "바람 발판 %d" % (index + 1))
+				var label := "태엽 발판" if route_id == "clockwork" else "바람 발판"
+				player.set_safe_spawn(Vector2(rect.get_center().x, rect.position.y - PLAYER_HALF_HEIGHT), "풀숲 다리" if route_id == "meadow" else "%s %d" % [label, index + 1])
 			return
 	_last_landed_platform = -1
 
@@ -66,6 +74,9 @@ func layout_snapshot() -> Dictionary:
 func _draw() -> void:
 	var base := Color("729452") if route_id == "meadow" else Color("5688a9")
 	var rim := Color("d3e996") if route_id == "meadow" else Color("c5f2ff")
+	if route_id == "clockwork":
+		base = Color("8b5940")
+		rim = Color("ffba66")
 	for index in platforms.size():
 		var rect := platforms[index]
 		draw_rect(rect, base, true)
@@ -73,4 +84,6 @@ func _draw() -> void:
 		for x in range(int(rect.position.x + 18), int(rect.end.x), 40):
 			draw_line(Vector2(x, rect.position.y + 12), Vector2(x, rect.end.y - 4), rim.darkened(0.25), 2)
 		var text := "풀숲 다리 · 그대로 전진" if route_id == "meadow" else "바람 발판 %d · 길게 점프" % (index + 1)
+		if route_id == "clockwork":
+			text = "태엽 발판 %d · 낙하 주의" % (index + 1)
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, -18), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("173147"))

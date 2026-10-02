@@ -201,6 +201,7 @@ var job_ultimate_rects: Array[Rect2] = []
 var job_ultimates: Array[Dictionary] = []
 var selected_job_ultimate: int = -1
 var stage_route_rects: Array[Rect2] = []
+var stage_route_options: Array[Dictionary] = PrototypeStageRunner.ROUTES.duplicate(true)
 var cleared_stage: int = 1
 var run_stage_count: int = 3
 var stage_recovered_health: int = 0
@@ -452,7 +453,7 @@ func _draw_boss_choice() -> void:
 	_draw_text_centered("보스 승리 · 웃는 태엽 기사", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 48)), 30, PASS_COLOR)
 	_draw_text_centered("기사는 사람들을 돌려보내라는 태엽 명령에 묶여 있었습니다.", Rect2(safe.position + Vector2(0, safe.size.y * 0.18), Vector2(safe.size.x, 32)), 20, TEXT_COLOR)
 	_draw_text_centered("이제 기사의 운명을 선택하세요.", Rect2(safe.position + Vector2(0, safe.size.y * 0.24), Vector2(safe.size.x, 30)), 19, MUTED_TEXT_COLOR)
-	var cards := [{"title": "구출", "lines": ["기사를 자유롭게 합니다.", "태엽 수호 영구 해금 · 체력 +5", "다음 도전 1회 · 체력 +10", "정예 지원 · 위기 회복 1회"]}, {"title": "파괴", "lines": ["길목의 위협을 없앱니다.", "핵의 잔향 영구 해금 · 스킬 +10%", "다음 도전 1회 · 피해 +10%", "받는 전투 피해도 +10%"]}]
+	var cards := [{"title": "구출", "lines": ["기사를 자유롭게 합니다.", "태엽 수호 영구 해금 · 체력 +5", "다음 도전 1회 · 체력 +10", "정예 지원 · 위기 회복 1회"]}, {"title": "파괴", "lines": ["길목의 위협을 없앱니다.", "핵의 잔향 영구 해금 · 스킬 +10%", "다음 도전 1회 · 피해 +10%", "피격 +10% · 다음 도전 위험 길"]}]
 	for index in cards.size():
 		var card: Dictionary = cards[index]
 		var rect := boss_choice_rects[index]
@@ -506,13 +507,16 @@ func _draw_weapon_rewards() -> void:
 		for line in item.lines.size():
 			_draw_text_centered(String(item.lines[line]), Rect2(rect.position + Vector2(0, rect.size.y * (0.44 + line * 0.16)), Vector2(rect.size.x, 30)), 18, TEXT_COLOR)
 	var reward_note := checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "보조 무기의 고유 효과는 50% 적용 · 등급 피해는 주 무기만"
+	if movement_metrics.get("run_route_id", "") == "clockwork" and not checkpoint_message.begins_with("중간 저장 실패"):
+		reward_note = "태엽 폐허 통과 · 체력 +20 / 필살기 +50 추가 지급 (상한 적용)"
 	_draw_text_centered(reward_note, Rect2(safe.position + Vector2(0, safe.size.y * 0.72), Vector2(safe.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	_draw_button(weapon_reward_confirm_rect, "선택한 무기로 교체" if selected_weapon_reward >= 0 else "무기를 선택하세요", selected_weapon_reward >= 0)
 	_draw_button(weapon_reward_skip_rect, "현재 무기 유지", false)
 
 
-func show_stage_routes(stage: int, stage_count: int, recovered_health: int) -> void:
+func show_stage_routes(stage: int, stage_count: int, recovered_health: int, routes: Array[Dictionary] = PrototypeStageRunner.ROUTES) -> void:
 	release_all_inputs()
+	stage_route_options = routes.duplicate(true)
 	cleared_stage = stage
 	run_stage_count = stage_count
 	stage_recovered_health = recovered_health
@@ -524,9 +528,10 @@ func show_stage_routes(stage: int, stage_count: int, recovered_health: int) -> v
 func _refresh_stage_routes() -> void:
 	var safe := _safe_area_in_viewport()
 	var gap := minf(32.0, safe.size.x * 0.03)
-	var card_width := (safe.size.x * 0.90 - gap) * 0.5
+	var count := stage_route_options.size()
+	var card_width := (safe.size.x * 0.90 - gap * (count - 1)) / count
 	stage_route_rects.clear()
-	for index in 2:
+	for index in count:
 		stage_route_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.43), Vector2(card_width, safe.size.y * 0.35)))
 
 
@@ -537,9 +542,9 @@ func _draw_stage_routes() -> void:
 	_draw_text_centered("스테이지 %d/%d 완료" % [cleared_stage, run_stage_count], Rect2(safe.position + Vector2(0, safe.size.y * 0.08), Vector2(safe.size.x, 50)), 32, PASS_COLOR)
 	_draw_text_centered("체력 +%d 회복 · 현재 %d/%d" % [stage_recovered_health, int(movement_metrics.get("health", 0)), int(movement_metrics.get("max_health", 100))], Rect2(safe.position + Vector2(0, safe.size.y * 0.20), Vector2(safe.size.x, 40)), 22, TEXT_COLOR)
 	_draw_text_centered("성장을 유지하고 다음 경로를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.30), Vector2(safe.size.x, 40)), 20, MUTED_TEXT_COLOR)
-	for index in PrototypeStageRunner.ROUTES.size():
+	for index in stage_route_options.size():
 		var rect := stage_route_rects[index]
-		var route := PrototypeStageRunner.ROUTES[index]
+		var route := stage_route_options[index]
 		draw_style_box(_panel_style(PANEL_COLOR), rect)
 		_draw_text_centered(String(route["name"]), Rect2(rect.position + Vector2(0, rect.size.y * 0.12), Vector2(rect.size.x, 40)), 28, ACTIVE_COLOR)
 		for line_index in route["lines"].size():
@@ -1156,7 +1161,7 @@ func _handle_screen_touch(position: Vector2) -> void:
 	if screen_mode == ScreenMode.STAGE_ROUTE:
 		for index in stage_route_rects.size():
 			if stage_route_rects[index].has_point(position):
-				stage_route_selected.emit(String(PrototypeStageRunner.ROUTES[index]["id"]))
+				stage_route_selected.emit(String(stage_route_options[index]["id"]))
 				return
 		return
 	if screen_mode == ScreenMode.JOB_MANIFESTATION:
@@ -1710,7 +1715,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-111 · 영구 해금과 시작 기억",
+		"GP-112 · 태엽 폐허 위험 경로",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR

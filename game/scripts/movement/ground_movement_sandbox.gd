@@ -342,6 +342,9 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		_intermission_stage = stage_runner.stage_number
 		controls.release_all_inputs()
 		var healing := ceili(player.damage_receiver.max_health * 0.20)
+		if stage_runner.route_id == "clockwork":
+			healing += 20
+			ultimate_controller.grant_stage_gauge(50)
 		var before := player.damage_receiver.health
 		player.apply_growth_health(0, healing)
 		_stage_recovered_health = player.damage_receiver.health - before
@@ -383,7 +386,7 @@ func _claim_weapon_reward(id: String) -> bool:
 		stage_runner.reward_claimed = false
 		weapon_controller.set_equipment(previous)
 		return false
-	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health)
+	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health, stage_runner.available_routes())
 	return true
 
 
@@ -462,14 +465,14 @@ func continue_saved_run() -> bool:
 			_finish_growth_selection()
 			stage_runner.force_emit_metrics()
 	elif stage_runner.reward_claimed:
-		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, 0)
+		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, 0, stage_runner.available_routes())
 	else:
 		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment))
 	return true
 
 
 func _continue_stage(route: String) -> void:
-	if not stage_runner.has_next_stage() or not stage_runner.reward_claimed or not growth.run_active or player.damage_receiver.dead or route not in ["meadow", "wind"] or controls.current_screen_mode() != 9:
+	if not stage_runner.has_next_stage() or not stage_runner.reward_claimed or not growth.run_active or player.damage_receiver.dead or not stage_runner.can_select_route(route) or controls.current_screen_mode() != 9:
 		return
 	controls.release_all_inputs()
 	weapon_controller.prepare_next_stage()
@@ -481,7 +484,7 @@ func _continue_stage(route: String) -> void:
 			projectile.free()
 	if route == "meadow":
 		player.apply_growth_health(0, 20)
-	else:
+	elif route == "wind":
 		ultimate_controller.grant_stage_gauge(25)
 	target_selector.reset_selection()
 	growth.begin_next_stage()

@@ -165,5 +165,5 @@ static func _valid_stage(value: Variant) -> bool:
 static func description(choice: String) -> String:
 	match choice:
 		"rescue": return "기사 동행 · 체력 +10 · 정예 지원 · 위기 회복 1회"
-		"destroy": return "태엽핵 · 주는 피해 +10% · 받는 전투 피해 +10%"
+		"destroy": return "태엽핵 · 피해/피격 +10% · 2스테이지 위험 길 개방"
 	return "다음 도전 보상 없음"
