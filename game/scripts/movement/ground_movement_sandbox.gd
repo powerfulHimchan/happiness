@@ -514,6 +514,8 @@ func _suspend_combat_environment() -> void:
 	_combat_environment_suspended = true
 	_suspended_node_states.clear()
 	var nodes: Array[Node] = [stage_runner, target_selector]
+	if controls.village_environment_owned:
+		nodes.append_array([player, weapon_controller])
 	for group_name in [&"combat_enemy", &"enemy_projectile", &"targetable"]:
 		for candidate in get_tree().get_nodes_in_group(group_name):
 			var candidate_node := candidate as Node

@@ -100,24 +100,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-gp113-weapon-blueprints.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-gp114-time-anchor-village.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-gp113-weapon-blueprints.apk
+          cp "${apk_path}" dist/happiness-tale-gp114-time-anchor-village.apk
           (
             cd dist
-            sha256sum happiness-tale-gp113-weapon-blueprints.apk \
-              | tee happiness-tale-gp113-weapon-blueprints.apk.sha256
+            sha256sum happiness-tale-gp114-time-anchor-village.apk \
+              | tee happiness-tale-gp114-time-anchor-village.apk.sha256
           )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-gp113-weapon-blueprints-apk
+          name: happiness-tale-gp114-time-anchor-village-apk
           path: |
-            dist/happiness-tale-gp113-weapon-blueprints.apk
-            dist/happiness-tale-gp113-weapon-blueprints.apk.sha256
+            dist/happiness-tale-gp114-time-anchor-village.apk
+            dist/happiness-tale-gp114-time-anchor-village.apk.sha256
           if-no-files-found: error
           retention-days: 14

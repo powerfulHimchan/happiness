@@ -44,6 +44,7 @@ enum ScreenMode {
 	START_WEAPON,
 	WEAPON_REWARD,
 	BOSS_CHOICE,
+	VILLAGE,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -128,6 +129,9 @@ var main_start_rect := Rect2()
 var main_continue_rect := Rect2()
 var checkpoint_available: bool = false
 var checkpoint_message: String = ""
+var main_village_rect: Rect2
+var village_page: String = "village"
+var village_environment_owned: bool = false
 var main_layout_rect := Rect2()
 var main_feedback_rect := Rect2()
 var feedback_panel_rect := Rect2()
@@ -317,6 +321,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.VILLAGE:
+		_draw_village()
+		return
 	if screen_mode == ScreenMode.BOSS_CHOICE:
 		_draw_boss_choice()
 		return
@@ -691,6 +698,7 @@ func update_test_record_summary(summary: Dictionary) -> void:
 func begin_retry(starting_weapon: String = "sword") -> bool:
 	if starting_weapon not in ["sword", "bow"]:
 		return false
+	_leave_village_environment()
 	selected_starting_weapon = starting_weapon
 	release_all_inputs()
 	result_snapshot.clear()
@@ -701,6 +709,7 @@ func begin_retry(starting_weapon: String = "sword") -> bool:
 
 
 func show_main_screen() -> void:
+	_leave_village_environment()
 	release_all_inputs()
 	screen_mode = ScreenMode.MAIN
 	queue_redraw()
@@ -784,7 +793,7 @@ func begin_stage_from_main(starting_weapon: String = "sword") -> bool:
 
 
 func show_start_weapon_selection() -> void:
-	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT]:
+	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]:
 		return
 	start_weapon_return_mode = screen_mode
 	start_weapon_previous_selection = selected_starting_weapon
@@ -1055,6 +1064,7 @@ func layout_snapshot() -> Dictionary:
 		"move": move_zone,
 		"actions": action_rects.duplicate(),
 		"result_panel": result_panel_rect,
+		"main_village": main_village_rect,
 		"growth_cards": growth_card_rects.duplicate(),
 		"growth_reroll": growth_reroll_rect,
 		"job_panel": job_panel_rect,
@@ -1119,6 +1129,9 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.VILLAGE:
+		_handle_village_touch(position)
+		return
 	if screen_mode == ScreenMode.BOSS_CHOICE:
 		_refresh_boss_choice_layout()
 		for index in boss_choice_rects.size():
@@ -1191,6 +1204,8 @@ func _handle_screen_touch(position: Vector2) -> void:
 			show_start_weapon_selection()
 		elif result_main_rect.has_point(position):
 			show_main_screen()
+	elif screen_mode == ScreenMode.MAIN and main_village_rect.has_point(position):
+		show_village()
 	elif screen_mode == ScreenMode.MAIN and main_start_rect.has_point(position):
 		show_start_weapon_selection()
 	elif screen_mode == ScreenMode.MAIN and checkpoint_available and main_continue_rect.has_point(position):
@@ -1502,9 +1517,10 @@ func _refresh_layout() -> void:
 		Vector2(280.0, 68.0)
 	)
 	main_feedback_rect = Rect2(
-		Vector2(result_panel_rect.get_center().x - 140.0, result_panel_rect.end.y - 190.0),
+		Vector2(result_panel_rect.get_center().x - 310.0, result_panel_rect.end.y - 190.0),
 		Vector2(280.0, 56.0)
 	)
+	main_village_rect = Rect2(Vector2(result_panel_rect.get_center().x + 30.0, result_panel_rect.end.y - 190.0), Vector2(280.0, 56.0))
 	main_continue_rect = Rect2(
 		Vector2(result_panel_rect.get_center().x - 140.0, result_panel_rect.end.y - 274.0),
 		Vector2(280.0, 56.0)
@@ -1718,7 +1734,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-113 · 무기 설계도와 태엽 무기",
+		"GP-114 · 시간의 닻 마을",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
@@ -1732,6 +1748,7 @@ func _draw_main_screen() -> void:
 	if not checkpoint_available:
 		_draw_text_centered("영구 기억 %d/2 · 무기 설계도 %d/2 해금" % [unlocked_memories.size(), unlocked_weapon_blueprints.size()], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	_draw_button(main_feedback_rect, "설정", false)
+	_draw_button(main_village_rect, "시간의 닻 마을", true)
 	if checkpoint_available:
 		_draw_button(main_continue_rect, "이어하기", true)
 	if not checkpoint_message.is_empty():
@@ -2285,3 +2302,86 @@ func _draw_memory_cards() -> void:
 			draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 3)
 		_draw_text_centered(String(card.name) + (" · 잠김" if not available else ""), Rect2(rect.position + Vector2(0, rect.size.y * 0.10), Vector2(rect.size.x, 28)), 19, ACTIVE_COLOR if available else MUTED_TEXT_COLOR)
 		_draw_text_centered(String(card.effect if available else card.condition), Rect2(rect.position + Vector2(0, rect.size.y * 0.58), Vector2(rect.size.x, 24)), 16, TEXT_COLOR if available else MUTED_TEXT_COLOR)
+
+
+func show_village() -> void:
+	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]:
+		return
+	release_all_inputs()
+	village_page = "village"
+	screen_mode = ScreenMode.VILLAGE
+	if not village_environment_owned:
+		village_environment_owned = true
+		combat_configuration_started.emit()
+	queue_redraw()
+
+
+func _leave_village_environment() -> void:
+	if village_environment_owned:
+		village_environment_owned = false
+		combat_configuration_finished.emit()
+
+
+func village_snapshot() -> Dictionary:
+	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary)
+	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(_safe_area_in_viewport(), cards.size(), checkpoint_available)}
+
+
+func _handle_village_touch(position: Vector2) -> void:
+	var snapshot := village_snapshot()
+	var layout: Dictionary = snapshot.layout
+	if layout.back.has_point(position):
+		if village_page == "village":
+			show_main_screen()
+		else:
+			village_page = "village"
+	elif layout.start.has_point(position):
+		show_start_weapon_selection()
+	elif checkpoint_available and layout["continue"].has_point(position):
+		show_main_screen()
+		continue_requested.emit()
+	elif village_page == "village":
+		for i in layout.cards.size():
+			if layout.cards[i].has_point(position):
+				village_page = PrototypeVillageView.FACILITIES[i]
+				break
+	queue_redraw()
+
+
+func _draw_village() -> void:
+	var safe := _safe_area_in_viewport()
+	var snapshot := village_snapshot()
+	var layout: Dictionary = snapshot.layout
+	draw_rect(Rect2(Vector2.ZERO, size), Color("182d36"))
+	draw_rect(Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.75)), Color("2b4b43"))
+	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
+	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
+	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "이 기기의 로컬 도전 기록"
+	_draw_text_centered(subtitle, Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, safe.size.y * 0.06)), 20, TEXT_COLOR)
+	var resident := "정착한 태엽 기사 · 다음 여행도 무사히 돌아오세요." if snapshot.resident else "태엽 기사 · 보스 구출 후 마을에 정착합니다."
+	_draw_text_centered(resident, Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.06)), 19, ACTIVE_COLOR if snapshot.resident else MUTED_TEXT_COLOR)
+	for i in snapshot.cards.size():
+		var card: Dictionary = snapshot.cards[i]
+		var rect: Rect2 = layout.cards[i]
+		var color := Color("3f675b") if card.open else Color("354752")
+		draw_style_box(_panel_style(color), rect)
+		# 마을 건물의 지붕을 코드로 그린다.
+		if village_page == "village":
+			var roof_y := rect.position.y + rect.size.y * 0.13
+			draw_colored_polygon(PackedVector2Array([Vector2(rect.position.x + 20, roof_y), Vector2(rect.get_center().x, rect.position.y - 10), Vector2(rect.end.x - 20, roof_y)]), Color("ab765b") if card.open else Color("607078"))
+		var title_rect := Rect2(rect.position + Vector2(12, rect.size.y * 0.16), Vector2(rect.size.x - 24, rect.size.y * 0.13))
+		_draw_village_text(card.name, title_rect, 26, TEXT_COLOR)
+		_draw_village_text("열림" if card.open else "잠김 · 조건을 확인하세요", Rect2(rect.position + Vector2(12, rect.size.y * 0.31), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 17, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
+		for j in card.lines.size():
+			_draw_village_text(String(card.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.44 + j * 0.08)), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 18, TEXT_COLOR)
+	_draw_button(layout.back, "메인 화면" if village_page == "village" else "마을로", false)
+	_draw_button(layout.start, "새 도전 준비", true)
+	if checkpoint_available:
+		_draw_button(layout["continue"], "이어하기", true)
+
+
+func _draw_village_text(value: String, rect: Rect2, requested_size: int, color: Color) -> void:
+	var font_size := mini(requested_size, maxi(12, int(rect.size.y * 0.8)))
+	while font_size > 10 and ThemeDB.fallback_font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > rect.size.x:
+		font_size -= 1
+	_draw_text_centered(value, rect, font_size, color)
