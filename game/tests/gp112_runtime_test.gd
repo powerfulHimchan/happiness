@@ -38,6 +38,7 @@ func _run() -> void:
 			sandbox._continue_stage("clockwork")
 			if not _check(controls.stage_route_rects.size() == 2 and runner.stage_number == 1 and player.global_position == start and not runner.next_stage("clockwork"), "파괴 보상 없는 위험 길 UI·실행 차단"): return
 			if not _check(legacy.grant("gp112-skipped", "destroy") == OK, "파괴 보상 준비"): return
+			sandbox._update_boss_legacy_status()
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
 			controls.use_boss_legacy = false
@@ -46,6 +47,7 @@ func _run() -> void:
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "영구 기억 도전 보상 유지"): return
 			if not _check(player.memory_id == "core_echo" and player.boss_legacy.is_empty() and controls.stage_route_options.size() == 2 and not runner.can_select_route("clockwork"), "영구 기억만 장착·일회 보상 건너뛰기는 위험 길 개방 없음"): return
 			if not _check(legacy.grant("gp112-active", "destroy") == OK, "새 파괴 보상 준비"): return
+			sandbox._update_boss_legacy_status()
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
 			_tap(controls.start_weapon_confirm_rect.get_center())
@@ -163,4 +165,3 @@ func _jump_to(destination: Vector2) -> bool:
 	for ignored in 8:
 		await physics_frame
 	return _check(left_floor and player.is_on_floor() and absf(player.global_position.y - destination.y) < 4 and absf(player.global_position.x - destination.x) < 65 and player.last_safe_position == destination, "기본 점프 착지·새 발판 안전 복귀점: 위치 %s / 목적지 %s / 복귀 %s" % [player.global_position, destination, player.last_safe_position])
-
