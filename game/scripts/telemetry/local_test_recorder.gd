@@ -25,13 +25,15 @@ func _ready() -> void:
 	_append_event("app_started", {})
 
 
-func start_run() -> void:
+func start_run(run_id: String = "") -> void:
 	_run_sequence += 1
 	_active_run_id = "%d-%d-%d" % [
 		int(Time.get_unix_time_from_system()),
 		Time.get_ticks_msec(),
 		_run_sequence,
 	]
+	if not run_id.is_empty():
+		_active_run_id = run_id
 	_recorded_section_count = 0
 	_recorded_stage_number = 1
 	_recorded_stage_completed = false

@@ -89,6 +89,9 @@ static func valid_state(state: Dictionary) -> bool:
 	for key in ["stage", "growth", "player", "weapons", "ultimate", "recorder"]:
 		if not state.get(key) is Dictionary:
 			return false
+	if state.has("boss_legacy") and (not state.boss_legacy is Dictionary or not BossLegacyStore.valid_active(state.boss_legacy, String(state.recorder.get("id", "")))):
+		return false
+	var legacy: Dictionary = state.get("boss_legacy", {})
 	var stage: Dictionary = state.stage
 	if stage.has("reward_claimed") and not stage.reward_claimed is bool:
 		return false
@@ -123,6 +126,9 @@ static func valid_state(state: Dictionary) -> bool:
 			return false
 	if not is_equal_approx(float(stage.elapsed), float(stage.history[-1].elapsed_s)) or stage.route != stage.history[-1].route:
 		return false
+	for assisted_stage in legacy.get("assisted_stages", []):
+		if float(assisted_stage) > float(stage.number):
+			return false
 	var growth: Dictionary = state.growth
 	if not _number(growth.get("level"), 1, 100, true) or not _number(growth.get("xp"), 0, 20 + (int(growth.level) - 1) * 5 - 1, true) or not _number(growth.get("total_xp"), 0, 100000, true) or not _number(growth.get("rerolls"), 0, 1, true) or not growth.get("ranks") is Dictionary or not growth.get("contributions") is Dictionary or not growth.get("recent") is Dictionary or growth.get("job") not in ["", "vanguard", "tracker"]:
 		return false
@@ -160,7 +166,7 @@ static func valid_state(state: Dictionary) -> bool:
 		if not _number(player.get(key), 0, 100):
 			return false
 	var ranks: Dictionary = growth.ranks
-	var expected_max := 100 + int(ranks.get("vitality", 0)) * 20 + int(ranks.get("recovery", 0)) * 10 + int(ranks.get("vanguard_vigor", 0)) * 30 + int(ranks.get("tracker_breath", 0)) * 20
+	var expected_max := 100 + (10 if legacy.get("choice") == "rescue" else 0) + int(ranks.get("vitality", 0)) * 20 + int(ranks.get("recovery", 0)) * 10 + int(ranks.get("vanguard_vigor", 0)) * 30 + int(ranks.get("tracker_breath", 0)) * 20
 	var sword_bonus := int(ranks.get("sword_power", 0)) * 0.15 + int(ranks.get("vanguard_edge", 0)) * 0.20 + (0.10 if growth.job == "vanguard" else 0.0)
 	var bow_bonus := int(ranks.get("bow_power", 0)) * 0.15 + int(ranks.get("tracker_focus", 0)) * 0.20 + (0.10 if growth.job == "tracker" else 0.0)
 	if int(player.max_health) != expected_max or not is_equal_approx(float(player.common), int(ranks.get("power", 0)) * 0.10) or not is_equal_approx(float(player.sword), sword_bonus) or not is_equal_approx(float(player.bow), bow_bonus):

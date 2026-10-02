@@ -204,6 +204,10 @@ var stage_route_rects: Array[Rect2] = []
 var cleared_stage: int = 1
 var run_stage_count: int = 3
 var stage_recovered_health: int = 0
+var pending_boss_legacy: Dictionary = {}
+var active_boss_legacy: Dictionary = {}
+var use_boss_legacy: bool = false
+var boss_legacy_toggle_rect := Rect2()
 var selected_starting_weapon: String = "sword"
 var start_weapon_previous_selection: String = "sword"
 var start_weapon_return_mode: int = ScreenMode.MAIN
@@ -442,7 +446,7 @@ func _draw_boss_choice() -> void:
 	_draw_text_centered("보스 승리 · 웃는 태엽 기사", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 48)), 30, PASS_COLOR)
 	_draw_text_centered("기사는 사람들을 돌려보내라는 태엽 명령에 묶여 있었습니다.", Rect2(safe.position + Vector2(0, safe.size.y * 0.18), Vector2(safe.size.x, 32)), 20, TEXT_COLOR)
 	_draw_text_centered("이제 기사의 운명을 선택하세요.", Rect2(safe.position + Vector2(0, safe.size.y * 0.24), Vector2(safe.size.x, 30)), 19, MUTED_TEXT_COLOR)
-	var cards := [{"title": "구출", "lines": ["태엽 명령을 해제하고", "기사를 자유롭게 합니다.", "도전 결과에 구출을 기록합니다."]}, {"title": "파괴", "lines": ["기사의 태엽핵을 파괴하고", "길목의 위협을 없앱니다.", "도전 결과에 파괴를 기록합니다."]}]
+	var cards := [{"title": "구출", "lines": ["태엽 명령을 해제하고", "기사를 자유롭게 합니다.", "다음 도전 1회 · 체력 +10", "정예 지원 · 위기 회복 1회"]}, {"title": "파괴", "lines": ["기사의 태엽핵을 파괴하고", "길목의 위협을 없앱니다.", "다음 도전 1회 · 피해 +10%", "받는 전투 피해도 +10%"]}]
 	for index in cards.size():
 		var card: Dictionary = cards[index]
 		var rect := boss_choice_rects[index]
@@ -451,7 +455,7 @@ func _draw_boss_choice() -> void:
 			draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 4)
 		_draw_text_centered(String(card.title), Rect2(rect.position + Vector2(0, rect.size.y * 0.10), Vector2(rect.size.x, 42)), 28, ACTIVE_COLOR)
 		for line in card.lines.size():
-			_draw_text_centered(String(card.lines[line]), Rect2(rect.position + Vector2(0, rect.size.y * (0.40 + line * 0.17)), Vector2(rect.size.x, 30)), 19, TEXT_COLOR)
+			_draw_text_centered(String(card.lines[line]), Rect2(rect.position + Vector2(0, rect.size.y * (0.30 + line * 0.16)), Vector2(rect.size.x, 30)), 19, TEXT_COLOR)
 	var note := checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "선택 후 확정하세요 · 다른 도전에서는 다시 선택할 수 있습니다."
 	_draw_text_centered(note, Rect2(safe.position + Vector2(0, safe.size.y * 0.75), Vector2(safe.size.x, 32)), 18, MUTED_TEXT_COLOR)
 	_draw_button(boss_choice_confirm_rect, "선택 확정 · 도전 완료" if selected_boss_choice >= 0 else "구출 또는 파괴를 선택하세요", selected_boss_choice >= 0)
@@ -771,6 +775,7 @@ func show_start_weapon_selection() -> void:
 		return
 	start_weapon_return_mode = screen_mode
 	start_weapon_previous_selection = selected_starting_weapon
+	use_boss_legacy = not pending_boss_legacy.is_empty()
 	release_all_inputs()
 	screen_mode = ScreenMode.START_WEAPON
 	_refresh_start_weapon_layout()
@@ -785,6 +790,7 @@ func _refresh_start_weapon_layout() -> void:
 	for index in 2:
 		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.25), Vector2(card_width, safe.size.y * 0.40)))
 	var button_width := minf(280.0, safe.size.x * 0.27)
+	boss_legacy_toggle_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.72), Vector2(safe.size.x * 0.90, safe.size.y * 0.07))
 	start_weapon_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - gap * 0.5 - button_width, safe.size.y * 0.83), Vector2(button_width, minf(64.0, safe.size.y * 0.11)))
 	start_weapon_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 + gap * 0.5, safe.size.y * 0.83), start_weapon_cancel_rect.size)
 
@@ -794,7 +800,7 @@ func _draw_start_weapon_selection() -> void:
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
 	_draw_text_centered("시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 54)), 32, ACTIVE_COLOR)
-	_draw_text_centered("선택한 무기를 주 무기로 장착하고 새 도전을 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, 34)), 19, TEXT_COLOR)
+	_draw_text_centered(BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "선택한 무기를 주 무기로 장착하고 새 도전을 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, 34)), 19, TEXT_COLOR)
 	var ids := ["sword", "bow"]
 	var names := ["검", "활"]
 	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m"]
@@ -809,7 +815,10 @@ func _draw_start_weapon_selection() -> void:
 		var offsets := [0.07, 0.32, 0.52, 0.73]
 		for line_index in labels.size():
 			_draw_text_centered(labels[line_index], Rect2(rect.position + Vector2(0, rect.size.y * offsets[line_index]), Vector2(rect.size.x, 38)), 28 if line_index == 0 else 18, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
-	_draw_text_centered("직업은 시작 무기로 고정되지 않고 능력 선택과 전투로 발현됩니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.70), Vector2(safe.size.x, 34)), 18, MUTED_TEXT_COLOR)
+	if not pending_boss_legacy.is_empty():
+		_draw_button(boss_legacy_toggle_rect, "다음 도전 1회 · 보상 적용 " + ("켜짐" if use_boss_legacy else "꺼짐 · 이번 기회 건너뛰기"), use_boss_legacy)
+	else:
+		_draw_text_centered("직업은 능력 선택과 전투로 발현됩니다", boss_legacy_toggle_rect, 18, MUTED_TEXT_COLOR)
 	_draw_button(start_weapon_cancel_rect, "돌아가기", false)
 	_draw_button(start_weapon_confirm_rect, "이 무기로 시작", true)
 
@@ -1111,6 +1120,9 @@ func _handle_screen_touch(position: Vector2) -> void:
 			if start_weapon_card_rects[index].has_point(position):
 				selected_starting_weapon = "sword" if index == 0 else "bow"
 				return
+		if not pending_boss_legacy.is_empty() and boss_legacy_toggle_rect.has_point(position):
+			use_boss_legacy = not use_boss_legacy
+			return
 		if start_weapon_cancel_rect.has_point(position):
 			selected_starting_weapon = start_weapon_previous_selection
 			screen_mode = start_weapon_return_mode
@@ -1545,7 +1557,7 @@ func _draw_header() -> void:
 		true
 	)
 	_draw_text("Lv.%d · 경험치 %d/%d" % [int(movement_metrics.get("growth_level", 1)), int(movement_metrics.get("growth_xp", 0)), int(movement_metrics.get("growth_next_xp", 20))], Vector2(left_x, top_y + 62.0), 17, ACTIVE_COLOR)
-	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")), Vector2(left_x, top_y + 86.0), 15, MUTED_TEXT_COLOR)
+	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")) + _legacy_hud_label(), Vector2(left_x, top_y + 86.0), 15, MUTED_TEXT_COLOR)
 
 	_draw_text(
 		"%d/%d · %s  %d/%d" % [
@@ -1673,13 +1685,13 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-109 · 보스전과 구출·파괴 선택",
+		"GP-110 · 다음 도전의 태엽 기사 보상",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
 	)
 	_draw_text_centered(
-		"완료 지점 저장 · 보상·보스 선택 화면에서 이어하기",
+		BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "완료 지점 저장 · 앱을 종료해도 이어하기",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
 		19,
 		MUTED_TEXT_COLOR
@@ -2200,3 +2212,16 @@ func _safe_area_in_viewport() -> Rect2:
 func _format_clock(value: float) -> String:
 	var total_seconds := maxi(0, int(floor(value)))
 	return "%d:%02d" % [int(total_seconds / 60), total_seconds % 60]
+
+
+func update_boss_legacy_status(pending: Dictionary, active: Dictionary) -> void:
+	pending_boss_legacy = pending.duplicate(true)
+	active_boss_legacy = active.duplicate(true)
+	queue_redraw()
+
+
+func _legacy_hud_label() -> String:
+	match active_boss_legacy.get("choice"):
+		"rescue": return " · 기사 회복 " + ("사용됨" if active_boss_legacy.rescue_used else "대기")
+		"destroy": return " · 핵 +10% / 위험 +10%"
+	return ""

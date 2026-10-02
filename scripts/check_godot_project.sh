@@ -51,6 +51,8 @@ required_files=(
   "$game_root/tests/gp107_runtime_test.gd"
   "$game_root/tests/gp108_runtime_test.gd"
   "$game_root/tests/gp109_runtime_test.gd"
+  "$game_root/tests/gp110_runtime_test.gd"
+  "$game_root/scripts/stage/boss_legacy_store.gd"
   "$game_root/scripts/combat/boss_clockwork_knight.gd"
   "$game_root/assets/clockwork_knight.svg"
   "$game_root/scripts/combat/prototype_weapon_rewards.gd"
@@ -571,6 +573,10 @@ if [[ -n "$godot_command" ]]; then
   for boss_phase in seed resolve empty resolved-seed resolved-resume empty-resolved; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp109_runtime_test.gd -- "$boss_phase"
+  done
+  for legacy_phase in reward-seed rescue-start rescue-resume destroy-start destroy-resume; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp110_runtime_test.gd -- "$legacy_phase"
   done
   echo "Godot headless project check: OK"
 else
