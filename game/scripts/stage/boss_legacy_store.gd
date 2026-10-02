@@ -18,14 +18,24 @@ func grant(source: String, choice: String) -> Error:
 	return _append({"event": "reward", "source": source, "choice": choice})
 
 
-func claim(run_id: String, enabled: bool) -> Dictionary:
-	if run_id.is_empty():
-		return {"error": ERR_INVALID_DATA, "state": {}}
-	var pending := pending_reward()
+func progress_snapshot() -> Dictionary:
+	var data := _load()
+	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory}
+
+
+func claim(run_id: String, enabled: bool, memory_id: String = "") -> Dictionary:
+	var data := _load()
+	if run_id.is_empty() or not PrototypeMemoryAbilities.available(memory_id, data.unlocked):
+		return {"error": ERR_INVALID_DATA, "state": {}, "memory_id": ""}
+	var pending: Dictionary = data.pending
 	if pending.is_empty():
-		return {"error": OK, "state": {}}
-	var error := _append({"event": "claim", "source": pending.source, "run_id": run_id, "enabled": enabled})
-	return {"error": error, "state": {"choice": pending.choice, "source_run": pending.source, "run_id": run_id, "rescue_used": false, "assisted_stages": []} if error == OK and enabled else {}}
+		var error: Error = OK
+		if memory_id != data.selected_memory:
+			error = _append({"event": "loadout", "run_id": run_id, "memory_id": memory_id})
+		return {"error": error, "state": {}, "memory_id": memory_id}
+	# 보상 소비와 영구 기억 선택은 하나의 정상 줄로 함께 확정한다.
+	var error := _append({"event": "claim", "source": pending.source, "run_id": run_id, "enabled": enabled, "memory_id": memory_id})
+	return {"error": error, "state": {"choice": pending.choice, "source_run": pending.source, "run_id": run_id, "rescue_used": false, "assisted_stages": []} if error == OK and enabled else {}, "memory_id": memory_id}
 
 
 func restore_active(state: Dictionary) -> Dictionary:
@@ -44,7 +54,7 @@ func restore_active(state: Dictionary) -> Dictionary:
 
 
 func spend_rescue(state: Dictionary) -> bool:
-	if state.is_empty() or state.choice != "rescue" or restore_active(state).rescue_used:
+	if state.is_empty() or state.choice != "rescue" or state.rescue_used or restore_active(state).rescue_used:
 		return false
 	if _append({"event": "rescue", "run_id": state.run_id}) != OK:
 		return false
@@ -53,7 +63,7 @@ func spend_rescue(state: Dictionary) -> bool:
 
 
 func spend_assist(state: Dictionary, stage: int) -> bool:
-	if state.is_empty() or state.choice != "rescue" or stage in restore_active(state).assisted_stages:
+	if state.is_empty() or state.choice != "rescue" or stage in state.assisted_stages or stage in restore_active(state).assisted_stages:
 		return false
 	if _append({"event": "assist", "run_id": state.run_id, "stage": stage}) != OK:
 		return false
@@ -82,7 +92,7 @@ func _append(event: Dictionary) -> Error:
 
 
 func _load() -> Dictionary:
-	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}}
+	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": ""}
 	if not FileAccess.file_exists(save_path):
 		return result
 	var file := FileAccess.open(save_path, FileAccess.READ)
@@ -109,11 +119,19 @@ func _load() -> Dictionary:
 			"reward":
 				if not source.is_empty() and event.get("choice") in ["rescue", "destroy"] and not result.rewards.has(source):
 					result.rewards[source] = event.choice
+					result.unlocked[PrototypeMemoryAbilities.CHOICE_IDS[event.choice]] = true
 					result.pending = {"source": source, "choice": event.choice}
 			"claim":
 				if not run_id.is_empty() and result.pending.get("source") == source and event.get("enabled") is bool:
+					if event.has("memory_id"):
+						if not event.memory_id is String or not PrototypeMemoryAbilities.available(event.memory_id, result.unlocked):
+							continue
+						result.selected_memory = event.memory_id
 					result.claims[run_id] = source
 					result.pending = {}
+			"loadout":
+				if not run_id.is_empty() and event.get("memory_id") is String and PrototypeMemoryAbilities.available(event.memory_id, result.unlocked):
+					result.selected_memory = event.memory_id
 			"rescue", "assist":
 				if not result.claims.has(run_id):
 					continue

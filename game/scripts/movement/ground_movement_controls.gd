@@ -204,6 +204,12 @@ var stage_route_rects: Array[Rect2] = []
 var cleared_stage: int = 1
 var run_stage_count: int = 3
 var stage_recovered_health: int = 0
+var unlocked_memories: Dictionary = {}
+var preferred_memory_id: String = ""
+var selected_memory_id: String = ""
+var active_memory_id: String = ""
+var start_memory_previous_selection: String = ""
+var memory_card_rects: Array[Rect2] = []
 var pending_boss_legacy: Dictionary = {}
 var active_boss_legacy: Dictionary = {}
 var use_boss_legacy: bool = false
@@ -446,7 +452,7 @@ func _draw_boss_choice() -> void:
 	_draw_text_centered("보스 승리 · 웃는 태엽 기사", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 48)), 30, PASS_COLOR)
 	_draw_text_centered("기사는 사람들을 돌려보내라는 태엽 명령에 묶여 있었습니다.", Rect2(safe.position + Vector2(0, safe.size.y * 0.18), Vector2(safe.size.x, 32)), 20, TEXT_COLOR)
 	_draw_text_centered("이제 기사의 운명을 선택하세요.", Rect2(safe.position + Vector2(0, safe.size.y * 0.24), Vector2(safe.size.x, 30)), 19, MUTED_TEXT_COLOR)
-	var cards := [{"title": "구출", "lines": ["태엽 명령을 해제하고", "기사를 자유롭게 합니다.", "다음 도전 1회 · 체력 +10", "정예 지원 · 위기 회복 1회"]}, {"title": "파괴", "lines": ["기사의 태엽핵을 파괴하고", "길목의 위협을 없앱니다.", "다음 도전 1회 · 피해 +10%", "받는 전투 피해도 +10%"]}]
+	var cards := [{"title": "구출", "lines": ["기사를 자유롭게 합니다.", "태엽 수호 영구 해금 · 체력 +5", "다음 도전 1회 · 체력 +10", "정예 지원 · 위기 회복 1회"]}, {"title": "파괴", "lines": ["길목의 위협을 없앱니다.", "핵의 잔향 영구 해금 · 스킬 +10%", "다음 도전 1회 · 피해 +10%", "받는 전투 피해도 +10%"]}]
 	for index in cards.size():
 		var card: Dictionary = cards[index]
 		var rect := boss_choice_rects[index]
@@ -775,6 +781,8 @@ func show_start_weapon_selection() -> void:
 		return
 	start_weapon_return_mode = screen_mode
 	start_weapon_previous_selection = selected_starting_weapon
+	start_memory_previous_selection = selected_memory_id
+	selected_memory_id = preferred_memory_id
 	use_boss_legacy = not pending_boss_legacy.is_empty()
 	release_all_inputs()
 	screen_mode = ScreenMode.START_WEAPON
@@ -788,11 +796,16 @@ func _refresh_start_weapon_layout() -> void:
 	var card_width := (safe.size.x * 0.90 - gap) * 0.5
 	start_weapon_card_rects.clear()
 	for index in 2:
-		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.25), Vector2(card_width, safe.size.y * 0.40)))
+		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.24), Vector2(card_width, safe.size.y * 0.31)))
+	memory_card_rects.clear()
+	var memory_gap := minf(18.0, safe.size.x * 0.02)
+	var memory_width := (safe.size.x * 0.90 - memory_gap * 2) / 3.0
+	for index in 3:
+		memory_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (memory_width + memory_gap), safe.size.y * 0.58), Vector2(memory_width, safe.size.y * 0.14)))
 	var button_width := minf(280.0, safe.size.x * 0.27)
-	boss_legacy_toggle_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.72), Vector2(safe.size.x * 0.90, safe.size.y * 0.07))
-	start_weapon_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - gap * 0.5 - button_width, safe.size.y * 0.83), Vector2(button_width, minf(64.0, safe.size.y * 0.11)))
-	start_weapon_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 + gap * 0.5, safe.size.y * 0.83), start_weapon_cancel_rect.size)
+	boss_legacy_toggle_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.75), Vector2(safe.size.x * 0.90, safe.size.y * 0.06))
+	start_weapon_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - gap * 0.5 - button_width, safe.size.y * 0.86), Vector2(button_width, minf(64.0, safe.size.y * 0.09)))
+	start_weapon_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 + gap * 0.5, safe.size.y * 0.86), start_weapon_cancel_rect.size)
 
 
 func _draw_start_weapon_selection() -> void:
@@ -815,10 +828,11 @@ func _draw_start_weapon_selection() -> void:
 		var offsets := [0.07, 0.32, 0.52, 0.73]
 		for line_index in labels.size():
 			_draw_text_centered(labels[line_index], Rect2(rect.position + Vector2(0, rect.size.y * offsets[line_index]), Vector2(rect.size.x, 38)), 28 if line_index == 0 else 18, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
+	_draw_memory_cards()
 	if not pending_boss_legacy.is_empty():
 		_draw_button(boss_legacy_toggle_rect, "다음 도전 1회 · 보상 적용 " + ("켜짐" if use_boss_legacy else "꺼짐 · 이번 기회 건너뛰기"), use_boss_legacy)
 	else:
-		_draw_text_centered("직업은 능력 선택과 전투로 발현됩니다", boss_legacy_toggle_rect, 18, MUTED_TEXT_COLOR)
+		_draw_text_centered("영구 기억은 도전마다 하나만 장착합니다", boss_legacy_toggle_rect, 18, MUTED_TEXT_COLOR)
 	_draw_button(start_weapon_cancel_rect, "돌아가기", false)
 	_draw_button(start_weapon_confirm_rect, "이 무기로 시작", true)
 
@@ -1043,6 +1057,8 @@ func layout_snapshot() -> Dictionary:
 		"start_weapon_cards": start_weapon_card_rects.duplicate(),
 		"start_weapon_confirm": start_weapon_confirm_rect,
 		"start_weapon_cancel": start_weapon_cancel_rect,
+		"memory_cards": memory_card_rects.duplicate(),
+		"boss_legacy_toggle": boss_legacy_toggle_rect,
 		"boss_choice_cards": boss_choice_rects.duplicate(),
 		"boss_choice_confirm": boss_choice_confirm_rect,
 		"weapon_reward_cards": weapon_reward_rects.duplicate(),
@@ -1078,6 +1094,7 @@ func _show_result_screen() -> void:
 		"stage_history": movement_metrics.get("run_stage_history", []).duplicate(true),
 		"boss_choice": String(movement_metrics.get("boss_choice", "")),
 		"boss_name": String(movement_metrics.get("boss_name", "")),
+		"memory_id": active_memory_id,
 		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
 		"damage_causes": String(movement_metrics.get("damage_cause_summary", "피격 없음")),
 		"sword_hits": sword_hits,
@@ -1120,11 +1137,18 @@ func _handle_screen_touch(position: Vector2) -> void:
 			if start_weapon_card_rects[index].has_point(position):
 				selected_starting_weapon = "sword" if index == 0 else "bow"
 				return
+		for index in memory_card_rects.size():
+			if memory_card_rects[index].has_point(position):
+				var id: String = PrototypeMemoryAbilities.IDS[index]
+				if PrototypeMemoryAbilities.available(id, unlocked_memories):
+					selected_memory_id = id
+				return
 		if not pending_boss_legacy.is_empty() and boss_legacy_toggle_rect.has_point(position):
 			use_boss_legacy = not use_boss_legacy
 			return
 		if start_weapon_cancel_rect.has_point(position):
 			selected_starting_weapon = start_weapon_previous_selection
+			selected_memory_id = start_memory_previous_selection
 			screen_mode = start_weapon_return_mode
 		elif start_weapon_confirm_rect.has_point(position):
 			begin_retry(selected_starting_weapon)
@@ -1544,7 +1568,7 @@ func _draw_header() -> void:
 	var left_x := hud_rect.position.x + 20.0
 	var center_x := hud_rect.position.x + hud_rect.size.x * 0.34
 	var right_x := hud_rect.position.x + hud_rect.size.x * 0.62
-	var top_y := hud_rect.position.y + 34.0
+	var top_y := hud_rect.position.y + 28.0
 
 	var health: int = int(movement_metrics.get("health", 100))
 	var max_health: int = maxi(1, int(movement_metrics.get("max_health", 100)))
@@ -1556,8 +1580,9 @@ func _draw_header() -> void:
 		Color("69d06f") if health > max_health * 0.3 else Color("ef6f6c"),
 		true
 	)
-	_draw_text("Lv.%d · 경험치 %d/%d" % [int(movement_metrics.get("growth_level", 1)), int(movement_metrics.get("growth_xp", 0)), int(movement_metrics.get("growth_next_xp", 20))], Vector2(left_x, top_y + 62.0), 17, ACTIVE_COLOR)
-	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")) + _legacy_hud_label(), Vector2(left_x, top_y + 86.0), 15, MUTED_TEXT_COLOR)
+	_draw_text("Lv.%d · 경험치 %d/%d" % [int(movement_metrics.get("growth_level", 1)), int(movement_metrics.get("growth_xp", 0)), int(movement_metrics.get("growth_next_xp", 20))], Vector2(left_x, top_y + 56.0), 17, ACTIVE_COLOR)
+	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")), Vector2(left_x, top_y + 76.0), 15, MUTED_TEXT_COLOR)
+	_draw_text(PrototypeMemoryAbilities.profile(active_memory_id).name + _legacy_hud_label(), Vector2(left_x, top_y + 96.0), 13, ACTIVE_COLOR)
 
 	_draw_text(
 		"%d/%d · %s  %d/%d" % [
@@ -1632,7 +1657,7 @@ func _draw_result_screen() -> void:
 	)
 	var choice := String(result_snapshot.get("boss_choice", ""))
 	if choice in ["rescue", "destroy"]:
-		_draw_text_centered("웃는 태엽 기사 · %s" % ("구출" if choice == "rescue" else "파괴"), Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
+		_draw_text_centered("태엽 기사 %s · %s 영구 해금" % [("구출" if choice == "rescue" else "파괴"), PrototypeMemoryAbilities.profile(PrototypeMemoryAbilities.CHOICE_IDS[choice]).name], Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
 	var content_x := result_panel_rect.position.x + 54.0
 	var content_width := result_panel_rect.size.x - 108.0
 	var y := result_panel_rect.position.y + 158.0
@@ -1685,7 +1710,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-110 · 다음 도전의 태엽 기사 보상",
+		"GP-111 · 영구 해금과 시작 기억",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
@@ -1697,7 +1722,7 @@ func _draw_main_screen() -> void:
 		MUTED_TEXT_COLOR
 	)
 	if not checkpoint_available:
-		_draw_text_centered("태엽 기사 기록 · 구출 %d회 · 파괴 %d회" % [int(test_record_summary.get("boss_rescue_count", 0)), int(test_record_summary.get("boss_destroy_count", 0))], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
+		_draw_text_centered("영구 기억 %d/2 해금 · 시작할 때 하나를 선택하세요" % unlocked_memories.size(), Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	_draw_button(main_feedback_rect, "설정", false)
 	if checkpoint_available:
 		_draw_button(main_continue_rect, "이어하기", true)
@@ -2225,3 +2250,25 @@ func _legacy_hud_label() -> String:
 		"rescue": return " · 기사 회복 " + ("사용됨" if active_boss_legacy.rescue_used else "대기")
 		"destroy": return " · 핵 +10% / 위험 +10%"
 	return ""
+
+
+func update_memory_status(unlocked: Dictionary, preferred: String, active: String) -> void:
+	unlocked_memories = unlocked.duplicate()
+	preferred_memory_id = preferred
+	active_memory_id = active
+	queue_redraw()
+
+
+func _draw_memory_cards() -> void:
+	var safe := _safe_area_in_viewport()
+	_draw_text_centered("영구 기억 · 하나만 장착", Rect2(safe.position + Vector2(0, safe.size.y * 0.55), Vector2(safe.size.x, safe.size.y * 0.03)), 14, MUTED_TEXT_COLOR)
+	for index in memory_card_rects.size():
+		var id: String = PrototypeMemoryAbilities.IDS[index]
+		var card := PrototypeMemoryAbilities.profile(id)
+		var available := PrototypeMemoryAbilities.available(id, unlocked_memories)
+		var rect := memory_card_rects[index]
+		draw_style_box(_panel_style(PANEL_COLOR), rect)
+		if selected_memory_id == id and available:
+			draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 3)
+		_draw_text_centered(String(card.name) + (" · 잠김" if not available else ""), Rect2(rect.position + Vector2(0, rect.size.y * 0.10), Vector2(rect.size.x, 28)), 19, ACTIVE_COLOR if available else MUTED_TEXT_COLOR)
+		_draw_text_centered(String(card.effect if available else card.condition), Rect2(rect.position + Vector2(0, rect.size.y * 0.58), Vector2(rect.size.x, 24)), 16, TEXT_COLOR if available else MUTED_TEXT_COLOR)
