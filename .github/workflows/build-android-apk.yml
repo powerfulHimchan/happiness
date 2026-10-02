@@ -100,24 +100,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-gp111-permanent-memories.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-gp112-clockwork-risk-route.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-gp111-permanent-memories.apk
+          cp "${apk_path}" dist/happiness-tale-gp112-clockwork-risk-route.apk
           (
             cd dist
-            sha256sum happiness-tale-gp111-permanent-memories.apk \
-              | tee happiness-tale-gp111-permanent-memories.apk.sha256
+            sha256sum happiness-tale-gp112-clockwork-risk-route.apk \
+              | tee happiness-tale-gp112-clockwork-risk-route.apk.sha256
           )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-gp111-permanent-memories-apk
+          name: happiness-tale-gp112-clockwork-risk-route-apk
           path: |
-            dist/happiness-tale-gp111-permanent-memories.apk
-            dist/happiness-tale-gp111-permanent-memories.apk.sha256
+            dist/happiness-tale-gp112-clockwork-risk-route.apk
+            dist/happiness-tale-gp112-clockwork-risk-route.apk.sha256
           if-no-files-found: error
           retention-days: 14

@@ -41,6 +41,7 @@ const ROUTES: Array[Dictionary] = [
 	{"id": "meadow", "name": "풀숲 길", "lines": ["다리로 전진 · 가까운 혼합 전투", "첫 웨이브 · 슬라임 + 씨앗 포대", "체력 20 추가 회복"]},
 	{"id": "wind", "name": "바람 길", "lines": ["징검 발판 · 흩어진 원거리 전투", "첫 웨이브 · 슬라임 + 바람 정령", "필살기 게이지 +25"]},
 ]
+const RISK_ROUTE := {"id": "clockwork", "name": "태엽 폐허 · 위험", "lines": ["좁은 발판 · 적 체력 +20%", "첫 웨이브 · 세 종류의 적", "통과: 체력 +20 · 필살기 +50"]}
 var stage_number: int = 1
 var route_id: String = "meadow"
 var reward_claimed: bool = false
@@ -117,7 +118,7 @@ func reset_stage() -> void:
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	for enemy in _all_combat_enemies():
-		enemy.damage_receiver.max_health = BossClockworkKnight.BOSS_HEALTH if enemy == boss else roundi(float(_initial_health[enemy.get_path()]) * (1.0 + 0.25 * (stage_number - 1)))
+		enemy.damage_receiver.max_health = _enemy_health(enemy)
 		enemy.reset_target()
 		_deactivate_enemy(enemy)
 	for gate_index in gates.size():
@@ -144,6 +145,27 @@ func reset_run() -> void:
 
 func has_next_stage() -> bool:
 	return stage_enabled and stage_complete and stage_number < stage_limit
+
+
+func available_routes() -> Array[Dictionary]:
+	var routes: Array[Dictionary] = ROUTES.duplicate(true)
+	if stage_number == 1 and player.boss_legacy.get("choice", "") == "destroy":
+		routes.append(RISK_ROUTE.duplicate(true))
+	return routes
+
+
+func can_select_route(id: String) -> bool:
+	for route in available_routes():
+		if route.id == id:
+			return true
+	return false
+
+
+func _enemy_health(enemy: PrototypeTarget) -> int:
+	if enemy == boss:
+		return BossClockworkKnight.BOSS_HEALTH
+	var multiplier := (1.0 + 0.25 * (stage_number - 1)) * (1.20 if route_id == "clockwork" else 1.0)
+	return roundi(float(_initial_health[enemy.get_path()]) * multiplier)
 
 
 func uses_boss() -> bool:
@@ -184,7 +206,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 
 
 func next_stage(next_route: String) -> bool:
-	if not has_next_stage() or next_route not in ["meadow", "wind"]:
+	if not has_next_stage() or not can_select_route(next_route):
 		return false
 	completed_elapsed_s += stage_elapsed_s
 	stage_number += 1
@@ -233,6 +255,8 @@ func current_metrics() -> Dictionary:
 	if uses_boss() and current_section == Section.ELITE:
 		section_name = "보스 · 웃는 태엽 기사"
 		objective = "돌진·충격파·탄막 회피 · 벽 충돌 시 검 공격"
+	if route_id == "clockwork" and not stage_complete:
+		objective = ["첫 관문까지 전진", "강화된 슬라임·씨앗·바람 처치", "좁은 태엽 발판을 점프로 건너기", "강화된 혼합 웨이브 처치", "강화된 갑옷 멧돼지 처치"][display_index]
 	if awaiting_boss_choice():
 		objective = "승리 · 구출 또는 파괴를 선택하세요"
 	var target_s := 0.0 if stage_complete else float(SECTION_TARGET_SECONDS[display_index])
@@ -244,8 +268,8 @@ func current_metrics() -> Dictionary:
 		"run_stage_number": stage_number,
 		"run_stage_count": stage_limit,
 		"run_route_id": route_id,
-		"run_route_name": "풀숲 길" if route_id == "meadow" else "바람 길",
-		"run_route_terrain": "연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판"),
+		"run_route_name": RISK_ROUTE.name if route_id == "clockwork" else ("풀숲 길" if route_id == "meadow" else "바람 길"),
+		"run_route_terrain": "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판")),
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
@@ -315,7 +339,11 @@ func _finish_current_section() -> void:
 
 func _activate_wave_one() -> void:
 	_activate_enemy(leaf_slime, Vector2(1510.0, 780.0))
-	if route_id == "wind":
+	if route_id == "clockwork":
+		_activate_enemy(seed_sack, Vector2(1980.0, 780.0))
+		_activate_enemy(wind_spirit, Vector2(1750.0, 540.0))
+		_active_enemies.assign([leaf_slime, seed_sack, wind_spirit])
+	elif route_id == "wind":
 		_activate_enemy(wind_spirit, Vector2(1850.0, 590.0))
 		_active_enemies.assign([leaf_slime, wind_spirit])
 	else:
@@ -347,7 +375,7 @@ func _activate_elite() -> void:
 
 func _activate_enemy(enemy: PrototypeTarget, spawn_position: Vector2) -> void:
 	enemy.set_stage_spawn(spawn_position)
-	enemy.damage_receiver.max_health = BossClockworkKnight.BOSS_HEALTH if enemy == boss else roundi(float(_initial_health[enemy.get_path()]) * (1.0 + 0.25 * (stage_number - 1)))
+	enemy.damage_receiver.max_health = _enemy_health(enemy)
 	enemy.reset_target()
 	enemy.visible = true
 	enemy.set_process(true)

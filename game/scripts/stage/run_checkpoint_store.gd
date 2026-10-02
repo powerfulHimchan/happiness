@@ -102,7 +102,7 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	if stage.has("reward_claimed") != state.weapons.has("equipment"):
 		return false
-	if not _number(stage.get("number"), 1, 3, true) or stage.get("limit") != 3 or stage.get("route") not in ["meadow", "wind"] or not _number(stage.get("elapsed"), 0, 1000000):
+	if not _number(stage.get("number"), 1, 3, true) or stage.get("limit") != 3 or not _valid_route(stage.get("route"), int(stage.number), legacy) or not _number(stage.get("elapsed"), 0, 1000000):
 		return false
 	if stage.has("boss_choice") and (not stage.boss_choice is String or stage.boss_choice not in ["", "rescue", "destroy"]):
 		return false
@@ -119,7 +119,7 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	for index in stage.history.size():
 		var entry: Variant = stage.history[index]
-		if not entry is Dictionary or entry.get("stage") != index + 1 or entry.get("route") not in ["meadow", "wind"] or not _number(entry.get("elapsed_s"), 0, 1000000):
+		if not entry is Dictionary or entry.get("stage") != index + 1 or not _valid_route(entry.get("route"), index + 1, legacy) or not _number(entry.get("elapsed_s"), 0, 1000000):
 			return false
 	if int(stage.number) == 3 and stage.history[-1].get("boss_choice") != stage.boss_choice:
 		return false
@@ -190,3 +190,7 @@ static func valid_state(state: Dictionary) -> bool:
 	if not profile_valid or not state.recorder.get("id") is String or String(state.recorder.id).is_empty():
 		return false
 	return true
+
+
+static func _valid_route(route: Variant, stage: int, legacy: Dictionary) -> bool:
+	return route in ["meadow", "wind"] or (route == "clockwork" and stage == 2 and legacy.get("choice", "") == "destroy")
