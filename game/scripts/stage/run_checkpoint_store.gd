@@ -100,6 +100,8 @@ static func valid_state(state: Dictionary) -> bool:
 	# GP-105~107 저장은 추가 필드가 없으면 일반 등급·보상 완료로 해석한다.
 	if state.weapons.has("equipment") and not PrototypeWeaponRewards.valid_equipment(state.weapons.equipment):
 		return false
+	if state.weapons.has("blueprints") and (not state.weapons.has("equipment") or not PrototypeWeaponRewards.valid_blueprints(state.weapons.blueprints, state.weapons.equipment)):
+		return false
 	if stage.has("reward_claimed") != state.weapons.has("equipment"):
 		return false
 	if not _number(stage.get("number"), 1, 3, true) or stage.get("limit") != 3 or not _valid_route(stage.get("route"), int(stage.number), legacy) or not _number(stage.get("elapsed"), 0, 1000000):

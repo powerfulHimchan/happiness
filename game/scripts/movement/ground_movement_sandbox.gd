@@ -349,7 +349,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		player.apply_growth_health(0, healing)
 		_stage_recovered_health = player.damage_receiver.health - before
 		_begin_growth_pause()
-		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment))
+		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints))
 		_save_checkpoint(metrics)
 
 
@@ -379,12 +379,13 @@ func _claim_weapon_reward(id: String) -> bool:
 	if controls.current_screen_mode() != 11 or not stage_runner.has_next_stage() or stage_runner.reward_claimed or not growth.run_active or player.damage_receiver.dead:
 		return false
 	var previous := weapon_controller.equipment.duplicate()
+	var previous_blueprints := weapon_controller.blueprints.duplicate()
 	if not id.is_empty() and not weapon_controller.equip_reward(id, stage_runner.stage_number):
 		return false
 	stage_runner.reward_claimed = true
 	if _save_checkpoint(stage_runner.current_metrics()) != OK:
 		stage_runner.reward_claimed = false
-		weapon_controller.set_equipment(previous)
+		weapon_controller.set_loadout(previous, previous_blueprints)
 		return false
 	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health, stage_runner.available_routes())
 	return true
@@ -467,7 +468,7 @@ func continue_saved_run() -> bool:
 	elif stage_runner.reward_claimed:
 		controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, 0, stage_runner.available_routes())
 	else:
-		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment))
+		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints))
 	return true
 
 
@@ -636,6 +637,8 @@ func _update_boss_legacy_status() -> void:
 	var progress := boss_legacy_store.progress_snapshot()
 	controls.update_boss_legacy_status(progress.pending, player.boss_legacy)
 	controls.update_memory_status(progress.unlocked, progress.selected_memory, player.memory_id)
+	weapon_controller.unlocked_blueprints = progress.blueprints.duplicate()
+	controls.update_weapon_blueprints(progress.blueprints)
 
 
 func _on_boss_legacy_damage(_event: DamageEvent) -> void:

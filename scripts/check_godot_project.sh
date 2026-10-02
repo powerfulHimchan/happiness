@@ -54,6 +54,7 @@ required_files=(
   "$game_root/tests/gp110_runtime_test.gd"
   "$game_root/tests/gp111_runtime_test.gd"
   "$game_root/tests/gp112_runtime_test.gd"
+  "$game_root/tests/gp113_runtime_test.gd"
   "$game_root/scripts/growth/prototype_memory_abilities.gd"
   "$game_root/scripts/stage/boss_legacy_store.gd"
   "$game_root/scripts/combat/boss_clockwork_knight.gd"
@@ -588,6 +589,10 @@ if [[ -n "$godot_command" ]]; then
   for risk_phase in seed resume finish; do
     checked_godot 90s --headless --path "$game_root" \
       --script res://tests/gp112_runtime_test.gd -- "$risk_phase"
+  done
+  for blueprint_phase in seed resume finish legacy-resume; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp113_runtime_test.gd -- "$blueprint_phase"
   done
   echo "Godot headless project check: OK"
 else
