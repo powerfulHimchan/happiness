@@ -95,6 +95,12 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	var legacy: Dictionary = state.get("boss_legacy", {})
 	var stage: Dictionary = state.stage
+	if stage.has("skills_claimed") != state.weapons.has("skills"):
+		return false
+	if state.weapons.has("skills") and (not PrototypeSkillRewards.valid_loadout(state.weapons.skills) or not stage.skills_claimed is bool):
+		return false
+	if stage.get("skills_claimed", false) == true and not stage.get("reward_claimed", true):
+		return false
 	if stage.has("reward_claimed") and not stage.reward_claimed is bool:
 		return false
 	# GP-105~107 저장은 추가 필드가 없으면 일반 등급·보상 완료로 해석한다.

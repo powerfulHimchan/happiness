@@ -32,6 +32,7 @@ var last_event_id: String = "없음"
 var _basic_remaining_s: float = 0.0
 var _skill_1_cooldown_s: float = 0.0
 var _skill_2_cooldown_s: float = 0.0
+var _action_slot: int = 0
 var _action: int = Action.NONE
 var _action_elapsed_s: float = 0.0
 var _next_skill_hit_index: int = 0
@@ -77,12 +78,12 @@ func set_active(enabled: bool) -> void:
 
 func request_skill_1() -> void:
 	if active:
-		_start_skill(Action.PIERCING_ARROW, skill_1, _skill_1_cooldown_s)
+		_start_skill(Action.ARROW_RAIN if skill_1.skill_id == &"bow_arrow_rain" else Action.PIERCING_ARROW, skill_1, _skill_1_cooldown_s, 1)
 
 
 func request_skill_2() -> void:
 	if active:
-		_start_skill(Action.ARROW_RAIN, skill_2, _skill_2_cooldown_s)
+		_start_skill(Action.ARROW_RAIN if skill_2.skill_id == &"bow_arrow_rain" else Action.PIERCING_ARROW, skill_2, _skill_2_cooldown_s, 2)
 
 
 func prepare_next_stage() -> void:
@@ -151,7 +152,7 @@ func _update_basic_attack() -> void:
 	]
 
 
-func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s: float) -> void:
+func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s: float, slot: int = 1) -> void:
 	if definition == null:
 		last_combat_log = "활 스킬 데이터 없음"
 		return
@@ -165,17 +166,20 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 		last_combat_log = "%s · 현재 사용 불가" % definition.display_name
 		return
 
+	_action_slot = slot
 	_action = action
 	_action_elapsed_s = 0.0
 	_next_skill_hit_index = 0
 	_action_sequence += 1
 	_basic_remaining_s = maxf(_basic_remaining_s, definition.duration_s)
-	if action == Action.PIERCING_ARROW:
+	if slot == 1:
 		_skill_1_cooldown_s = definition.cooldown_s
+	else:
+		_skill_2_cooldown_s = definition.cooldown_s
+	if action == Action.PIERCING_ARROW:
 		piercing_last_hit_count = 0
 		_piercing_projectile_id = "player:bow_piercing:%d" % _action_sequence
 	else:
-		_skill_2_cooldown_s = definition.cooldown_s
 		var target := target_selector.current_target
 		_rain_anchor = (
 			target.global_position
@@ -222,15 +226,16 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			direction = (
 				target.global_position + Vector2(0.0, -38.0) - origin
 			).normalized()
+		var projectile_id := "%s:%d" % [_piercing_projectile_id, hit_index]
 		_spawn_projectile(
-			_piercing_projectile_id,
+			projectile_id,
 			definition.skill_id,
 			int(definition.damage[hit_index]),
 			definition.max_targets,
 			direction,
 			PackedStringArray(["bow", "skill", "piercing"])
 		)
-		last_combat_log = "관통 화살 발사 · 피해 %d · 최대 3개체" % player.growth_damage(int(definition.damage[hit_index]), "bow", "skill")
+		last_combat_log = "%s %d타 · 피해 %d · 최대 %d개체" % [definition.display_name, hit_index + 1, player.growth_damage(int(definition.damage[hit_index]), "bow", "skill"), definition.max_targets]
 		return
 
 	var applied_targets := 0
@@ -288,7 +293,7 @@ func _spawn_projectile(
 		direction,
 		tags
 	)
-	projectile.hit_registered.connect(_on_projectile_hit)
+	projectile.hit_registered.connect(_on_projectile_hit.bind(tags.has("skill")))
 	get_tree().current_scene.add_child(projectile)
 	projectile.global_position = _projectile_origin()
 	projectile_fired_count += 1
@@ -303,11 +308,11 @@ func _on_projectile_hit(
 	target: PrototypeTarget,
 	damage: int,
 	result: int,
-	projectile_id: String
+	projectile_id: String,
+	is_skill: bool = false
 ) -> void:
 	if result == DamageReceiver.Result.APPLIED:
 		total_damage += damage
-		var is_skill := projectile_id == _piercing_projectile_id
 		if is_skill:
 			piercing_last_hit_count += 1
 			skill_hit_count += 1
@@ -320,10 +325,8 @@ func _on_projectile_hit(
 
 
 func _current_skill() -> SkillDefinition:
-	if _action == Action.PIERCING_ARROW:
-		return skill_1
-	if _action == Action.ARROW_RAIN:
-		return skill_2
+	if _action != Action.NONE:
+		return skill_1 if _action_slot == 1 else skill_2
 	return null
 
 

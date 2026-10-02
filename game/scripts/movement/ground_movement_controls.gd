@@ -27,6 +27,7 @@ signal growth_reroll_requested
 signal job_confirmed(ultimate_index: int)
 signal stage_route_selected(route: String)
 signal continue_requested
+signal skill_reward_selected(id: String, slot: int)
 signal weapon_reward_selected(weapon_id: String)
 signal boss_choice_confirmed(choice: String)
 
@@ -45,6 +46,7 @@ enum ScreenMode {
 	WEAPON_REWARD,
 	BOSS_CHOICE,
 	VILLAGE,
+	SKILL_REWARD,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -204,6 +206,16 @@ var job_confirm_rect := Rect2()
 var job_ultimate_rects: Array[Rect2] = []
 var job_ultimates: Array[Dictionary] = []
 var selected_job_ultimate: int = -1
+var skill_reward_open_rect: Rect2
+var skill_reward_loadout: Dictionary = PrototypeSkillRewards.defaults()
+var skill_reward_claimed: bool = true
+var skill_reward_offers: Array[Dictionary] = []
+var skill_reward_offer_rects: Array[Rect2] = []
+var skill_reward_slot_rects: Array[Rect2] = []
+var skill_reward_confirm_rect: Rect2
+var skill_reward_cancel_rect: Rect2
+var selected_skill_offer: int = -1
+var selected_skill_slot: int = -1
 var stage_route_rects: Array[Rect2] = []
 var stage_route_options: Array[Dictionary] = PrototypeStageRunner.ROUTES.duplicate(true)
 var cleared_stage: int = 1
@@ -321,6 +333,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.SKILL_REWARD:
+		_draw_skill_rewards()
+		return
 	if screen_mode == ScreenMode.VILLAGE:
 		_draw_village()
 		return
@@ -539,6 +554,7 @@ func _refresh_stage_routes() -> void:
 	var gap := minf(32.0, safe.size.x * 0.03)
 	var count := stage_route_options.size()
 	var card_width := (safe.size.x * 0.90 - gap * (count - 1)) / count
+	skill_reward_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - 140.0, safe.size.y * 0.81), Vector2(280.0, safe.size.y * 0.08))
 	stage_route_rects.clear()
 	for index in count:
 		stage_route_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.43), Vector2(card_width, safe.size.y * 0.35)))
@@ -558,7 +574,10 @@ func _draw_stage_routes() -> void:
 		_draw_text_centered(String(route["name"]), Rect2(rect.position + Vector2(0, rect.size.y * 0.12), Vector2(rect.size.x, 40)), 28, ACTIVE_COLOR)
 		for line_index in route["lines"].size():
 			_draw_text_centered(String(route["lines"][line_index]), Rect2(rect.position + Vector2(0, rect.size.y * (0.40 + 0.18 * line_index)), Vector2(rect.size.x, 32)), 18, TEXT_COLOR)
-	_draw_text_centered("카드를 누르면 다음 스테이지를 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.84), Vector2(safe.size.x, 36)), 18, MUTED_TEXT_COLOR)
+	if not skill_reward_claimed:
+		_draw_button(skill_reward_open_rect, "스킬 교체 살펴보기", true)
+	else:
+		_draw_text_centered("스킬 교체 완료 · 경로를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.84), Vector2(safe.size.x, 36)), 18, MUTED_TEXT_COLOR)
 	if not checkpoint_message.is_empty():
 		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.91), Vector2(safe.size.x, 28)), 16, PASS_COLOR if checkpoint_available else WAIT_COLOR)
 
@@ -1129,6 +1148,9 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.SKILL_REWARD:
+		_handle_skill_reward_touch(position)
+		return
 	if screen_mode == ScreenMode.VILLAGE:
 		_handle_village_touch(position)
 		return
@@ -1175,6 +1197,9 @@ func _handle_screen_touch(position: Vector2) -> void:
 			begin_retry(selected_starting_weapon)
 		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
+		if not skill_reward_claimed and skill_reward_open_rect.has_point(position):
+			show_skill_rewards()
+			return
 		for index in stage_route_rects.size():
 			if stage_route_rects[index].has_point(position):
 				stage_route_selected.emit(String(stage_route_options[index]["id"]))
@@ -1734,7 +1759,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-114 · 시간의 닻 마을",
+		"GP-115 · 정예 보상과 스킬 교체",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
@@ -2385,3 +2410,82 @@ func _draw_village_text(value: String, rect: Rect2, requested_size: int, color: 
 	while font_size > 10 and ThemeDB.fallback_font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > rect.size.x:
 		font_size -= 1
 	_draw_text_centered(value, rect, font_size, color)
+
+
+func update_skill_reward_status(loadout: Dictionary, claimed: bool) -> void:
+	skill_reward_loadout = loadout.duplicate(true)
+	skill_reward_claimed = claimed
+	skill_reward_offers = PrototypeSkillRewards.offers(loadout)
+	queue_redraw()
+
+
+func show_skill_rewards() -> void:
+	if screen_mode != ScreenMode.STAGE_ROUTE or skill_reward_claimed:
+		return
+	release_all_inputs()
+	selected_skill_offer = -1
+	selected_skill_slot = -1
+	screen_mode = ScreenMode.SKILL_REWARD
+	_refresh_skill_reward_layout()
+	queue_redraw()
+
+
+func _refresh_skill_reward_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	var gap := safe.size.x * 0.02
+	var width := (safe.size.x * 0.90 - gap) * 0.5
+	skill_reward_offer_rects.clear()
+	skill_reward_slot_rects.clear()
+	for i in 2:
+		skill_reward_offer_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (width + gap), safe.size.y * 0.17), Vector2(width, safe.size.y * 0.28)))
+		skill_reward_slot_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (width + gap), safe.size.y * 0.53), Vector2(width, safe.size.y * 0.22)))
+	skill_reward_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.84), Vector2(width, safe.size.y * 0.09))
+	skill_reward_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05 + width + gap, safe.size.y * 0.84), skill_reward_cancel_rect.size)
+
+
+func _handle_skill_reward_touch(position: Vector2) -> void:
+	_refresh_skill_reward_layout()
+	for i in skill_reward_offers.size():
+		if skill_reward_offer_rects[i].has_point(position):
+			selected_skill_offer = i
+			selected_skill_slot = -1
+			return
+	if selected_skill_offer >= 0:
+		for i in 2:
+			if skill_reward_slot_rects[i].has_point(position):
+				selected_skill_slot = i
+				return
+	if skill_reward_cancel_rect.has_point(position):
+		show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, stage_route_options)
+	elif skill_reward_confirm_rect.has_point(position) and selected_skill_offer >= 0 and selected_skill_slot >= 0:
+		skill_reward_selected.emit(String(skill_reward_offers[selected_skill_offer].id), selected_skill_slot)
+
+
+func _draw_skill_rewards() -> void:
+	_refresh_skill_reward_layout()
+	var safe := _safe_area_in_viewport()
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.98))
+	_draw_text_centered("스킬 보상 · 기존 기술과 비교", Rect2(safe.position + Vector2(0, safe.size.y * 0.05), Vector2(safe.size.x, safe.size.y * 0.07)), 30, ACTIVE_COLOR)
+	for i in skill_reward_offers.size():
+		var offer: Dictionary = skill_reward_offers[i]
+		var rect: Rect2 = skill_reward_offer_rects[i]
+		draw_style_box(_panel_style(Color("365d68") if i == selected_skill_offer else PANEL_COLOR), rect)
+		_draw_village_text(("검 · " if offer.weapon == "sword" else "활 · ") + String(offer.name), Rect2(rect.position + Vector2(12, 12), Vector2(rect.size.x - 24, rect.size.y * 0.20)), 25, TEXT_COLOR)
+		for j in offer.lines.size():
+			_draw_village_text(String(offer.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.33 + j * 0.18)), Vector2(rect.size.x - 24, rect.size.y * 0.14)), 19, MUTED_TEXT_COLOR)
+	_draw_text_centered("기술을 고른 뒤 교체할 슬롯을 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.46), Vector2(safe.size.x, safe.size.y * 0.06)), 19, TEXT_COLOR)
+	for i in 2:
+		var rect: Rect2 = skill_reward_slot_rects[i]
+		draw_style_box(_panel_style(Color("365d68") if i == selected_skill_slot else PANEL_COLOR), rect)
+		var id := ""
+		if selected_skill_offer >= 0:
+			id = String(skill_reward_loadout[skill_reward_offers[selected_skill_offer].weapon][i])
+		var label := "슬롯 %d · %s" % [i + 1, PrototypeSkillRewards.SKILLS[id].display_name if not id.is_empty() else "기술을 먼저 선택"]
+		_draw_village_text(label, Rect2(rect.position + Vector2(12, 10), Vector2(rect.size.x - 24, rect.size.y * 0.25)), 22, TEXT_COLOR)
+		if not id.is_empty():
+			var lines := PrototypeSkillRewards.lines(id)
+			for j in lines.size():
+				_draw_village_text(lines[j], Rect2(rect.position + Vector2(12, rect.size.y * (0.35 + j * 0.19)), Vector2(rect.size.x - 24, rect.size.y * 0.15)), 17, MUTED_TEXT_COLOR)
+	_draw_text_centered(checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "정예마다 한 번 교체 · 교체한 스킬은 대기시간부터 시작", Rect2(safe.position + Vector2(0, safe.size.y * 0.77), Vector2(safe.size.x, safe.size.y * 0.05)), 17, MUTED_TEXT_COLOR)
+	_draw_button(skill_reward_cancel_rect, "현재 구성 유지", false)
+	_draw_button(skill_reward_confirm_rect, "교체 확정", selected_skill_offer >= 0 and selected_skill_slot >= 0)
