@@ -108,6 +108,8 @@ func _run() -> void:
 			controls.begin_retry()
 			if not _check(weapons.equipment == {"sword": 0, "bow": 0} and weapons.blueprints == {"sword": "", "bow": ""} and player.weapon_blueprints == weapons.blueprints and weapons.unlocked_blueprints.size() == 2, "새 도전 장비·설계 초기화·영구 해금 유지"): return
 			old.weapons.erase("blueprints")
+			# 완료 이력이 없는 현재 도전의 ID로 이전 형식 저장을 준비한다.
+			old.recorder = recorder.checkpoint_snapshot()
 			if not _check(store.save_checkpoint(old) == OK, "설계 필드 없는 이전 저장 준비"): return
 		"legacy-resume":
 			if not _check(sandbox.continue_saved_run() and weapons.equipment == {"sword": 1, "bow": 2} and weapons.blueprints == {"sword": "", "bow": ""} and not "태엽" in controls.movement_metrics.weapon_equipment_summary, "이전 저장은 기존 기본 무기·등급으로 복원"): return
