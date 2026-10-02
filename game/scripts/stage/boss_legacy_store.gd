@@ -20,7 +20,7 @@ func grant(source: String, choice: String) -> Error:
 
 func progress_snapshot() -> Dictionary:
 	var data := _load()
-	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory}
+	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate()}
 
 
 func claim(run_id: String, enabled: bool, memory_id: String = "") -> Dictionary:
@@ -92,7 +92,7 @@ func _append(event: Dictionary) -> Error:
 
 
 func _load() -> Dictionary:
-	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": ""}
+	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}}
 	if not FileAccess.file_exists(save_path):
 		return result
 	var file := FileAccess.open(save_path, FileAccess.READ)
@@ -120,6 +120,9 @@ func _load() -> Dictionary:
 				if not source.is_empty() and event.get("choice") in ["rescue", "destroy"] and not result.rewards.has(source):
 					result.rewards[source] = event.choice
 					result.unlocked[PrototypeMemoryAbilities.CHOICE_IDS[event.choice]] = true
+					if event.choice == "destroy":
+						for blueprint in PrototypeWeaponRewards.BLUEPRINTS:
+							result.blueprints[blueprint] = true
 					result.pending = {"source": source, "choice": event.choice}
 			"claim":
 				if not run_id.is_empty() and result.pending.get("source") == source and event.get("enabled") is bool:

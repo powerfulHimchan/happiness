@@ -13,6 +13,8 @@ const CHECKPOINT_FIELDS := ["_basic_remaining_s", "_skill_1_cooldown_s", "_skill
 
 var active_weapon_id: String = SWORD_ID
 var equipment: Dictionary = {"sword": 0, "bow": 0}
+var blueprints: Dictionary = {"sword": "", "bow": ""}
+var unlocked_blueprints: Dictionary = {}
 var switch_count: int = 0
 var blocked_switch_count: int = 0
 var reserved_switch_count: int = 0
@@ -84,7 +86,7 @@ func prepare_next_stage() -> void:
 
 
 func checkpoint_snapshot() -> Dictionary:
-	var state := {"active": active_weapon_id, "equipment": equipment.duplicate()}
+	var state := {"active": active_weapon_id, "equipment": equipment.duplicate(), "blueprints": blueprints.duplicate()}
 	for weapon_id in [SWORD_ID, BOW_ID]:
 		var combat: Node = sword_combat if weapon_id == SWORD_ID else bow_combat
 		var values := {}
@@ -96,7 +98,7 @@ func checkpoint_snapshot() -> Dictionary:
 
 func restore_checkpoint(state: Dictionary) -> void:
 	reset_combat()
-	set_equipment(state.get("equipment", {"sword": 0, "bow": 0}))
+	set_loadout(state.get("equipment", {"sword": 0, "bow": 0}), state.get("blueprints", {"sword": "", "bow": ""}))
 	active_weapon_id = String(state.active)
 	for weapon_id in [SWORD_ID, BOW_ID]:
 		var combat: Node = sword_combat if weapon_id == SWORD_ID else bow_combat
@@ -109,6 +111,7 @@ func reset_combat(starting_weapon: String = SWORD_ID) -> bool:
 	if starting_weapon not in [SWORD_ID, BOW_ID]:
 		return false
 	active_weapon_id = starting_weapon
+	blueprints = {"sword": "", "bow": ""}
 	set_equipment({"sword": 0, "bow": 0})
 	switch_count = 0
 	blocked_switch_count = 0
@@ -130,18 +133,36 @@ func force_emit_metrics() -> void:
 func set_equipment(value: Dictionary) -> bool:
 	if not PrototypeWeaponRewards.valid_equipment(value):
 		return false
+	var designs := blueprints.duplicate()
+	for id in designs:
+		if int(value[id]) == 0:
+			designs[id] = ""
+	return set_loadout(value, designs)
+
+
+func set_loadout(value: Dictionary, designs: Dictionary) -> bool:
+	if not PrototypeWeaponRewards.valid_equipment(value) or not PrototypeWeaponRewards.valid_blueprints(designs, value):
+		return false
 	equipment = {"sword": int(value.sword), "bow": int(value.bow)}
+	blueprints = designs.duplicate()
 	player.weapon_equipment = equipment.duplicate()
+	player.weapon_blueprints = blueprints.duplicate()
 	_emit_active_metrics()
 	return true
 
 
 func equip_reward(id: String, grade: int) -> bool:
-	if id not in equipment or grade < 1 or grade > 2 or grade <= int(equipment[id]):
+	var design := id if PrototypeWeaponRewards.BLUEPRINTS.has(id) else ""
+	if not design.is_empty() and unlocked_blueprints.get(design, false) != true:
+		return false
+	var weapon: String = PrototypeWeaponRewards.BLUEPRINTS[design].weapon if not design.is_empty() else id
+	if weapon not in equipment or grade < 1 or grade > 2 or grade < int(equipment[weapon]) or (grade == int(equipment[weapon]) and design == blueprints[weapon]):
 		return false
 	var next := equipment.duplicate()
-	next[id] = grade
-	return set_equipment(next)
+	var designs := blueprints.duplicate()
+	next[weapon] = grade
+	designs[weapon] = design
+	return set_loadout(next, designs)
 
 
 func _perform_switch(reason: String) -> void:
@@ -192,14 +213,16 @@ func _enrich_metrics(metrics: Dictionary) -> void:
 	var sword_metrics := sword_combat.current_metrics()
 	var bow_metrics := bow_combat.current_metrics()
 	metrics["active_weapon_id"] = active_weapon_id
-	var own := PrototypeWeaponRewards.profile(active_weapon_id, int(equipment[active_weapon_id]))
+	var own := PrototypeWeaponRewards.profile(active_weapon_id, int(equipment[active_weapon_id]), String(blueprints[active_weapon_id]))
 	var other := BOW_ID if active_weapon_id == SWORD_ID else SWORD_ID
-	var backup := PrototypeWeaponRewards.profile(other, int(equipment[other]))
+	var backup := PrototypeWeaponRewards.profile(other, int(equipment[other]), String(blueprints[other]))
 	metrics["weapon_name"] = own.name
 	metrics["weapon_equipment"] = equipment.duplicate()
+	metrics["weapon_blueprints"] = blueprints.duplicate()
 	metrics["weapon_backup_name"] = backup.name
-	metrics["weapon_equipment_summary"] = "%s · %s" % [PrototypeWeaponRewards.profile(SWORD_ID, int(equipment.sword)).name, PrototypeWeaponRewards.profile(BOW_ID, int(equipment.bow)).name]
-	metrics["weapon_backup_effect"] = "보조: %s 피해 +%d%%" % ["스킬" if other == SWORD_ID else "기본", roundi(float(backup.unique) * PrototypeWeaponRewards.BACKUP_RATIO * 100)]
+	metrics["weapon_equipment_summary"] = "%s · %s" % [PrototypeWeaponRewards.profile(SWORD_ID, int(equipment.sword), blueprints.sword).name, PrototypeWeaponRewards.profile(BOW_ID, int(equipment.bow), blueprints.bow).name]
+	var effect_percent := float(backup.unique) * PrototypeWeaponRewards.BACKUP_RATIO * 100
+	metrics["weapon_backup_effect"] = "보조: %s 피해 +%s%%" % ["스킬" if other == SWORD_ID else "기본", str(roundi(effect_percent)) if blueprints[other].is_empty() else "%.1f" % effect_percent]
 	metrics["weapon_switch_label"] = (
 		"전환 %.1f" % _switch_cooldown_remaining_s
 		if _switch_cooldown_remaining_s > 0.0

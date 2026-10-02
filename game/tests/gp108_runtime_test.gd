@@ -57,6 +57,7 @@ func _run() -> void:
 		if mode == "legacy-seed":
 			saved.stage.erase("reward_claimed")
 			saved.weapons.erase("equipment")
+			saved.weapons.erase("blueprints")
 			if not _check(store.save_checkpoint(saved) == OK, "이전 버전 저장 준비"):
 				return
 	else:

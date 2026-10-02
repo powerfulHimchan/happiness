@@ -206,6 +206,7 @@ var cleared_stage: int = 1
 var run_stage_count: int = 3
 var stage_recovered_health: int = 0
 var unlocked_memories: Dictionary = {}
+var unlocked_weapon_blueprints: Dictionary = {}
 var preferred_memory_id: String = ""
 var selected_memory_id: String = ""
 var active_memory_id: String = ""
@@ -453,7 +454,7 @@ func _draw_boss_choice() -> void:
 	_draw_text_centered("보스 승리 · 웃는 태엽 기사", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 48)), 30, PASS_COLOR)
 	_draw_text_centered("기사는 사람들을 돌려보내라는 태엽 명령에 묶여 있었습니다.", Rect2(safe.position + Vector2(0, safe.size.y * 0.18), Vector2(safe.size.x, 32)), 20, TEXT_COLOR)
 	_draw_text_centered("이제 기사의 운명을 선택하세요.", Rect2(safe.position + Vector2(0, safe.size.y * 0.24), Vector2(safe.size.x, 30)), 19, MUTED_TEXT_COLOR)
-	var cards := [{"title": "구출", "lines": ["기사를 자유롭게 합니다.", "태엽 수호 영구 해금 · 체력 +5", "다음 도전 1회 · 체력 +10", "정예 지원 · 위기 회복 1회"]}, {"title": "파괴", "lines": ["길목의 위협을 없앱니다.", "핵의 잔향 영구 해금 · 스킬 +10%", "다음 도전 1회 · 피해 +10%", "피격 +10% · 다음 도전 위험 길"]}]
+	var cards := [{"title": "구출", "lines": ["기사를 자유롭게 합니다.", "태엽 수호 영구 해금 · 체력 +5", "다음 도전 1회 · 체력 +10", "정예 지원 · 위기 회복 1회"]}, {"title": "파괴", "lines": ["태엽 검·활 설계도 영구 해금", "핵의 잔향 영구 해금 · 스킬 +10%", "다음 도전 1회 · 피해 +10%", "피격 +10% · 다음 도전 위험 길"]}]
 	for index in cards.size():
 		var card: Dictionary = cards[index]
 		var rect := boss_choice_rects[index]
@@ -481,9 +482,10 @@ func show_weapon_rewards(stage: int, cards: Array[Dictionary]) -> void:
 func _refresh_weapon_reward_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	var gap := minf(32.0, safe.size.x * 0.03)
-	var width := (safe.size.x * 0.90 - gap) * 0.5
+	var count := maxi(2, weapon_reward_cards.size())
+	var width := (safe.size.x * 0.90 - gap * (count - 1)) / count
 	weapon_reward_rects.clear()
-	for index in 2:
+	for index in count:
 		weapon_reward_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (width + gap), safe.size.y * 0.27), Vector2(width, safe.size.y * 0.42)))
 	var button_width := minf(360.0, safe.size.x * 0.55)
 	weapon_reward_confirm_rect = Rect2(safe.position + Vector2((safe.size.x - button_width) * 0.5, safe.size.y * 0.80), Vector2(button_width, safe.size.y * 0.08))
@@ -495,15 +497,15 @@ func _draw_weapon_rewards() -> void:
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	_draw_text_centered("정예 처치 · 무기 보상", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 50)), 32, PASS_COLOR)
-	_draw_text_centered("검·활 중 하나 교체 · 무기와 스킬 대기시간 유지", Rect2(safe.position + Vector2(0, safe.size.y * 0.17), Vector2(safe.size.x, 36)), 20, MUTED_TEXT_COLOR)
+	_draw_text_centered("설계도 무기: 일반 피해 감소 · 고유 효과 강화" if weapon_reward_cards.size() > 2 else "검·활 중 하나 교체 · 무기와 스킬 대기시간 유지", Rect2(safe.position + Vector2(0, safe.size.y * 0.17), Vector2(safe.size.x, 36)), 20, MUTED_TEXT_COLOR)
 	for index in weapon_reward_cards.size():
 		var item := weapon_reward_cards[index]
 		var rect := weapon_reward_rects[index]
 		draw_style_box(_panel_style(PANEL_COLOR), rect)
 		if selected_weapon_reward == index:
 			draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 4)
-		_draw_text_centered(String(item.name), Rect2(rect.position + Vector2(0, rect.size.y * 0.10), Vector2(rect.size.x, 40)), 27, ACTIVE_COLOR)
-		_draw_text_centered("현재: %s" % String(item.previous_name), Rect2(rect.position + Vector2(0, rect.size.y * 0.27), Vector2(rect.size.x, 30)), 17, MUTED_TEXT_COLOR)
+		_draw_text_centered(String(item.name), Rect2(rect.position + Vector2(0, rect.size.y * 0.10), Vector2(rect.size.x, 40)), 22 if weapon_reward_cards.size() > 2 else 27, ACTIVE_COLOR)
+		_draw_text_centered("현재: %s" % String(item.previous_name), Rect2(rect.position + Vector2(0, rect.size.y * 0.27), Vector2(rect.size.x, 30)), 15 if weapon_reward_cards.size() > 2 else 17, MUTED_TEXT_COLOR)
 		for line in item.lines.size():
 			_draw_text_centered(String(item.lines[line]), Rect2(rect.position + Vector2(0, rect.size.y * (0.44 + line * 0.16)), Vector2(rect.size.x, 30)), 18, TEXT_COLOR)
 	var reward_note := checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "보조 무기의 고유 효과는 50% 적용 · 등급 피해는 주 무기만"
@@ -1100,6 +1102,7 @@ func _show_result_screen() -> void:
 		"boss_choice": String(movement_metrics.get("boss_choice", "")),
 		"boss_name": String(movement_metrics.get("boss_name", "")),
 		"memory_id": active_memory_id,
+		"weapon_blueprints": movement_metrics.get("weapon_blueprints", {"sword": "", "bow": ""}).duplicate(),
 		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
 		"damage_causes": String(movement_metrics.get("damage_cause_summary", "피격 없음")),
 		"sword_hits": sword_hits,
@@ -1662,7 +1665,7 @@ func _draw_result_screen() -> void:
 	)
 	var choice := String(result_snapshot.get("boss_choice", ""))
 	if choice in ["rescue", "destroy"]:
-		_draw_text_centered("태엽 기사 %s · %s 영구 해금" % [("구출" if choice == "rescue" else "파괴"), PrototypeMemoryAbilities.profile(PrototypeMemoryAbilities.CHOICE_IDS[choice]).name], Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
+		_draw_text_centered("태엽 기사 %s · %s 영구 해금" % [("구출" if choice == "rescue" else "파괴"), PrototypeMemoryAbilities.profile(PrototypeMemoryAbilities.CHOICE_IDS[choice]).name + (" / 태엽 검·활 설계도" if choice == "destroy" else "")], Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
 	var content_x := result_panel_rect.position.x + 54.0
 	var content_width := result_panel_rect.size.x - 108.0
 	var y := result_panel_rect.position.y + 158.0
@@ -1715,7 +1718,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-112 · 태엽 폐허 위험 경로",
+		"GP-113 · 무기 설계도와 태엽 무기",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
@@ -1727,7 +1730,7 @@ func _draw_main_screen() -> void:
 		MUTED_TEXT_COLOR
 	)
 	if not checkpoint_available:
-		_draw_text_centered("영구 기억 %d/2 해금 · 시작할 때 하나를 선택하세요" % unlocked_memories.size(), Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
+		_draw_text_centered("영구 기억 %d/2 · 무기 설계도 %d/2 해금" % [unlocked_memories.size(), unlocked_weapon_blueprints.size()], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	_draw_button(main_feedback_rect, "설정", false)
 	if checkpoint_available:
 		_draw_button(main_continue_rect, "이어하기", true)
@@ -2261,6 +2264,11 @@ func update_memory_status(unlocked: Dictionary, preferred: String, active: Strin
 	unlocked_memories = unlocked.duplicate()
 	preferred_memory_id = preferred
 	active_memory_id = active
+	queue_redraw()
+
+
+func update_weapon_blueprints(unlocked: Dictionary) -> void:
+	unlocked_weapon_blueprints = unlocked.duplicate()
 	queue_redraw()
 
 
