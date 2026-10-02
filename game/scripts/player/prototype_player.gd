@@ -42,6 +42,7 @@ const POST_HIT_FLASH_S := 0.12
 const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
+var memory_id: String = ""
 var boss_legacy: Dictionary = {}
 var boss_legacy_store := BossLegacyStore.new()
 
@@ -345,7 +346,7 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0))
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind))
 
 
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
@@ -389,6 +390,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	memory_id = ""
 	boss_legacy = {}
 	set_job_emblem("", Color.WHITE)
 	growth_common_bonus = 0.0

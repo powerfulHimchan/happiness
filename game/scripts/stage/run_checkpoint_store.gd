@@ -91,6 +91,8 @@ static func valid_state(state: Dictionary) -> bool:
 			return false
 	if state.has("boss_legacy") and (not state.boss_legacy is Dictionary or not BossLegacyStore.valid_active(state.boss_legacy, String(state.recorder.get("id", "")))):
 		return false
+	if not PrototypeMemoryAbilities.valid_id(state.get("memory_id", "")):
+		return false
 	var legacy: Dictionary = state.get("boss_legacy", {})
 	var stage: Dictionary = state.stage
 	if stage.has("reward_claimed") and not stage.reward_claimed is bool:
@@ -166,7 +168,7 @@ static func valid_state(state: Dictionary) -> bool:
 		if not _number(player.get(key), 0, 100):
 			return false
 	var ranks: Dictionary = growth.ranks
-	var expected_max := 100 + (10 if legacy.get("choice") == "rescue" else 0) + int(ranks.get("vitality", 0)) * 20 + int(ranks.get("recovery", 0)) * 10 + int(ranks.get("vanguard_vigor", 0)) * 30 + int(ranks.get("tracker_breath", 0)) * 20
+	var expected_max := 100 + PrototypeMemoryAbilities.health_bonus(String(state.get("memory_id", ""))) + (10 if legacy.get("choice") == "rescue" else 0) + int(ranks.get("vitality", 0)) * 20 + int(ranks.get("recovery", 0)) * 10 + int(ranks.get("vanguard_vigor", 0)) * 30 + int(ranks.get("tracker_breath", 0)) * 20
 	var sword_bonus := int(ranks.get("sword_power", 0)) * 0.15 + int(ranks.get("vanguard_edge", 0)) * 0.20 + (0.10 if growth.job == "vanguard" else 0.0)
 	var bow_bonus := int(ranks.get("bow_power", 0)) * 0.15 + int(ranks.get("tracker_focus", 0)) * 0.20 + (0.10 if growth.job == "tracker" else 0.0)
 	if int(player.max_health) != expected_max or not is_equal_approx(float(player.common), int(ranks.get("power", 0)) * 0.10) or not is_equal_approx(float(player.sword), sword_bonus) or not is_equal_approx(float(player.bow), bow_bonus):

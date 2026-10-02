@@ -30,6 +30,8 @@ var _intermission_stage: int = 0
 var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
 var boss_legacy_store := BossLegacyStore.new()
+var _last_legacy_grant_source: String = ""
+var _last_legacy_grant_path: String = ""
 var _restoring_checkpoint: bool = false
 var _available_checkpoint: Dictionary = {}
 
@@ -71,6 +73,7 @@ func _ready() -> void:
 	controls.feedback_settings_changed.connect(feedback_controller.configure)
 	controls.test_records_clear_requested.connect(test_recorder.clear_records)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
+	player.damage_received.connect(_on_boss_legacy_damage)
 	player.player_died.connect(controls.release_all_inputs)
 	player.player_died.connect(_finish_growth_selection)
 	player.player_died.connect(_discard_checkpoint)
@@ -247,10 +250,10 @@ func _reset_test() -> void:
 		controls.show_main_screen()
 		return
 	var run_id := "%d-%d-%d" % [int(Time.get_unix_time_from_system() * 1000), Time.get_ticks_usec(), randi()]
-	var claimed := boss_legacy_store.claim(run_id, controls.use_boss_legacy)
+	var claimed := boss_legacy_store.claim(run_id, controls.use_boss_legacy, controls.selected_memory_id)
 	if claimed.error != OK:
 		controls.show_main_screen()
-		controls.update_checkpoint_status(not _available_checkpoint.is_empty(), "보상 저장 실패 · 다시 시작하세요")
+		controls.update_checkpoint_status(not _available_checkpoint.is_empty(), "보상·기억 저장 실패 · 다시 시작하세요")
 		return
 	_discard_checkpoint()
 	_finish_growth_selection()
@@ -259,6 +262,9 @@ func _reset_test() -> void:
 	weapon_controller.reset_combat(controls.selected_starting_weapon)
 	growth.reset_run(weapon_controller.active_weapon_id)
 	player.boss_legacy = claimed.state
+	player.memory_id = claimed.memory_id
+	var memory_health := PrototypeMemoryAbilities.health_bonus(player.memory_id)
+	player.apply_growth_health(memory_health, memory_health)
 	if player.boss_legacy.get("choice") == "rescue":
 		player.apply_growth_health(10, 10)
 	_update_boss_legacy_status()
@@ -317,7 +323,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 			event.damage = 20
 			event.tags = PackedStringArray(["helper"])
 			stage_runner.final_enemy().receive_damage(event)
-		_update_boss_legacy_status()
+			_update_boss_legacy_status()
 		return
 	if bool(metrics.get("run_complete", true)):
 		_finish_growth_selection()
@@ -357,6 +363,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
 		"boss_legacy": player.boss_legacy.duplicate(true),
+		"memory_id": player.memory_id,
 	}
 	var error := checkpoint_store.save_checkpoint(state)
 	if error == OK:
@@ -432,6 +439,7 @@ func continue_saved_run() -> bool:
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)
 	player.boss_legacy = boss_legacy_store.restore_active(state.get("boss_legacy", {}))
+	player.memory_id = String(state.get("memory_id", ""))
 	_update_boss_legacy_status()
 	growth.restore_checkpoint(state.growth)
 	weapon_controller.restore_checkpoint(state.weapons)
@@ -608,7 +616,12 @@ func _on_safe_zone_entered(
 func _grant_boss_legacy(source: String, choice: String) -> bool:
 	if choice.is_empty():
 		return true
+	if source == _last_legacy_grant_source and boss_legacy_store.save_path == _last_legacy_grant_path:
+		return true
 	var error := boss_legacy_store.grant(source, choice)
+	if error == OK:
+		_last_legacy_grant_source = source
+		_last_legacy_grant_path = boss_legacy_store.save_path
 	_update_boss_legacy_status()
 	if error != OK:
 		controls.update_checkpoint_status(true, "보상 저장 실패 · 이어하기로 다시 저장하세요")
@@ -616,4 +629,10 @@ func _grant_boss_legacy(source: String, choice: String) -> bool:
 
 
 func _update_boss_legacy_status() -> void:
-	controls.update_boss_legacy_status(boss_legacy_store.pending_reward(), player.boss_legacy)
+	var progress := boss_legacy_store.progress_snapshot()
+	controls.update_boss_legacy_status(progress.pending, player.boss_legacy)
+	controls.update_memory_status(progress.unlocked, progress.selected_memory, player.memory_id)
+
+
+func _on_boss_legacy_damage(_event: DamageEvent) -> void:
+	_update_boss_legacy_status()
