@@ -20,7 +20,7 @@ func grant(source: String, choice: String) -> Error:
 
 func progress_snapshot() -> Dictionary:
 	var data := _load()
-	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate()}
+	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate()}
 
 
 func claim(run_id: String, enabled: bool, memory_id: String = "") -> Dictionary:
@@ -92,7 +92,7 @@ func _append(event: Dictionary) -> Error:
 
 
 func _load() -> Dictionary:
-	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}}
+	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}}
 	if not FileAccess.file_exists(save_path):
 		return result
 	var file := FileAccess.open(save_path, FileAccess.READ)
@@ -116,6 +116,9 @@ func _load() -> Dictionary:
 		var source: String = event.get("source", "") if event.get("source", "") is String else ""
 		var run_id: String = event.get("run_id", "") if event.get("run_id", "") is String else ""
 		match event.get("event"):
+			"job":
+				if event.get("job_id") is String and not PrototypeJobProgress.profile(event.job_id).is_empty():
+					result.jobs[event.job_id] = true
 			"reward":
 				if not source.is_empty() and event.get("choice") in ["rescue", "destroy"] and not result.rewards.has(source):
 					result.rewards[source] = event.choice
@@ -170,3 +173,11 @@ static func description(choice: String) -> String:
 		"rescue": return "기사 동행 · 체력 +10 · 정예 지원 · 위기 회복 1회"
 		"destroy": return "태엽핵 · 피해/피격 +10% · 2스테이지 위험 길 개방"
 	return "다음 도전 보상 없음"
+
+
+func discover_job(id: String) -> Error:
+	if PrototypeJobProgress.profile(id).is_empty():
+		return ERR_INVALID_DATA
+	if _load().jobs.has(id):
+		return OK
+	return _append({"event": "job", "job_id": id})

@@ -221,6 +221,8 @@ var stage_route_options: Array[Dictionary] = PrototypeStageRunner.ROUTES.duplica
 var cleared_stage: int = 1
 var run_stage_count: int = 3
 var stage_recovered_health: int = 0
+var discovered_jobs: Dictionary = {}
+var job_codex_message: String = ""
 var unlocked_memories: Dictionary = {}
 var unlocked_weapon_blueprints: Dictionary = {}
 var preferred_memory_id: String = ""
@@ -424,7 +426,7 @@ func _draw_job_manifestation() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	draw_style_box(_panel_style(PANEL_COLOR), job_panel_rect)
 	var color: Color = manifested_job.get("color", ACTIVE_COLOR)
-	var headings := ["직업이 발현되었습니다", String(manifested_job.get("name", "")), String(manifested_job.get("passive", "")), "이번 도전의 필살기를 하나 선택하세요"]
+	var headings := ["직업이 발현되었습니다", String(manifested_job.get("name", "")), String(manifested_job.get("passive", "")), job_codex_message if not job_codex_message.is_empty() else "이번 도전의 필살기를 하나 선택하세요"]
 	var sizes := [20, 34, 19, 18]
 	var offsets := [0.02, 0.12, 0.23, 0.32]
 	for index in headings.size():
@@ -1759,7 +1761,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-115 · 정예 보상과 스킬 교체",
+		"GP-116 · 직업 도감과 영구 발견",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
@@ -2348,7 +2350,7 @@ func _leave_village_environment() -> void:
 
 
 func village_snapshot() -> Dictionary:
-	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary)
+	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary, discovered_jobs, String(movement_metrics.get("growth_job_id", "")) if bool(movement_metrics.get("growth_run_active", false)) else "")
 	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(_safe_area_in_viewport(), cards.size(), checkpoint_available)}
 
 
@@ -2381,7 +2383,7 @@ func _draw_village() -> void:
 	draw_rect(Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.75)), Color("2b4b43"))
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
-	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "이 기기의 로컬 도전 기록"
+	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "이 기기의 로컬 도전 기록"
 	_draw_text_centered(subtitle, Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, safe.size.y * 0.06)), 20, TEXT_COLOR)
 	var resident := "정착한 태엽 기사 · 다음 여행도 무사히 돌아오세요." if snapshot.resident else "태엽 기사 · 보스 구출 후 마을에 정착합니다."
 	_draw_text_centered(resident, Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.06)), 19, ACTIVE_COLOR if snapshot.resident else MUTED_TEXT_COLOR)
@@ -2396,7 +2398,7 @@ func _draw_village() -> void:
 			draw_colored_polygon(PackedVector2Array([Vector2(rect.position.x + 20, roof_y), Vector2(rect.get_center().x, rect.position.y - 10), Vector2(rect.end.x - 20, roof_y)]), Color("ab765b") if card.open else Color("607078"))
 		var title_rect := Rect2(rect.position + Vector2(12, rect.size.y * 0.16), Vector2(rect.size.x - 24, rect.size.y * 0.13))
 		_draw_village_text(card.name, title_rect, 26, TEXT_COLOR)
-		_draw_village_text("열림" if card.open else "잠김 · 조건을 확인하세요", Rect2(rect.position + Vector2(12, rect.size.y * 0.31), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 17, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
+		_draw_village_text(String(card.get("status", "열림" if card.open else "잠김 · 조건을 확인하세요")), Rect2(rect.position + Vector2(12, rect.size.y * 0.31), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 17, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
 		for j in card.lines.size():
 			_draw_village_text(String(card.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.44 + j * 0.08)), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 18, TEXT_COLOR)
 	_draw_button(layout.back, "메인 화면" if village_page == "village" else "마을로", false)
@@ -2489,3 +2491,9 @@ func _draw_skill_rewards() -> void:
 	_draw_text_centered(checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "정예마다 한 번 교체 · 교체한 스킬은 대기시간부터 시작", Rect2(safe.position + Vector2(0, safe.size.y * 0.77), Vector2(safe.size.x, safe.size.y * 0.05)), 17, MUTED_TEXT_COLOR)
 	_draw_button(skill_reward_cancel_rect, "현재 구성 유지", false)
 	_draw_button(skill_reward_confirm_rect, "교체 확정", selected_skill_offer >= 0 and selected_skill_slot >= 0)
+
+
+func update_job_codex_status(discovered: Dictionary, message: String = "") -> void:
+	discovered_jobs = discovered.duplicate()
+	job_codex_message = message
+	queue_redraw()
