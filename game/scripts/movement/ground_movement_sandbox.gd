@@ -440,6 +440,7 @@ func continue_saved_run() -> bool:
 	player.growth_bow_bonus = float(state.player.bow)
 	player.boss_legacy = boss_legacy_store.restore_active(state.get("boss_legacy", {}))
 	player.memory_id = String(state.get("memory_id", ""))
+	controls.selected_memory_id = player.memory_id
 	_update_boss_legacy_status()
 	growth.restore_checkpoint(state.growth)
 	weapon_controller.restore_checkpoint(state.weapons)

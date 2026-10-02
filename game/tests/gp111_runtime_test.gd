@@ -92,7 +92,7 @@ func _run() -> void:
 		"guard-resume":
 			if not _check(controls.preferred_memory_id == "clockwork_guard" and player.damage_receiver.max_health == 100 and player.memory_id == "", "재실행은 선호 기억만 복원·전투 시작 전 체력 보너스 없음"): return
 			var saved := store.load_checkpoint()
-			if not _check(sandbox.continue_saved_run() and player.memory_id == "clockwork_guard" and player.damage_receiver.max_health == saved.player.max_health and player.damage_receiver.health == saved.player.health, "이어하기는 저장된 수호·체력 정확히 복원"): return
+			if not _check(sandbox.continue_saved_run() and player.memory_id == "clockwork_guard" and controls.selected_memory_id == "clockwork_guard" and player.damage_receiver.max_health == saved.player.max_health and player.damage_receiver.health == saved.player.health, "이어하기는 저장된 수호·시작 선택·체력 정확히 복원"): return
 			if not _check(sandbox._claim_weapon_reward(""), "이어하기 장비 보상 유지 선택"): return
 			sandbox._continue_stage("wind")
 			if not _check(player.memory_id == "clockwork_guard" and player.damage_receiver.max_health == saved.player.max_health, "스테이지 전환에서 수호 보너스 재적용 없음"): return
