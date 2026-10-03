@@ -22,7 +22,7 @@ func _run() -> void:
 		return
 
 	var initial: Dictionary = controls.control_layout_snapshot()
-	if not _assert_equal((initial["touch_rects"] as Dictionary).size(), 7, "전체 조작 요소 7개"):
+	if not _assert_equal((initial["touch_rects"] as Dictionary).size(), 8, "회복약 포함 전체 조작 요소 8개"):
 		return
 	var safe: Rect2 = controls.layout_snapshot()["safe"]
 	for rect_value in (initial["touch_rects"] as Dictionary).values():
