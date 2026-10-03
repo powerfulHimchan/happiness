@@ -12,6 +12,7 @@ enum Type {
 	JUMP,
 	WEAPON_SWAP,
 	BASIC_ATTACK,
+	RECOVERY_POTION,
 }
 
 enum Phase {
@@ -28,6 +29,7 @@ const PRIORITY_BY_TYPE := {
 	Type.JUMP: 400,
 	Type.WEAPON_SWAP: 300,
 	Type.BASIC_ATTACK: 200,
+	Type.RECOVERY_POTION: 650,
 }
 
 const BUFFER_MSEC_BY_TYPE := {
@@ -38,6 +40,7 @@ const BUFFER_MSEC_BY_TYPE := {
 	Type.JUMP: 120,
 	Type.WEAPON_SWAP: 200,
 	Type.BASIC_ATTACK: 50,
+	Type.RECOVERY_POTION: 100,
 }
 
 var command_type: int
@@ -87,6 +90,8 @@ func display_name() -> String:
 			return "무기 전환"
 		Type.BASIC_ATTACK:
 			return "자동 공격"
+		Type.RECOVERY_POTION:
+			return "회복약"
 	return "알 수 없음"
 
 

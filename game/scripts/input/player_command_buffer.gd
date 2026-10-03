@@ -64,6 +64,7 @@ func clear() -> void:
 
 func _uses_single_buffer_slot(command_type: int) -> bool:
 	return command_type == PlayerCommand.Type.JUMP \
+		or command_type == PlayerCommand.Type.RECOVERY_POTION \
 		or command_type == PlayerCommand.Type.WEAPON_SWAP
 
 

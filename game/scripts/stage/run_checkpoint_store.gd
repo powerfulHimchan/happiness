@@ -170,6 +170,8 @@ static func valid_state(state: Dictionary) -> bool:
 		if tag not in PrototypeJobProgress.TAG_NAMES or not _number(growth.recent[tag], 0, 100):
 			return false
 	var player: Dictionary = state.player
+	if player.has("potions_remaining") and not _number(player.potions_remaining, 0, PrototypePlayer.POTIONS_PER_RUN, true):
+		return false
 	if not _number(player.get("max_health"), 100, 10000, true) or not _number(player.get("health"), 1, float(player.max_health), true):
 		return false
 	for key in ["common", "sword", "bow"]:
