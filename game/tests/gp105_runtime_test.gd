@@ -32,6 +32,7 @@ func _run() -> void:
 		quit(0)
 		return
 	sandbox = SANDBOX.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	sandbox.checkpoint_store = store
 	# ready 전에 기록 경로를 지정해 다음 프로세스도 같은 기록을 읽는다.
 	sandbox.get_node("LocalTestRecorder").record_path = RECORD_PATH

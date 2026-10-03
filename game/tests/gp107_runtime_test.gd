@@ -21,6 +21,7 @@ func _run() -> void:
 	store.clear_checkpoint()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(RECORD_PATH))
 	sandbox = SANDBOX.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	sandbox.checkpoint_store = store
 	sandbox.get_node("LocalTestRecorder").record_path = RECORD_PATH
 	root.add_child(sandbox)

@@ -9,6 +9,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var sandbox := SANDBOX_SCENE.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	root.add_child(sandbox)
 	var controls := sandbox.get_node("CanvasLayer/GroundMovementControls") as Control
 	var feedback := sandbox.get_node("CombatFeedbackController") as CombatFeedbackController

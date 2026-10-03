@@ -12,6 +12,7 @@ func _run() -> void:
 		store.clear_checkpoint()
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(GP113_LEGACY))
 	sandbox = SANDBOX.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	sandbox.checkpoint_store = store
 	sandbox.boss_legacy_store = legacy
 	sandbox.get_node("LocalTestRecorder").record_path = "user://gp113_records.jsonl"

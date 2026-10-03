@@ -618,6 +618,10 @@ if [[ -n "$godot_command" ]]; then
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp117_runtime_test.gd -- "$potion_phase"
   done
+  for orb_phase in seed resume; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp118_runtime_test.gd -- "$orb_phase"
+  done
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

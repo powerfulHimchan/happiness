@@ -11,6 +11,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_remove_test_save()
 	var sandbox := SANDBOX_SCENE.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	root.add_child(sandbox)
 	var controls := sandbox.get_node("CanvasLayer/GroundMovementControls") as Control
 	await process_frame

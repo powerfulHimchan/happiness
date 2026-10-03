@@ -373,6 +373,13 @@ func use_recovery_potion() -> bool:
 	return true
 
 
+func collect_recovery_orb() -> bool:
+	if _is_input_locked() or damage_receiver.health >= damage_receiver.max_health:
+		return false
+	apply_growth_health(0, ceili(damage_receiver.max_health * RecoveryOrbController.HEAL_RATIO))
+	return true
+
+
 func feedback_snapshot() -> Dictionary:
 	return {
 		"hit_flash_remaining_s": _hit_flash_remaining_s,

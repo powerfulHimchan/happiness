@@ -10,6 +10,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var sandbox := SANDBOX_SCENE.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	root.add_child(sandbox)
 	var stage_runner := sandbox.get_node("StageRunner") as PrototypeStageRunner
 	stage_runner.set_stage_enabled(false)
