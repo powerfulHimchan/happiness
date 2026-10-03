@@ -57,7 +57,8 @@ func _run() -> void:
 				if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and store.load_checkpoint() == saved, "손상 횟수 거부·정상 저장 보호"): return
 		"resume":
 			if not _check(sandbox.continue_saved_run() and player.potions_remaining == 1 and controls.movement_metrics.potions_remaining == 1, "별도 프로세스 이어하기·횟수 HUD 복원"): return
-			if not _check(sandbox.continue_to_next_stage("wind") and player.potions_remaining == 1, "다음 스테이지는 회복약 재충전 없음"): return
+			_tap(controls.stage_route_rects[1].get_center())
+			if not _check(runner.stage_number == 2 and controls.current_screen_mode() == 0 and player.potions_remaining == 1, "다음 스테이지는 회복약 재충전 없음"): return
 			player.damage_receiver.health = player.damage_receiver.max_health - 1
 			_press_potion()
 			controls._handle_touch_released(7)
