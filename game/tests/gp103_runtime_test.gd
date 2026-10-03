@@ -9,6 +9,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var sandbox := SANDBOX.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	root.add_child(sandbox)
 	current_scene = sandbox
 	await process_frame

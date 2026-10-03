@@ -1,6 +1,7 @@
-[gd_scene load_steps=44 format=3]
+[gd_scene load_steps=45 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/stage/recovery_orb_controller.gd" id="36_recovery_orbs"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
 [ext_resource type="Texture2D" path="res://assets/prototype_player.svg" id="3_avatar"]
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_controls.gd" id="4_controls"]
@@ -774,6 +775,9 @@ script = ExtResource("33_growth")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 layer = 10
+
+[node name="RecoveryOrbController" type="Node2D" parent="."]
+script = ExtResource("36_recovery_orbs")
 
 [node name="GroundMovementControls" type="Control" parent="CanvasLayer"]
 layout_mode = 3

@@ -5,6 +5,7 @@ extends Node
 ## 180초는 측정 목표이며 제한 시간이 아니다. 구간 완료 조건만 다음 관문을 연다.
 
 signal stage_metrics_changed(metrics: Dictionary)
+signal stage_reset
 
 enum Section {
 	ADVANCE_ONE,
@@ -134,6 +135,7 @@ func reset_stage() -> void:
 	_active_enemies.clear()
 	_metric_elapsed_s = 0.0
 	_last_stage_log = "구간 1/5 시작 · 첫 관문까지 전진"
+	stage_reset.emit()
 	_emit_metrics()
 
 

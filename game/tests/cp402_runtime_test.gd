@@ -11,6 +11,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_remove_test_save()
 	var first := SANDBOX_SCENE.instantiate()
+	first.get_node("RecoveryOrbController").drop_chance = 0.0
 	root.add_child(first)
 	var first_controls := first.get_node("CanvasLayer/GroundMovementControls") as Control
 	await process_frame
@@ -33,6 +34,7 @@ func _run() -> void:
 	first.queue_free()
 	await process_frame
 	var second := SANDBOX_SCENE.instantiate()
+	second.get_node("RecoveryOrbController").drop_chance = 0.0
 	root.add_child(second)
 	var second_controls := second.get_node("CanvasLayer/GroundMovementControls") as Control
 	await process_frame
@@ -76,6 +78,7 @@ func _run() -> void:
 	second.queue_free()
 	await process_frame
 	var third := SANDBOX_SCENE.instantiate()
+	third.get_node("RecoveryOrbController").drop_chance = 0.0
 	root.add_child(third)
 	var third_controls := third.get_node("CanvasLayer/GroundMovementControls") as Control
 	await process_frame

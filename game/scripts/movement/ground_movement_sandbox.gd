@@ -366,6 +366,12 @@ func _use_recovery_potion() -> bool:
 	return player.use_recovery_potion()
 
 
+func _can_collect_recovery_orb() -> bool:
+	return controls.current_screen_mode() == 0 and growth.run_active \
+		and not get_tree().paused and not _combat_environment_suspended \
+		and stage_runner.stage_enabled and not stage_runner.stage_complete
+
+
 func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error:
 	if growth.choosing or growth.awaiting_job_confirmation:
 		return ERR_BUSY
@@ -537,7 +543,7 @@ func _suspend_combat_environment() -> void:
 		return
 	_combat_environment_suspended = true
 	_suspended_node_states.clear()
-	var nodes: Array[Node] = [stage_runner, target_selector]
+	var nodes: Array[Node] = [stage_runner, target_selector, $RecoveryOrbController]
 	if controls.village_environment_owned:
 		nodes.append_array([player, weapon_controller])
 	for group_name in [&"combat_enemy", &"enemy_projectile", &"targetable"]:

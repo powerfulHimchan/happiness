@@ -12,6 +12,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_remove_test_files()
 	var first := SANDBOX_SCENE.instantiate()
+	first.get_node("RecoveryOrbController").drop_chance = 0.0
 	(first.get_node("StageRunner") as PrototypeStageRunner).stage_limit = 1
 	root.add_child(first)
 	var controls := first.get_node("CanvasLayer/GroundMovementControls") as Control
@@ -54,6 +55,7 @@ func _run() -> void:
 	first.queue_free()
 	await process_frame
 	var second := SANDBOX_SCENE.instantiate()
+	second.get_node("RecoveryOrbController").drop_chance = 0.0
 	(second.get_node("StageRunner") as PrototypeStageRunner).stage_limit = 1
 	root.add_child(second)
 	var second_controls := second.get_node("CanvasLayer/GroundMovementControls") as Control

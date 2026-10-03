@@ -15,6 +15,7 @@ func _run() -> void:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	legacy.fail_writes = phase == "legacy-fail"
 	sandbox = SANDBOX.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	sandbox.checkpoint_store = store
 	sandbox.boss_legacy_store = legacy
 	sandbox.get_node("LocalTestRecorder").record_path = GP116_RECORD

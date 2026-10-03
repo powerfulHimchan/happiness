@@ -14,6 +14,7 @@ func _run() -> void:
 		for path in [GP111_LEGACY_PATH, GP111_RECORD_PATH]:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	sandbox = SANDBOX.instantiate()
+	sandbox.get_node("RecoveryOrbController").drop_chance = 0.0
 	sandbox.checkpoint_store = store
 	sandbox.boss_legacy_store = legacy
 	sandbox.get_node("LocalTestRecorder").record_path = GP111_RECORD_PATH
