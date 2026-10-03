@@ -65,6 +65,7 @@ func _ready() -> void:
 	controls.skill_1_pressed.connect(weapon_controller.request_skill_1)
 	controls.skill_2_pressed.connect(weapon_controller.request_skill_2)
 	controls.ultimate_pressed.connect(ultimate_controller.request_ultimate)
+	controls.recovery_potion_pressed.connect(_use_recovery_potion)
 	controls.weapon_swap_pressed.connect(weapon_controller.request_weapon_switch)
 	controls.reset_requested.connect(_reset_test)
 	controls.retry_requested.connect(_reset_test)
@@ -359,6 +360,12 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		_save_checkpoint(metrics)
 
 
+func _use_recovery_potion() -> bool:
+	if controls.current_screen_mode() != 0 or not growth.run_active or get_tree().paused or stage_runner.stage_complete:
+		return false
+	return player.use_recovery_potion()
+
+
 func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error:
 	if growth.choosing or growth.awaiting_job_confirmation:
 		return ERR_BUSY
@@ -371,7 +378,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
-		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus},
+		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining},
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
@@ -455,6 +462,7 @@ func continue_saved_run() -> bool:
 	player.reset_movement_test(TRACK_START)
 	player.damage_receiver.max_health = int(state.player.max_health)
 	player.damage_receiver.health = int(state.player.health)
+	player.potions_remaining = int(state.player.get("potions_remaining", PrototypePlayer.POTIONS_PER_RUN))
 	player.growth_common_bonus = float(state.player.common)
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)

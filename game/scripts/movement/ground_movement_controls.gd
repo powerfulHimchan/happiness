@@ -10,6 +10,7 @@ signal reset_requested
 signal skill_1_pressed
 signal skill_2_pressed
 signal ultimate_pressed
+signal recovery_potion_pressed
 signal weapon_swap_pressed
 signal retry_requested
 signal layout_test_started
@@ -74,6 +75,7 @@ const DEFAULT_CONTROL_CENTERS := {
 	&"skill_2": Vector2(0.905, 0.600),
 	&"ultimate": Vector2(0.680, 0.665),
 	&"weapon_swap": Vector2(0.690, 0.845),
+	&"recovery_potion": Vector2(0.400, 0.850),
 }
 const LEFT_CONTROL_CENTERS := {
 	&"move": Vector2(0.85, 0.80),
@@ -83,6 +85,7 @@ const LEFT_CONTROL_CENTERS := {
 	&"skill_2": Vector2(0.095, 0.600),
 	&"ultimate": Vector2(0.320, 0.665),
 	&"weapon_swap": Vector2(0.310, 0.845),
+	&"recovery_potion": Vector2(0.600, 0.850),
 }
 const ACTION_ORDER: Array[StringName] = [
 	&"jump",
@@ -91,6 +94,7 @@ const ACTION_ORDER: Array[StringName] = [
 	&"skill_1",
 	&"ultimate",
 	&"weapon_swap",
+	&"recovery_potion",
 ]
 const ACTION_LABELS := {
 	&"jump": "점프",
@@ -99,6 +103,7 @@ const ACTION_LABELS := {
 	&"skill_2": "회전",
 	&"ultimate": "새벽 0%",
 	&"weapon_swap": "전환",
+	&"recovery_potion": "회복약",
 }
 const ACTION_TYPES := {
 	&"jump": PlayerCommand.Type.JUMP,
@@ -107,6 +112,7 @@ const ACTION_TYPES := {
 	&"skill_2": PlayerCommand.Type.SKILL_2,
 	&"ultimate": PlayerCommand.Type.ULTIMATE,
 	&"weapon_swap": PlayerCommand.Type.WEAPON_SWAP,
+	&"recovery_potion": PlayerCommand.Type.RECOVERY_POTION,
 }
 
 var command_buffer := PlayerCommandBuffer.new()
@@ -1430,6 +1436,9 @@ func _dispatch_action_command(command: PlayerCommand) -> void:
 		PlayerCommand.Type.WEAPON_SWAP:
 			if command.phase == PlayerCommand.Phase.PRESSED:
 				weapon_swap_pressed.emit()
+		PlayerCommand.Type.RECOVERY_POTION:
+			if command.phase == PlayerCommand.Phase.PRESSED and screen_mode == ScreenMode.COMBAT:
+				recovery_potion_pressed.emit()
 
 
 func _handle_header_action(position: Vector2) -> bool:
@@ -1504,6 +1513,7 @@ func _refresh_layout() -> void:
 		&"skill_2": 72.0,
 		&"ultimate": 72.0,
 		&"weapon_swap": 64.0,
+		&"recovery_potion": 56.0,
 	}
 	action_rects.clear()
 	for action_id in ACTION_ORDER:
@@ -1634,6 +1644,7 @@ func _draw_header() -> void:
 	_draw_text("Lv.%d · 경험치 %d/%d" % [int(movement_metrics.get("growth_level", 1)), int(movement_metrics.get("growth_xp", 0)), int(movement_metrics.get("growth_next_xp", 20))], Vector2(left_x, top_y + 56.0), 17, ACTIVE_COLOR)
 	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")), Vector2(left_x, top_y + 76.0), 15, MUTED_TEXT_COLOR)
 	_draw_text(PrototypeMemoryAbilities.profile(active_memory_id).name + _legacy_hud_label(), Vector2(left_x, top_y + 96.0), 13, ACTIVE_COLOR)
+	_draw_text(String(movement_metrics.get("potion_log", "회복약 · 최대 체력 25% 회복")), Vector2(left_x, top_y + 116.0), 12, MUTED_TEXT_COLOR)
 
 	_draw_text(
 		"%d/%d · %s  %d/%d" % [
@@ -1761,7 +1772,7 @@ func _draw_main_screen() -> void:
 		ACTIVE_COLOR
 	)
 	_draw_text_centered(
-		"GP-116 · 직업 도감과 영구 발견",
+		"GP-117 · 전투 회복약",
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
 		25,
 		TEXT_COLOR
@@ -2019,6 +2030,8 @@ func _draw_action_controls() -> void:
 		var ultimate_active := action_id == &"ultimate" \
 			and bool(movement_metrics.get("ultimate_active", false))
 		var color := ACTIVE_COLOR if pressed or ultimate_ready or ultimate_active else ACTION_COLOR
+		if action_id == &"recovery_potion":
+			color = PASS_COLOR if int(movement_metrics.get("potions_remaining", 2)) > 0 and int(movement_metrics.get("health", 100)) < int(movement_metrics.get("max_health", 100)) else MUTED_TEXT_COLOR
 		draw_circle(rect.get_center(), rect.size.x * 0.5, Color(color, (0.30 if pressed else 0.20) * control_opacity))
 		draw_arc(rect.get_center(), rect.size.x * 0.5, 0.0, TAU, 44, Color(color, control_opacity), 5.0, true)
 		if action_id == &"ultimate":
@@ -2033,9 +2046,13 @@ func _draw_action_controls() -> void:
 				48, Color(ACTIVE_COLOR, control_opacity), 9.0, true
 			)
 		_draw_text_centered(_action_label(action_id), rect, 18, Color(TEXT_COLOR, control_opacity))
+		if action_id == &"recovery_potion":
+			_draw_text_centered("체력 +25%", Rect2(rect.position + Vector2(0, rect.size.y * 0.65), Vector2(rect.size.x, 24)), 13, Color(color, control_opacity))
 
 
 func _action_label(action_id: StringName) -> String:
+	if action_id == &"recovery_potion":
+		return "회복 %d/2" % int(movement_metrics.get("potions_remaining", 2))
 	if action_id == &"skill_1":
 		return String(movement_metrics.get("skill_1_button_label", ACTION_LABELS[action_id]))
 	if action_id == &"skill_2":

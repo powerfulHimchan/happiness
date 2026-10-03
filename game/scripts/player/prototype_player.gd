@@ -34,6 +34,8 @@ const GROUND_EVADE_COOLDOWN_S := 0.45
 const AIR_DASH_SPEED_MPS := 9.5
 const AIR_DASH_DURATION_S := 0.18
 const MAX_HEALTH := 100
+const POTIONS_PER_RUN := 2
+const POTION_HEAL_RATIO := 0.25
 const FALL_DAMAGE_RATIO := 0.10
 const FALL_BOUNDARY_Y := 1160.0
 const FALL_RECOVERY_DELAY_S := 0.45
@@ -43,6 +45,8 @@ const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
 var memory_id: String = ""
+var potions_remaining: int = POTIONS_PER_RUN
+var potion_log: String = "회복약 · 최대 체력 25% 회복"
 var boss_legacy: Dictionary = {}
 var boss_legacy_store := BossLegacyStore.new()
 
@@ -358,6 +362,17 @@ func apply_growth_health(maximum_bonus: int, healing: int) -> void:
 	_emit_metrics()
 
 
+func use_recovery_potion() -> bool:
+	if _is_input_locked() or potions_remaining <= 0 or damage_receiver.health >= damage_receiver.max_health:
+		return false
+	var before := damage_receiver.health
+	potions_remaining -= 1
+	apply_growth_health(0, ceili(damage_receiver.max_health * POTION_HEAL_RATIO))
+	potion_log = "회복약 +%d · 남은 %d회" % [damage_receiver.health - before, potions_remaining]
+	_emit_metrics()
+	return true
+
+
 func feedback_snapshot() -> Dictionary:
 	return {
 		"hit_flash_remaining_s": _hit_flash_remaining_s,
@@ -391,6 +406,8 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	potions_remaining = POTIONS_PER_RUN
+	potion_log = "회복약 · 최대 체력 25% 회복"
 	memory_id = ""
 	boss_legacy = {}
 	set_job_emblem("", Color.WHITE)
@@ -795,6 +812,8 @@ func _emit_metrics() -> void:
 		"invincibility_end_frame": _invincibility_end_frame,
 		"health": damage_receiver.health,
 		"max_health": damage_receiver.max_health,
+		"potions_remaining": potions_remaining,
+		"potion_log": potion_log,
 		"fall_count": fall_count,
 		"last_fall_damage": last_fall_damage,
 		"last_fall_log": last_fall_log,
