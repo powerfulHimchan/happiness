@@ -20,7 +20,7 @@ func grant(source: String, choice: String) -> Error:
 
 func progress_snapshot() -> Dictionary:
 	var data := _load()
-	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate(), "potion_recipe": data.potion_recipe}
+	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate(), "potion_recipe": data.potion_recipe, "routes": data.routes.duplicate()}
 
 
 func select_potion_recipe(id: String) -> Error:
@@ -111,7 +111,7 @@ func _append(event: Dictionary) -> Error:
 
 
 func _load() -> Dictionary:
-	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}, "potion_recipe": PrototypePotionRecipes.BASIC}
+	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}, "potion_recipe": PrototypePotionRecipes.BASIC, "routes": {}}
 	if not FileAccess.file_exists(save_path):
 		return result
 	var file := FileAccess.open(save_path, FileAccess.READ)
@@ -135,6 +135,10 @@ func _load() -> Dictionary:
 		var source: String = event.get("source", "") if event.get("source", "") is String else ""
 		var run_id: String = event.get("run_id", "") if event.get("run_id", "") is String else ""
 		match event.get("event"):
+			"routes":
+				if PrototypeRouteAtlas.valid_ids(event.get("ids")):
+					for id in event.ids:
+						result.routes[id] = true
 			"potion_recipe":
 				if PrototypePotionRecipes.valid_id(event.get("id")) and PrototypePotionRecipes.available(event.id, result.unlocked):
 					result.potion_recipe = event.id
@@ -206,3 +210,14 @@ func discover_job(id: String) -> Error:
 	if _load().jobs.has(id):
 		return OK
 	return _append({"event": "job", "job_id": id})
+
+
+func discover_routes(ids: Array) -> Error:
+	if not PrototypeRouteAtlas.valid_ids(ids):
+		return ERR_INVALID_DATA
+	var known: Dictionary = _load().routes
+	var fresh: Array = []
+	for id in ids:
+		if not known.has(id):
+			fresh.append(id)
+	return OK if fresh.is_empty() else _append({"event": "routes", "ids": fresh})
