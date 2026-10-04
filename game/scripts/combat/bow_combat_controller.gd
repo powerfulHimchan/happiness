@@ -10,11 +10,13 @@ enum Action {
 	NONE,
 	PIERCING_ARROW,
 	ARROW_RAIN,
+	SPREAD_ARROW,
 }
 
 const SWORD_RANGE_M := 1.6
 const CLOSE_DAMAGE_MULTIPLIER := 0.80
 const PROJECTILE_SCENE := preload("res://scenes/combat/bow_projectile.tscn")
+const SPREAD_ANGLES_DEG := [-15.0, 0.0, 15.0]
 
 @export var weapon: WeaponDefinition
 @export var skill_1: SkillDefinition
@@ -39,6 +41,7 @@ var _next_skill_hit_index: int = 0
 var _action_sequence: int = 0
 var _rain_anchor: Vector2 = Vector2.ZERO
 var _piercing_projectile_id: String = ""
+var _spread_direction := Vector2.RIGHT
 
 @onready var player: PrototypePlayer = get_parent() as PrototypePlayer
 @onready var target_selector: AutoTargetSelector = $"../AutoTargetSelector"
@@ -79,12 +82,18 @@ func set_active(enabled: bool) -> void:
 
 func request_skill_1() -> void:
 	if active:
-		_start_skill(Action.ARROW_RAIN if skill_1.skill_id == &"bow_arrow_rain" else Action.PIERCING_ARROW, skill_1, _skill_1_cooldown_s, 1)
+		_start_skill(_skill_action(skill_1), skill_1, _skill_1_cooldown_s, 1)
 
 
 func request_skill_2() -> void:
 	if active:
-		_start_skill(Action.ARROW_RAIN if skill_2.skill_id == &"bow_arrow_rain" else Action.PIERCING_ARROW, skill_2, _skill_2_cooldown_s, 2)
+		_start_skill(_skill_action(skill_2), skill_2, _skill_2_cooldown_s, 2)
+
+
+func _skill_action(definition: SkillDefinition) -> int:
+	if definition != null and definition.skill_id == &"bow_spread":
+		return Action.SPREAD_ARROW
+	return Action.ARROW_RAIN if definition != null and definition.skill_id == &"bow_arrow_rain" else Action.PIERCING_ARROW
 
 
 func prepare_next_stage() -> void:
@@ -177,9 +186,10 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 		_skill_1_cooldown_s = definition.cooldown_s
 	else:
 		_skill_2_cooldown_s = definition.cooldown_s
-	if action == Action.PIERCING_ARROW:
+	if action != Action.ARROW_RAIN:
 		piercing_last_hit_count = 0
 		_piercing_projectile_id = "player:bow_piercing:%d" % _action_sequence
+		_spread_direction = Vector2(float(player.facing_direction), 0.0)
 	else:
 		var target := target_selector.current_target
 		_rain_anchor = (
@@ -219,6 +229,11 @@ func _update_skill_action(delta: float) -> void:
 
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
+	if _action == Action.SPREAD_ARROW:
+		for i in SPREAD_ANGLES_DEG.size():
+			_spawn_projectile("player:bow_spread:%d:%d:%d" % [_action_sequence, hit_index, i], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, _spread_direction.rotated(deg_to_rad(SPREAD_ANGLES_DEG[i])), PackedStringArray(["bow", "skill", "spread"]))
+		last_combat_log = "산개 사격 · 화살 3발 · 각 피해 %d · 정면 30도" % player.growth_damage(int(definition.damage[hit_index]), "bow", "skill")
+		return
 	if _action == Action.PIERCING_ARROW:
 		var origin := _projectile_origin()
 		var target := target_selector.current_target

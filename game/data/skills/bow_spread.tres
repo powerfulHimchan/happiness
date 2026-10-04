@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"bow_spread"
+display_name = "산개 사격"
+cooldown_s = 7.0
+duration_s = 0.50
+hit_times_s = PackedFloat32Array(0.18)
+damage = PackedInt32Array(16)
+hit_range_m = 8.0
+max_targets = 1
+can_move = true
+can_turn = false
+evade_cancel_start_s = 0.22
+ultimate_gain = 8

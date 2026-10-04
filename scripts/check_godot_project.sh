@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/data/skills/sword_line.tres"
+  "$game_root/data/skills/bow_spread.tres"
+  "$game_root/tests/gp121_runtime_test.gd"
   "$game_root/scripts/growth/prototype_potion_recipes.gd"
   "$game_root/tests/gp120_runtime_test.gd"
   "$game_root/project.godot"
@@ -631,6 +634,10 @@ if [[ -n "$godot_command" ]]; then
   for apothecary_phase in seed resume legacy; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp120_runtime_test.gd -- "$apothecary_phase"
+  done
+  for directional_phase in seed resume finish legacy combat; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp121_runtime_test.gd -- "$directional_phase"
   done
   echo "Godot headless project check: OK"
 else

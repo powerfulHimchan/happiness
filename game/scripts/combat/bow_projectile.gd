@@ -63,6 +63,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _check_hits(segment_start: Vector2, segment_end: Vector2) -> void:
+	if _hit_count >= max_hits or is_queued_for_deletion():
+		return
 	for node in get_tree().get_nodes_in_group("targetable"):
 		var target := node as PrototypeTarget
 		if target == null or not target.is_targetable():

@@ -100,24 +100,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-gp120-village-apothecary.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-gp121-directional-skills.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-gp120-village-apothecary.apk
+          cp "${apk_path}" dist/happiness-tale-gp121-directional-skills.apk
           (
             cd dist
-            sha256sum happiness-tale-gp120-village-apothecary.apk \
-              | tee happiness-tale-gp120-village-apothecary.apk.sha256
+            sha256sum happiness-tale-gp121-directional-skills.apk \
+              | tee happiness-tale-gp121-directional-skills.apk.sha256
           )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-gp120-village-apothecary-apk
+          name: happiness-tale-gp121-directional-skills-apk
           path: |
-            dist/happiness-tale-gp120-village-apothecary.apk
-            dist/happiness-tale-gp120-village-apothecary.apk.sha256
+            dist/happiness-tale-gp121-directional-skills.apk
+            dist/happiness-tale-gp121-directional-skills.apk.sha256
           if-no-files-found: error
           retention-days: 14
