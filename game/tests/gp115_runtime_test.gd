@@ -35,7 +35,7 @@ func _run() -> void:
 			controls.begin_retry()
 			if not _finish_stage(): return
 			_tap(controls.weapon_reward_skip_rect.get_center())
-			if not _check(controls.current_screen_mode() == 9 and not runner.skills_claimed and controls.skill_reward_offers[0].id == "sword_crescent" and controls.skill_reward_offers[1].id == "bow_volley", "무기 보상 후 두 스킬 후보"): return
+			if not _check(controls.current_screen_mode() == 9 and not runner.skills_claimed and controls.skill_reward_offers.size() == 4 and controls.skill_reward_offers[0].id == "sword_crescent" and controls.skill_reward_offers[1].id == "bow_volley", "무기 보상 후 기존 후보를 포함한 네 스킬 후보"): return
 			var saved := store.load_checkpoint()
 			var previous := weapons.checkpoint_snapshot()
 			_tap(controls.skill_reward_open_rect.get_center())

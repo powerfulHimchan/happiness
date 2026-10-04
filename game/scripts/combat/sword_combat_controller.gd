@@ -10,11 +10,13 @@ enum Action {
 	NONE,
 	DASH_SLASH,
 	SPIN_SLASH,
+	LINE_SLASH,
 }
 
 const COMBO_RESET_S := 0.90
 const BASIC_FLASH_S := 0.11
 const SKILL_FLASH_S := 0.16
+const LINE_HALF_HEIGHT_M := 0.90
 
 @export var weapon: WeaponDefinition
 @export var skill_1: SkillDefinition
@@ -38,6 +40,9 @@ var _next_skill_hit_index: int = 0
 var _action_sequence: int = 0
 var _captured_target: PrototypeTarget
 var _slash_remaining_s: float = 0.0
+var _line_remaining_s: float = 0.0
+var _line_direction: int = 1
+var _line_range_px: float = 0.0
 
 @onready var player: PrototypePlayer = get_parent() as PrototypePlayer
 @onready var target_selector: AutoTargetSelector = $"../AutoTargetSelector"
@@ -58,6 +63,8 @@ func _physics_process(delta: float) -> void:
 	_skill_1_cooldown_s = maxf(0.0, _skill_1_cooldown_s - delta)
 	_skill_2_cooldown_s = maxf(0.0, _skill_2_cooldown_s - delta)
 	_slash_remaining_s = maxf(0.0, _slash_remaining_s - delta)
+	_line_remaining_s = maxf(0.0, _line_remaining_s - delta)
+	queue_redraw()
 	_update_slash_visual()
 
 	if not active:
@@ -75,13 +82,29 @@ func _physics_process(delta: float) -> void:
 func request_skill_1() -> void:
 	if not active:
 		return
-	_start_skill(Action.DASH_SLASH if skill_1.skill_id == &"sword_dash" else Action.SPIN_SLASH, skill_1, _skill_1_cooldown_s, 1)
+	_start_skill(_skill_action(skill_1), skill_1, _skill_1_cooldown_s, 1)
 
 
 func request_skill_2() -> void:
 	if not active:
 		return
-	_start_skill(Action.DASH_SLASH if skill_2.skill_id == &"sword_dash" else Action.SPIN_SLASH, skill_2, _skill_2_cooldown_s, 2)
+	_start_skill(_skill_action(skill_2), skill_2, _skill_2_cooldown_s, 2)
+
+
+func _skill_action(definition: SkillDefinition) -> int:
+	if definition != null and definition.skill_id == &"sword_line":
+		return Action.LINE_SLASH
+	return Action.DASH_SLASH if definition != null and definition.skill_id == &"sword_dash" else Action.SPIN_SLASH
+
+
+func _draw() -> void:
+	if _line_remaining_s <= 0.0:
+		return
+	var end_x := _line_range_px * _line_direction
+	var height := LINE_HALF_HEIGHT_M * PrototypePlayer.PIXELS_PER_METER
+	draw_rect(Rect2(Vector2(minf(0, end_x), -38 - height), Vector2(_line_range_px, height * 2)), Color("ffd166", 0.18))
+	draw_line(Vector2(0, -38), Vector2(end_x, -38), Color("fff2cc"), 7, true)
+	draw_line(Vector2(0, -50), Vector2(end_x * 0.95, -50), Color("ffd166"), 3, true)
 
 
 func set_active(enabled: bool) -> void:
@@ -91,6 +114,8 @@ func set_active(enabled: bool) -> void:
 	if not active:
 		_finish_action("무기 전환으로 검 공격 중단")
 		_slash_remaining_s = 0.0
+		_line_remaining_s = 0.0
+		queue_redraw()
 		slash_sprite.visible = false
 	_emit_metrics()
 
@@ -99,11 +124,15 @@ func prepare_next_stage() -> void:
 	_finish_action("스테이지 이동 · 검 행동 정리")
 	combo_index = 0
 	_slash_remaining_s = 0.0
+	_line_remaining_s = 0.0
+	queue_redraw()
 	slash_sprite.visible = false
 	_emit_metrics()
 
 
 func reset_combat() -> void:
+	_line_remaining_s = 0.0
+	queue_redraw()
 	combo_index = 0
 	basic_attack_count = 0
 	skill_hit_count = 0
@@ -192,6 +221,9 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 	_next_skill_hit_index = 0
 	_action_sequence += 1
 	_captured_target = target_selector.current_target
+	if action == Action.LINE_SLASH:
+		_line_direction = player.facing_direction
+		_line_range_px = definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER
 	_basic_remaining_s = maxf(_basic_remaining_s, definition.duration_s)
 	_combo_idle_s = 0.0
 	if slot == 1:
@@ -251,7 +283,12 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 				player.global_position.distance_to(target.global_position)
 				/ PrototypePlayer.PIXELS_PER_METER
 			)
-			if distance_m <= definition.hit_range_m:
+			var in_range := distance_m <= definition.hit_range_m
+			if _action == Action.LINE_SLASH:
+				var offset := (target.global_position - player.global_position) / PrototypePlayer.PIXELS_PER_METER
+				var forward := offset.x * _line_direction
+				in_range = forward >= 0 and forward <= definition.hit_range_m and absf(offset.y) <= LINE_HALF_HEIGHT_M
+			if in_range:
 				targets.append(target)
 
 	var applied_targets := 0
@@ -307,6 +344,12 @@ func _damage_target(
 
 
 func _show_slash(duration_s: float, variant: int) -> void:
+	if _action == Action.LINE_SLASH:
+		_line_remaining_s = duration_s
+		_slash_remaining_s = 0.0
+		slash_sprite.visible = false
+		queue_redraw()
+		return
 	_slash_remaining_s = duration_s
 	slash_sprite.visible = true
 	slash_sprite.rotation = float(variant % 4) * 0.42 - 0.48
@@ -354,10 +397,14 @@ func _on_player_evade_started() -> void:
 	if _action != Action.NONE:
 		_finish_action("회피로 공격 취소")
 	_slash_remaining_s = 0.0
+	_line_remaining_s = 0.0
+	queue_redraw()
 	slash_sprite.visible = false
 
 
 func _on_player_interrupted(reason: String) -> void:
+	_line_remaining_s = 0.0
+	queue_redraw()
 	if _action != Action.NONE:
 		_finish_action("%s로 공격 중단" % reason)
 

@@ -2539,8 +2539,11 @@ func _refresh_skill_reward_layout() -> void:
 	var width := (safe.size.x * 0.90 - gap) * 0.5
 	skill_reward_offer_rects.clear()
 	skill_reward_slot_rects.clear()
+	var count := maxi(1, skill_reward_offers.size())
+	var offer_width := (safe.size.x * 0.90 - gap * (count - 1)) / count
+	for i in skill_reward_offers.size():
+		skill_reward_offer_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (offer_width + gap), safe.size.y * 0.17), Vector2(offer_width, safe.size.y * 0.28)))
 	for i in 2:
-		skill_reward_offer_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (width + gap), safe.size.y * 0.17), Vector2(width, safe.size.y * 0.28)))
 		skill_reward_slot_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (width + gap), safe.size.y * 0.53), Vector2(width, safe.size.y * 0.22)))
 	skill_reward_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.84), Vector2(width, safe.size.y * 0.09))
 	skill_reward_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05 + width + gap, safe.size.y * 0.84), skill_reward_cancel_rect.size)
