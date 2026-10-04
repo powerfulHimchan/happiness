@@ -31,6 +31,8 @@ var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
 var boss_legacy_store := BossLegacyStore.new()
 var _job_codex_message: String = ""
+var _pending_route_records: Array = []
+var _route_atlas_message: String = ""
 var _last_legacy_grant_source: String = ""
 var _last_legacy_grant_path: String = ""
 var _restoring_checkpoint: bool = false
@@ -55,6 +57,7 @@ func _ready() -> void:
 	controls.skill_reward_selected.connect(_claim_skill_reward)
 	controls.relic_reward_selected.connect(_claim_relic_reward)
 	controls.potion_recipe_selected.connect(_select_potion_recipe)
+	controls.route_records_retry_requested.connect(_retry_route_records)
 	controls.boss_choice_confirmed.connect(_resolve_boss_choice)
 	controls.continue_requested.connect(continue_saved_run)
 	controls.growth_card_selected.connect(growth.choose_card)
@@ -338,6 +341,8 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 			stage_runner.final_enemy().receive_damage(event)
 			_update_boss_legacy_status()
 		return
+	if growth.run_active and not player.damage_receiver.dead:
+		_record_route_history(stage_runner.stage_history)
 	if bool(metrics.get("run_complete", true)):
 		_finish_growth_selection()
 		growth.stop_run()
@@ -445,6 +450,7 @@ func _refresh_checkpoint() -> void:
 	_available_checkpoint = checkpoint_store.load_checkpoint()
 	var job_error: Error = OK
 	if not _available_checkpoint.is_empty():
+		_record_route_history(_available_checkpoint.stage.history)
 		job_error = _discover_job(String(_available_checkpoint.growth.job))
 	if job_error == OK:
 		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
@@ -684,6 +690,7 @@ func _update_boss_legacy_status() -> void:
 	controls.update_weapon_blueprints(progress.blueprints)
 	controls.update_job_codex_status(progress.jobs, _job_codex_message)
 	controls.update_potion_recipe_status(String(progress.potion_recipe))
+	controls.update_route_atlas_status(progress.routes, _route_atlas_message)
 
 
 func _select_potion_recipe(id: String) -> bool:
@@ -754,3 +761,24 @@ func _confirm_job(index: int) -> bool:
 	if _discover_job(growth.jobs.job_id) != OK:
 		return false
 	return growth.choose_job_ultimate(index)
+
+
+func _record_route_history(history: Array) -> void:
+	for entry in history:
+		var id := String(entry.route)
+		if id in PrototypeRouteAtlas.IDS and id not in _pending_route_records:
+			_pending_route_records.append(id)
+	_flush_route_records()
+
+
+func _flush_route_records() -> void:
+	var error := boss_legacy_store.discover_routes(_pending_route_records)
+	if error == OK:
+		_pending_route_records.clear()
+	_route_atlas_message = "지도 기록 저장 실패 · 경로 카드를 눌러 재시도" if error != OK else ""
+	controls.update_route_atlas_status(boss_legacy_store.progress_snapshot().routes, _route_atlas_message)
+
+
+func _retry_route_records() -> void:
+	if controls.current_screen_mode() == 13 and controls.village_page == "atlas":
+		_flush_route_records()

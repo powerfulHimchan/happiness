@@ -33,6 +33,7 @@ signal weapon_reward_selected(weapon_id: String)
 signal boss_choice_confirmed(choice: String)
 signal relic_reward_selected
 signal potion_recipe_selected(id: String)
+signal route_records_retry_requested
 
 enum ScreenMode {
 	COMBAT,
@@ -239,6 +240,8 @@ var run_stage_count: int = 3
 var stage_recovered_health: int = 0
 var discovered_jobs: Dictionary = {}
 var job_codex_message: String = ""
+var surveyed_routes: Dictionary = {}
+var route_atlas_message: String = ""
 var unlocked_memories: Dictionary = {}
 var unlocked_weapon_blueprints: Dictionary = {}
 var preferred_memory_id: String = ""
@@ -2401,7 +2404,7 @@ func _leave_village_environment() -> void:
 
 
 func village_snapshot() -> Dictionary:
-	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary, discovered_jobs, String(movement_metrics.get("growth_job_id", "")) if bool(movement_metrics.get("growth_run_active", false)) else "", preferred_potion_recipe)
+	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary, discovered_jobs, String(movement_metrics.get("growth_job_id", "")) if bool(movement_metrics.get("growth_run_active", false)) else "", preferred_potion_recipe, surveyed_routes)
 	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(_safe_area_in_viewport(), cards.size(), checkpoint_available)}
 
 
@@ -2424,6 +2427,11 @@ func _handle_village_touch(position: Vector2) -> void:
 				village_page = PrototypeVillageView.FACILITIES[i]
 				potion_recipe_message = ""
 				break
+	elif village_page == "atlas" and not route_atlas_message.is_empty():
+		for rect in layout.cards:
+			if rect.has_point(position):
+				route_records_retry_requested.emit()
+				break
 	elif village_page == "apothecary":
 		for i in layout.cards.size():
 			if layout.cards[i].has_point(position) and snapshot.cards[i].open:
@@ -2440,9 +2448,11 @@ func _draw_village() -> void:
 	draw_rect(Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.75)), Color("2b4b43"))
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
-	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
+	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "세 경로의 지형·보너스·선택 조건을 비교하세요" if village_page == "atlas" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
 	_draw_text_centered(subtitle, Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, safe.size.y * 0.06)), 20, TEXT_COLOR)
 	var resident := potion_recipe_message if village_page == "apothecary" and not potion_recipe_message.is_empty() else "약초사 · 이어하기의 회복약은 바꾸지 않아요." if village_page == "apothecary" and snapshot.resident else "약초사 · 보스 구출 후 농축 조제를 열어 드려요." if village_page == "apothecary" else "정착한 태엽 기사 · 다음 여행도 무사히 돌아오세요." if snapshot.resident else "태엽 기사 · 보스 구출 후 마을에 정착합니다."
+	if village_page == "atlas":
+		resident = route_atlas_message if not route_atlas_message.is_empty() else "지도 제작자 · 실제로 통과한 길만 답사 기록에 남겨요."
 	_draw_text_centered(resident, Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.06)), 19, ACTIVE_COLOR if snapshot.resident else MUTED_TEXT_COLOR)
 	for i in snapshot.cards.size():
 		var card: Dictionary = snapshot.cards[i]
@@ -2455,11 +2465,12 @@ func _draw_village() -> void:
 		if village_page == "village":
 			var roof_y := rect.position.y + rect.size.y * 0.13
 			draw_colored_polygon(PackedVector2Array([Vector2(rect.position.x + 20, roof_y), Vector2(rect.get_center().x, rect.position.y - 10), Vector2(rect.end.x - 20, roof_y)]), Color("ab765b") if card.open else Color("607078"))
-		var title_rect := Rect2(rect.position + Vector2(12, rect.size.y * 0.16), Vector2(rect.size.x - 24, rect.size.y * 0.13))
+		var compact: bool = village_page == "village" and snapshot.cards.size() > 5
+		var title_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.04 if compact else 0.16)), Vector2(rect.size.x - 24, rect.size.y * (0.20 if compact else 0.13)))
 		_draw_village_text(card.name, title_rect, 26, TEXT_COLOR)
-		_draw_village_text(String(card.get("status", "열림" if card.open else "잠김 · 조건을 확인하세요")), Rect2(rect.position + Vector2(12, rect.size.y * 0.31), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 17, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
+		_draw_village_text(String(card.get("status", "열림" if card.open else "잠김 · 조건을 확인하세요")), Rect2(rect.position + Vector2(12, rect.size.y * (0.27 if compact else 0.31)), Vector2(rect.size.x - 24, rect.size.y * (0.16 if compact else 0.08))), 17, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
 		for j in card.lines.size():
-			_draw_village_text(String(card.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.44 + j * 0.08)), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 18, TEXT_COLOR)
+			_draw_village_text(String(card.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.47 + j * 0.15 if compact else 0.44 + j * 0.08)), Vector2(rect.size.x - 24, rect.size.y * (0.13 if compact else 0.08))), 18, TEXT_COLOR)
 		if village_page == "apothecary":
 			var bottle := rect.position + Vector2(rect.size.x * 0.86, rect.size.y * 0.20)
 			draw_rect(Rect2(bottle - Vector2(8, 24), Vector2(16, 9)), Color("ba9768"))
@@ -2600,4 +2611,10 @@ func _draw_skill_rewards() -> void:
 func update_job_codex_status(discovered: Dictionary, message: String = "") -> void:
 	discovered_jobs = discovered.duplicate()
 	job_codex_message = message
+	queue_redraw()
+
+
+func update_route_atlas_status(surveyed: Dictionary, message: String = "") -> void:
+	surveyed_routes = surveyed.duplicate()
+	route_atlas_message = message
 	queue_redraw()

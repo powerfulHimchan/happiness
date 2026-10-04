@@ -145,7 +145,7 @@ func _test_apothecary_layout(unlocked: bool) -> bool:
 	for dimensions in [Vector2(1280, 720), Vector2(2400, 1080)]:
 		controls.size = dimensions
 		controls.village_page = "village"
-		if not _check(controls.village_snapshot().cards.size() == 5 and controls.village_snapshot().cards[4].open == unlocked, "다섯 시설·약초사 정착 상태"): return false
+		if not _check(controls.village_snapshot().cards.size() == 6 and controls.village_snapshot().cards[4].open == unlocked, "여섯 시설·약초사 정착 상태"): return false
 		for page in ["village", "apothecary"]:
 			controls.village_page = page
 			var snapshot: Dictionary = controls.village_snapshot()

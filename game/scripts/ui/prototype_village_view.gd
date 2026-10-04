@@ -2,15 +2,19 @@ class_name PrototypeVillageView
 extends RefCounted
 
 ## GP-114: 기존 영구 해금과 로컬 기록을 읽는 마을. 방문으로 저장을 변경하지 않는다.
-const FACILITIES := ["forge", "memories", "records", "jobs", "apothecary"]
-const TITLES := {"village": "시간의 닻 마을", "forge": "대장간 · 설계도", "memories": "기억의 쉼터", "records": "광장 · 도전 기록", "jobs": "직업 도감", "apothecary": "약방 · 회복약 조제"}
+const FACILITIES := ["forge", "memories", "records", "jobs", "apothecary", "atlas"]
+const TITLES := {"village": "시간의 닻 마을", "forge": "대장간 · 설계도", "memories": "기억의 쉼터", "records": "광장 · 도전 기록", "jobs": "직업 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
 
 static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictionary:
 	var cards: Array[Rect2] = []
 	var gap := safe.size.x * 0.02
-	var width := (safe.size.x * 0.90 - gap * (card_count - 1)) / card_count
+	var columns := 3 if card_count > 5 else card_count
+	var rows := ceili(float(card_count) / columns)
+	var width := (safe.size.x * 0.90 - gap * (columns - 1)) / columns
+	var row_gap := safe.size.y * 0.025
+	var height := (safe.size.y * 0.42 - row_gap * (rows - 1)) / rows
 	for i in card_count:
-		cards.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (width + gap), safe.size.y * 0.34), Vector2(width, safe.size.y * 0.42)))
+		cards.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + (i % columns) * (width + gap), safe.size.y * 0.34 + int(i / columns) * (height + row_gap)), Vector2(width, height)))
 	var count := 3 if can_continue else 2
 	var button_width := (safe.size.x * 0.90 - gap * (count - 1)) / count
 	var buttons: Array[Rect2] = []
@@ -18,9 +22,11 @@ static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictiona
 		buttons.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (button_width + gap), safe.size.y * 0.85), Vector2(button_width, safe.size.y * 0.09)))
 	return {"cards": cards, "back": buttons[0], "start": buttons[1], "continue": buttons[2] if can_continue else Rect2()}
 
-static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary, discovered_jobs: Dictionary = {}, current_job: String = "", potion_recipe: String = PrototypePotionRecipes.BASIC) -> Array[Dictionary]:
+static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary, discovered_jobs: Dictionary = {}, current_job: String = "", potion_recipe: String = PrototypePotionRecipes.BASIC, surveyed_routes: Dictionary = {}) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	match page:
+		"atlas":
+			result = PrototypeRouteAtlas.cards(surveyed_routes)
 		"apothecary":
 			for id in PrototypePotionRecipes.IDS:
 				var recipe := PrototypePotionRecipes.profile(id)
@@ -68,5 +74,6 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
 				{"name": "직업 도감", "open": true, "status": "언제든 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자", "조건 · 전용 능력 · 필살기"]},
 				{"name": "약방", "open": bool(memories.get("clockwork_guard", false)), "status": "약초사 정착" if memories.get("clockwork_guard", false) else "보스 구출로 약초사 정착", "lines": ["기본 25% · 2개", "농축 40% · 1개", "다음 도전의 회복약 선택"]},
+				{"name": "지도 제작소", "open": true, "status": "언제든 경로 비교", "lines": ["답사한 경로 %d/3" % surveyed_routes.size(), "풀숲 · 바람 · 태엽 폐허", "지형 · 보너스 · 통과 기록"]},
 			])
 	return result
