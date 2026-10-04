@@ -38,7 +38,7 @@ func _run() -> void:
 			if not _check(not player.double_jump_unlocked and not player.air_jump_available and controls._action_label(&"jump") == "점프", "새 도전은 기존 1단 점프"): return
 			if not await _test_jump(false): return
 			player.set_physics_process(false)
-			if not _choose_air_jump(): return
+			if not await _choose_air_jump(): return
 			if not _check(player.double_jump_unlocked and player.air_jump_available and growth.ranks.get("air_jump") == 1 and player.damage_receiver.max_health == 100 and player.growth_common_bonus == 0.0 and weapons.sword_combat._skill_1_cooldown_s == 0.0, "실제 능력 카드 터치로 도약만 해금"): return
 			for ignored in 100:
 				for card in growth._draw_cards():
