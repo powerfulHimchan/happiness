@@ -32,6 +32,7 @@ signal skill_reward_selected(id: String, slot: int)
 signal weapon_reward_selected(weapon_id: String)
 signal boss_choice_confirmed(choice: String)
 signal relic_reward_selected
+signal potion_recipe_selected(id: String)
 
 enum ScreenMode {
 	COMBAT,
@@ -142,6 +143,8 @@ var checkpoint_message: String = ""
 var main_village_rect: Rect2
 var village_page: String = "village"
 var village_environment_owned: bool = false
+var preferred_potion_recipe: String = PrototypePotionRecipes.BASIC
+var potion_recipe_message: String = ""
 var main_layout_rect := Rect2()
 var main_feedback_rect := Rect2()
 var feedback_panel_rect := Rect2()
@@ -873,6 +876,7 @@ func _draw_start_weapon_selection() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
 	_draw_text_centered("시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 54)), 32, ACTIVE_COLOR)
 	_draw_text_centered(BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "선택한 무기를 주 무기로 장착하고 새 도전을 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, 34)), 19, TEXT_COLOR)
+	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe), Rect2(safe.position + Vector2(0, safe.size.y * 0.21), Vector2(safe.size.x, safe.size.y * 0.025)), 17, PASS_COLOR)
 	var ids := ["sword", "bow"]
 	var names := ["검", "활"]
 	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m"]
@@ -2077,12 +2081,12 @@ func _draw_action_controls() -> void:
 			)
 		_draw_text_centered(_action_label(action_id), rect, 18, Color(TEXT_COLOR, control_opacity))
 		if action_id == &"recovery_potion":
-			_draw_text_centered("체력 +25%", Rect2(rect.position + Vector2(0, rect.size.y * 0.65), Vector2(rect.size.x, 24)), 13, Color(color, control_opacity))
+			_draw_text_centered("체력 +%d%%" % int(movement_metrics.get("potion_heal_percent", 25)), Rect2(rect.position + Vector2(0, rect.size.y * 0.65), Vector2(rect.size.x, 24)), 13, Color(color, control_opacity))
 
 
 func _action_label(action_id: StringName) -> String:
 	if action_id == &"recovery_potion":
-		return "회복 %d/2" % int(movement_metrics.get("potions_remaining", 2))
+		return "회복 %d/%d" % [int(movement_metrics.get("potions_remaining", 2)), int(movement_metrics.get("potions_capacity", 2))]
 	if action_id == &"skill_1":
 		return String(movement_metrics.get("skill_1_button_label", ACTION_LABELS[action_id]))
 	if action_id == &"skill_2":
@@ -2397,7 +2401,7 @@ func _leave_village_environment() -> void:
 
 
 func village_snapshot() -> Dictionary:
-	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary, discovered_jobs, String(movement_metrics.get("growth_job_id", "")) if bool(movement_metrics.get("growth_run_active", false)) else "")
+	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary, discovered_jobs, String(movement_metrics.get("growth_job_id", "")) if bool(movement_metrics.get("growth_run_active", false)) else "", preferred_potion_recipe)
 	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(_safe_area_in_viewport(), cards.size(), checkpoint_available)}
 
 
@@ -2418,6 +2422,12 @@ func _handle_village_touch(position: Vector2) -> void:
 		for i in layout.cards.size():
 			if layout.cards[i].has_point(position):
 				village_page = PrototypeVillageView.FACILITIES[i]
+				potion_recipe_message = ""
+				break
+	elif village_page == "apothecary":
+		for i in layout.cards.size():
+			if layout.cards[i].has_point(position) and snapshot.cards[i].open:
+				potion_recipe_selected.emit(String(snapshot.cards[i].id))
 				break
 	queue_redraw()
 
@@ -2430,15 +2440,17 @@ func _draw_village() -> void:
 	draw_rect(Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.75)), Color("2b4b43"))
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
-	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "이 기기의 로컬 도전 기록"
+	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
 	_draw_text_centered(subtitle, Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, safe.size.y * 0.06)), 20, TEXT_COLOR)
-	var resident := "정착한 태엽 기사 · 다음 여행도 무사히 돌아오세요." if snapshot.resident else "태엽 기사 · 보스 구출 후 마을에 정착합니다."
+	var resident := potion_recipe_message if village_page == "apothecary" and not potion_recipe_message.is_empty() else "약초사 · 이어하기의 회복약은 바꾸지 않아요." if village_page == "apothecary" and snapshot.resident else "약초사 · 보스 구출 후 농축 조제를 열어 드려요." if village_page == "apothecary" else "정착한 태엽 기사 · 다음 여행도 무사히 돌아오세요." if snapshot.resident else "태엽 기사 · 보스 구출 후 마을에 정착합니다."
 	_draw_text_centered(resident, Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.06)), 19, ACTIVE_COLOR if snapshot.resident else MUTED_TEXT_COLOR)
 	for i in snapshot.cards.size():
 		var card: Dictionary = snapshot.cards[i]
 		var rect: Rect2 = layout.cards[i]
 		var color := Color("3f675b") if card.open else Color("354752")
 		draw_style_box(_panel_style(color), rect)
+		if village_page == "apothecary" and card.id == preferred_potion_recipe:
+			draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 3)
 		# 마을 건물의 지붕을 코드로 그린다.
 		if village_page == "village":
 			var roof_y := rect.position.y + rect.size.y * 0.13
@@ -2448,6 +2460,10 @@ func _draw_village() -> void:
 		_draw_village_text(String(card.get("status", "열림" if card.open else "잠김 · 조건을 확인하세요")), Rect2(rect.position + Vector2(12, rect.size.y * 0.31), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 17, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
 		for j in card.lines.size():
 			_draw_village_text(String(card.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.44 + j * 0.08)), Vector2(rect.size.x - 24, rect.size.y * 0.08)), 18, TEXT_COLOR)
+		if village_page == "apothecary":
+			var bottle := rect.position + Vector2(rect.size.x * 0.86, rect.size.y * 0.20)
+			draw_rect(Rect2(bottle - Vector2(8, 24), Vector2(16, 9)), Color("ba9768"))
+			draw_style_box(_panel_style(Color("d47961") if card.id == PrototypePotionRecipes.BASIC else Color("cda54b")), Rect2(bottle - Vector2(16, 13), Vector2(32, 33)))
 	_draw_button(layout.back, "메인 화면" if village_page == "village" else "마을로", false)
 	_draw_button(layout.start, "새 도전 준비", true)
 	if checkpoint_available:
@@ -2459,6 +2475,12 @@ func _draw_village_text(value: String, rect: Rect2, requested_size: int, color: 
 	while font_size > 10 and ThemeDB.fallback_font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > rect.size.x:
 		font_size -= 1
 	_draw_text_centered(value, rect, font_size, color)
+
+
+func update_potion_recipe_status(id: String, message: String = "") -> void:
+	preferred_potion_recipe = id
+	potion_recipe_message = message
+	queue_redraw()
 
 
 func _refresh_relic_reward_layout() -> void:
