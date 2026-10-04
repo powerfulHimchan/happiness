@@ -2465,7 +2465,7 @@ func _draw_village() -> void:
 		if village_page == "village":
 			var roof_y := rect.position.y + rect.size.y * 0.13
 			draw_colored_polygon(PackedVector2Array([Vector2(rect.position.x + 20, roof_y), Vector2(rect.get_center().x, rect.position.y - 10), Vector2(rect.end.x - 20, roof_y)]), Color("ab765b") if card.open else Color("607078"))
-		var compact := village_page == "village" and snapshot.cards.size() > 5
+		var compact: bool = village_page == "village" and snapshot.cards.size() > 5
 		var title_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.04 if compact else 0.16)), Vector2(rect.size.x - 24, rect.size.y * (0.20 if compact else 0.13)))
 		_draw_village_text(card.name, title_rect, 26, TEXT_COLOR)
 		_draw_village_text(String(card.get("status", "열림" if card.open else "잠김 · 조건을 확인하세요")), Rect2(rect.position + Vector2(12, rect.size.y * (0.27 if compact else 0.31)), Vector2(rect.size.x - 24, rect.size.y * (0.16 if compact else 0.08))), 17, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
