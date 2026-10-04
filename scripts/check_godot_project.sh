@@ -622,6 +622,10 @@ if [[ -n "$godot_command" ]]; then
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp118_runtime_test.gd -- "$orb_phase"
   done
+  for relic_phase in seed resume spent legacy; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp119_runtime_test.gd -- "$relic_phase"
+  done
   echo "Godot headless project check: OK"
 else
   echo "Static project check: OK"

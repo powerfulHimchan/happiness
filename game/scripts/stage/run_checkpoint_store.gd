@@ -95,6 +95,10 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	var legacy: Dictionary = state.get("boss_legacy", {})
 	var stage: Dictionary = state.stage
+	if not PrototypeRelic.valid_state(state.get("relic", {})):
+		return false
+	if not state.get("relic", {}).is_empty() and (not _number(stage.get("number"), 2, 3, true) or stage.get("reward_claimed") != true):
+		return false
 	if stage.has("skills_claimed") != state.weapons.has("skills"):
 		return false
 	if state.weapons.has("skills") and (not PrototypeSkillRewards.valid_loadout(state.weapons.skills) or not stage.skills_claimed is bool):

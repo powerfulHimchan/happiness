@@ -31,6 +31,7 @@ signal continue_requested
 signal skill_reward_selected(id: String, slot: int)
 signal weapon_reward_selected(weapon_id: String)
 signal boss_choice_confirmed(choice: String)
+signal relic_reward_selected
 
 enum ScreenMode {
 	COMBAT,
@@ -48,6 +49,7 @@ enum ScreenMode {
 	BOSS_CHOICE,
 	VILLAGE,
 	SKILL_REWARD,
+	RELIC_REWARD,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -215,6 +217,11 @@ var selected_job_ultimate: int = -1
 var skill_reward_open_rect: Rect2
 var skill_reward_loadout: Dictionary = PrototypeSkillRewards.defaults()
 var skill_reward_claimed: bool = true
+var relic_offer_available: bool = false
+var relic_reward_open_rect: Rect2
+var relic_reward_card_rect: Rect2
+var relic_reward_confirm_rect: Rect2
+var relic_reward_cancel_rect: Rect2
 var skill_reward_offers: Array[Dictionary] = []
 var skill_reward_offer_rects: Array[Rect2] = []
 var skill_reward_slot_rects: Array[Rect2] = []
@@ -341,6 +348,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.RELIC_REWARD:
+		_draw_relic_rewards()
+		return
 	if screen_mode == ScreenMode.SKILL_REWARD:
 		_draw_skill_rewards()
 		return
@@ -563,6 +573,10 @@ func _refresh_stage_routes() -> void:
 	var count := stage_route_options.size()
 	var card_width := (safe.size.x * 0.90 - gap * (count - 1)) / count
 	skill_reward_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - 140.0, safe.size.y * 0.81), Vector2(280.0, safe.size.y * 0.08))
+	relic_reward_open_rect = Rect2()
+	if relic_offer_available:
+		skill_reward_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.81), Vector2(safe.size.x * 0.43, safe.size.y * 0.08))
+		relic_reward_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.52, safe.size.y * 0.81), skill_reward_open_rect.size)
 	stage_route_rects.clear()
 	for index in count:
 		stage_route_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.43), Vector2(card_width, safe.size.y * 0.35)))
@@ -585,7 +599,9 @@ func _draw_stage_routes() -> void:
 	if not skill_reward_claimed:
 		_draw_button(skill_reward_open_rect, "스킬 교체 살펴보기", true)
 	else:
-		_draw_text_centered("스킬 교체 완료 · 경로를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.84), Vector2(safe.size.x, 36)), 18, MUTED_TEXT_COLOR)
+		_draw_text_centered("스킬 교체 완료", skill_reward_open_rect, 18, MUTED_TEXT_COLOR)
+	if relic_offer_available:
+		_draw_button(relic_reward_open_rect, "유물 · 불사조 깃털", true)
 	if not checkpoint_message.is_empty():
 		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.91), Vector2(safe.size.x, 28)), 16, PASS_COLOR if checkpoint_available else WAIT_COLOR)
 
@@ -1156,6 +1172,13 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.RELIC_REWARD:
+		_refresh_relic_reward_layout()
+		if relic_reward_cancel_rect.has_point(position):
+			show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, stage_route_options)
+		elif relic_reward_confirm_rect.has_point(position):
+			relic_reward_selected.emit()
+		return
 	if screen_mode == ScreenMode.SKILL_REWARD:
 		_handle_skill_reward_touch(position)
 		return
@@ -1205,6 +1228,12 @@ func _handle_screen_touch(position: Vector2) -> void:
 			begin_retry(selected_starting_weapon)
 		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
+		if relic_offer_available and relic_reward_open_rect.has_point(position):
+			release_all_inputs()
+			screen_mode = ScreenMode.RELIC_REWARD
+			_refresh_relic_reward_layout()
+			queue_redraw()
+			return
 		if not skill_reward_claimed and skill_reward_open_rect.has_point(position):
 			show_skill_rewards()
 			return
@@ -1645,6 +1674,7 @@ func _draw_header() -> void:
 	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")), Vector2(left_x, top_y + 76.0), 15, MUTED_TEXT_COLOR)
 	_draw_text(PrototypeMemoryAbilities.profile(active_memory_id).name + _legacy_hud_label(), Vector2(left_x, top_y + 96.0), 13, ACTIVE_COLOR)
 	_draw_text(String(movement_metrics.get("potion_log", "회복약 · 최대 체력 25% 회복")), Vector2(left_x, top_y + 116.0), 12, MUTED_TEXT_COLOR)
+	_draw_text(String(movement_metrics.get("relic_hud", "유물 없음")), Vector2(left_x, top_y + 134.0), 12, ACTIVE_COLOR)
 
 	_draw_text(
 		"%d/%d · %s  %d/%d" % [
@@ -2429,6 +2459,38 @@ func _draw_village_text(value: String, rect: Rect2, requested_size: int, color: 
 	while font_size > 10 and ThemeDB.fallback_font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > rect.size.x:
 		font_size -= 1
 	_draw_text_centered(value, rect, font_size, color)
+
+
+func _refresh_relic_reward_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	relic_reward_card_rect = Rect2(safe.position + Vector2(safe.size.x * 0.18, safe.size.y * 0.21), Vector2(safe.size.x * 0.64, safe.size.y * 0.47))
+	var width := safe.size.x * 0.40
+	relic_reward_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.07, safe.size.y * 0.80), Vector2(width, safe.size.y * 0.09))
+	relic_reward_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.80), relic_reward_cancel_rect.size)
+
+
+func _draw_relic_rewards() -> void:
+	_refresh_relic_reward_layout()
+	var safe := _safe_area_in_viewport()
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.97), true)
+	_draw_text_centered("첫 유물 · 마지막 관문을 위한 준비", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 50)), 30, ACTIVE_COLOR)
+	draw_style_box(_panel_style(PANEL_COLOR), relic_reward_card_rect)
+	var rect := relic_reward_card_rect
+	_draw_text_centered("희귀 · 불사조 깃털", Rect2(rect.position + Vector2(0, rect.size.y * 0.07), Vector2(rect.size.x, 42)), 28, Color("ffca78"))
+	var center := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.37)
+	var feather := PackedVector2Array([center + Vector2(0, -28), center + Vector2(18, -8), center + Vector2(14, 14), center + Vector2(0, 30), center + Vector2(-14, 14), center + Vector2(-18, -8)])
+	draw_colored_polygon(feather, Color("ffa86a"))
+	draw_line(center + Vector2(0, -16), center + Vector2(0, 33), Color("fff1cf"), 3.0)
+	for offset in [-8.0, 3.0, 14.0]:
+		draw_line(center + Vector2(-12, offset - 8), center + Vector2(0, offset), Color("fff1cf"), 2.0)
+		draw_line(center + Vector2(12, offset - 8), center + Vector2(0, offset), Color("fff1cf"), 2.0)
+	var lines := ["치명적인 피해를 받으면 체력 50%로 부활", "이 도전에서 한 번 · 부활 후 1초 보호", "새 도전에는 가져갈 수 없습니다"]
+	for i in lines.size():
+		_draw_text_centered(lines[i], Rect2(rect.position + Vector2(0, rect.size.y * (0.57 + i * 0.12)), Vector2(rect.size.x, 30)), 19, TEXT_COLOR)
+	_draw_button(relic_reward_cancel_rect, "나중에 선택", false)
+	_draw_button(relic_reward_confirm_rect, "유물 획득", true)
+	if not checkpoint_message.is_empty():
+		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.92), Vector2(safe.size.x, 28)), 16, WAIT_COLOR)
 
 
 func update_skill_reward_status(loadout: Dictionary, claimed: bool) -> void:
