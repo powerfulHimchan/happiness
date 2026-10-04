@@ -20,7 +20,16 @@ func grant(source: String, choice: String) -> Error:
 
 func progress_snapshot() -> Dictionary:
 	var data := _load()
-	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate()}
+	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate(), "potion_recipe": data.potion_recipe}
+
+
+func select_potion_recipe(id: String) -> Error:
+	var data := _load()
+	if not PrototypePotionRecipes.available(id, data.unlocked):
+		return ERR_INVALID_DATA
+	if id == data.potion_recipe:
+		return OK
+	return _append({"event": "potion_recipe", "id": id})
 
 
 func claim(run_id: String, enabled: bool, memory_id: String = "") -> Dictionary:
@@ -102,7 +111,7 @@ func _append(event: Dictionary) -> Error:
 
 
 func _load() -> Dictionary:
-	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}}
+	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}, "potion_recipe": PrototypePotionRecipes.BASIC}
 	if not FileAccess.file_exists(save_path):
 		return result
 	var file := FileAccess.open(save_path, FileAccess.READ)
@@ -126,6 +135,9 @@ func _load() -> Dictionary:
 		var source: String = event.get("source", "") if event.get("source", "") is String else ""
 		var run_id: String = event.get("run_id", "") if event.get("run_id", "") is String else ""
 		match event.get("event"):
+			"potion_recipe":
+				if PrototypePotionRecipes.valid_id(event.get("id")) and PrototypePotionRecipes.available(event.id, result.unlocked):
+					result.potion_recipe = event.id
 			"phoenix_used":
 				if not run_id.is_empty():
 					result.phoenix[run_id] = true

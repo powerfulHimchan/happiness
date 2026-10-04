@@ -99,6 +99,7 @@ func _run() -> void:
 			_tap(controls.weapon_reward_skip_rect.get_center())
 			var old := store.load_checkpoint()
 			old.player.erase("potions_remaining")
+			old.player.erase("potion_recipe")
 			if not _check(store.save_checkpoint(old) == OK, "GP-116 이전 회복약 없는 정상 저장 준비"): return
 		"legacy-resume":
 			if not _check(sandbox.continue_saved_run() and player.potions_remaining == 2 and controls.movement_metrics.potions_remaining == 2, "기존 저장은 미사용 두 회로 호환 복원"): return

@@ -48,6 +48,7 @@ const STOP_EPSILON_MPS := 0.02
 var memory_id: String = ""
 var potions_remaining: int = POTIONS_PER_RUN
 var potion_log: String = "회복약 · 최대 체력 25% 회복"
+var potion_recipe: String = PrototypePotionRecipes.BASIC
 var relic_state: Dictionary = {}
 var relic_run_id: String = ""
 var phoenix_allowed: Callable
@@ -391,10 +392,19 @@ func use_recovery_potion() -> bool:
 		return false
 	var before := damage_receiver.health
 	potions_remaining -= 1
-	apply_growth_health(0, ceili(damage_receiver.max_health * POTION_HEAL_RATIO))
-	potion_log = "회복약 +%d · 남은 %d회" % [damage_receiver.health - before, potions_remaining]
+	var recipe := PrototypePotionRecipes.profile(potion_recipe)
+	apply_growth_health(0, ceili(damage_receiver.max_health * float(recipe.ratio)))
+	potion_log = "%s +%d · 남은 %d회" % [recipe.name, damage_receiver.health - before, potions_remaining]
 	_emit_metrics()
 	return true
+
+
+func prepare_potions(id: String, remaining: int = -1) -> void:
+	potion_recipe = id if PrototypePotionRecipes.valid_id(id) else PrototypePotionRecipes.BASIC
+	var recipe := PrototypePotionRecipes.profile(potion_recipe)
+	potions_remaining = int(recipe.count) if remaining < 0 else clampi(remaining, 0, int(recipe.count))
+	potion_log = PrototypePotionRecipes.summary(potion_recipe) + " · 남은 %d회" % potions_remaining
+	_emit_metrics()
 
 
 func collect_recovery_orb() -> bool:
@@ -441,6 +451,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	relic_run_id = ""
 	potions_remaining = POTIONS_PER_RUN
 	potion_log = "회복약 · 최대 체력 25% 회복"
+	potion_recipe = PrototypePotionRecipes.BASIC
 	memory_id = ""
 	boss_legacy = {}
 	set_job_emblem("", Color.WHITE)
@@ -846,6 +857,9 @@ func _emit_metrics() -> void:
 		"health": damage_receiver.health,
 		"max_health": damage_receiver.max_health,
 		"potions_remaining": potions_remaining,
+		"potions_capacity": PrototypePotionRecipes.profile(potion_recipe).count,
+		"potion_heal_percent": roundi(float(PrototypePotionRecipes.profile(potion_recipe).ratio) * 100),
+		"potion_recipe": potion_recipe,
 		"potion_log": potion_log,
 		"relic_hud": PrototypeRelic.hud(relic_state),
 		"relic": relic_state.duplicate(),

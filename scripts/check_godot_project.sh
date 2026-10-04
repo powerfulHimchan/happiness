@@ -5,6 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/scripts/growth/prototype_potion_recipes.gd"
+  "$game_root/tests/gp120_runtime_test.gd"
   "$game_root/project.godot"
   "$game_root/export_presets.cfg"
   "$game_root/scenes/movement/ground_movement_sandbox.tscn"
@@ -625,6 +627,10 @@ if [[ -n "$godot_command" ]]; then
   for relic_phase in seed resume spent legacy; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp119_runtime_test.gd -- "$relic_phase"
+  done
+  for apothecary_phase in seed resume legacy; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp120_runtime_test.gd -- "$apothecary_phase"
   done
   echo "Godot headless project check: OK"
 else

@@ -54,6 +54,7 @@ func _ready() -> void:
 	controls.weapon_reward_selected.connect(_claim_weapon_reward)
 	controls.skill_reward_selected.connect(_claim_skill_reward)
 	controls.relic_reward_selected.connect(_claim_relic_reward)
+	controls.potion_recipe_selected.connect(_select_potion_recipe)
 	controls.boss_choice_confirmed.connect(_resolve_boss_choice)
 	controls.continue_requested.connect(continue_saved_run)
 	controls.growth_card_selected.connect(growth.choose_card)
@@ -268,6 +269,7 @@ func _reset_test() -> void:
 	_finish_growth_selection()
 	_intermission_stage = 0
 	player.reset_movement_test(TRACK_START)
+	player.prepare_potions(String(boss_legacy_store.progress_snapshot().potion_recipe))
 	weapon_controller.reset_combat(controls.selected_starting_weapon)
 	growth.reset_run(weapon_controller.active_weapon_id)
 	player.boss_legacy = claimed.state
@@ -388,7 +390,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
-		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining},
+		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe},
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
@@ -473,7 +475,7 @@ func continue_saved_run() -> bool:
 	player.reset_movement_test(TRACK_START)
 	player.damage_receiver.max_health = int(state.player.max_health)
 	player.damage_receiver.health = int(state.player.health)
-	player.potions_remaining = int(state.player.get("potions_remaining", PrototypePlayer.POTIONS_PER_RUN))
+	player.prepare_potions(String(state.player.get("potion_recipe", PrototypePotionRecipes.BASIC)), int(state.player.get("potions_remaining", PrototypePlayer.POTIONS_PER_RUN)))
 	player.growth_common_bonus = float(state.player.common)
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)
@@ -681,6 +683,15 @@ func _update_boss_legacy_status() -> void:
 	weapon_controller.unlocked_blueprints = progress.blueprints.duplicate()
 	controls.update_weapon_blueprints(progress.blueprints)
 	controls.update_job_codex_status(progress.jobs, _job_codex_message)
+	controls.update_potion_recipe_status(String(progress.potion_recipe))
+
+
+func _select_potion_recipe(id: String) -> bool:
+	if controls.current_screen_mode() != 13 or controls.village_page != "apothecary":
+		return false
+	var error := boss_legacy_store.select_potion_recipe(id)
+	controls.update_potion_recipe_status(String(boss_legacy_store.progress_snapshot().potion_recipe), "조제 저장 실패 · 다시 선택하세요" if error != OK else "다음 새 도전에 적용됩니다")
+	return error == OK
 
 
 func _on_boss_legacy_damage(_event: DamageEvent) -> void:
