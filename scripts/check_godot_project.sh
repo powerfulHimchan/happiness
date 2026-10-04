@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp123_runtime_test.gd"
   "$game_root/scripts/stage/prototype_route_atlas.gd"
   "$game_root/tests/gp122_runtime_test.gd"
   "$game_root/data/skills/sword_line.tres"
@@ -644,6 +645,10 @@ if [[ -n "$godot_command" ]]; then
   for atlas_phase in seed resume finish legacy; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp122_runtime_test.gd -- "$atlas_phase"
+  done
+  for jump_phase in seed resume finish legacy; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp123_runtime_test.gd -- "$jump_phase"
   done
   echo "Godot headless project check: OK"
 else

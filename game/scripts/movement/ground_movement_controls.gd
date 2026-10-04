@@ -2088,6 +2088,8 @@ func _draw_action_controls() -> void:
 
 
 func _action_label(action_id: StringName) -> String:
+	if action_id == &"jump" and bool(movement_metrics.get("double_jump_unlocked", false)):
+		return "2단 점프" if movement_metrics.get("jump_state", "지상") == "지상" else "도약 1" if bool(movement_metrics.get("air_jump_available", false)) else "도약 0"
 	if action_id == &"recovery_potion":
 		return "회복 %d/%d" % [int(movement_metrics.get("potions_remaining", 2)), int(movement_metrics.get("potions_capacity", 2))]
 	if action_id == &"skill_1":

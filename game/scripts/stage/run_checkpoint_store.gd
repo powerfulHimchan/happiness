@@ -160,6 +160,9 @@ static func valid_state(state: Dictionary) -> bool:
 	for id in growth.ranks:
 		if id not in ids or not _number(growth.ranks[id], 1, 99, true):
 			return false
+		for card in valid_cards:
+			if card.id == id and int(growth.ranks[id]) > int(card.get("max_rank", 99)):
+				return false
 		rank_count += int(growth.ranks[id])
 	if rank_count != int(growth.level) - 1:
 		return false
