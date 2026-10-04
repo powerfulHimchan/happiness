@@ -69,6 +69,11 @@ var stop_test_passed: bool = false
 var reversal_test_passed: bool = false
 var last_stop_time_s: float = 0.0
 var last_stop_distance_m: float = 0.0
+var double_jump_unlocked: bool = false
+var air_jump_available: bool = false
+var double_jump_count: int = 0
+var _air_jump_flash_remaining_s: float = 0.0
+var _air_jump_flash_position := Vector2.ZERO
 var jump_held: bool = false
 var jump_count: int = 0
 var last_jump_height_m: float = 0.0
@@ -131,6 +136,9 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _air_jump_flash_remaining_s > 0.0:
+		_air_jump_flash_remaining_s = maxf(0.0, _air_jump_flash_remaining_s - delta)
+		queue_redraw()
 	damage_receiver.tick(delta)
 	_hit_flash_remaining_s = maxf(0.0, _hit_flash_remaining_s - delta)
 	if damage_receiver.dead:
@@ -155,6 +163,7 @@ func _physics_process(delta: float) -> void:
 	_update_mobility_timers(delta)
 	if grounded_at_start:
 		air_dash_available = true
+		air_jump_available = double_jump_unlocked
 	_update_jump_windows(delta, grounded_at_start)
 
 	if _mobility_action == MobilityAction.NONE and not _combat_action_active:
@@ -172,6 +181,7 @@ func _physics_process(delta: float) -> void:
 		return
 	if not grounded_at_start and is_on_floor():
 		air_dash_available = true
+		air_jump_available = double_jump_unlocked
 		if _mobility_action == MobilityAction.AIR_DASH:
 			_finish_mobility_action()
 	_update_jump_metrics(grounded_at_start)
@@ -361,6 +371,12 @@ func set_job_emblem(job_id: String, color: Color) -> void:
 
 
 func _draw() -> void:
+	if _air_jump_flash_remaining_s > 0.0:
+		var progress := 1.0 - _air_jump_flash_remaining_s / 0.18
+		var center := to_local(_air_jump_flash_position)
+		draw_arc(center, 22.0 + progress * 25.0, 0.0, TAU, 24, Color(0.56, 0.92, 1.0, 1.0 - progress), 4.0, true)
+		draw_line(center + Vector2(-20, 8), center + Vector2(-8, 16), Color("9be8f2"), 3.0, true)
+		draw_line(center + Vector2(20, 8), center + Vector2(8, 16), Color("9be8f2"), 3.0, true)
 	if job_emblem_id.is_empty():
 		return
 	# 색뿐 아니라 선봉대의 마름모와 추적자의 원형 표식으로 구분한다.
@@ -430,6 +446,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 	facing_direction = 1
 	avatar_sprite.flip_h = false
 	air_dash_available = true
+	air_jump_available = double_jump_unlocked
 	_coyote_remaining_s = 0.0
 	_jump_start_y = spawn_position.y
 	_jump_peak_height_m = 0.0
@@ -447,6 +464,11 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	double_jump_unlocked = false
+	air_jump_available = false
+	double_jump_count = 0
+	_air_jump_flash_remaining_s = 0.0
+	queue_redraw()
 	relic_state = {}
 	relic_run_id = ""
 	potions_remaining = POTIONS_PER_RUN
@@ -722,6 +744,7 @@ func _update_fall_recovery(delta: float) -> void:
 	_last_position_x = global_position.x
 	_fall_recovery_active = false
 	air_dash_available = true
+	air_jump_available = double_jump_unlocked
 	avatar.visible = true
 	last_fall_log = "복귀 %s · HP %d/%d" % [
 		last_safe_label,
@@ -731,6 +754,8 @@ func _update_fall_recovery(delta: float) -> void:
 
 
 func _cancel_actions_for_recovery() -> void:
+	_air_jump_flash_remaining_s = 0.0
+	queue_redraw()
 	move_input = 0.0
 	move_input_vector = Vector2.ZERO
 	jump_held = false
@@ -766,10 +791,20 @@ func _update_jump_windows(delta: float, grounded: bool) -> void:
 
 
 func _try_execute_jump(grounded: bool) -> void:
-	if _jump_buffer_remaining_s <= 0.0 or _coyote_remaining_s <= 0.0:
+	if _jump_buffer_remaining_s <= 0.0 or _is_input_locked():
 		return
 
-	if _jump_requested_airborne and grounded:
+	var air_jump := not grounded and _coyote_remaining_s <= 0.0
+	if air_jump:
+		if not double_jump_unlocked or not air_jump_available:
+			return
+		air_jump_available = false
+		double_jump_count += 1
+		_air_jump_flash_remaining_s = 0.18
+		_air_jump_flash_position = global_position + Vector2(0, 50)
+		queue_redraw()
+		last_jump_assist = "공중 도약"
+	elif _jump_requested_airborne and grounded:
 		last_jump_assist = "착지 버퍼"
 	elif not grounded:
 		last_jump_assist = "코요테"
@@ -837,6 +872,9 @@ func _emit_metrics() -> void:
 		"stop_distance_m": last_stop_distance_m,
 		"jump_state": _jump_state_name(),
 		"jump_held": jump_held,
+		"double_jump_unlocked": double_jump_unlocked,
+		"air_jump_available": air_jump_available,
+		"double_jump_count": double_jump_count,
 		"jump_count": jump_count,
 		"jump_height_m": _jump_peak_height_m if _jump_in_progress else last_jump_height_m,
 		"last_jump_height_m": last_jump_height_m,
@@ -915,3 +953,9 @@ func _damage_cause_summary() -> String:
 	if fall_count > 0:
 		parts.append("낙하 %d회" % fall_count)
 	return "피격 없음" if parts.is_empty() else " · ".join(parts)
+
+
+func set_double_jump_unlocked(enabled: bool) -> void:
+	double_jump_unlocked = enabled
+	air_jump_available = enabled
+	_emit_metrics()

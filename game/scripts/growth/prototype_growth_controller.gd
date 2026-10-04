@@ -17,6 +17,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "power", "title": "새벽의 힘", "category": "common", "lines": ["검·활 기본 공격·스킬", "피해 +10%"], "tags": {"strength": 1.25, "shooting": 1.25}},
 	{"id": "vitality", "title": "튼튼한 심장", "category": "common", "lines": ["최대 체력 +20", "현재 체력 +20"], "tags": {"strength": 1.25, "nature": 0.75}},
 	{"id": "recovery", "title": "다시 일어서기", "category": "common", "lines": ["최대 체력 +10", "체력 40 회복"], "tags": {"nature": 0.75, "determination": 0.75}},
+	{"id": "air_jump", "title": "공중 도약", "category": "common", "lines": ["공중에서 한 번 더 점프", "착지 시 충전 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
 var level: int = 1
@@ -54,6 +55,7 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	player.set_double_jump_unlocked(false)
 	var was_choosing := choosing or awaiting_job_confirmation
 	level = 1
 	experience = 0
@@ -90,6 +92,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	total_experience = int(state.total_xp)
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
+	player.set_double_jump_unlocked(int(ranks.get("air_jump", 0)) == 1)
 	jobs.job_id = String(state.job)
 	jobs.contributions = state.contributions.duplicate(true)
 	jobs.recent_ability = state.recent.duplicate(true)
@@ -152,7 +155,7 @@ func reroll() -> bool:
 			break
 	if offered_cards == previous:
 		for card in CARDS:
-			if card["category"] == "common" and card not in offered_cards:
+			if card["category"] == "common" and card not in offered_cards and _card_available(card):
 				offered_cards[1] = card.duplicate(true)
 				break
 	choices_requested.emit(offered_cards.duplicate(true), level, rerolls_remaining)
@@ -163,10 +166,13 @@ func reroll() -> bool:
 func choose_card(index: int) -> bool:
 	if not choosing or awaiting_job_confirmation or not run_active or index < 0 or index >= offered_cards.size():
 		return false
+	if not _card_available(offered_cards[index]):
+		return false
 	var selected_tags: Dictionary = offered_cards[index].get("tags", {})
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"air_jump": player.set_double_jump_unlocked(true)
 		"sword_power": player.growth_sword_bonus += 0.15
 		"bow_power": player.growth_bow_bonus += 0.15
 		"power": player.growth_common_bonus += 0.10
@@ -252,10 +258,13 @@ func choose_job_ultimate(index: int) -> bool:
 func _draw_cards() -> Array[Dictionary]:
 	var related: Array[Dictionary] = []
 	var common: Array[Dictionary] = []
-	var pool: Array[Dictionary] = CARDS.duplicate(true)
+	var pool: Array[Dictionary] = []
+	for card in CARDS:
+		if _card_available(card):
+			pool.append(card)
 	var job_cards := PrototypeJobRewards.cards_for(jobs.job_id)
 	pool.append_array(job_cards)
-	for card in CARDS:
+	for card in pool:
 		if card["category"] == weapons.active_weapon_id:
 			related.append(card)
 		elif card["category"] == "common":
@@ -277,3 +286,7 @@ func metrics_snapshot() -> Dictionary:
 
 func _emit_metrics() -> void:
 	metrics_changed.emit(metrics_snapshot())
+
+
+func _card_available(card: Dictionary) -> bool:
+	return not card.has("max_rank") or int(ranks.get(card.id, 0)) < int(card.max_rank)
