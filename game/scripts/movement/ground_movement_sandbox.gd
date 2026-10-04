@@ -43,6 +43,7 @@ var _suspended_node_states: Array[Dictionary] = []
 
 func _ready() -> void:
 	player.boss_legacy_store = boss_legacy_store
+	player.phoenix_allowed = _can_collect_recovery_orb
 	_update_boss_legacy_status()
 	growth.metrics_changed.connect(controls.update_growth_metrics)
 	growth.choices_requested.connect(_on_growth_choices_requested)
@@ -52,6 +53,7 @@ func _ready() -> void:
 	controls.stage_route_selected.connect(_continue_stage)
 	controls.weapon_reward_selected.connect(_claim_weapon_reward)
 	controls.skill_reward_selected.connect(_claim_skill_reward)
+	controls.relic_reward_selected.connect(_claim_relic_reward)
 	controls.boss_choice_confirmed.connect(_resolve_boss_choice)
 	controls.continue_requested.connect(continue_saved_run)
 	controls.growth_card_selected.connect(growth.choose_card)
@@ -78,6 +80,7 @@ func _ready() -> void:
 	player.fall_recovery_started.connect(controls.release_all_inputs)
 	player.damage_received.connect(_on_boss_legacy_damage)
 	player.player_died.connect(controls.release_all_inputs)
+	player.phoenix_revived.connect(controls.release_all_inputs)
 	player.player_died.connect(_finish_growth_selection)
 	player.player_died.connect(_discard_checkpoint)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
@@ -281,6 +284,7 @@ func _reset_test() -> void:
 	target_selector.reset_selection()
 	ultimate_controller.reset_ultimate()
 	test_recorder.start_run(run_id)
+	player.relic_run_id = run_id
 	stage_runner.reset_run()
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
@@ -390,6 +394,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"recorder": test_recorder.checkpoint_snapshot(),
 		"boss_legacy": player.boss_legacy.duplicate(true),
 		"memory_id": player.memory_id,
+		"relic": player.relic_state.duplicate(),
 	}
 	var error := checkpoint_store.save_checkpoint(state)
 	if error == OK:
@@ -474,6 +479,10 @@ func continue_saved_run() -> bool:
 	player.growth_bow_bonus = float(state.player.bow)
 	player.boss_legacy = boss_legacy_store.restore_active(state.get("boss_legacy", {}))
 	player.memory_id = String(state.get("memory_id", ""))
+	player.relic_state = state.get("relic", {}).duplicate()
+	player.relic_run_id = String(state.recorder.id)
+	if not player.relic_state.is_empty():
+		player.relic_state.used = player.relic_state.used or boss_legacy_store.phoenix_used(player.relic_run_id)
 	controls.selected_memory_id = player.memory_id
 	_update_boss_legacy_status()
 	growth.restore_checkpoint(state.growth)
@@ -680,6 +689,7 @@ func _on_boss_legacy_damage(_event: DamageEvent) -> void:
 
 func _show_intermission_routes() -> void:
 	controls.update_skill_reward_status(weapon_controller.skills, stage_runner.skills_claimed)
+	controls.relic_offer_available = stage_runner.stage_number == 2 and player.relic_state.is_empty()
 	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health, stage_runner.available_routes())
 
 
@@ -700,6 +710,22 @@ func _claim_skill_reward(id: String, slot: int) -> bool:
 		weapon_controller.force_emit_metrics()
 		return false
 	weapon_controller.prepare_next_stage()
+	_show_intermission_routes()
+	return true
+
+
+func _claim_relic_reward() -> bool:
+	if controls.current_screen_mode() != 15 or stage_runner.stage_number != 2 \
+	or not stage_runner.has_next_stage() or not stage_runner.reward_claimed \
+	or not growth.run_active or player.damage_receiver.dead or not player.relic_state.is_empty():
+		return false
+	player.relic_state = {"id": PrototypeRelic.PHOENIX_ID, "used": false}
+	player.relic_run_id = String(test_recorder.checkpoint_snapshot().id)
+	if _save_checkpoint(stage_runner.current_metrics()) != OK:
+		player.relic_state = {}
+		player.apply_growth_health(0, 0)
+		return false
+	player.apply_growth_health(0, 0)
 	_show_intermission_routes()
 	return true
 

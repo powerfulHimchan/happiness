@@ -48,6 +48,7 @@ func _ready() -> void:
 	slash_sprite.visible = false
 	player.evade_started.connect(_on_player_evade_started)
 	player.player_died.connect(_on_player_interrupted.bind("사망"))
+	player.phoenix_revived.connect(_on_player_interrupted.bind("부활"))
 	player.fall_recovery_started.connect(_on_player_interrupted.bind("낙하"))
 	_emit_metrics()
 

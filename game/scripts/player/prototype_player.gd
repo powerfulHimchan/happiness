@@ -9,6 +9,7 @@ signal fall_recovery_started
 signal player_died
 signal evade_started
 signal damage_received(event: DamageEvent)
+signal phoenix_revived
 
 enum MobilityAction {
 	NONE,
@@ -47,6 +48,9 @@ const STOP_EPSILON_MPS := 0.02
 var memory_id: String = ""
 var potions_remaining: int = POTIONS_PER_RUN
 var potion_log: String = "회복약 · 최대 체력 25% 회복"
+var relic_state: Dictionary = {}
+var relic_run_id: String = ""
+var phoenix_allowed: Callable
 var boss_legacy: Dictionary = {}
 var boss_legacy_store := BossLegacyStore.new()
 
@@ -301,6 +305,8 @@ func receive_damage(event: DamageEvent) -> int:
 		incoming.source_position = event.source_position
 		event = incoming
 	var result := damage_receiver.try_receive(event, invincible or _fall_recovery_active)
+	if result == DamageReceiver.Result.APPLIED and damage_receiver.dead:
+		_try_phoenix_revival()
 	if result == DamageReceiver.Result.APPLIED and not damage_receiver.dead and damage_receiver.health <= floori(damage_receiver.max_health * 0.25) and boss_legacy_store.spend_rescue(boss_legacy):
 		apply_growth_health(0, ceili(damage_receiver.max_health * 0.30))
 	last_damage_summary = event.summary() if event != null else "잘못된 이벤트"
@@ -327,6 +333,24 @@ func receive_damage(event: DamageEvent) -> int:
 			player_died.emit()
 	_emit_metrics()
 	return result
+
+
+func _try_phoenix_revival() -> bool:
+	if not damage_receiver.dead or relic_state.is_empty() or relic_state.used or relic_run_id.is_empty() \
+	or not phoenix_allowed.is_valid() or not phoenix_allowed.call():
+		return false
+	if boss_legacy_store.phoenix_used(relic_run_id):
+		relic_state.used = true
+		return false
+	if boss_legacy_store.spend_phoenix(relic_run_id) != OK:
+		return false
+	relic_state.used = true
+	damage_receiver.revive_with_health(ceili(damage_receiver.max_health * PrototypeRelic.HEAL_RATIO), PrototypeRelic.INVULNERABLE_S)
+	_cancel_actions_for_recovery()
+	velocity = Vector2.ZERO
+	_input_lock_remaining_s = 0.20
+	phoenix_revived.emit()
+	return true
 
 
 func set_job_emblem(job_id: String, color: Color) -> void:
@@ -413,6 +437,8 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	relic_state = {}
+	relic_run_id = ""
 	potions_remaining = POTIONS_PER_RUN
 	potion_log = "회복약 · 최대 체력 25% 회복"
 	memory_id = ""
@@ -821,6 +847,8 @@ func _emit_metrics() -> void:
 		"max_health": damage_receiver.max_health,
 		"potions_remaining": potions_remaining,
 		"potion_log": potion_log,
+		"relic_hud": PrototypeRelic.hud(relic_state),
+		"relic": relic_state.duplicate(),
 		"fall_count": fall_count,
 		"last_fall_damage": last_fall_damage,
 		"last_fall_log": last_fall_log,

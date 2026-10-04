@@ -65,6 +65,13 @@ func try_receive(event: DamageEvent, external_invulnerable: bool = false) -> int
 	return last_result
 
 
+func revive_with_health(amount: int, protection_s: float) -> void:
+	# 피해 이벤트·피격 집계는 보존해 같은 치명타의 재적용을 막는다.
+	health = clampi(amount, 1, max_health)
+	dead = false
+	_post_hit_remaining_s = maxf(_post_hit_remaining_s, protection_s)
+
+
 func apply_environmental_damage(amount: int, minimum_health: int = 0) -> int:
 	if dead or amount <= 0:
 		return 0

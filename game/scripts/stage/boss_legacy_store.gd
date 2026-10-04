@@ -71,6 +71,16 @@ func spend_assist(state: Dictionary, stage: int) -> bool:
 	return true
 
 
+func phoenix_used(run_id: String) -> bool:
+	return _load().phoenix.get(run_id, false)
+
+
+func spend_phoenix(run_id: String) -> Error:
+	if run_id.is_empty() or phoenix_used(run_id):
+		return ERR_INVALID_DATA
+	return _append({"event": "phoenix_used", "run_id": run_id})
+
+
 func _append(event: Dictionary) -> Error:
 	var file := FileAccess.open(save_path, FileAccess.READ_WRITE if FileAccess.file_exists(save_path) else FileAccess.WRITE_READ)
 	if file == null:
@@ -92,7 +102,7 @@ func _append(event: Dictionary) -> Error:
 
 
 func _load() -> Dictionary:
-	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}}
+	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}}
 	if not FileAccess.file_exists(save_path):
 		return result
 	var file := FileAccess.open(save_path, FileAccess.READ)
@@ -116,6 +126,9 @@ func _load() -> Dictionary:
 		var source: String = event.get("source", "") if event.get("source", "") is String else ""
 		var run_id: String = event.get("run_id", "") if event.get("run_id", "") is String else ""
 		match event.get("event"):
+			"phoenix_used":
+				if not run_id.is_empty():
+					result.phoenix[run_id] = true
 			"job":
 				if event.get("job_id") is String and not PrototypeJobProgress.profile(event.job_id).is_empty():
 					result.jobs[event.job_id] = true
