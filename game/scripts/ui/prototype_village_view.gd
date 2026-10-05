@@ -3,7 +3,7 @@ extends RefCounted
 
 ## GP-114: 기존 영구 해금과 로컬 기록을 읽는 마을. 방문으로 저장을 변경하지 않는다.
 const FACILITIES := ["forge", "memories", "records", "jobs", "apothecary", "atlas"]
-const TITLES := {"village": "시간의 닻 마을", "forge": "대장간 · 설계도", "memories": "기억의 쉼터", "records": "광장 · 도전 기록", "jobs": "직업 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
+const TITLES := {"village": "시간의 닻 마을", "forge": "대장간 · 설계도", "memories": "기억의 쉼터", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
 
 static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictionary:
 	var cards: Array[Rect2] = []
@@ -72,7 +72,7 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				{"name": "대장간", "open": not blueprints.is_empty(), "lines": ["무기 설계도 %d/2" % blueprints.size(), "태엽 검 · 태엽 활", "설계와 등급별 효과 살펴보기"]},
 				{"name": "기억의 쉼터", "open": not memories.is_empty(), "lines": ["영구 기억 %d/2" % memories.size(), "태엽 수호 · 핵의 잔향", "기억의 능력과 해금 조건"]},
 				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
-				{"name": "직업 도감", "open": true, "status": "언제든 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자", "조건 · 전용 능력 · 필살기"]},
+				{"name": "성장 도감", "open": true, "status": "직업 · 능력 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자 · 능력 도감", "조건 · 강화 가지 · 효과"]},
 				{"name": "약방", "open": bool(memories.get("clockwork_guard", false)), "status": "약초사 정착" if memories.get("clockwork_guard", false) else "보스 구출로 약초사 정착", "lines": ["기본 25% · 2개", "농축 40% · 1개", "다음 도전의 회복약 선택"]},
 				{"name": "지도 제작소", "open": true, "status": "언제든 경로 비교", "lines": ["답사한 경로 %d/3" % surveyed_routes.size(), "풀숲 · 바람 · 태엽 폐허", "지형 · 보너스 · 통과 기록"]},
 			])

@@ -143,6 +143,9 @@ var checkpoint_available: bool = false
 var checkpoint_message: String = ""
 var main_village_rect: Rect2
 var village_page: String = "village"
+var ability_codex_page: int = 0
+var discovered_abilities: Dictionary = {}
+var ability_codex_message: String = ""
 var village_environment_owned: bool = false
 var preferred_potion_recipe: String = PrototypePotionRecipes.BASIC
 var potion_recipe_message: String = ""
@@ -630,7 +633,8 @@ func _draw_growth_choices() -> void:
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	_draw_text_centered("레벨 %d · 능력 하나를 선택하세요" % growth_choice_level, Rect2(safe.position + Vector2(0.0, safe.size.y * 0.08), Vector2(safe.size.x, 60.0)), 30, ACTIVE_COLOR)
-	_draw_text_centered("전투는 잠시 멈춥니다 · 선택하면 바로 재개", Rect2(safe.position + Vector2(0.0, safe.size.y * 0.18), Vector2(safe.size.x, 40.0)), 20, MUTED_TEXT_COLOR)
+	var selection_message := String(movement_metrics.get("growth_selection_message", ""))
+	_draw_text_centered(selection_message if not selection_message.is_empty() else "전투는 잠시 멈춥니다 · 선택하면 바로 재개", Rect2(safe.position + Vector2(0.0, safe.size.y * 0.18), Vector2(safe.size.x, 40.0)), 20, ACTIVE_COLOR if not selection_message.is_empty() else MUTED_TEXT_COLOR)
 	var slot_labels := ["직업 전용" if not growth_cards.is_empty() and growth_cards[0].get("category", "") == "job" else "현재 무기", "공용", "무작위"]
 	for index in growth_cards.size():
 		var rect := growth_card_rects[index]
@@ -2407,7 +2411,20 @@ func _leave_village_environment() -> void:
 
 func village_snapshot() -> Dictionary:
 	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary, discovered_jobs, String(movement_metrics.get("growth_job_id", "")) if bool(movement_metrics.get("growth_run_active", false)) else "", preferred_potion_recipe, surveyed_routes)
-	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(_safe_area_in_viewport(), cards.size(), checkpoint_available)}
+	var pages := ceili(float(PrototypeAbilityCodex.definitions().size()) / PrototypeAbilityCodex.PAGE_SIZE)
+	ability_codex_page = clampi(ability_codex_page, 0, pages - 1)
+	if village_page == "abilities":
+		var ranks: Dictionary = movement_metrics.get("growth_ranks", {}) if bool(movement_metrics.get("growth_run_active", false)) else {}
+		var all_cards := PrototypeAbilityCodex.cards(discovered_abilities, ranks)
+		cards = all_cards.slice(ability_codex_page * PrototypeAbilityCodex.PAGE_SIZE, (ability_codex_page + 1) * PrototypeAbilityCodex.PAGE_SIZE)
+	var safe := _safe_area_in_viewport()
+	var tabs := {}
+	var pager := {}
+	if village_page in ["jobs", "abilities"]:
+		tabs = {"jobs": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08)), "abilities": Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08))}
+	if village_page == "abilities":
+		pager = {"previous": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06)), "next": Rect2(safe.position + Vector2(safe.size.x * 0.71, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06))}
+	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(safe, cards.size(), checkpoint_available), "tabs": tabs, "pager": pager, "ability_page": ability_codex_page, "ability_pages": pages}
 
 
 func _handle_village_touch(position: Vector2) -> void:
@@ -2423,6 +2440,15 @@ func _handle_village_touch(position: Vector2) -> void:
 	elif checkpoint_available and layout["continue"].has_point(position):
 		show_main_screen()
 		continue_requested.emit()
+	elif village_page in ["jobs", "abilities"]:
+		for page in snapshot.tabs:
+			if snapshot.tabs[page].has_point(position):
+				village_page = page
+				ability_codex_page = 0
+				break
+		if village_page == "abilities" and not snapshot.pager.is_empty():
+			if snapshot.pager.previous.has_point(position): ability_codex_page = maxi(0, ability_codex_page - 1)
+			elif snapshot.pager.next.has_point(position): ability_codex_page = mini(snapshot.ability_pages - 1, ability_codex_page + 1)
 	elif village_page == "village":
 		for i in layout.cards.size():
 			if layout.cards[i].has_point(position):
@@ -2451,11 +2477,17 @@ func _draw_village() -> void:
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
 	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "세 경로의 지형·보너스·선택 조건을 비교하세요" if village_page == "atlas" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
+	if village_page == "abilities":
+		subtitle = ability_codex_message if not ability_codex_message.is_empty() else "발견 %d/%d · 직접 선택한 능력만 기록해요" % [discovered_abilities.size(), PrototypeAbilityCodex.definitions().size()]
 	_draw_text_centered(subtitle, Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, safe.size.y * 0.06)), 20, TEXT_COLOR)
 	var resident := potion_recipe_message if village_page == "apothecary" and not potion_recipe_message.is_empty() else "약초사 · 이어하기의 회복약은 바꾸지 않아요." if village_page == "apothecary" and snapshot.resident else "약초사 · 보스 구출 후 농축 조제를 열어 드려요." if village_page == "apothecary" else "정착한 태엽 기사 · 다음 여행도 무사히 돌아오세요." if snapshot.resident else "태엽 기사 · 보스 구출 후 마을에 정착합니다."
 	if village_page == "atlas":
 		resident = route_atlas_message if not route_atlas_message.is_empty() else "지도 제작자 · 실제로 통과한 길만 답사 기록에 남겨요."
-	_draw_text_centered(resident, Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.06)), 19, ACTIVE_COLOR if snapshot.resident else MUTED_TEXT_COLOR)
+	if village_page in ["jobs", "abilities"]:
+		for page in snapshot.tabs:
+			_draw_button(snapshot.tabs[page], "직업 도감" if page == "jobs" else "능력 도감", village_page == page)
+	else:
+		_draw_text_centered(resident, Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.06)), 19, ACTIVE_COLOR if snapshot.resident else MUTED_TEXT_COLOR)
 	for i in snapshot.cards.size():
 		var card: Dictionary = snapshot.cards[i]
 		var rect: Rect2 = layout.cards[i]
@@ -2477,6 +2509,10 @@ func _draw_village() -> void:
 			var bottle := rect.position + Vector2(rect.size.x * 0.86, rect.size.y * 0.20)
 			draw_rect(Rect2(bottle - Vector2(8, 24), Vector2(16, 9)), Color("ba9768"))
 			draw_style_box(_panel_style(Color("d47961") if card.id == PrototypePotionRecipes.BASIC else Color("cda54b")), Rect2(bottle - Vector2(16, 13), Vector2(32, 33)))
+	if village_page == "abilities":
+		_draw_button(snapshot.pager.previous, "이전", ability_codex_page > 0)
+		_draw_button(snapshot.pager.next, "다음", ability_codex_page < snapshot.ability_pages - 1)
+		_draw_village_text("%d / %d" % [ability_codex_page + 1, snapshot.ability_pages], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.78), Vector2(safe.size.x * 0.40, safe.size.y * 0.06)), 19, TEXT_COLOR)
 	_draw_button(layout.back, "메인 화면" if village_page == "village" else "마을로", false)
 	_draw_button(layout.start, "새 도전 준비", true)
 	if checkpoint_available:
@@ -2488,6 +2524,12 @@ func _draw_village_text(value: String, rect: Rect2, requested_size: int, color: 
 	while font_size > 10 and ThemeDB.fallback_font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > rect.size.x:
 		font_size -= 1
 	_draw_text_centered(value, rect, font_size, color)
+
+
+func update_ability_codex_status(found: Dictionary, message: String = "") -> void:
+	discovered_abilities = found.duplicate()
+	ability_codex_message = message
+	queue_redraw()
 
 
 func update_potion_recipe_status(id: String, message: String = "") -> void:
