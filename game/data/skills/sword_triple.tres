@@ -11,7 +11,6 @@ duration_s = 0.8
 hit_times_s = PackedFloat32Array(0.14, 0.34, 0.54)
 damage = PackedInt32Array(24, 28, 36)
 hit_range_m = 2.4
-max_targets = 1
 can_move = false
 can_turn = false
 evade_cancel_start_s = 0.2

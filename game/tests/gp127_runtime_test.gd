@@ -1,4 +1,4 @@
-extends "res://tests/gp127_runtime_test.gd"
+extends "res://tests/gp121_runtime_test.gd"
 
 const GP127_SAVE := "user://gp127_checkpoint.json"
 const GP127_META := "user://gp127_meta.jsonl"
@@ -198,3 +198,9 @@ func _test_tactical_combat() -> bool:
 	bow._update_skill_action(1.1)
 	if not _check(get_nodes_in_group("bow_projectile").is_empty() and bow._action == BowCombatController.Action.NONE, "무기 전환은 준비·발사·표시 취소"): return false
 	return true
+
+func _check(condition: bool, message: String) -> bool:
+	if not condition:
+		push_error("GP-127 failed: " + message)
+		quit(1)
+	return condition
