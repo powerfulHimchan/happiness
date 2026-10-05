@@ -31,6 +31,8 @@ var choosing: bool = false
 var run_active: bool = false
 var offered_cards: Array[Dictionary] = []
 var ranks: Dictionary = {}
+var record_ability: Callable
+var selection_message: String = ""
 var rng := RandomNumberGenerator.new()
 var _rewarded_lives: Dictionary = {}
 var jobs := PrototypeJobProgress.new()
@@ -69,6 +71,7 @@ func reset_run(starting_weapon: String = "sword") -> void:
 	run_active = true
 	offered_cards.clear()
 	ranks.clear()
+	selection_message = ""
 	_rewarded_lives.clear()
 	jobs.reset(starting_weapon)
 	awaiting_job_confirmation = false
@@ -175,6 +178,12 @@ func choose_card(index: int) -> bool:
 		return false
 	if not _card_available(offered_cards[index]):
 		return false
+	# 기록에 성공한 실제 선택만 효과를 적용한다. 실패 시 같은 카드를 다시 누른다.
+	if record_ability.is_valid() and record_ability.call([String(offered_cards[index].id)]) != OK:
+		selection_message = "능력 기록 저장 실패 · 카드를 다시 선택하세요"
+		_emit_metrics()
+		return false
+	selection_message = ""
 	var selected_tags: Dictionary = offered_cards[index].get("tags", {})
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
@@ -290,7 +299,7 @@ func _draw_cards() -> Array[Dictionary]:
 
 
 func metrics_snapshot() -> Dictionary:
-	return {"growth_level": level, "growth_xp": experience, "growth_next_xp": next_level_experience(), "growth_total_xp": total_experience, "growth_rerolls": rerolls_remaining, "growth_ranks": ranks.duplicate(), "growth_job_id": jobs.job_id, "growth_run_active": run_active, "growth_job_hud": jobs.hud_text(), "growth_job_contributions": jobs.contributions.duplicate(true)}
+	return {"growth_selection_message": selection_message, "growth_level": level, "growth_xp": experience, "growth_next_xp": next_level_experience(), "growth_total_xp": total_experience, "growth_rerolls": rerolls_remaining, "growth_ranks": ranks.duplicate(), "growth_job_id": jobs.job_id, "growth_run_active": run_active, "growth_job_hud": jobs.hud_text(), "growth_job_contributions": jobs.contributions.duplicate(true)}
 
 
 func _emit_metrics() -> void:

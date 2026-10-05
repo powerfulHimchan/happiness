@@ -30,6 +30,8 @@ var _intermission_stage: int = 0
 var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
 var boss_legacy_store := BossLegacyStore.new()
+var ability_discovery_store := AbilityDiscoveryStore.new()
+var _ability_codex_message: String = ""
 var _job_codex_message: String = ""
 var _pending_route_records: Array = []
 var _route_atlas_message: String = ""
@@ -47,6 +49,8 @@ func _ready() -> void:
 	player.boss_legacy_store = boss_legacy_store
 	player.phoenix_allowed = _can_collect_recovery_orb
 	player.lifesteal_allowed = _can_collect_recovery_orb
+	growth.record_ability = _record_abilities
+	_record_abilities([])
 	_update_boss_legacy_status()
 	growth.metrics_changed.connect(controls.update_growth_metrics)
 	growth.choices_requested.connect(_on_growth_choices_requested)
@@ -257,7 +261,7 @@ func _draw_track_markers() -> void:
 func _reset_test() -> void:
 	# 확정 저장을 먼저 회수하고 보상 소비 저장 실패 시 새 도전을 시작하지 않는다.
 	_refresh_checkpoint()
-	if not _available_checkpoint.is_empty() and not _job_codex_message.is_empty():
+	if not _available_checkpoint.is_empty() and (not _job_codex_message.is_empty() or not _ability_codex_message.is_empty()):
 		controls.show_main_screen()
 		return
 	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)):
@@ -387,6 +391,10 @@ func _can_collect_recovery_orb() -> bool:
 func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error:
 	if growth.choosing or growth.awaiting_job_confirmation:
 		return ERR_BUSY
+	var ability_error := _record_abilities(growth.ranks.keys())
+	if ability_error != OK:
+		controls.update_checkpoint_status(not _available_checkpoint.is_empty(), _ability_codex_message)
+		return ability_error
 	var job_error := _discover_job(growth.jobs.job_id)
 	if job_error != OK:
 		controls.update_checkpoint_status(not _available_checkpoint.is_empty(), "중간 저장 실패 · 직업 기록을 다시 저장해야 합니다")
@@ -450,17 +458,18 @@ func _record_stage_metrics(metrics: Dictionary) -> void:
 func _refresh_checkpoint() -> void:
 	_available_checkpoint = checkpoint_store.load_checkpoint()
 	var job_error: Error = OK
+	var ability_error: Error = _record_abilities(_available_checkpoint.growth.ranks.keys() if not _available_checkpoint.is_empty() else [])
 	if not _available_checkpoint.is_empty():
 		_record_route_history(_available_checkpoint.stage.history)
 		job_error = _discover_job(String(_available_checkpoint.growth.job))
-	if job_error == OK:
+	if job_error == OK and ability_error == OK:
 		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
 			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 				_discard_checkpoint()
 		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
 	_update_boss_legacy_status()
-	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
+	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), _ability_codex_message if ability_error != OK else checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
 
 
 func _discard_checkpoint() -> void:
@@ -474,6 +483,8 @@ func continue_saved_run() -> bool:
 	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2:
 		return false
 	var state := _available_checkpoint.duplicate(true)
+	if _record_abilities(state.growth.ranks.keys()) != OK:
+		return false
 	if _discover_job(String(state.growth.job)) != OK:
 		return false
 	_restoring_checkpoint = true
@@ -748,6 +759,13 @@ func _claim_relic_reward() -> bool:
 	player.apply_growth_health(0, 0)
 	_show_intermission_routes()
 	return true
+
+
+func _record_abilities(ids: Array) -> Error:
+	var error := ability_discovery_store.discover(ids)
+	_ability_codex_message = "능력 기록 저장 실패 · 다시 선택하거나 이어하기로 재시도하세요" if error != OK else ""
+	controls.update_ability_codex_status(ability_discovery_store.snapshot(), _ability_codex_message)
+	return error
 
 
 func _discover_job(id: String) -> Error:

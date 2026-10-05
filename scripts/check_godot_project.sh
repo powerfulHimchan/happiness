@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp126_runtime_test.gd"
+  "$game_root/scripts/growth/prototype_ability_codex.gd"
+  "$game_root/scripts/stage/ability_discovery_store.gd"
   "$game_root/tests/gp125_runtime_test.gd"
   "$game_root/tests/gp124_runtime_test.gd"
   "$game_root/tests/gp123_runtime_test.gd"
@@ -659,6 +662,10 @@ if [[ -n "$godot_command" ]]; then
   for branch_phase in seed resume crisis restore legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp125_runtime_test.gd -- "$branch_phase"
+  done
+  for codex_phase in seed resume finish legacy-fail legacy-resume; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp126_runtime_test.gd -- "$codex_phase"
   done
   echo "Godot headless project check: OK"
 else
