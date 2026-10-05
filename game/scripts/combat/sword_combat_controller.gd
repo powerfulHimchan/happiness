@@ -92,7 +92,7 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
-	if definition != null and definition.skill_id == &"sword_line":
+	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple"]:
 		return Action.LINE_SLASH
 	return Action.DASH_SLASH if definition != null and definition.skill_id == &"sword_dash" else Action.SPIN_SLASH
 
