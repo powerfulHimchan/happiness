@@ -19,6 +19,8 @@ const CARDS: Array[Dictionary] = [
 	{"id": "recovery", "title": "다시 일어서기", "category": "common", "lines": ["최대 체력 +10", "체력 40 회복"], "tags": {"nature": 0.75, "determination": 0.75}},
 	{"id": "air_jump", "title": "공중 도약", "category": "common", "lines": ["공중에서 한 번 더 점프", "착지 시 충전 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "lifesteal", "title": "생명 흡수", "category": "common", "lines": ["검·활 실제 피해의 5% 회복", "소수 회복 누적 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "lifesteal_depth", "title": "깊은 흡수", "category": "common", "lines": ["생명 흡수: 항상 10% 회복", "위기의 흡수와 하나만 선택"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal"], "excludes": ["lifesteal_crisis"]},
+	{"id": "lifesteal_crisis", "title": "위기의 흡수", "category": "common", "lines": ["체력 30% 이하: 15% 회복", "평소 5% · 깊은 흡수와 하나만"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal"], "excludes": ["lifesteal_depth"]},
 ]
 
 var level: int = 1
@@ -96,6 +98,8 @@ func restore_checkpoint(state: Dictionary) -> void:
 	ranks = state.ranks.duplicate(true)
 	player.set_double_jump_unlocked(int(ranks.get("air_jump", 0)) == 1)
 	player.set_lifesteal_unlocked(int(ranks.get("lifesteal", 0)) == 1)
+	for branch in ["lifesteal_depth", "lifesteal_crisis"]:
+		if ranks.has(branch): player.set_lifesteal_branch(branch)
 	jobs.job_id = String(state.job)
 	jobs.contributions = state.contributions.duplicate(true)
 	jobs.recent_ability = state.recent.duplicate(true)
@@ -175,6 +179,7 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"lifesteal_depth", "lifesteal_crisis": player.set_lifesteal_branch(card_id)
 		"lifesteal": player.set_lifesteal_unlocked(true)
 		"air_jump": player.set_double_jump_unlocked(true)
 		"sword_power": player.growth_sword_bonus += 0.15
@@ -293,4 +298,8 @@ func _emit_metrics() -> void:
 
 
 func _card_available(card: Dictionary) -> bool:
+	for required in card.get("requires", []):
+		if not ranks.has(required): return false
+	for excluded in card.get("excludes", []):
+		if ranks.has(excluded): return false
 	return not card.has("max_rank") or int(ranks.get(card.id, 0)) < int(card.max_rank)

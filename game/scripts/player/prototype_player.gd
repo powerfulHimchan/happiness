@@ -57,6 +57,7 @@ var boss_legacy_store := BossLegacyStore.new()
 
 const LIFESTEAL_DAMAGE_PER_HEALTH := 20
 var lifesteal_unlocked: bool = false
+var lifesteal_branch: String = ""
 var lifesteal_progress: int = 0
 var lifesteal_allowed: Callable
 var _lifesteal_flash_remaining_s: float = 0.0
@@ -475,6 +476,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 func reset_movement_test(spawn_position: Vector2) -> void:
 	lifesteal_unlocked = false
+	lifesteal_branch = ""
 	lifesteal_progress = 0
 	_lifesteal_flash_remaining_s = 0.0
 	double_jump_unlocked = false
@@ -888,6 +890,8 @@ func _emit_metrics() -> void:
 		"jump_held": jump_held,
 		"double_jump_unlocked": double_jump_unlocked,
 		"lifesteal_unlocked": lifesteal_unlocked,
+		"lifesteal_branch": lifesteal_branch,
+		"lifesteal_rate_percent": lifesteal_multiplier() * 5 if lifesteal_unlocked else 0,
 		"lifesteal_progress": lifesteal_progress,
 		"air_jump_available": air_jump_available,
 		"double_jump_count": double_jump_count,
@@ -980,10 +984,26 @@ func set_double_jump_unlocked(enabled: bool) -> void:
 func set_lifesteal_unlocked(enabled: bool) -> void:
 	lifesteal_unlocked = enabled
 	if not enabled:
+		lifesteal_branch = ""
 		lifesteal_progress = 0
 		_lifesteal_flash_remaining_s = 0.0
 		queue_redraw()
 	_emit_metrics()
+
+
+func set_lifesteal_branch(branch: String) -> void:
+	if not lifesteal_unlocked or branch not in ["lifesteal_depth", "lifesteal_crisis"]:
+		return
+	if not lifesteal_branch.is_empty() and lifesteal_branch != branch:
+		return
+	lifesteal_branch = branch
+	_emit_metrics()
+
+
+func lifesteal_multiplier() -> int:
+	if lifesteal_branch == "lifesteal_depth": return 2
+	if lifesteal_branch == "lifesteal_crisis" and damage_receiver.health * 10 <= damage_receiver.max_health * 3: return 3
+	return 1
 
 
 func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
@@ -997,11 +1017,14 @@ func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
 		and (event.tags.has("sword") or event.tags.has("bow")) \
 		and (event.tags.has("basic") or event.tags.has("skill")) \
 		and damage_receiver.health < damage_receiver.max_health
+	# 회복으로 문턱을 넘는 타격도 공격 시점의 배율을 한 번만 사용한다.
+	var multiplier := lifesteal_multiplier()
 	var before := target.damage_receiver.health
 	var result := target.receive_damage(event)
 	if result == DamageReceiver.Result.APPLIED and can_absorb and not damage_receiver.dead:
 		var actual := maxi(0, before - target.damage_receiver.health)
-		lifesteal_progress += actual
+		# 1단위는 체력 1/20이다. 강화 전후와 체력 문턱을 넘을 때 기존 소수를 보존한다.
+		lifesteal_progress += actual * multiplier
 		var healing := lifesteal_progress / LIFESTEAL_DAMAGE_PER_HEALTH
 		lifesteal_progress %= LIFESTEAL_DAMAGE_PER_HEALTH
 		var old_health := damage_receiver.health

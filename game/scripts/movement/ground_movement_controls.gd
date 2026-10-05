@@ -1681,7 +1681,7 @@ func _draw_header() -> void:
 	_draw_text(String(movement_metrics.get("growth_job_hud", "직업 미발현")), Vector2(left_x, top_y + 76.0), 15, MUTED_TEXT_COLOR)
 	_draw_text(PrototypeMemoryAbilities.profile(active_memory_id).name + _legacy_hud_label(), Vector2(left_x, top_y + 96.0), 13, ACTIVE_COLOR)
 	_draw_text(String(movement_metrics.get("potion_log", "회복약 · 최대 체력 25% 회복")), Vector2(left_x, top_y + 116.0), 12, MUTED_TEXT_COLOR)
-	_draw_text(String(movement_metrics.get("relic_hud", "유물 없음")) + (" · 흡수 5%" if bool(movement_metrics.get("lifesteal_unlocked", false)) else ""), Vector2(left_x, top_y + 134.0), 12, ACTIVE_COLOR)
+	_draw_text(String(movement_metrics.get("relic_hud", "유물 없음")) + (" · 흡수 %d%%" % int(movement_metrics.get("lifesteal_rate_percent", 5)) if bool(movement_metrics.get("lifesteal_unlocked", false)) else ""), Vector2(left_x, top_y + 134.0), 12, ACTIVE_COLOR)
 
 	_draw_text(
 		"%d/%d · %s  %d/%d" % [

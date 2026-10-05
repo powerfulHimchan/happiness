@@ -166,6 +166,12 @@ static func valid_state(state: Dictionary) -> bool:
 		rank_count += int(growth.ranks[id])
 	if rank_count != int(growth.level) - 1:
 		return false
+	for card in valid_cards:
+		if not growth.ranks.has(card.id): continue
+		for required in card.get("requires", []):
+			if not growth.ranks.has(required): return false
+		for excluded in card.get("excludes", []):
+			if growth.ranks.has(excluded): return false
 	for source in PrototypeJobProgress.WEIGHTS:
 		if not growth.contributions.get(source) is Dictionary:
 			return false
