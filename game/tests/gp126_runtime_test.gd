@@ -55,6 +55,8 @@ func _run() -> void:
 			if not _check(not sandbox._claim_weapon_reward("") and not runner.reward_claimed and store.load_checkpoint() == saved, "능력 기록 실패는 중간 저장·보상 확정 보류·기존 저장 보호"): return
 			book.save_path = GP126_BOOK
 			if not _check(sandbox._claim_weapon_reward(""), "중간 저장 재시도 성공"): return
+			# 정예 처치의 추가 레벨업으로 정상 선택한 검 카드도 포함한 뒤 조회를 비교한다.
+			journal = FileAccess.get_file_as_string(GP126_BOOK)
 			controls.show_main_screen()
 			controls.show_village()
 			var before := growth.checkpoint_snapshot()
@@ -66,7 +68,9 @@ func _run() -> void:
 			if not _check(cards[0].id == "lifesteal" and cards[0].status == "이번 도전 1등급" and cards[1].id == "lifesteal_depth" and cards[1].open and not cards[2].open, "현재 기본·강화 등급·반대 가지 미발견 표시"): return
 			if not _check(growth.checkpoint_snapshot() == before and store.load_checkpoint() == saved and legacy.progress_snapshot() == metadata and FileAccess.get_file_as_string(GP126_BOOK) == journal, "능력 도감은 성장·중간 저장·보스 메타·발견 파일 변경 없음"): return
 		"resume":
-			if not _check(controls.discovered_abilities == {"lifesteal": true, "lifesteal_depth": true} and not player.lifesteal_unlocked, "별도 프로세스 영구 발견은 시작 능력을 지급하지 않음"): return
+			var expected := {}
+			for id in store.load_checkpoint().growth.ranks: expected[id] = true
+			if not _check(controls.discovered_abilities == expected and expected.has("lifesteal_depth") and not player.lifesteal_unlocked, "별도 프로세스 실제 획득 영구 발견은 시작 능력을 지급하지 않음"): return
 			if not _check(sandbox.continue_saved_run() and player.lifesteal_branch == "lifesteal_depth", "도감과 기존 강화 이어하기 독립 복원"): return
 			var journal := FileAccess.get_file_as_string(GP126_BOOK)
 			if not _check(book.discover(["lifesteal", "lifesteal_depth", "lifesteal"]) == OK and FileAccess.get_file_as_string(GP126_BOOK) == journal, "반복 발견·중복 ID는 추가 쓰기 없음"): return
