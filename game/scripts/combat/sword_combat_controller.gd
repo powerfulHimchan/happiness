@@ -92,7 +92,7 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
-	if definition != null and definition.skill_id == &"sword_line":
+	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple"]:
 		return Action.LINE_SLASH
 	return Action.DASH_SLASH if definition != null and definition.skill_id == &"sword_dash" else Action.SPIN_SLASH
 
@@ -285,9 +285,10 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			)
 			var in_range := distance_m <= definition.hit_range_m
 			if _action == Action.LINE_SLASH:
-				var offset := (target.global_position - player.global_position) / PrototypePlayer.PIXELS_PER_METER
+				# Vector2의 2.4m 변환 오차로 정확한 경계가 빠지지 않도록 픽셀로 비교한다.
+				var offset := target.global_position - player.global_position
 				var forward := offset.x * _line_direction
-				in_range = forward >= 0 and forward <= definition.hit_range_m and absf(offset.y) <= LINE_HALF_HEIGHT_M
+				in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and absf(offset.y) <= LINE_HALF_HEIGHT_M * PrototypePlayer.PIXELS_PER_METER
 			if in_range:
 				targets.append(target)
 

@@ -11,6 +11,7 @@ enum Action {
 	PIERCING_ARROW,
 	ARROW_RAIN,
 	SPREAD_ARROW,
+	FOCUS_ARROW,
 }
 
 const SWORD_RANGE_M := 1.6
@@ -58,6 +59,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	queue_redraw()
 	_basic_remaining_s = maxf(0.0, _basic_remaining_s - delta)
 	_skill_1_cooldown_s = maxf(0.0, _skill_1_cooldown_s - delta)
 	_skill_2_cooldown_s = maxf(0.0, _skill_2_cooldown_s - delta)
@@ -91,9 +93,20 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
+	if definition != null and definition.skill_id == &"bow_focus":
+		return Action.FOCUS_ARROW
 	if definition != null and definition.skill_id == &"bow_spread":
 		return Action.SPREAD_ARROW
 	return Action.ARROW_RAIN if definition != null and definition.skill_id == &"bow_arrow_rain" else Action.PIERCING_ARROW
+
+
+func _draw() -> void:
+	if _action != Action.FOCUS_ARROW:
+		return
+	var ready := clampf(_action_elapsed_s / 0.70, 0.0, 1.0)
+	var start := Vector2(58 * _spread_direction.x, -48)
+	draw_line(start, start + _spread_direction * weapon.attack_range_m * PrototypePlayer.PIXELS_PER_METER, Color(1, 0.85, 0.4, 0.15 + ready * 0.4), 2 + ready * 3, true)
+	draw_arc(start, 12 + ready * 8, 0, TAU, 24, Color("ffd166"), 3, true)
 
 
 func prepare_next_stage() -> void:
@@ -234,11 +247,13 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			_spawn_projectile("player:bow_spread:%d:%d:%d" % [_action_sequence, hit_index, i], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, _spread_direction.rotated(deg_to_rad(SPREAD_ANGLES_DEG[i])), PackedStringArray(["bow", "skill", "spread"]))
 		last_combat_log = "산개 사격 · 화살 3발 · 각 피해 %d · 정면 30도" % player.growth_damage(int(definition.damage[hit_index]), "bow", "skill")
 		return
-	if _action == Action.PIERCING_ARROW:
+	if _action in [Action.PIERCING_ARROW, Action.FOCUS_ARROW]:
 		var origin := _projectile_origin()
 		var target := target_selector.current_target
 		var direction := Vector2(float(player.facing_direction), 0.0)
-		if is_instance_valid(target) and target_selector.is_target_on_screen(target):
+		if _action == Action.FOCUS_ARROW:
+			direction = _spread_direction
+		elif is_instance_valid(target) and target_selector.is_target_on_screen(target):
 			direction = (
 				target.global_position + Vector2(0.0, -38.0) - origin
 			).normalized()
@@ -353,6 +368,7 @@ func _action_name() -> String:
 
 
 func _finish_action(reason: String) -> void:
+	queue_redraw()
 	if _action != Action.NONE and not reason.is_empty():
 		last_combat_log = reason
 	_action = Action.NONE

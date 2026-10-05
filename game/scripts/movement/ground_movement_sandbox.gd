@@ -727,6 +727,10 @@ func _show_intermission_routes() -> void:
 func _claim_skill_reward(id: String, slot: int) -> bool:
 	if controls.current_screen_mode() != 14 or not stage_runner.has_next_stage() or not stage_runner.reward_claimed or stage_runner.skills_claimed or not growth.run_active or player.damage_receiver.dead:
 		return false
+	var offered := false
+	for card in controls.skill_reward_offers:
+		if String(card.id) == id: offered = true
+	if not offered: return false
 	var previous := weapon_controller.checkpoint_snapshot()
 	if not weapon_controller.replace_skill(id, slot):
 		return false

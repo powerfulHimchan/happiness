@@ -232,6 +232,8 @@ var relic_reward_cancel_rect: Rect2
 var skill_reward_offers: Array[Dictionary] = []
 var skill_reward_offer_rects: Array[Rect2] = []
 var skill_reward_slot_rects: Array[Rect2] = []
+var skill_reward_cycle_rect: Rect2
+var skill_reward_offset: int = 0
 var skill_reward_confirm_rect: Rect2
 var skill_reward_cancel_rect: Rect2
 var selected_skill_offer: int = -1
@@ -2573,6 +2575,7 @@ func _draw_relic_rewards() -> void:
 func update_skill_reward_status(loadout: Dictionary, claimed: bool) -> void:
 	skill_reward_loadout = loadout.duplicate(true)
 	skill_reward_claimed = claimed
+	skill_reward_offset = 0
 	skill_reward_offers = PrototypeSkillRewards.offers(loadout)
 	queue_redraw()
 
@@ -2600,12 +2603,20 @@ func _refresh_skill_reward_layout() -> void:
 		skill_reward_offer_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (offer_width + gap), safe.size.y * 0.17), Vector2(offer_width, safe.size.y * 0.28)))
 	for i in 2:
 		skill_reward_slot_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (width + gap), safe.size.y * 0.53), Vector2(width, safe.size.y * 0.22)))
+	skill_reward_cycle_rect = Rect2(safe.position + Vector2(safe.size.x * 0.65, safe.size.y * 0.46), Vector2(safe.size.x * 0.30, safe.size.y * 0.06))
 	skill_reward_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.84), Vector2(width, safe.size.y * 0.09))
 	skill_reward_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05 + width + gap, safe.size.y * 0.84), skill_reward_cancel_rect.size)
 
 
 func _handle_skill_reward_touch(position: Vector2) -> void:
 	_refresh_skill_reward_layout()
+	if skill_reward_cycle_rect.has_point(position):
+		skill_reward_offset = (skill_reward_offset + 1) % 3
+		skill_reward_offers = PrototypeSkillRewards.offers(skill_reward_loadout, skill_reward_offset)
+		selected_skill_offer = -1
+		selected_skill_slot = -1
+		queue_redraw()
+		return
 	for i in skill_reward_offers.size():
 		if skill_reward_offer_rects[i].has_point(position):
 			selected_skill_offer = i
@@ -2634,7 +2645,8 @@ func _draw_skill_rewards() -> void:
 		_draw_village_text(("검 · " if offer.weapon == "sword" else "활 · ") + String(offer.name), Rect2(rect.position + Vector2(12, 12), Vector2(rect.size.x - 24, rect.size.y * 0.20)), 25, TEXT_COLOR)
 		for j in offer.lines.size():
 			_draw_village_text(String(offer.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.33 + j * 0.18)), Vector2(rect.size.x - 24, rect.size.y * 0.14)), 19, MUTED_TEXT_COLOR)
-	_draw_text_centered("기술을 고른 뒤 교체할 슬롯을 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.46), Vector2(safe.size.x, safe.size.y * 0.06)), 19, TEXT_COLOR)
+	_draw_text_centered("기술을 고른 뒤 교체할 슬롯을 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.46), Vector2(safe.size.x * 0.62, safe.size.y * 0.06)), 19, TEXT_COLOR)
+	_draw_button(skill_reward_cycle_rect, "다른 후보 %d/3" % (skill_reward_offset + 1), true)
 	for i in 2:
 		var rect: Rect2 = skill_reward_slot_rects[i]
 		draw_style_box(_panel_style(Color("365d68") if i == selected_skill_slot else PANEL_COLOR), rect)
