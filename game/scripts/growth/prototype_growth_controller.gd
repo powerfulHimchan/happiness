@@ -18,6 +18,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "vitality", "title": "튼튼한 심장", "category": "common", "lines": ["최대 체력 +20", "현재 체력 +20"], "tags": {"strength": 1.25, "nature": 0.75}},
 	{"id": "recovery", "title": "다시 일어서기", "category": "common", "lines": ["최대 체력 +10", "체력 40 회복"], "tags": {"nature": 0.75, "determination": 0.75}},
 	{"id": "air_jump", "title": "공중 도약", "category": "common", "lines": ["공중에서 한 번 더 점프", "착지 시 충전 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "lifesteal", "title": "생명 흡수", "category": "common", "lines": ["검·활 실제 피해의 5% 회복", "소수 회복 누적 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
 var level: int = 1
@@ -56,6 +57,7 @@ func _ready() -> void:
 
 func reset_run(starting_weapon: String = "sword") -> void:
 	player.set_double_jump_unlocked(false)
+	player.set_lifesteal_unlocked(false)
 	var was_choosing := choosing or awaiting_job_confirmation
 	level = 1
 	experience = 0
@@ -93,6 +95,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
 	player.set_double_jump_unlocked(int(ranks.get("air_jump", 0)) == 1)
+	player.set_lifesteal_unlocked(int(ranks.get("lifesteal", 0)) == 1)
 	jobs.job_id = String(state.job)
 	jobs.contributions = state.contributions.duplicate(true)
 	jobs.recent_ability = state.recent.duplicate(true)
@@ -172,6 +175,7 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"lifesteal": player.set_lifesteal_unlocked(true)
 		"air_jump": player.set_double_jump_unlocked(true)
 		"sword_power": player.growth_sword_bonus += 0.15
 		"bow_power": player.growth_bow_bonus += 0.15

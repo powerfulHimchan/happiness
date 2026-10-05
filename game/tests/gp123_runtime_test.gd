@@ -45,7 +45,8 @@ func _run() -> void:
 					if not _check(card.id != "air_jump", "해금한 공중 도약은 공용·무작위 후보 모두 제외"): return
 			# 이미 선택한 카드가 남은 오래된 화면으로 다시 전달되어도 중복하지 않는다.
 			growth.choosing = true
-			growth.offered_cards = [PrototypeGrowthController.CARDS[-1].duplicate(true)]
+			for card in PrototypeGrowthController.CARDS:
+				if card.id == "air_jump": growth.offered_cards = [card.duplicate(true)]
 			if not _check(not growth.choose_card(0) and growth.ranks.air_jump == 1, "최대 1등급 카드 중복 선택 차단"): return
 			growth.choosing = false
 			growth.offered_cards.clear()

@@ -12,6 +12,7 @@ signal hit_registered(
 
 const HIT_RADIUS_PX := 44.0
 
+var damage_handler: Callable
 var projectile_id: String = ""
 var attack_id: StringName = &""
 var damage: int = 0
@@ -83,7 +84,7 @@ func _check_hits(segment_start: Vector2, segment_end: Vector2) -> void:
 		event.stagger_s = 0.08
 		event.tags = tags
 		event.source_position = segment_start
-		var result := target.receive_damage(event)
+		var result: int = damage_handler.call(target, event) if damage_handler.is_valid() else target.receive_damage(event)
 		if result == DamageReceiver.Result.APPLIED:
 			_hit_count += 1
 		hit_registered.emit(target, damage, result, projectile_id)

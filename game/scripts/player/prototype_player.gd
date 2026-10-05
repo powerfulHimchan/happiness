@@ -55,6 +55,11 @@ var phoenix_allowed: Callable
 var boss_legacy: Dictionary = {}
 var boss_legacy_store := BossLegacyStore.new()
 
+const LIFESTEAL_DAMAGE_PER_HEALTH := 20
+var lifesteal_unlocked: bool = false
+var lifesteal_progress: int = 0
+var lifesteal_allowed: Callable
+var _lifesteal_flash_remaining_s: float = 0.0
 var growth_common_bonus: float = 0.0
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
@@ -136,6 +141,9 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _lifesteal_flash_remaining_s > 0.0:
+		_lifesteal_flash_remaining_s = maxf(0.0, _lifesteal_flash_remaining_s - delta)
+		queue_redraw()
 	if _air_jump_flash_remaining_s > 0.0:
 		_air_jump_flash_remaining_s = maxf(0.0, _air_jump_flash_remaining_s - delta)
 		queue_redraw()
@@ -371,6 +379,8 @@ func set_job_emblem(job_id: String, color: Color) -> void:
 
 
 func _draw() -> void:
+	if _lifesteal_flash_remaining_s > 0.0:
+		draw_arc(Vector2(0, -30), 65.0, 0.0, TAU, 32, Color(0.4, 1.0, 0.65, _lifesteal_flash_remaining_s / 0.20), 5.0, true)
 	if _air_jump_flash_remaining_s > 0.0:
 		var progress := 1.0 - _air_jump_flash_remaining_s / 0.18
 		var center := to_local(_air_jump_flash_position)
@@ -464,6 +474,9 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	lifesteal_unlocked = false
+	lifesteal_progress = 0
+	_lifesteal_flash_remaining_s = 0.0
 	double_jump_unlocked = false
 	air_jump_available = false
 	double_jump_count = 0
@@ -754,6 +767,7 @@ func _update_fall_recovery(delta: float) -> void:
 
 
 func _cancel_actions_for_recovery() -> void:
+	_lifesteal_flash_remaining_s = 0.0
 	_air_jump_flash_remaining_s = 0.0
 	queue_redraw()
 	move_input = 0.0
@@ -873,6 +887,8 @@ func _emit_metrics() -> void:
 		"jump_state": _jump_state_name(),
 		"jump_held": jump_held,
 		"double_jump_unlocked": double_jump_unlocked,
+		"lifesteal_unlocked": lifesteal_unlocked,
+		"lifesteal_progress": lifesteal_progress,
 		"air_jump_available": air_jump_available,
 		"double_jump_count": double_jump_count,
 		"jump_count": jump_count,
@@ -959,3 +975,38 @@ func set_double_jump_unlocked(enabled: bool) -> void:
 	double_jump_unlocked = enabled
 	air_jump_available = enabled
 	_emit_metrics()
+
+
+func set_lifesteal_unlocked(enabled: bool) -> void:
+	lifesteal_unlocked = enabled
+	if not enabled:
+		lifesteal_progress = 0
+		_lifesteal_flash_remaining_s = 0.0
+		queue_redraw()
+	_emit_metrics()
+
+
+func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
+	if not is_instance_valid(target):
+		return DamageReceiver.Result.INVALID_EVENT
+	# 처치가 레벨업 화면을 열기 전에 공격 순간의 자격을 확보한다.
+	var can_absorb: bool = lifesteal_unlocked and not damage_receiver.dead \
+		and lifesteal_allowed.is_valid() and lifesteal_allowed.call() \
+		and target.is_in_group("combat_enemy") and target.is_visible_in_tree() \
+		and event != null and event.attacker_id == &"player" \
+		and (event.tags.has("sword") or event.tags.has("bow")) \
+		and (event.tags.has("basic") or event.tags.has("skill")) \
+		and damage_receiver.health < damage_receiver.max_health
+	var before := target.damage_receiver.health
+	var result := target.receive_damage(event)
+	if result == DamageReceiver.Result.APPLIED and can_absorb and not damage_receiver.dead:
+		var actual := maxi(0, before - target.damage_receiver.health)
+		lifesteal_progress += actual
+		var healing := lifesteal_progress / LIFESTEAL_DAMAGE_PER_HEALTH
+		lifesteal_progress %= LIFESTEAL_DAMAGE_PER_HEALTH
+		var old_health := damage_receiver.health
+		apply_growth_health(0, healing)
+		if damage_receiver.health > old_health:
+			_lifesteal_flash_remaining_s = 0.20
+			queue_redraw()
+	return result

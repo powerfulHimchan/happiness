@@ -336,7 +336,7 @@ func _damage_target(
 	event.tags = tags
 	event.source_position = player.global_position
 	last_event_id = String(event.event_id)
-	var result := target.receive_damage(event)
+	var result := player.deal_weapon_damage(target, event)
 	if result == DamageReceiver.Result.APPLIED:
 		total_damage += damage
 		hit_registered.emit(attack_id != &"sword_basic", target, damage)
