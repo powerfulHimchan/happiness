@@ -46,6 +46,7 @@ var _suspended_node_states: Array[Dictionary] = []
 func _ready() -> void:
 	player.boss_legacy_store = boss_legacy_store
 	player.phoenix_allowed = _can_collect_recovery_orb
+	player.lifesteal_allowed = _can_collect_recovery_orb
 	_update_boss_legacy_status()
 	growth.metrics_changed.connect(controls.update_growth_metrics)
 	growth.choices_requested.connect(_on_growth_choices_requested)
@@ -395,7 +396,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
-		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe},
+		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress},
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
@@ -494,6 +495,7 @@ func continue_saved_run() -> bool:
 	controls.selected_memory_id = player.memory_id
 	_update_boss_legacy_status()
 	growth.restore_checkpoint(state.growth)
+	player.lifesteal_progress = int(state.player.get("lifesteal_progress", 0))
 	weapon_controller.restore_checkpoint(state.weapons)
 	ultimate_controller.reset_ultimate()
 	ultimate_controller.gauge = int(state.ultimate.gauge)

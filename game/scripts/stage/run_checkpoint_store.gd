@@ -187,6 +187,9 @@ static func valid_state(state: Dictionary) -> bool:
 	for key in ["common", "sword", "bow"]:
 		if not _number(player.get(key), 0, 100):
 			return false
+	var progress: Variant = player.get("lifesteal_progress", 0)
+	if not _number(progress, 0, PrototypePlayer.LIFESTEAL_DAMAGE_PER_HEALTH - 1, true) or (not growth.ranks.has("lifesteal") and progress != 0):
+		return false
 	var ranks: Dictionary = growth.ranks
 	var expected_max := 100 + PrototypeMemoryAbilities.health_bonus(String(state.get("memory_id", ""))) + (10 if legacy.get("choice") == "rescue" else 0) + int(ranks.get("vitality", 0)) * 20 + int(ranks.get("recovery", 0)) * 10 + int(ranks.get("vanguard_vigor", 0)) * 30 + int(ranks.get("tracker_breath", 0)) * 20
 	var sword_bonus := int(ranks.get("sword_power", 0)) * 0.15 + int(ranks.get("vanguard_edge", 0)) * 0.20 + (0.10 if growth.job == "vanguard" else 0.0)

@@ -277,7 +277,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		event.tags = PackedStringArray(["bow", "skill", "area", "rain_hit"])
 		event.source_position = _rain_anchor
 		last_event_id = String(event.event_id)
-		var result := rain_target.receive_damage(event)
+		var result := player.deal_weapon_damage(rain_target, event)
 		if result == DamageReceiver.Result.APPLIED:
 			applied_targets += 1
 			skill_hit_count += 1
@@ -309,6 +309,7 @@ func _spawn_projectile(
 		direction,
 		tags
 	)
+	projectile.damage_handler = player.deal_weapon_damage
 	projectile.hit_registered.connect(_on_projectile_hit.bind(tags.has("skill")))
 	get_tree().current_scene.add_child(projectile)
 	projectile.global_position = _projectile_origin()
