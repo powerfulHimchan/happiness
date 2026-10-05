@@ -152,7 +152,7 @@ func _test_tactical_combat() -> bool:
 	sword._update_skill_action(0.20)
 	if not _check(front.damage_receiver.health == 948 and player.combat_evade_allowed, "둘째 타격 28·회피 취소 허용"): return false
 	sword._update_skill_action(0.20)
-	if not _check(front.damage_receiver.health == 912 and boundary.damage_receiver.health == 912 and behind.damage_receiver.health == 1000 and far.damage_receiver.health == 1000 and high.damage_receiver.health == 1000 and sword.skill_hit_count == 6, "셋째36·총88·정면2.4m 경계·후방/거리/높이 제외·각 타격 고유 ID"): return false
+	if not _check(front.damage_receiver.health == 912 and boundary.damage_receiver.health == 912 and behind.damage_receiver.health == 1000 and far.damage_receiver.health == 1000 and high.damage_receiver.health == 1000 and sword.skill_hit_count == 6, "셋째36·총88·정면2.4m 경계·후방/거리/높이 제외·각 타격 고유 ID: %s" % [str([front.damage_receiver.health, boundary.damage_receiver.health, behind.damage_receiver.health, far.damage_receiver.health, high.damage_receiver.health, sword.skill_hit_count])]): return false
 	sword._update_skill_action(0.30)
 	sword._skill_1_cooldown_s = 0
 	_press_skill(0)
