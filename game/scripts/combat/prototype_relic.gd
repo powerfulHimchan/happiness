@@ -23,3 +23,15 @@ static func hud(state: Dictionary) -> String:
 	if state.id == CLOCK_ID:
 		return "시계추 조각 · 스킬 대기 -20%"
 	return "불사조 깃털 · 사용 완료" if state.used else "불사조 깃털 · 부활 1회"
+
+static func codex_cards(state: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for offer in OFFERS:
+		var owned: bool = state.get("id", "") == offer.id
+		var lines: Array[String] = []
+		for line in offer.lines: lines.append(String(line))
+		lines.append("조건: 두 번째 정예 완료 후 하나 선택")
+		lines.append("기본 공격·회피·필살기에는 적용하지 않음" if offer.id == CLOCK_ID else "사용한 깃털은 이 도전에서 재부활 불가")
+		var status := "이번 도전 · 사용 완료" if owned and bool(state.get("used", false)) else "이번 도전 · 보유 중" if owned else "미보유 · 효과 미리 보기"
+		result.append({"id": offer.id, "name": offer.name, "open": owned, "status": status, "lines": lines})
+	return result
