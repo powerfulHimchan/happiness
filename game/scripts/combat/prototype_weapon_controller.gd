@@ -222,6 +222,7 @@ func _enrich_metrics(metrics: Dictionary) -> void:
 	metrics["weapon_name"] = own.name
 	metrics["weapon_equipment"] = equipment.duplicate()
 	metrics["weapon_blueprints"] = blueprints.duplicate()
+	metrics["weapon_skills"] = skills.duplicate(true)
 	metrics["weapon_backup_name"] = backup.name
 	metrics["weapon_equipment_summary"] = "%s · %s" % [PrototypeWeaponRewards.profile(SWORD_ID, int(equipment.sword), blueprints.sword).name, PrototypeWeaponRewards.profile(BOW_ID, int(equipment.bow), blueprints.bow).name]
 	var effect_percent := float(backup.unique) * PrototypeWeaponRewards.BACKUP_RATIO * 100
