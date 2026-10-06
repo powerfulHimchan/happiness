@@ -193,6 +193,9 @@ static func valid_state(state: Dictionary) -> bool:
 	for key in ["common", "sword", "bow"]:
 		if not _number(player.get(key), 0, 100):
 			return false
+	var barrier: Variant = player.get("barrier_health", 0)
+	if not _number(barrier, 0, PrototypePlayer.BARRIER_CAPACITY, true) or (not growth.ranks.has("magic_barrier") and barrier != 0):
+		return false
 	var progress: Variant = player.get("lifesteal_progress", 0)
 	if not _number(progress, 0, PrototypePlayer.LIFESTEAL_DAMAGE_PER_HEALTH - 1, true) or (not growth.ranks.has("lifesteal") and progress != 0):
 		return false
