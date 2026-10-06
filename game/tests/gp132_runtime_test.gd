@@ -124,7 +124,7 @@ func _test_skill_codex(active: bool, multiplier: float) -> bool:
 	var health := player.damage_receiver.health
 	var potions := player.potions_remaining
 	var gauge := ultimate.gauge
-	var found := sandbox.ability_discovery_store.snapshot()
+	var found: Dictionary = sandbox.ability_discovery_store.snapshot()
 	controls.show_main_screen()
 	controls.show_village()
 	for dimensions in [Vector2(1280, 720), Vector2(2400, 1080)]:
