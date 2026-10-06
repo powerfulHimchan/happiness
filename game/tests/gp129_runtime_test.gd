@@ -76,6 +76,7 @@ func _run() -> void:
 			var saved := store.load_checkpoint()
 			if not _check(legacy.spend_phoenix(String(saved.recorder.id)) == OK, "동일 도전 깃털 소비 저널 준비"): return
 			for ignored in 2:
+				controls.show_main_screen()
 				if not _check(sandbox.continue_saved_run() and player.relic_state == {"id": PrototypeRelic.CLOCK_ID, "used": false} and player.skill_recharge_multiplier() == 1.25 and JSON.parse_string(JSON.stringify(weapons.checkpoint_snapshot())) == saved.weapons and _real_timers_match(), "별도 프로세스·반복 이어하기 원본 대기시간·20% 유지·깃털 저널 독립"): return
 			_tap(controls.stage_route_rects[0].get_center())
 			if not _check(runner.stage_number == 3 and player.skill_recharge_multiplier() == 1.25 and _real_timers_match(), "보스 경로 진입은 유물·대기시간 초기화 없음"): return
