@@ -186,7 +186,7 @@ static func valid_state(state: Dictionary) -> bool:
 	if not PrototypePotionRecipes.valid_id(player.get("potion_recipe", PrototypePotionRecipes.BASIC)) or (player.has("potion_recipe") and not player.has("potions_remaining")):
 		return false
 	var potion: Dictionary = PrototypePotionRecipes.profile(String(player.get("potion_recipe", PrototypePotionRecipes.BASIC)))
-	if player.has("potions_remaining") and not _number(player.potions_remaining, 0, int(potion.count), true):
+	if player.has("potions_remaining") and not _number(player.potions_remaining, 0, int(potion.count) + int(growth.ranks.get("potion_pouch", 0)), true):
 		return false
 	if not _number(player.get("max_health"), 100, 10000, true) or not _number(player.get("health"), 1, float(player.max_health), true):
 		return false
