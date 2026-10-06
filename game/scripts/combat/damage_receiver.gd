@@ -14,6 +14,9 @@ enum Result {
 @export var max_health: int = 100
 @export var post_hit_invulnerability_s: float = 0.50
 
+var barrier_health: int = 0
+var last_absorbed_damage: int = 0
+var last_health_damage: int = 0
 var health: int = 100
 var dead: bool = false
 var applied_count: int = 0
@@ -35,6 +38,8 @@ func tick(delta: float) -> void:
 
 
 func try_receive(event: DamageEvent, external_invulnerable: bool = false) -> int:
+	last_absorbed_damage = 0
+	last_health_damage = 0
 	if event == null or String(event.event_id).is_empty() or event.damage <= 0:
 		last_result = Result.INVALID_EVENT
 		return last_result
@@ -56,7 +61,12 @@ func try_receive(event: DamageEvent, external_invulnerable: bool = false) -> int
 		last_result = Result.INVULNERABLE_BLOCKED
 		return last_result
 
-	health = maxi(0, health - event.damage)
+	# 유효한 새 타격만 방벽을 소비한다. 완전 흡수도 기존 경직·피격 무적을 적용한다.
+	last_absorbed_damage = mini(maxi(0, barrier_health), event.damage)
+	barrier_health -= last_absorbed_damage
+	var before := health
+	health = maxi(0, health - (event.damage - last_absorbed_damage))
+	last_health_damage = before - health
 	applied_count += 1
 	dead = health <= 0
 	if not dead:
@@ -90,6 +100,9 @@ func post_hit_remaining_s() -> float:
 
 
 func reset() -> void:
+	barrier_health = 0
+	last_absorbed_damage = 0
+	last_health_damage = 0
 	health = max_health
 	dead = false
 	applied_count = 0

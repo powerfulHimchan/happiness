@@ -21,6 +21,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "lifesteal", "title": "생명 흡수", "category": "common", "lines": ["검·활 실제 피해의 5% 회복", "소수 회복 누적 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "lifesteal_depth", "title": "깊은 흡수", "category": "common", "lines": ["생명 흡수: 항상 10% 회복", "위기의 흡수와 하나만 선택"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal"], "excludes": ["lifesteal_crisis"]},
 	{"id": "lifesteal_crisis", "title": "위기의 흡수", "category": "common", "lines": ["체력 30% 이하: 15% 회복", "평소 5% · 깊은 흡수와 하나만"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal"], "excludes": ["lifesteal_depth"]},
+	{"id": "magic_barrier", "title": "마력 방벽", "category": "common", "lines": ["피해 20을 먼저 흡수", "다음 스테이지 진입 시 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
 var level: int = 1
@@ -60,6 +61,7 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	player.set_barrier_unlocked(false)
 	player.set_double_jump_unlocked(false)
 	player.set_lifesteal_unlocked(false)
 	var was_choosing := choosing or awaiting_job_confirmation
@@ -84,6 +86,7 @@ func reset_run(starting_weapon: String = "sword") -> void:
 
 
 func begin_next_stage() -> void:
+	player.recharge_barrier()
 	rerolls_remaining = 1
 	_emit_metrics()
 
@@ -99,6 +102,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	total_experience = int(state.total_xp)
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
+	player.set_barrier_unlocked(int(ranks.get("magic_barrier", 0)) == 1)
 	player.set_double_jump_unlocked(int(ranks.get("air_jump", 0)) == 1)
 	player.set_lifesteal_unlocked(int(ranks.get("lifesteal", 0)) == 1)
 	for branch in ["lifesteal_depth", "lifesteal_crisis"]:
@@ -189,6 +193,7 @@ func choose_card(index: int) -> bool:
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
 		"lifesteal_depth", "lifesteal_crisis": player.set_lifesteal_branch(card_id)
+		"magic_barrier": player.set_barrier_unlocked(true)
 		"lifesteal": player.set_lifesteal_unlocked(true)
 		"air_jump": player.set_double_jump_unlocked(true)
 		"sword_power": player.growth_sword_bonus += 0.15

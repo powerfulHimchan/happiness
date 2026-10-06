@@ -1675,7 +1675,7 @@ func _draw_header() -> void:
 
 	var health: int = int(movement_metrics.get("health", 100))
 	var max_health: int = maxi(1, int(movement_metrics.get("max_health", 100)))
-	_draw_text("체력  %d / %d" % [health, max_health], Vector2(left_x, top_y), 23, TEXT_COLOR)
+	_draw_village_text("체력  %d / %d" % [health, max_health] + (" · 방벽 %d" % int(movement_metrics.get("barrier_health", 0)) if bool(movement_metrics.get("barrier_unlocked", false)) else ""), Rect2(Vector2(left_x, top_y - 24), Vector2(hud_rect.size.x * 0.29, 30)), 23, TEXT_COLOR)
 	var health_bar := Rect2(Vector2(left_x, top_y + 14.0), Vector2(hud_rect.size.x * 0.27, 18.0))
 	draw_rect(health_bar, Color("0d202b"), true)
 	draw_rect(

@@ -404,7 +404,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
-		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress},
+		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress, "barrier_health": player.damage_receiver.barrier_health},
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
@@ -507,6 +507,8 @@ func continue_saved_run() -> bool:
 	_update_boss_legacy_status()
 	growth.restore_checkpoint(state.growth)
 	player.lifesteal_progress = int(state.player.get("lifesteal_progress", 0))
+	player.damage_receiver.barrier_health = int(state.player.get("barrier_health", 0))
+	player.queue_redraw()
 	weapon_controller.restore_checkpoint(state.weapons)
 	ultimate_controller.reset_ultimate()
 	ultimate_controller.gauge = int(state.ultimate.gauge)

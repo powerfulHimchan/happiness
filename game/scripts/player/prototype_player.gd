@@ -55,6 +55,9 @@ var phoenix_allowed: Callable
 var boss_legacy: Dictionary = {}
 var boss_legacy_store := BossLegacyStore.new()
 
+const BARRIER_CAPACITY := 20
+var barrier_unlocked: bool = false
+
 const LIFESTEAL_DAMAGE_PER_HEALTH := 20
 var lifesteal_unlocked: bool = false
 var lifesteal_branch: String = ""
@@ -312,6 +315,20 @@ func set_combat_evade_allowed(allowed: bool) -> void:
 	combat_evade_allowed = allowed
 
 
+func set_barrier_unlocked(enabled: bool) -> void:
+	barrier_unlocked = enabled
+	damage_receiver.barrier_health = BARRIER_CAPACITY if enabled else 0
+	queue_redraw()
+	_emit_metrics()
+
+
+func recharge_barrier() -> void:
+	if barrier_unlocked and not damage_receiver.dead:
+		damage_receiver.barrier_health = BARRIER_CAPACITY
+		queue_redraw()
+		_emit_metrics()
+
+
 func receive_damage(event: DamageEvent) -> int:
 	# 원본 이벤트는 공유될 수 있으므로 핵의 위험 보상은 복사본에만 적용한다.
 	if event != null and boss_legacy.get("choice") == "destroy":
@@ -327,7 +344,7 @@ func receive_damage(event: DamageEvent) -> int:
 	var result := damage_receiver.try_receive(event, invincible or _fall_recovery_active)
 	if result == DamageReceiver.Result.APPLIED and damage_receiver.dead:
 		_try_phoenix_revival()
-	if result == DamageReceiver.Result.APPLIED and not damage_receiver.dead and damage_receiver.health <= floori(damage_receiver.max_health * 0.25) and boss_legacy_store.spend_rescue(boss_legacy):
+	if result == DamageReceiver.Result.APPLIED and damage_receiver.last_health_damage > 0 and not damage_receiver.dead and damage_receiver.health <= floori(damage_receiver.max_health * 0.25) and boss_legacy_store.spend_rescue(boss_legacy):
 		apply_growth_health(0, ceili(damage_receiver.max_health * 0.30))
 	last_damage_summary = event.summary() if event != null else "잘못된 이벤트"
 	last_damage_tags = ", ".join(event.tags) if event != null else "없음"
@@ -351,6 +368,7 @@ func receive_damage(event: DamageEvent) -> int:
 			_cancel_actions_for_recovery()
 			velocity = Vector2.ZERO
 			player_died.emit()
+	queue_redraw()
 	_emit_metrics()
 	return result
 
@@ -380,6 +398,8 @@ func set_job_emblem(job_id: String, color: Color) -> void:
 
 
 func _draw() -> void:
+	if barrier_unlocked and damage_receiver.barrier_health > 0 and not damage_receiver.dead:
+		draw_arc(Vector2(0, -38), 58.0, -PI * 0.5, -PI * 0.5 + TAU * float(damage_receiver.barrier_health) / BARRIER_CAPACITY, 48, Color("82dcec", 0.75), 4.0, true)
 	if _lifesteal_flash_remaining_s > 0.0:
 		draw_arc(Vector2(0, -30), 65.0, 0.0, TAU, 32, Color(0.4, 1.0, 0.65, _lifesteal_flash_remaining_s / 0.20), 5.0, true)
 	if _air_jump_flash_remaining_s > 0.0:
@@ -475,6 +495,8 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	barrier_unlocked = false
+	damage_receiver.barrier_health = 0
 	lifesteal_unlocked = false
 	lifesteal_branch = ""
 	lifesteal_progress = 0
@@ -889,6 +911,10 @@ func _emit_metrics() -> void:
 		"jump_state": _jump_state_name(),
 		"jump_held": jump_held,
 		"double_jump_unlocked": double_jump_unlocked,
+		"barrier_unlocked": barrier_unlocked,
+		"barrier_health": damage_receiver.barrier_health,
+		"barrier_capacity": BARRIER_CAPACITY,
+		"barrier_absorbed": damage_receiver.last_absorbed_damage,
 		"lifesteal_unlocked": lifesteal_unlocked,
 		"lifesteal_branch": lifesteal_branch,
 		"lifesteal_rate_percent": lifesteal_multiplier() * 5 if lifesteal_unlocked else 0,

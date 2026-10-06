@@ -106,7 +106,7 @@ func _run() -> void:
 			controls.show_village()
 			if not await _test_book_layout(): return
 			controls.ability_codex_page = 3
-			if not _check(controls.village_snapshot().cards[0].id == "vanguard_edge" and controls.village_snapshot().cards[0].status == "이번 도전 1등급", "직업 카드의 현재 도전 등급"): return
+			if not _check(controls.village_snapshot().cards.filter(func(card: Dictionary) -> bool: return card.id == "vanguard_edge" and card.status == "이번 도전 1등급").size() == 1, "직업 카드의 현재 도전 등급"): return
 			controls.begin_retry()
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "이전 도전 저장의 실제 검 능력 준비"): return
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(GP126_BOOK))
@@ -180,7 +180,7 @@ func _test_book_layout() -> bool:
 		var seen: Array[String] = []
 		for page in 5:
 			var snapshot: Dictionary = controls.village_snapshot()
-			if not _check(snapshot.ability_page == page and snapshot.ability_pages == 5 and snapshot.cards.size() == (1 if page == 4 else 3), "13능력 다섯 페이지·마지막 한 장"): return false
+			if not _check(snapshot.ability_page == page and snapshot.ability_pages == 5 and snapshot.cards.size() == mini(3, PrototypeAbilityCodex.definitions().size() - page * 3), "전체 능력 다섯 페이지·마지막 페이지 크기"): return false
 			var safe: Rect2 = controls.layout_snapshot().safe
 			var rects: Array = snapshot.layout.cards.duplicate()
 			rects.append_array([snapshot.layout.back, snapshot.layout.start])
@@ -200,7 +200,7 @@ func _test_book_layout() -> bool:
 			controls.queue_redraw()
 			await process_frame
 			_tap(snapshot.pager.next.get_center())
-		if not _check(seen.size() == 13 and controls.ability_codex_page == 4, "모든 능력 조회·마지막 페이지 범위 제한"): return false
+		if not _check(seen.size() == PrototypeAbilityCodex.definitions().size() and controls.ability_codex_page == 4, "모든 능력 조회·마지막 페이지 범위 제한"): return false
 		for ignored in 6: _tap(controls.village_snapshot().pager.previous.get_center())
 		if not _check(controls.ability_codex_page == 0, "이전 페이지 범위 제한"): return false
 		_tap(controls.village_snapshot().tabs.jobs.get_center())
