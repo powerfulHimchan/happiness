@@ -56,7 +56,7 @@ func _run() -> void:
 			store.save_path = GP129_SAVE
 			if not _check(controls.current_screen_mode() == 15 and controls.selected_relic_offer == 1 and player.relic_state.is_empty() and player.skill_recharge_multiplier() == 1 and weapons.checkpoint_snapshot() == before and store.load_checkpoint() == saved, "선택 저장 실패는 효과·쿨다운·정상 파일 보존·재시도 가능"): return
 			_tap(controls.relic_reward_confirm_rect.get_center())
-			if not _check(controls.current_screen_mode() == 9 and player.relic_state == {"id": PrototypeRelic.CLOCK_ID, "used": false} and player.skill_recharge_multiplier() == 1.25 and not controls.relic_offer_available and weapons.checkpoint_snapshot() == before and store.load_checkpoint().weapons == before, "시계추 실제 확정·하나만 획득·원본 쿨다운 저장"): return
+			if not _check(controls.current_screen_mode() == 9 and player.relic_state == {"id": PrototypeRelic.CLOCK_ID, "used": false} and player.skill_recharge_multiplier() == 1.25 and not controls.relic_offer_available and weapons.checkpoint_snapshot() == before and store.load_checkpoint().weapons == JSON.parse_string(JSON.stringify(before)), "시계추 실제 확정·하나만 획득·원본 쿨다운 저장: %s" % [str([controls.current_screen_mode(), player.relic_state, player.skill_recharge_multiplier(), controls.relic_offer_available, weapons.checkpoint_snapshot() == before, store.load_checkpoint().weapons == JSON.parse_string(JSON.stringify(before))])]): return
 			if not _check(player.damage_receiver.health == health and player.potions_remaining == potions and ultimate.gauge == gauge and not sandbox._claim_relic_reward() and String(controls.movement_metrics.relic_hud).contains("-20%"), "깃털 중복 획득 차단·체력/회복약/필살기 유지·HUD"): return
 			if not _check(_real_timers_match(), "양 무기 네 슬롯 실제 남은 시간 HUD"): return
 			var valid := store.load_checkpoint()
@@ -76,7 +76,7 @@ func _run() -> void:
 			var saved := store.load_checkpoint()
 			if not _check(legacy.spend_phoenix(String(saved.recorder.id)) == OK, "동일 도전 깃털 소비 저널 준비"): return
 			for ignored in 2:
-				if not _check(sandbox.continue_saved_run() and player.relic_state == {"id": PrototypeRelic.CLOCK_ID, "used": false} and player.skill_recharge_multiplier() == 1.25 and weapons.checkpoint_snapshot() == saved.weapons and _real_timers_match(), "별도 프로세스·반복 이어하기 원본 대기시간·20% 유지·깃털 저널 독립"): return
+				if not _check(sandbox.continue_saved_run() and player.relic_state == {"id": PrototypeRelic.CLOCK_ID, "used": false} and player.skill_recharge_multiplier() == 1.25 and JSON.parse_string(JSON.stringify(weapons.checkpoint_snapshot())) == saved.weapons and _real_timers_match(), "별도 프로세스·반복 이어하기 원본 대기시간·20% 유지·깃털 저널 독립"): return
 			_tap(controls.stage_route_rects[0].get_center())
 			if not _check(runner.stage_number == 3 and player.skill_recharge_multiplier() == 1.25 and _real_timers_match(), "보스 경로 진입은 유물·대기시간 초기화 없음"): return
 		"finish":
