@@ -501,7 +501,7 @@ func continue_saved_run() -> bool:
 	player.memory_id = String(state.get("memory_id", ""))
 	player.relic_state = state.get("relic", {}).duplicate()
 	player.relic_run_id = String(state.recorder.id)
-	if not player.relic_state.is_empty():
+	if player.relic_state.get("id", "") == PrototypeRelic.PHOENIX_ID:
 		player.relic_state.used = player.relic_state.used or boss_legacy_store.phoenix_used(player.relic_run_id)
 	controls.selected_memory_id = player.memory_id
 	_update_boss_legacy_status()
@@ -751,18 +751,20 @@ func _claim_skill_reward(id: String, slot: int) -> bool:
 	return true
 
 
-func _claim_relic_reward() -> bool:
+func _claim_relic_reward(id: String = PrototypeRelic.PHOENIX_ID) -> bool:
 	if controls.current_screen_mode() != 15 or stage_runner.stage_number != 2 \
 	or not stage_runner.has_next_stage() or not stage_runner.reward_claimed \
-	or not growth.run_active or player.damage_receiver.dead or not player.relic_state.is_empty():
+	or not growth.run_active or player.damage_receiver.dead or not player.relic_state.is_empty() or not PrototypeRelic.valid_id(id):
 		return false
-	player.relic_state = {"id": PrototypeRelic.PHOENIX_ID, "used": false}
+	player.relic_state = {"id": id, "used": false}
 	player.relic_run_id = String(test_recorder.checkpoint_snapshot().id)
 	if _save_checkpoint(stage_runner.current_metrics()) != OK:
 		player.relic_state = {}
+		weapon_controller.force_emit_metrics()
 		player.apply_growth_health(0, 0)
 		return false
 	player.apply_growth_health(0, 0)
+	weapon_controller.force_emit_metrics()
 	_show_intermission_routes()
 	return true
 

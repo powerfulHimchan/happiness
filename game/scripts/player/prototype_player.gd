@@ -373,8 +373,12 @@ func receive_damage(event: DamageEvent) -> int:
 	return result
 
 
+func skill_recharge_multiplier() -> float:
+	return PrototypeRelic.CLOCK_RECHARGE_MULTIPLIER if relic_state.get("id", "") == PrototypeRelic.CLOCK_ID and relic_state.get("used", false) == false else 1.0
+
+
 func _try_phoenix_revival() -> bool:
-	if not damage_receiver.dead or relic_state.is_empty() or relic_state.used or relic_run_id.is_empty() \
+	if not damage_receiver.dead or relic_state.get("id", "") != PrototypeRelic.PHOENIX_ID or relic_state.used or relic_run_id.is_empty() \
 	or not phoenix_allowed.is_valid() or not phoenix_allowed.call():
 		return false
 	if boss_legacy_store.phoenix_used(relic_run_id):
@@ -945,6 +949,7 @@ func _emit_metrics() -> void:
 		"potion_heal_percent": roundi(float(PrototypePotionRecipes.profile(potion_recipe).ratio) * 100),
 		"potion_recipe": potion_recipe,
 		"potion_log": potion_log,
+		"skill_recharge_multiplier": skill_recharge_multiplier(),
 		"relic_hud": PrototypeRelic.hud(relic_state),
 		"relic": relic_state.duplicate(),
 		"fall_count": fall_count,

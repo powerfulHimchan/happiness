@@ -39,9 +39,9 @@ static func weapon_for(id: String) -> String:
 			return weapon
 	return ""
 
-static func lines(id: String) -> Array[String]:
+static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]:
 	var definition: SkillDefinition = SKILLS[id]
-	var result: Array[String] = ["재사용 %.0f초 · 동작 %.2f초" % [definition.cooldown_s, definition.duration_s]]
+	var result: Array[String] = ["재사용 %.1f초 · 동작 %.2f초" % [definition.cooldown_s / recharge_multiplier, definition.duration_s]]
 	result.append("타격 %d회 · 기본 피해 %d" % [definition.damage.size(), _total_damage(definition)])
 	if id == "bow_spread":
 		result[1] = "화살 3발 · 각 기본 피해 %d" % int(definition.damage[0])
@@ -64,7 +64,7 @@ static func _total_damage(definition: SkillDefinition) -> int:
 		total += damage
 	return total
 
-static func offers(loadout: Dictionary, offset: int = 0) -> Array[Dictionary]:
+static func offers(loadout: Dictionary, offset: int = 0, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var candidates := {}
 	for weapon in POOLS:
@@ -76,5 +76,5 @@ static func offers(loadout: Dictionary, offset: int = 0) -> Array[Dictionary]:
 	for index in 2:
 		for weapon in POOLS:
 			var id: String = candidates[weapon][posmod(offset + index, candidates[weapon].size())]
-			result.append({"id": id, "weapon": weapon, "name": SKILLS[id].display_name, "lines": lines(id)})
+			result.append({"id": id, "weapon": weapon, "name": SKILLS[id].display_name, "lines": lines(id, recharge_multiplier)})
 	return result

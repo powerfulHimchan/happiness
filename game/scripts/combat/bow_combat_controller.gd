@@ -61,8 +61,8 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	queue_redraw()
 	_basic_remaining_s = maxf(0.0, _basic_remaining_s - delta)
-	_skill_1_cooldown_s = maxf(0.0, _skill_1_cooldown_s - delta)
-	_skill_2_cooldown_s = maxf(0.0, _skill_2_cooldown_s - delta)
+	_skill_1_cooldown_s = maxf(0.0, _skill_1_cooldown_s - delta * player.skill_recharge_multiplier())
+	_skill_2_cooldown_s = maxf(0.0, _skill_2_cooldown_s - delta * player.skill_recharge_multiplier())
 	if not active:
 		_emit_metrics()
 		return
@@ -403,9 +403,9 @@ func _build_metrics() -> Dictionary:
 		"combo_reset_remaining_s": 0.0,
 		"basic_attack_remaining_s": _basic_remaining_s,
 		"skill_1_name": skill_1.display_name if skill_1 != null else "스킬 1",
-		"skill_1_cooldown_s": _skill_1_cooldown_s,
+		"skill_1_cooldown_s": _skill_1_cooldown_s / player.skill_recharge_multiplier(),
 		"skill_2_name": skill_2.display_name if skill_2 != null else "스킬 2",
-		"skill_2_cooldown_s": _skill_2_cooldown_s,
+		"skill_2_cooldown_s": _skill_2_cooldown_s / player.skill_recharge_multiplier(),
 		"combat_evade_cancel_ready": player.combat_evade_allowed,
 		"basic_attack_count": basic_attack_count,
 		"skill_hit_count": skill_hit_count,
