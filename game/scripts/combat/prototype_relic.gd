@@ -27,7 +27,7 @@ static func hud(state: Dictionary) -> String:
 static func codex_cards(state: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for offer in OFFERS:
-		var owned := state.get("id", "") == offer.id
+		var owned: bool = state.get("id", "") == offer.id
 		var lines: Array[String] = []
 		for line in offer.lines: lines.append(String(line))
 		lines.append("조건: 두 번째 정예 완료 후 하나 선택")
