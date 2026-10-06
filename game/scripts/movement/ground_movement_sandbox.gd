@@ -493,7 +493,6 @@ func continue_saved_run() -> bool:
 	player.reset_movement_test(TRACK_START)
 	player.damage_receiver.max_health = int(state.player.max_health)
 	player.damage_receiver.health = int(state.player.health)
-	player.prepare_potions(String(state.player.get("potion_recipe", PrototypePotionRecipes.BASIC)), int(state.player.get("potions_remaining", PrototypePlayer.POTIONS_PER_RUN)))
 	player.growth_common_bonus = float(state.player.common)
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)
@@ -506,6 +505,7 @@ func continue_saved_run() -> bool:
 	controls.selected_memory_id = player.memory_id
 	_update_boss_legacy_status()
 	growth.restore_checkpoint(state.growth)
+	player.prepare_potions(String(state.player.get("potion_recipe", PrototypePotionRecipes.BASIC)), int(state.player.get("potions_remaining", PrototypePlayer.POTIONS_PER_RUN)))
 	player.lifesteal_progress = int(state.player.get("lifesteal_progress", 0))
 	player.damage_receiver.barrier_health = int(state.player.get("barrier_health", 0))
 	player.queue_redraw()

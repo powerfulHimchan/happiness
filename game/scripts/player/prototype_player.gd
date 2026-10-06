@@ -49,6 +49,7 @@ var memory_id: String = ""
 var potions_remaining: int = POTIONS_PER_RUN
 var potion_log: String = "회복약 · 최대 체력 25% 회복"
 var potion_recipe: String = PrototypePotionRecipes.BASIC
+var potion_pouch_unlocked: bool = false
 var relic_state: Dictionary = {}
 var relic_run_id: String = ""
 var phoenix_allowed: Callable
@@ -453,8 +454,22 @@ func use_recovery_potion() -> bool:
 func prepare_potions(id: String, remaining: int = -1) -> void:
 	potion_recipe = id if PrototypePotionRecipes.valid_id(id) else PrototypePotionRecipes.BASIC
 	var recipe := PrototypePotionRecipes.profile(potion_recipe)
-	potions_remaining = int(recipe.count) if remaining < 0 else clampi(remaining, 0, int(recipe.count))
-	potion_log = PrototypePotionRecipes.summary(potion_recipe) + " · 남은 %d회" % potions_remaining
+	potions_remaining = potions_capacity() if remaining < 0 else clampi(remaining, 0, potions_capacity())
+	potion_log = "%s · 최대 %d개 · 체력 %d%% · 남은 %d회" % [recipe.name, potions_capacity(), roundi(float(recipe.ratio) * 100), potions_remaining]
+	_emit_metrics()
+
+
+func potions_capacity() -> int:
+	return int(PrototypePotionRecipes.profile(potion_recipe).count) + (1 if potion_pouch_unlocked else 0)
+
+
+func set_potion_pouch_unlocked(enabled: bool, refill: bool = false) -> void:
+	var newly_unlocked: bool = enabled and not potion_pouch_unlocked
+	potion_pouch_unlocked = enabled
+	potions_remaining = mini(potions_remaining, potions_capacity())
+	if newly_unlocked and refill and not damage_receiver.dead:
+		potions_remaining = mini(potions_capacity(), potions_remaining + 1)
+		potion_log = "회복약 주머니 · 1개 보충 · 남은 %d/%d" % [potions_remaining, potions_capacity()]
 	_emit_metrics()
 
 
@@ -515,6 +530,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	potions_remaining = POTIONS_PER_RUN
 	potion_log = "회복약 · 최대 체력 25% 회복"
 	potion_recipe = PrototypePotionRecipes.BASIC
+	potion_pouch_unlocked = false
 	memory_id = ""
 	boss_legacy = {}
 	set_job_emblem("", Color.WHITE)
@@ -945,7 +961,7 @@ func _emit_metrics() -> void:
 		"health": damage_receiver.health,
 		"max_health": damage_receiver.max_health,
 		"potions_remaining": potions_remaining,
-		"potions_capacity": PrototypePotionRecipes.profile(potion_recipe).count,
+		"potions_capacity": potions_capacity(),
 		"potion_heal_percent": roundi(float(PrototypePotionRecipes.profile(potion_recipe).ratio) * 100),
 		"potion_recipe": potion_recipe,
 		"potion_log": potion_log,

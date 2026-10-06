@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp131_runtime_test.gd"
   "$game_root/tests/gp130_runtime_test.gd"
   "$game_root/tests/gp129_runtime_test.gd"
   "$game_root/tests/gp128_runtime_test.gd"
@@ -551,6 +552,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for pouch_phase in seed resume finish legacy combat; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp131_runtime_test.gd -- "$pouch_phase"
+  done
   for relic_codex_phase in seed resume finish legacy; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp130_runtime_test.gd -- "$relic_codex_phase"
