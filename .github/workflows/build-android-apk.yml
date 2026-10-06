@@ -100,24 +100,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-gp129-clock-relic.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-gp130-relic-codex.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-gp129-clock-relic.apk
+          cp "${apk_path}" dist/happiness-tale-gp130-relic-codex.apk
           (
             cd dist
-            sha256sum happiness-tale-gp129-clock-relic.apk \
-              | tee happiness-tale-gp129-clock-relic.apk.sha256
+            sha256sum happiness-tale-gp130-relic-codex.apk \
+              | tee happiness-tale-gp130-relic-codex.apk.sha256
           )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-gp129-clock-relic-apk
+          name: happiness-tale-gp130-relic-codex-apk
           path: |
-            dist/happiness-tale-gp129-clock-relic.apk
-            dist/happiness-tale-gp129-clock-relic.apk.sha256
+            dist/happiness-tale-gp130-relic-codex.apk
+            dist/happiness-tale-gp130-relic-codex.apk.sha256
           if-no-files-found: error
           retention-days: 14
