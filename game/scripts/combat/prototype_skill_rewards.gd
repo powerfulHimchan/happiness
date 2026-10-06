@@ -16,6 +16,24 @@ const SKILLS := {
 }
 const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus"]}
 const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중"}
+const CODEX_PAGE_SIZE := 3
+
+## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
+static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var active := valid_loadout(loadout)
+	var starting := defaults()
+	for index in POOLS.sword.size():
+		for weapon in POOLS:
+			var id: String = POOLS[weapon][index]
+			var slot: int = loadout[weapon].find(id) if active else starting[weapon].find(id)
+			var status := "이번 도전 · 슬롯 %d" % (slot + 1) if active and slot >= 0 else "미장착 · 효과 미리 보기" if active else "시작 스킬 · 슬롯 %d" % (slot + 1) if slot >= 0 else "보상 교체 스킬"
+			var effect := lines(id, recharge_multiplier if active else 1.0)
+			effect.append("시작 장착 · 새 도전마다 초기화" if id in starting[weapon] else "정예 후 스킬 보상에서 슬롯 교체")
+			effect.append("표기 피해는 강화 전 기본값")
+			effect.append("시계추 적용 · 재사용 -20%" if active and recharge_multiplier > 1.0 else "첫·두 번째 정예 후 교체 가능")
+			result.append({"id": id, "weapon": weapon, "name": ("검 · " if weapon == "sword" else "활 · ") + String(SKILLS[id].display_name), "open": slot >= 0, "status": status, "lines": effect})
+	return result
 
 static func defaults() -> Dictionary:
 	return {"sword": ["sword_dash", "sword_spin"], "bow": ["bow_piercing", "bow_arrow_rain"]}
