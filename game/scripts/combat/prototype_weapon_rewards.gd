@@ -7,6 +7,7 @@ const DAMAGE_BONUS := [0.0, 0.15, 0.30]
 const UNIQUE_BONUS := [0.0, 0.10, 0.20]
 const NAMES := {"sword": ["연습용 검", "풀잎 검", "새벽 검"], "bow": ["연습용 활", "씨앗 활", "바람 활"]}
 const BACKUP_RATIO := 0.50
+const CODEX_PAGE_SIZE := 3
 const BLUEPRINTS := {"clockwork_sword": {"weapon": "sword", "name": "태엽 검"}, "clockwork_bow": {"weapon": "bow", "name": "태엽 활"}}
 const CLOCKWORK_DAMAGE := [0.0, 0.10, 0.20]
 const CLOCKWORK_UNIQUE := [0.0, 0.25, 0.35]
@@ -69,3 +70,28 @@ static func damage_multiplier(equipment: Dictionary, id: String, kind: String, b
 	var other := "bow" if id == "sword" else "sword"
 	var backup := profile(other, int(equipment[other]), String(blueprints.get(other, "")))
 	return 1.0 + float(own.damage) + (float(own.unique) if own.kind == kind else 0.0) + (float(backup.unique) * BACKUP_RATIO if backup.kind == kind else 0.0)
+
+
+static func codex_cards(unlocked: Dictionary, equipment: Dictionary = {}, blueprints: Dictionary = {}, active_weapon: String = "") -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var active := active_weapon in NAMES and valid_equipment(equipment) and valid_blueprints(blueprints, equipment)
+	for weapon in NAMES:
+		var designs: Array[String] = [""]
+		for id in BLUEPRINTS:
+			if BLUEPRINTS[id].weapon == weapon: designs.append(String(id))
+		for design in designs:
+			for grade in GRADE_NAMES.size():
+				var item := profile(weapon, grade, design)
+				if item.is_empty(): continue
+				var available: bool = design.is_empty() or unlocked.get(design, false) == true
+				var equipped: bool = active and int(equipment[weapon]) == grade and blueprints[weapon] == design
+				var status := "이번 도전 · 주 무기" if equipped and active_weapon == weapon else "이번 도전 · 보조 무기" if equipped else "획득 가능 · 효과 미리 보기" if available else "미해금 · 효과 미리 보기"
+				var lines: Array[String] = []
+				for line in item.lines: lines.append(String(line))
+				var condition := "시작 무기 · 새 도전 기본 장비" if grade == 0 else "첫 정예 보상" if grade == 1 else "두 번째 정예 보상"
+				if not design.is_empty(): condition = "보스 파괴로 해금 · " + condition
+				lines.append(condition)
+				lines.append("장비 합산: 기본 +%.1f%% · 스킬 +%.1f%%" % [(damage_multiplier(equipment, weapon, "basic", blueprints) - 1.0) * 100, (damage_multiplier(equipment, weapon, "skill", blueprints) - 1.0) * 100] if equipped else "고유 효과는 피해 보너스에 합산")
+				lines.append("성장·기억·거리 보정 전 · 필살기 제외")
+				result.append({"id": "%s_%d" % [item.id, grade], "weapon": weapon, "blueprint": design, "grade": grade, "name": item.name, "open": available or equipped, "equipped": equipped, "status": status, "lines": lines})
+	return result
