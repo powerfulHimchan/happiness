@@ -450,13 +450,18 @@ func apply_growth_health(maximum_bonus: int, healing: int) -> void:
 	_emit_metrics()
 
 
+func potion_heal_ratio() -> float:
+	var bonus := PrototypeRelic.DEW_POTION_BONUS if relic_state.get("id", "") == PrototypeRelic.DEW_ID and not relic_state.get("used", false) else 0.0
+	return float(PrototypePotionRecipes.profile(potion_recipe).ratio) + bonus
+
+
 func use_recovery_potion() -> bool:
 	if _is_input_locked() or potions_remaining <= 0 or damage_receiver.health >= damage_receiver.max_health:
 		return false
 	var before := damage_receiver.health
 	potions_remaining -= 1
 	var recipe := PrototypePotionRecipes.profile(potion_recipe)
-	apply_growth_health(0, ceili(damage_receiver.max_health * float(recipe.ratio)))
+	apply_growth_health(0, ceili(damage_receiver.max_health * potion_heal_ratio()))
 	potion_log = "%s +%d · 남은 %d회" % [recipe.name, damage_receiver.health - before, potions_remaining]
 	_emit_metrics()
 	return true
@@ -466,7 +471,7 @@ func prepare_potions(id: String, remaining: int = -1) -> void:
 	potion_recipe = id if PrototypePotionRecipes.valid_id(id) else PrototypePotionRecipes.BASIC
 	var recipe := PrototypePotionRecipes.profile(potion_recipe)
 	potions_remaining = potions_capacity() if remaining < 0 else clampi(remaining, 0, potions_capacity())
-	potion_log = "%s · 최대 %d개 · 체력 %d%% · 남은 %d회" % [recipe.name, potions_capacity(), roundi(float(recipe.ratio) * 100), potions_remaining]
+	potion_log = "%s · 최대 %d개 · 체력 %d%% · 남은 %d회" % [recipe.name, potions_capacity(), roundi(potion_heal_ratio() * 100), potions_remaining]
 	_emit_metrics()
 
 
@@ -976,7 +981,7 @@ func _emit_metrics() -> void:
 		"max_health": damage_receiver.max_health,
 		"potions_remaining": potions_remaining,
 		"potions_capacity": potions_capacity(),
-		"potion_heal_percent": roundi(float(PrototypePotionRecipes.profile(potion_recipe).ratio) * 100),
+		"potion_heal_percent": roundi(potion_heal_ratio() * 100),
 		"potion_recipe": potion_recipe,
 		"potion_log": potion_log,
 		"skill_recharge_multiplier": skill_recharge_multiplier(),

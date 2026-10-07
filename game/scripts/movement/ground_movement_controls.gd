@@ -615,7 +615,7 @@ func _draw_stage_routes() -> void:
 	else:
 		_draw_text_centered("스킬 교체 완료", skill_reward_open_rect, 18, MUTED_TEXT_COLOR)
 	if relic_offer_available:
-		_draw_button(relic_reward_open_rect, "유물 선택 · 두 후보", true)
+		_draw_button(relic_reward_open_rect, "유물 선택 · %d종" % PrototypeRelic.OFFERS.size(), true)
 	if not checkpoint_message.is_empty():
 		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.91), Vector2(safe.size.x, 28)), 16, PASS_COLOR if checkpoint_available else WAIT_COLOR)
 
@@ -2575,8 +2575,11 @@ func update_potion_recipe_status(id: String, message: String = "") -> void:
 func _refresh_relic_reward_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	relic_reward_card_rects.clear()
-	for i in PrototypeRelic.OFFERS.size():
-		relic_reward_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.48), safe.size.y * 0.21), Vector2(safe.size.x * 0.42, safe.size.y * 0.47)))
+	var count := PrototypeRelic.OFFERS.size()
+	var gap := safe.size.x * 0.03
+	var card_width := (safe.size.x * 0.90 - gap * (count - 1)) / count
+	for i in count:
+		relic_reward_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (card_width + gap), safe.size.y * 0.21), Vector2(card_width, safe.size.y * 0.47)))
 	relic_reward_card_rect = relic_reward_card_rects[0]
 	var width := safe.size.x * 0.40
 	relic_reward_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.07, safe.size.y * 0.80), Vector2(width, safe.size.y * 0.09))
@@ -2598,6 +2601,11 @@ func _draw_relic_rewards() -> void:
 			var feather := PackedVector2Array([center + Vector2(0, -28), center + Vector2(18, -8), center + Vector2(14, 14), center + Vector2(0, 30), center + Vector2(-14, 14), center + Vector2(-18, -8)])
 			draw_colored_polygon(feather, Color("ffa86a"))
 			draw_line(center + Vector2(0, -16), center + Vector2(0, 33), Color("fff1cf"), 3.0)
+		elif offer.id == PrototypeRelic.DEW_ID:
+			var drop := PackedVector2Array([center + Vector2(0, -34), center + Vector2(22, 2), center + Vector2(18, 22), center + Vector2(0, 30), center + Vector2(-18, 22), center + Vector2(-22, 2)])
+			draw_colored_polygon(drop, Color("82dcec"))
+			draw_line(center + Vector2(-9, 9), center + Vector2(9, 9), Color("fff1cf"), 4, true)
+			draw_line(center + Vector2(0, 0), center + Vector2(0, 18), Color("fff1cf"), 4, true)
 		else:
 			draw_arc(center + Vector2(0, -12), 23, 0, TAU, 32, Color("82dcec"), 4, true)
 			draw_line(center + Vector2(0, -12), center + Vector2(0, -27), Color("fff1cf"), 3, true)
