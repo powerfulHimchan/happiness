@@ -63,7 +63,7 @@ func _run() -> void:
 			if not await _test_book_layout(): return
 			controls.ability_codex_page = 3
 			var cards: Array = controls.village_snapshot().cards
-			if not _check(cards.filter(func(card: Dictionary) -> bool: return card.id == "potion_pouch" and card.open and card.status == "이번 도전 1등급").size() == 1 and player.potions_remaining == 3, "15능력 도감 실제 원본·등급·조회는 보충 없음"): return
+			if not _check(cards.filter(func(card: Dictionary) -> bool: return card.id == "potion_pouch" and card.open and card.status == "이번 도전 1등급").size() == 1 and player.potions_remaining == 3, "전체 능력 도감 실제 원본·등급·조회는 보충 없음"): return
 		"resume":
 			if not _check(not player.potion_pouch_unlocked and player.potions_capacity() == 2 and controls.discovered_abilities.has("potion_pouch"), "영구 발견만으로 시작 주머니 자동 지급 없음"): return
 			for ignored in 2:

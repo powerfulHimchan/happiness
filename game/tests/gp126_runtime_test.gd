@@ -105,7 +105,8 @@ func _run() -> void:
 			controls.show_main_screen()
 			controls.show_village()
 			if not await _test_book_layout(): return
-			controls.ability_codex_page = 3
+			for i in PrototypeAbilityCodex.definitions().size():
+				if PrototypeAbilityCodex.definitions()[i].id == "vanguard_edge": controls.ability_codex_page = i / PrototypeAbilityCodex.PAGE_SIZE
 			if not _check(controls.village_snapshot().cards.filter(func(card: Dictionary) -> bool: return card.id == "vanguard_edge" and card.status == "이번 도전 1등급").size() == 1, "직업 카드의 현재 도전 등급"): return
 			controls.begin_retry()
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "이전 도전 저장의 실제 검 능력 준비"): return
@@ -178,9 +179,10 @@ func _test_book_layout() -> bool:
 		_tap(controls.village_snapshot().tabs.abilities.get_center())
 		if not _check(controls.village_page == "abilities" and controls.ability_codex_page == 0, "실제 능력 탭 터치"): return false
 		var seen: Array[String] = []
-		for page in 5:
+		var page_count := ceili(float(PrototypeAbilityCodex.definitions().size()) / PrototypeAbilityCodex.PAGE_SIZE)
+		for page in page_count:
 			var snapshot: Dictionary = controls.village_snapshot()
-			if not _check(snapshot.ability_page == page and snapshot.ability_pages == 5 and snapshot.cards.size() == mini(3, PrototypeAbilityCodex.definitions().size() - page * 3), "전체 능력 다섯 페이지·마지막 페이지 크기"): return false
+			if not _check(snapshot.ability_page == page and snapshot.ability_pages == page_count and snapshot.cards.size() == mini(3, PrototypeAbilityCodex.definitions().size() - page * 3), "전체 능력 페이지·마지막 페이지 크기"): return false
 			var safe: Rect2 = controls.layout_snapshot().safe
 			var rects: Array = snapshot.layout.cards.duplicate()
 			rects.append_array([snapshot.layout.back, snapshot.layout.start])
@@ -200,8 +202,8 @@ func _test_book_layout() -> bool:
 			controls.queue_redraw()
 			await process_frame
 			_tap(snapshot.pager.next.get_center())
-		if not _check(seen.size() == PrototypeAbilityCodex.definitions().size() and controls.ability_codex_page == 4, "모든 능력 조회·마지막 페이지 범위 제한"): return false
-		for ignored in 6: _tap(controls.village_snapshot().pager.previous.get_center())
+		if not _check(seen.size() == PrototypeAbilityCodex.definitions().size() and controls.ability_codex_page == page_count - 1, "모든 능력 조회·마지막 페이지 범위 제한"): return false
+		for ignored in page_count + 1: _tap(controls.village_snapshot().pager.previous.get_center())
 		if not _check(controls.ability_codex_page == 0, "이전 페이지 범위 제한"): return false
 		_tap(controls.village_snapshot().tabs.jobs.get_center())
 		if not _check(controls.village_page == "jobs" and controls.village_snapshot().cards.size() == 2, "직업 탭으로 기존 도감 유지"): return false

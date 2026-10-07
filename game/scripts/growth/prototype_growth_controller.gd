@@ -23,6 +23,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "lifesteal_crisis", "title": "위기의 흡수", "category": "common", "lines": ["체력 30% 이하: 15% 회복", "평소 5% · 깊은 흡수와 하나만"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal"], "excludes": ["lifesteal_depth"]},
 	{"id": "magic_barrier", "title": "마력 방벽", "category": "common", "lines": ["피해 20을 먼저 흡수", "다음 스테이지 진입 시 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "potion_pouch", "title": "회복약 주머니", "category": "common", "lines": ["회복약 1개 보충 · 최대 소지 +1", "기본·농축 적용 · 스테이지 간 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "nimble_evade", "title": "민첩한 회피", "category": "common", "lines": ["지상 회피 재사용 대기 -20%", "0.45초 → 0.36초 · 무적 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
 var level: int = 1
@@ -62,6 +63,7 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	player.set_nimble_evade_unlocked(false)
 	player.set_potion_pouch_unlocked(false)
 	player.set_barrier_unlocked(false)
 	player.set_double_jump_unlocked(false)
@@ -104,6 +106,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	total_experience = int(state.total_xp)
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
+	player.set_nimble_evade_unlocked(int(ranks.get("nimble_evade", 0)) == 1)
 	player.set_potion_pouch_unlocked(int(ranks.get("potion_pouch", 0)) == 1)
 	player.set_barrier_unlocked(int(ranks.get("magic_barrier", 0)) == 1)
 	player.set_double_jump_unlocked(int(ranks.get("air_jump", 0)) == 1)
@@ -195,6 +198,7 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"nimble_evade": player.set_nimble_evade_unlocked(true)
 		"potion_pouch": player.set_potion_pouch_unlocked(true, true)
 		"lifesteal_depth", "lifesteal_crisis": player.set_lifesteal_branch(card_id)
 		"magic_barrier": player.set_barrier_unlocked(true)
