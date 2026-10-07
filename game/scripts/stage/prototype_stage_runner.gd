@@ -36,7 +36,7 @@ const ADVANCE_ONE_X := 1230.0
 const ADVANCE_TWO_X := 3830.0
 
 @export var stage_enabled: bool = true
-@export_range(1, 3) var stage_limit: int = 1
+@export_range(1, 5) var stage_limit: int = 1
 
 const ROUTES: Array[Dictionary] = [
 	{"id": "meadow", "name": "풀숲 길", "lines": ["다리로 전진 · 가까운 혼합 전투", "첫 웨이브 · 슬라임 + 씨앗 포대", "체력 20 추가 회복"]},
@@ -167,13 +167,13 @@ func can_select_route(id: String) -> bool:
 
 func _enemy_health(enemy: PrototypeTarget) -> int:
 	if enemy == boss:
-		return BossClockworkKnight.BOSS_HEALTH
+		return BossClockworkKnight.BOSS_HEALTH * 3 / 2 if stage_limit == 5 else BossClockworkKnight.BOSS_HEALTH
 	var multiplier := (1.0 + 0.25 * (stage_number - 1)) * (1.20 if route_id == "clockwork" else 1.0)
 	return roundi(float(_initial_health[enemy.get_path()]) * multiplier)
 
 
 func uses_boss() -> bool:
-	return stage_enabled and stage_limit == 3 and stage_number == 3
+	return stage_enabled and stage_limit in [3, 5] and stage_number == stage_limit
 
 
 func awaiting_boss_choice() -> bool:

@@ -268,6 +268,10 @@ var start_weapon_return_mode: int = ScreenMode.MAIN
 var start_weapon_card_rects: Array[Rect2] = []
 var start_weapon_confirm_rect := Rect2()
 var start_weapon_cancel_rect := Rect2()
+var selected_stage_limit: int = 3
+var requested_stage_limit: int = 0
+var previous_stage_limit: int = 3
+var start_length_rects: Array[Rect2] = []
 var weapon_reward_cards: Array[Dictionary] = []
 var weapon_reward_rects: Array[Rect2] = []
 var weapon_reward_confirm_rect := Rect2()
@@ -567,7 +571,11 @@ func _draw_weapon_rewards() -> void:
 	if movement_metrics.get("run_route_id", "") == "clockwork" and not checkpoint_message.begins_with("중간 저장 실패"):
 		reward_note = "태엽 폐허 통과 · 체력 +20 / 필살기 +50 추가 지급 (상한 적용)"
 	_draw_text_centered(reward_note, Rect2(safe.position + Vector2(0, safe.size.y * 0.72), Vector2(safe.size.x, 30)), 18, MUTED_TEXT_COLOR)
-	_draw_button(weapon_reward_confirm_rect, "선택한 무기로 교체" if selected_weapon_reward >= 0 else "무기를 선택하세요", selected_weapon_reward >= 0)
+	var confirm_label := "무기를 선택하세요"
+	if selected_weapon_reward >= 0:
+		var selected := weapon_reward_cards[selected_weapon_reward]
+		confirm_label = "이 무기 유지 · 보상 확정" if selected.name == selected.previous_name else "선택한 무기로 교체"
+	_draw_button(weapon_reward_confirm_rect, confirm_label, selected_weapon_reward >= 0)
 	_draw_button(weapon_reward_skip_rect, "현재 무기 유지", false)
 
 
@@ -754,11 +762,14 @@ func update_test_record_summary(summary: Dictionary) -> void:
 	queue_redraw()
 
 
-func begin_retry(starting_weapon: String = "sword") -> bool:
-	if starting_weapon not in ["sword", "bow"]:
+func begin_retry(starting_weapon: String = "sword", stage_count: int = 0) -> bool:
+	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5]:
 		return false
 	_leave_village_environment()
 	selected_starting_weapon = starting_weapon
+	requested_stage_limit = stage_count
+	if stage_count > 0:
+		selected_stage_limit = stage_count
 	release_all_inputs()
 	result_snapshot.clear()
 	screen_mode = ScreenMode.COMBAT
@@ -856,6 +867,7 @@ func show_start_weapon_selection() -> void:
 		return
 	start_weapon_return_mode = screen_mode
 	start_weapon_previous_selection = selected_starting_weapon
+	previous_stage_limit = selected_stage_limit
 	start_memory_previous_selection = selected_memory_id
 	selected_memory_id = preferred_memory_id
 	use_boss_legacy = not pending_boss_legacy.is_empty()
@@ -869,14 +881,17 @@ func _refresh_start_weapon_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	var gap := minf(32.0, safe.size.x * 0.03)
 	var card_width := (safe.size.x * 0.90 - gap) * 0.5
+	start_length_rects.clear()
+	for index in 2:
+		start_length_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.19), Vector2(card_width, safe.size.y * 0.065)))
 	start_weapon_card_rects.clear()
 	for index in 2:
-		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.24), Vector2(card_width, safe.size.y * 0.31)))
+		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.28), Vector2(card_width, safe.size.y * 0.29)))
 	memory_card_rects.clear()
 	var memory_gap := minf(18.0, safe.size.x * 0.02)
 	var memory_width := (safe.size.x * 0.90 - memory_gap * 2) / 3.0
 	for index in 3:
-		memory_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (memory_width + memory_gap), safe.size.y * 0.58), Vector2(memory_width, safe.size.y * 0.14)))
+		memory_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (memory_width + memory_gap), safe.size.y * 0.60), Vector2(memory_width, safe.size.y * 0.12)))
 	var button_width := minf(280.0, safe.size.x * 0.27)
 	boss_legacy_toggle_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.75), Vector2(safe.size.x * 0.90, safe.size.y * 0.06))
 	start_weapon_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - gap * 0.5 - button_width, safe.size.y * 0.86), Vector2(button_width, minf(64.0, safe.size.y * 0.09)))
@@ -887,9 +902,11 @@ func _draw_start_weapon_selection() -> void:
 	_refresh_start_weapon_layout()
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
-	_draw_text_centered("시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 54)), 32, ACTIVE_COLOR)
-	_draw_text_centered(BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "선택한 무기를 주 무기로 장착하고 새 도전을 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, 34)), 19, TEXT_COLOR)
-	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe), Rect2(safe.position + Vector2(0, safe.size.y * 0.21), Vector2(safe.size.x, safe.size.y * 0.025)), 17, PASS_COLOR)
+	_draw_text_centered("도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
+	_draw_text_centered(BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "선택한 무기를 주 무기로 장착하고 새 도전을 시작합니다", Rect2(safe.position + Vector2(0, safe.size.y * 0.10), Vector2(safe.size.x, safe.size.y * 0.04)), 19, TEXT_COLOR)
+	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x, safe.size.y * 0.03)), 17, PASS_COLOR)
+	for index in 2:
+		_draw_button(start_length_rects[index], "3스테이지 · 약 9분" if index == 0 else "5스테이지 · 약 15분", selected_stage_limit == (3 if index == 0 else 5))
 	var ids := ["sword", "bow"]
 	var names := ["검", "활"]
 	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m"]
@@ -1132,6 +1149,7 @@ func layout_snapshot() -> Dictionary:
 		"job_ultimates": job_ultimate_rects.duplicate(),
 		"stage_routes": stage_route_rects.duplicate(),
 		"start_weapon_cards": start_weapon_card_rects.duplicate(),
+		"start_lengths": start_length_rects.duplicate(),
 		"start_weapon_confirm": start_weapon_confirm_rect,
 		"start_weapon_cancel": start_weapon_cancel_rect,
 		"memory_cards": memory_card_rects.duplicate(),
@@ -1229,6 +1247,10 @@ func _handle_screen_touch(position: Vector2) -> void:
 		return
 	if screen_mode == ScreenMode.START_WEAPON:
 		_refresh_start_weapon_layout()
+		for index in start_length_rects.size():
+			if start_length_rects[index].has_point(position):
+				selected_stage_limit = 3 if index == 0 else 5
+				return
 		for index in start_weapon_card_rects.size():
 			if start_weapon_card_rects[index].has_point(position):
 				selected_starting_weapon = "sword" if index == 0 else "bow"
@@ -1244,10 +1266,11 @@ func _handle_screen_touch(position: Vector2) -> void:
 			return
 		if start_weapon_cancel_rect.has_point(position):
 			selected_starting_weapon = start_weapon_previous_selection
+			selected_stage_limit = previous_stage_limit
 			selected_memory_id = start_memory_previous_selection
 			screen_mode = start_weapon_return_mode
 		elif start_weapon_confirm_rect.has_point(position):
-			begin_retry(selected_starting_weapon)
+			begin_retry(selected_starting_weapon, selected_stage_limit)
 		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
 		if relic_offer_available and relic_reward_open_rect.has_point(position):
@@ -2400,7 +2423,7 @@ func update_weapon_blueprints(unlocked: Dictionary) -> void:
 
 func _draw_memory_cards() -> void:
 	var safe := _safe_area_in_viewport()
-	_draw_text_centered("영구 기억 · 하나만 장착", Rect2(safe.position + Vector2(0, safe.size.y * 0.55), Vector2(safe.size.x, safe.size.y * 0.03)), 14, MUTED_TEXT_COLOR)
+	_draw_text_centered("영구 기억 · 하나만 장착", Rect2(safe.position + Vector2(0, safe.size.y * 0.57), Vector2(safe.size.x, safe.size.y * 0.03)), 14, MUTED_TEXT_COLOR)
 	for index in memory_card_rects.size():
 		var id: String = PrototypeMemoryAbilities.IDS[index]
 		var card := PrototypeMemoryAbilities.profile(id)

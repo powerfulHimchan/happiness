@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp139_runtime_test.gd"
   "$game_root/tests/gp138_runtime_test.gd"
   "$game_root/tests/gp137_runtime_test.gd"
   "$game_root/tests/gp136_runtime_test.gd"
@@ -561,6 +562,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for expedition_phase in seed resume boss finish legacy flows; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp139_runtime_test.gd -- "$expedition_phase"
+  done
   for collector_phase in seed resume finish legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp138_runtime_test.gd -- "$collector_phase"
