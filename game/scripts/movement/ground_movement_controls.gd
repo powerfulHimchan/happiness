@@ -34,6 +34,8 @@ signal boss_choice_confirmed(choice: String)
 signal relic_reward_selected(id: String)
 signal potion_recipe_selected(id: String)
 signal route_records_retry_requested
+signal run_build_started
+signal run_build_finished
 
 enum ScreenMode {
 	COMBAT,
@@ -52,6 +54,7 @@ enum ScreenMode {
 	VILLAGE,
 	SKILL_REWARD,
 	RELIC_REWARD,
+	RUN_BUILD,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -134,6 +137,13 @@ var fps_30_rect := Rect2()
 var reset_rect := Rect2()
 var combat_layout_rect := Rect2()
 var hud_rect := Rect2()
+var combat_build_rect := Rect2()
+var run_build_reader: Callable
+var run_build_state: Dictionary = {}
+var run_build_tab: int = 0
+var run_build_page: int = 0
+var run_build_owned: bool = false
+var run_build_resume_pending: bool = false
 var result_panel_rect := Rect2()
 var result_retry_rect := Rect2()
 var result_main_rect := Rect2()
@@ -335,6 +345,10 @@ func _notification(what: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.RUN_BUILD:
+		close_run_build()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if screen_mode == ScreenMode.LAYOUT_EDITOR:
@@ -367,6 +381,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.RUN_BUILD:
+		_draw_run_build()
+		return
 	if screen_mode == ScreenMode.RELIC_REWARD:
 		_draw_relic_rewards()
 		return
@@ -765,6 +782,7 @@ func update_test_record_summary(summary: Dictionary) -> void:
 func begin_retry(starting_weapon: String = "sword", stage_count: int = 0) -> bool:
 	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5]:
 		return false
+	_leave_run_build()
 	_leave_village_environment()
 	selected_starting_weapon = starting_weapon
 	requested_stage_limit = stage_count
@@ -779,6 +797,7 @@ func begin_retry(starting_weapon: String = "sword", stage_count: int = 0) -> boo
 
 
 func show_main_screen() -> void:
+	_leave_run_build()
 	_leave_village_environment()
 	release_all_inputs()
 	screen_mode = ScreenMode.MAIN
@@ -1037,9 +1056,13 @@ func _update_mode_timer(delta: float) -> void:
 	elif screen_mode == ScreenMode.COMBAT_RESUME_COUNTDOWN:
 		combat_resume_remaining_s = maxf(0.0, combat_resume_remaining_s - delta)
 		if is_zero_approx(combat_resume_remaining_s):
+			var returning_from_build := run_build_resume_pending
 			screen_mode = ScreenMode.COMBAT
 			editor_return_mode = ScreenMode.MAIN
-			combat_configuration_finished.emit()
+			if returning_from_build:
+				_leave_run_build()
+			else:
+				combat_configuration_finished.emit()
 			queue_redraw()
 
 
@@ -1136,6 +1159,7 @@ func advance_mode_timer_for_test(delta: float) -> void:
 
 func layout_snapshot() -> Dictionary:
 	return {
+		"run_build": combat_build_rect,
 		"safe": _safe_area_in_viewport(),
 		"hud": hud_rect,
 		"move": move_zone,
@@ -1178,6 +1202,7 @@ func control_layout_snapshot() -> Dictionary:
 
 
 func _show_result_screen() -> void:
+	_leave_run_build()
 	release_all_inputs()
 	var sword_hits := int(movement_metrics.get("sword_total_hits", 0))
 	var bow_hits := int(movement_metrics.get("bow_total_hits", 0))
@@ -1207,6 +1232,9 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.RUN_BUILD:
+		_handle_run_build_touch(position)
+		return
 	if screen_mode == ScreenMode.RELIC_REWARD:
 		_refresh_relic_reward_layout()
 		for i in relic_reward_card_rects.size():
@@ -1490,6 +1518,7 @@ func _submit_action(action_id: StringName, phase: int, pointer_id: int) -> void:
 
 
 func _dispatch_action_command(command: PlayerCommand) -> void:
+	if screen_mode == ScreenMode.RUN_BUILD or run_build_resume_pending: return
 	match command.command_type:
 		PlayerCommand.Type.JUMP:
 			if command.phase == PlayerCommand.Phase.PRESSED:
@@ -1517,6 +1546,9 @@ func _dispatch_action_command(command: PlayerCommand) -> void:
 
 
 func _handle_header_action(position: Vector2) -> bool:
+	if combat_build_rect.has_point(position):
+		open_run_build()
+		return true
 	if combat_layout_rect.has_point(position):
 		open_layout_editor()
 		return true
@@ -1603,6 +1635,7 @@ func _refresh_layout() -> void:
 		safe.position + Vector2(10.0, 10.0),
 		Vector2(safe.size.x - 20.0, clampf(safe.size.y * 0.20, 132.0, 158.0))
 	)
+	combat_build_rect = _run_build_entry_rect(safe, Vector2(button_width * 2 + gap, button_height))
 	var panel_size := Vector2(
 		clampf(safe.size.x * 0.72, 760.0, 1060.0),
 		clampf(safe.size.y * 0.82, 580.0, 650.0)
@@ -1760,6 +1793,8 @@ func _draw_header() -> void:
 	_draw_button(fps_30_rect, "30", Engine.max_fps == 30)
 	_draw_button(reset_rect, "재설정", false)
 	_draw_button(combat_layout_rect, "배치", false)
+	if combat_build_rect.has_area():
+		_draw_button(combat_build_rect, "도전 상태", false)
 
 
 func _ultimate_hud_label() -> String:
@@ -2236,6 +2271,29 @@ func _control_touch_rect(control_id: StringName) -> Rect2:
 	if control_id == MOVE_CONTROL:
 		return move_zone
 	return action_rects.get(control_id, Rect2())
+
+
+func _run_build_entry_rect(safe: Rect2, button_size: Vector2) -> Rect2:
+	var obstacles: Array = _control_touch_rects().values()
+	var top := maxf(hud_rect.end.y + 14.0, safe.position.y + 184.0)
+	var xs: Array[float] = [safe.position.x + 18.0]
+	var ys: Array[float] = [top]
+	for obstacle: Rect2 in obstacles:
+		xs.append(obstacle.end.x + 8.0)
+		ys.append(maxf(top, obstacle.end.y + 8.0))
+	xs.sort()
+	ys.sort()
+	for y in ys:
+		for x in xs:
+			var candidate := Rect2(Vector2(x, y), button_size)
+			if not safe.encloses(candidate): continue
+			var blocked := false
+			for obstacle: Rect2 in obstacles:
+				if candidate.intersects(obstacle.grow(4.0)):
+					blocked = true
+					break
+			if not blocked: return candidate
+	return Rect2()
 
 
 func _control_touch_rects() -> Dictionary:
@@ -2768,3 +2826,81 @@ func update_route_atlas_status(surveyed: Dictionary, message: String = "") -> vo
 	surveyed_routes = surveyed.duplicate()
 	route_atlas_message = message
 	queue_redraw()
+
+
+func open_run_build() -> bool:
+	if screen_mode != ScreenMode.COMBAT or run_build_owned or not run_build_reader.is_valid(): return false
+	var state: Dictionary = run_build_reader.call()
+	if state.is_empty(): return false
+	release_all_inputs()
+	run_build_state = state.duplicate(true)
+	run_build_tab = 0
+	run_build_page = 0
+	run_build_owned = true
+	screen_mode = ScreenMode.RUN_BUILD
+	run_build_started.emit()
+	queue_redraw()
+	return true
+
+
+func close_run_build() -> bool:
+	if screen_mode != ScreenMode.RUN_BUILD or not run_build_owned: return false
+	run_build_resume_pending = true
+	_start_combat_resume_countdown()
+	return true
+
+
+func _leave_run_build() -> void:
+	if not run_build_owned: return
+	release_all_inputs()
+	run_build_owned = false
+	run_build_resume_pending = false
+	run_build_state.clear()
+	run_build_finished.emit()
+
+
+func run_build_snapshot() -> Dictionary:
+	var all_cards := PrototypeRunBuildView.cards(run_build_tab, run_build_state)
+	var pages := maxi(1, ceili(float(all_cards.size()) / PrototypeRunBuildView.PAGE_SIZE))
+	var page := clampi(run_build_page, 0, pages - 1)
+	var cards := all_cards.slice(page * PrototypeRunBuildView.PAGE_SIZE, (page + 1) * PrototypeRunBuildView.PAGE_SIZE)
+	return {"tab": run_build_tab, "page": page, "pages": pages, "count": all_cards.size(), "cards": cards.duplicate(true), "layout": PrototypeRunBuildView.layout(_safe_area_in_viewport(), cards.size())}
+
+
+func _handle_run_build_touch(position: Vector2) -> void:
+	var snapshot := run_build_snapshot()
+	var layout: Dictionary = snapshot.layout
+	if layout.back.has_point(position):
+		close_run_build()
+		return
+	for index in layout.tabs.size():
+		if layout.tabs[index].has_point(position):
+			run_build_tab = index
+			run_build_page = 0
+			return
+	if layout.previous.has_point(position): run_build_page = maxi(0, int(snapshot.page) - 1)
+	if layout.next.has_point(position): run_build_page = mini(int(snapshot.pages) - 1, int(snapshot.page) + 1)
+
+
+func _draw_run_build() -> void:
+	var safe := _safe_area_in_viewport()
+	var snapshot := run_build_snapshot()
+	var layout: Dictionary = snapshot.layout
+	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
+	_draw_village_text("현재 도전 상태", Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.075)), 32, ACTIVE_COLOR)
+	_draw_village_text("조회 중 전투 정지 · 닫으면 3초 뒤 복귀", Rect2(safe.position + Vector2(0, safe.size.y * 0.14), Vector2(safe.size.x, safe.size.y * 0.05)), 20, MUTED_TEXT_COLOR)
+	for index in layout.tabs.size():
+		_draw_button(layout.tabs[index], PrototypeRunBuildView.TABS[index], index == run_build_tab)
+	for index in snapshot.cards.size():
+		var card: Dictionary = snapshot.cards[index]
+		var rect: Rect2 = layout.cards[index]
+		draw_style_box(_panel_style(), rect)
+		_draw_village_text(String(card.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.10), Vector2(rect.size.x - 24, rect.size.y * 0.13)), 26, TEXT_COLOR)
+		_draw_village_text(String(card.status), Rect2(rect.position + Vector2(12, rect.size.y * 0.28), Vector2(rect.size.x - 24, rect.size.y * 0.09)), 18, ACTIVE_COLOR)
+		var line_height := 0.50 / maxi(6, card.lines.size())
+		for j in card.lines.size():
+			_draw_village_text(String(card.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.42 + j * line_height)), Vector2(rect.size.x - 24, rect.size.y * line_height)), 18, TEXT_COLOR)
+	_draw_button(layout.previous, "이전", snapshot.page > 0)
+	_draw_button(layout.next, "다음", snapshot.page < snapshot.pages - 1)
+	_draw_village_text("%d / %d" % [int(snapshot.page) + 1, int(snapshot.pages)], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.78), Vector2(safe.size.x * 0.40, safe.size.y * 0.055)), 19, TEXT_COLOR)
+	_draw_button(layout.back, "전투로 돌아가기", true)
