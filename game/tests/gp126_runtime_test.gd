@@ -197,7 +197,7 @@ func _test_book_layout() -> bool:
 				var source := PrototypeAbilityCodex.profile(card.id)
 				seen.append(String(card.id))
 				if not _check(card.name == source.title and card.lines[0] == source.lines[0] and card.lines[1] == source.lines[1] and card.lines.size() == 5 and card.open == controls.discovered_abilities.has(card.id), "기본·강화·직업 카드 실제 원본 데이터·발견 상태"): return false
-				if source.has("requires") and not _check("생명 흡수" in card.lines[2], "강화 가지 선행 조건"): return false
+				if source.has("requires") and not _check(String(PrototypeAbilityCodex.profile(source.requires[0]).title) in card.lines[2], "강화 가지 선행 조건"): return false
 				if source.has("job") and not _check(String(PrototypeJobProgress.profile(source.job).name) in card.lines[2], "직업 카드 발현 조건"): return false
 			controls.queue_redraw()
 			await process_frame

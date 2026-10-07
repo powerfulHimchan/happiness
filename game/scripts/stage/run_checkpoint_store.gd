@@ -194,7 +194,8 @@ static func valid_state(state: Dictionary) -> bool:
 		if not _number(player.get(key), 0, 100):
 			return false
 	var barrier: Variant = player.get("barrier_health", 0)
-	if not _number(barrier, 0, PrototypePlayer.BARRIER_CAPACITY, true) or (not growth.ranks.has("magic_barrier") and barrier != 0):
+	var barrier_capacity := PrototypePlayer.BARRIER_CAPACITY + (PrototypePlayer.FORTIFIED_BARRIER_BONUS if growth.ranks.has("fortified_barrier") else 0)
+	if not _number(barrier, 0, barrier_capacity, true) or (not growth.ranks.has("magic_barrier") and barrier != 0):
 		return false
 	var progress: Variant = player.get("lifesteal_progress", 0)
 	if not _number(progress, 0, PrototypePlayer.LIFESTEAL_DAMAGE_PER_HEALTH - 1, true) or (not growth.ranks.has("lifesteal") and progress != 0):
