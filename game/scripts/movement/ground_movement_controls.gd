@@ -1725,9 +1725,9 @@ func _draw_header() -> void:
 	_draw_text("%s %.1fs  ·  %s %.1fs" % [skill_1_name, skill_1_cd, skill_2_name, skill_2_cd], Vector2(right_x, top_y + 30.0), 16, MUTED_TEXT_COLOR)
 	var ultimate_gauge: int = int(movement_metrics.get("ultimate_gauge", 0))
 	var ultimate_active: bool = bool(movement_metrics.get("ultimate_active", false))
-	_draw_text(
-		"%s  %s" % [String(movement_metrics.get("ultimate_name", "새벽의 틈")), "발동 중" if ultimate_active else "%d%%" % ultimate_gauge],
-		Vector2(right_x, top_y + 60.0),
+	_draw_village_text(
+		_ultimate_hud_label(),
+		Rect2(Vector2(right_x, top_y + 40.0), Vector2(hud_rect.size.x * 0.36, 24)),
 		17,
 		ACTIVE_COLOR if ultimate_active or ultimate_gauge >= 100 else TEXT_COLOR
 	)
@@ -1737,6 +1737,13 @@ func _draw_header() -> void:
 	_draw_button(fps_30_rect, "30", Engine.max_fps == 30)
 	_draw_button(reset_rect, "재설정", false)
 	_draw_button(combat_layout_rect, "배치", false)
+
+
+func _ultimate_hud_label() -> String:
+	var label := "%s  %s" % [String(movement_metrics.get("ultimate_name", "새벽의 틈")), "발동 중" if bool(movement_metrics.get("ultimate_active", false)) else "%d%%" % int(movement_metrics.get("ultimate_gauge", 0))]
+	if bool(movement_metrics.get("growth_run_active", false)) and int(movement_metrics.get("growth_ranks", {}).get("time_collector", 0)) == 1:
+		label += " · 처치 +%d" % UltimateController.DEFEAT_GAIN
+	return label
 
 
 func _draw_action_log(panel_rect: Rect2) -> void:
