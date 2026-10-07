@@ -92,7 +92,8 @@ func _run() -> void:
 			controls.begin_retry()
 			if not _check(weapons.equipment == {"sword": 0, "bow": 0} and weapons.blueprints == {"sword": "", "bow": ""} and weapons.unlocked_blueprints.size() == 2, "새 도전 기본 장비/설계 초기화·해금 유지"): return
 			if not await _test_weapon_codex(true): return
-			_tap(controls.village_snapshot().layout["continue"].get_center())
+			# 첫 스테이지 완료 전에는 중간 저장이 없으므로 새 도전으로 전투 복귀한다.
+			controls.begin_retry()
 			if not _finish_stage(): return
 			_tap(controls.weapon_reward_rects[0].get_center())
 			_tap(controls.weapon_reward_confirm_rect.get_center())
