@@ -26,6 +26,9 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 var _growth_pause_owned: bool = false
 var _growth_previous_tree_pause: bool = false
 var _growth_previous_controls_mode: int = Node.PROCESS_MODE_INHERIT
+var _run_build_pause_owned: bool = false
+var _run_build_previous_tree_pause: bool = false
+var _run_build_previous_controls_mode: int = Node.PROCESS_MODE_INHERIT
 var _intermission_stage: int = 0
 var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
@@ -84,6 +87,9 @@ func _ready() -> void:
 	controls.layout_test_finished.connect(_on_layout_test_finished)
 	controls.combat_configuration_started.connect(_suspend_combat_environment)
 	controls.combat_configuration_finished.connect(_restore_combat_environment)
+	controls.run_build_reader = _capture_run_build
+	controls.run_build_started.connect(_begin_run_build_pause)
+	controls.run_build_finished.connect(_finish_run_build_pause)
 	controls.feedback_settings_changed.connect(feedback_controller.configure)
 	controls.test_records_clear_requested.connect(test_recorder.clear_records)
 	player.fall_recovery_started.connect(controls.release_all_inputs)
@@ -306,6 +312,9 @@ func _reset_test() -> void:
 
 
 func _begin_growth_pause() -> void:
+	# 성장/보상 화면으로 전환할 때 조회의 정지 소유권을 먼저 정리한다.
+	if _run_build_pause_owned:
+		controls._leave_run_build()
 	if not _growth_pause_owned:
 		_growth_previous_tree_pause = get_tree().paused
 		_growth_previous_controls_mode = controls.process_mode
@@ -566,6 +575,8 @@ func _continue_stage(route: String) -> void:
 
 
 func _exit_tree() -> void:
+	if _run_build_pause_owned:
+		get_tree().paused = _run_build_previous_tree_pause
 	if _growth_pause_owned:
 		get_tree().paused = _growth_previous_tree_pause
 
@@ -819,3 +830,47 @@ func _flush_route_records() -> void:
 func _retry_route_records() -> void:
 	if controls.current_screen_mode() == 13 and controls.village_page == "atlas":
 		_flush_route_records()
+
+
+func _capture_run_build() -> Dictionary:
+	if not growth.run_active or player.damage_receiver.dead or _growth_pause_owned or _combat_environment_suspended: return {}
+	var metrics := {}
+	weapon_controller._enrich_metrics(metrics)
+	var damage := {}
+	var cooldowns := {}
+	for weapon in ["sword", "bow"]:
+		damage[weapon] = {"basic": player.growth_damage(100, weapon, "basic"), "skill": player.growth_damage(100, weapon, "skill")}
+		cooldowns[weapon] = [float(metrics[weapon + "_skill_1_cooldown_s"]), float(metrics[weapon + "_skill_2_cooldown_s"])]
+	return {
+		"growth": growth.metrics_snapshot(), "stage": stage_runner.current_metrics(),
+		"equipment": weapon_controller.equipment.duplicate(), "blueprints": weapon_controller.blueprints.duplicate(),
+		"skills": weapon_controller.skills.duplicate(true), "active": weapon_controller.active_weapon_id,
+		"recharge": player.skill_recharge_multiplier(), "damage": damage, "cooldowns": cooldowns,
+		"health": {
+			"current": player.damage_receiver.health, "maximum": player.damage_receiver.max_health,
+			"barrier": player.damage_receiver.barrier_health, "barrier_max": player.barrier_capacity() if player.barrier_unlocked else 0,
+			"potions": player.potions_remaining, "potion_max": player.potions_capacity(),
+			"potion_percent": roundi(player.potion_heal_ratio() * 100),
+			"lifesteal_percent": player.lifesteal_multiplier() * 5 if player.lifesteal_unlocked else 0,
+			"air_jump": player.double_jump_unlocked,
+		},
+		"recipe": player.potion_recipe,
+		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s},
+		"relic": player.relic_state.duplicate(), "memory": player.memory_id, "legacy": player.boss_legacy.get("choice", ""),
+	}
+
+
+func _begin_run_build_pause() -> void:
+	if _run_build_pause_owned: return
+	_run_build_previous_tree_pause = get_tree().paused
+	_run_build_previous_controls_mode = controls.process_mode
+	_run_build_pause_owned = true
+	controls.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().paused = true
+
+
+func _finish_run_build_pause() -> void:
+	if not _run_build_pause_owned: return
+	controls.process_mode = _run_build_previous_controls_mode
+	get_tree().paused = _run_build_previous_tree_pause
+	_run_build_pause_owned = false
