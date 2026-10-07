@@ -115,7 +115,7 @@ func _test_village_codex(expected_id: String, used: bool) -> bool:
 		_tap(controls.village_snapshot().tabs.relics.get_center())
 		if not _check(controls.village_page == "relics", "실제 유물 도감 탭 터치"): return false
 		var snapshot: Dictionary = controls.village_snapshot()
-		if not _check(snapshot.cards.size() == 2, "불사조·시계추 두 카드 표시"): return false
+		if not _check(snapshot.cards.size() == PrototypeRelic.OFFERS.size(), "전체 유물 원본 카드 표시"): return false
 		var rects: Array = snapshot.layout.cards.duplicate()
 		rects.append_array(snapshot.tabs.values())
 		rects.append_array([snapshot.layout.back, snapshot.layout.start])

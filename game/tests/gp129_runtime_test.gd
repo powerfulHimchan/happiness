@@ -144,14 +144,14 @@ func _test_relic_layout() -> bool:
 		_tap(controls.relic_reward_open_rect.get_center())
 		controls._refresh_relic_reward_layout()
 		var rects: Array = controls.relic_reward_card_rects.duplicate()
-		if not _check(rects.size() == 2, "유물 두 후보 표시"): return false
+		if not _check(rects.size() == PrototypeRelic.OFFERS.size(), "전체 유물 후보 표시"): return false
 		rects.append_array([controls.relic_reward_confirm_rect, controls.relic_reward_cancel_rect])
 		var safe: Rect2 = controls.layout_snapshot().safe
 		for i in rects.size():
 			if not _check(safe.encloses(rects[i]), "두 화면비 유물·확정·취소 안전 영역"): return false
 			for j in range(i + 1, rects.size()):
 				if not _check(not rects[i].intersects(rects[j]), "두 후보·확정·취소 입력 비중첩"): return false
-		for i in 2:
+		for i in PrototypeRelic.OFFERS.size():
 			_tap(controls.relic_reward_card_rects[i].get_center())
 			if not _check(controls.selected_relic_offer == i, "실제 카드 터치 선택"): return false
 			controls.queue_redraw()
