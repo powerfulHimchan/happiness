@@ -198,11 +198,18 @@ func _test_ground_evade(unlocked: bool, fps: int) -> bool:
 	growth.jobs_enabled = jobs_enabled
 	return _check(weapons.checkpoint_snapshot() == equipment and player.potions_remaining == potions, "지상 회피 감소는 양 무기 쿨다운·회복약 변경 없음")
 
+func _press_nimble_jump() -> void:
+	controls._handle_touch_released(4)
+	_tap(controls.action_rects[&"jump"].get_center())
+	controls._physics_process(0.001)
+	await physics_frame
+	await physics_frame
+
 func _test_air_and_locks() -> bool:
 	player.prepare_next_stage(Vector2(960, 780))
 	player.set_physics_process(true)
 	for ignored in 8: await physics_frame
-	await _press_jump()
+	await _press_nimble_jump()
 	controls._handle_touch_released(4)
 	for ignored in 10: await physics_frame
 	player.set_physics_process(false)
