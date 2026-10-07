@@ -90,6 +90,7 @@ var last_jump_height_m: float = 0.0
 var last_jump_assist: String = "대기"
 var invincible: bool = false
 var air_dash_available: bool = true
+var nimble_evade_unlocked: bool = false
 var ground_evade_count: int = 0
 var air_dash_count: int = 0
 var last_mobility_result: String = "대기"
@@ -316,6 +317,16 @@ func set_combat_evade_allowed(allowed: bool) -> void:
 	combat_evade_allowed = allowed
 
 
+func ground_evade_cooldown_s() -> float:
+	return GROUND_EVADE_COOLDOWN_S * (0.8 if nimble_evade_unlocked else 1.0)
+
+
+func set_nimble_evade_unlocked(enabled: bool) -> void:
+	# 선택 전에 시작한 회피의 남은 대기시간은 바꾸지 않는다.
+	nimble_evade_unlocked = enabled
+	_emit_metrics()
+
+
 func set_barrier_unlocked(enabled: bool) -> void:
 	barrier_unlocked = enabled
 	damage_receiver.barrier_health = BARRIER_CAPACITY if enabled else 0
@@ -514,6 +525,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	nimble_evade_unlocked = false
 	barrier_unlocked = false
 	damage_receiver.barrier_health = 0
 	lifesteal_unlocked = false
@@ -675,7 +687,7 @@ func _start_ground_evade() -> void:
 	_mobility_action = MobilityAction.GROUND_EVADE
 	_mobility_direction = Vector2(float(direction), 0.0)
 	_mobility_remaining_s = GROUND_EVADE_DURATION_S
-	_evade_cooldown_remaining_s = GROUND_EVADE_COOLDOWN_S
+	_evade_cooldown_remaining_s = ground_evade_cooldown_s()
 	ground_evade_count += 1
 	last_mobility_result = "지상 회피"
 	_begin_invincibility()
@@ -951,6 +963,8 @@ func _emit_metrics() -> void:
 		"invincible": invincible,
 		"invincible_remaining_s": _invincible_remaining_s,
 		"evade_cooldown_remaining_s": _evade_cooldown_remaining_s,
+		"nimble_evade_unlocked": nimble_evade_unlocked,
+		"ground_evade_cooldown_s": ground_evade_cooldown_s(),
 		"air_dash_available": air_dash_available,
 		"ground_evade_count": ground_evade_count,
 		"air_dash_count": air_dash_count,

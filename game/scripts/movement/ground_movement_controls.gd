@@ -2103,6 +2103,9 @@ func _draw_action_controls() -> void:
 
 
 func _action_label(action_id: StringName) -> String:
+	if action_id == &"evade" and bool(movement_metrics.get("nimble_evade_unlocked", false)) and movement_metrics.get("jump_state", "지상") == "지상":
+		var remaining := float(movement_metrics.get("evade_cooldown_remaining_s", 0.0))
+		return "회피 %.2f" % (maxf(0.01, ceilf(remaining * 100.0 - 0.000001) / 100.0)) if remaining > 0.0 else "민첩 회피"
 	if action_id == &"jump" and bool(movement_metrics.get("double_jump_unlocked", false)):
 		return "2단 점프" if movement_metrics.get("jump_state", "지상") == "지상" else "도약 1" if bool(movement_metrics.get("air_jump_available", false)) else "도약 0"
 	if action_id == &"recovery_potion":
