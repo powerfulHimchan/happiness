@@ -166,7 +166,7 @@ func _test_dew_combat() -> bool:
 	controls.show_main_screen()
 	_press_dew_potion()
 	if not _check(player.damage_receiver.health == 1 and player.potions_remaining == 1, "메인에는 강화 회복약 사용 차단"): return false
-	controls.screen_mode = GroundMovementControls.ScreenMode.COMBAT
+	controls.screen_mode = 0
 	_press_dew_potion()
 	if not _check(player.damage_receiver.health == 52 and player.potions_remaining == 0, "농축101×50% 정수 올림51·실제 회복"): return false
 	player.set_potion_pouch_unlocked(true, true)
