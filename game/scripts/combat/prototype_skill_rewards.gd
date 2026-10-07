@@ -1,7 +1,7 @@
 class_name PrototypeSkillRewards
 extends RefCounted
 
-## 무기별 다섯 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
+## 무기별 여섯 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
 const SKILLS := {
 	"sword_dash": preload("res://data/skills/sword_dash.tres"),
 	"sword_spin": preload("res://data/skills/sword_spin.tres"),
@@ -13,9 +13,11 @@ const SKILLS := {
 	"bow_volley": preload("res://data/skills/bow_volley.tres"),
 	"bow_spread": preload("res://data/skills/bow_spread.tres"),
 	"bow_focus": preload("res://data/skills/bow_focus.tres"),
+	"sword_thrust": preload("res://data/skills/sword_thrust.tres"),
+	"bow_double_piercing": preload("res://data/skills/bow_double_piercing.tres"),
 }
-const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus"]}
-const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중"}
+const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing"]}
+const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중"}
 const CODEX_PAGE_SIZE := 3
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
@@ -68,6 +70,8 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 		"sword_spin": result.append("주변 2m · 두 번 베기")
 		"sword_crescent": result.append("주변 3m · 한 번 크게 베기")
 		"sword_line": result.append("정면 4m · 상하 0.9m · 1타")
+		"sword_thrust": result.append("정면 %.1fm · 상하 %.2fm · 1타" % [definition.hit_range_m, definition.hit_half_height_m])
+		"bow_double_piercing": result.append("화살 2발 · 각 최대 %d개체 관통" % definition.max_targets)
 		"sword_triple": result.append("정면 2.4m · 상하 0.9m · 3타")
 		"bow_focus": result.append("0.7초 준비 · 정면 1발 · 이동 불가")
 		"bow_piercing": result.append("화살 1발 · 최대 3개체 관통")
@@ -81,6 +85,15 @@ static func _total_damage(definition: SkillDefinition) -> int:
 	for damage in definition.damage:
 		total += damage
 	return total
+
+static func offer_page_count(loadout: Dictionary) -> int:
+	var count := 1
+	for weapon in POOLS:
+		var candidates := 0
+		for id in POOLS[weapon]:
+			if id not in loadout[weapon]: candidates += 1
+		count = maxi(count, candidates)
+	return count
 
 static func offers(loadout: Dictionary, offset: int = 0, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []

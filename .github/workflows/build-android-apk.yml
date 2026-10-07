@@ -100,24 +100,24 @@ jobs:
       - name: Collect and verify APK
         shell: bash
         run: |
-          apk_path="$(find game/build -type f -name 'happiness-tale-gp133-nimble-evade.apk' -print -quit)"
+          apk_path="$(find game/build -type f -name 'happiness-tale-gp134-precision-skills.apk' -print -quit)"
           test -n "${apk_path}"
           test -s "${apk_path}"
           mkdir -p dist
-          cp "${apk_path}" dist/happiness-tale-gp133-nimble-evade.apk
+          cp "${apk_path}" dist/happiness-tale-gp134-precision-skills.apk
           (
             cd dist
-            sha256sum happiness-tale-gp133-nimble-evade.apk \
-              | tee happiness-tale-gp133-nimble-evade.apk.sha256
+            sha256sum happiness-tale-gp134-precision-skills.apk \
+              | tee happiness-tale-gp134-precision-skills.apk.sha256
           )
           ls -lh dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: happiness-tale-gp133-nimble-evade-apk
+          name: happiness-tale-gp134-precision-skills-apk
           path: |
-            dist/happiness-tale-gp133-nimble-evade.apk
-            dist/happiness-tale-gp133-nimble-evade.apk.sha256
+            dist/happiness-tale-gp134-precision-skills.apk
+            dist/happiness-tale-gp134-precision-skills.apk.sha256
           if-no-files-found: error
           retention-days: 14
