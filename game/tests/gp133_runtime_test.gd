@@ -130,6 +130,10 @@ func _choose_nimble() -> bool:
 		var safe: Rect2 = controls.layout_snapshot().safe
 		for rect in controls.growth_card_rects:
 			if not _check(safe.encloses(rect) and not rect.intersects(controls.growth_reroll_rect), "두 화면비 실제 능력 선택 카드 안전 영역"): return false
+		var chosen_rect: Rect2 = controls.growth_card_rects[index]
+		var font_size := mini(26, int(chosen_rect.size.x / 12.0)) - 3
+		for line in growth.offered_cards[index].lines:
+			if not _check(ThemeDB.fallback_font.get_string_size(String(line), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= chosen_rect.size.x - 24, "두 화면비 실제 회피 카드 설명 글자 너비"): return false
 		controls.queue_redraw()
 		await process_frame
 	book.save_path = "user://gp133_missing/abilities.jsonl"

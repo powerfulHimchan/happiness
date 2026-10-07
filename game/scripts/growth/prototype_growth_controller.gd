@@ -23,7 +23,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "lifesteal_crisis", "title": "위기의 흡수", "category": "common", "lines": ["체력 30% 이하: 15% 회복", "평소 5% · 깊은 흡수와 하나만"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal"], "excludes": ["lifesteal_depth"]},
 	{"id": "magic_barrier", "title": "마력 방벽", "category": "common", "lines": ["피해 20을 먼저 흡수", "다음 스테이지 진입 시 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "potion_pouch", "title": "회복약 주머니", "category": "common", "lines": ["회복약 1개 보충 · 최대 소지 +1", "기본·농축 적용 · 스테이지 간 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
-	{"id": "nimble_evade", "title": "민첩한 회피", "category": "common", "lines": ["지상 회피 재사용 대기 -20%", "0.45초 → 0.36초 · 무적 0.18초 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "nimble_evade", "title": "민첩한 회피", "category": "common", "lines": ["지상 회피 재사용 대기 -20%", "0.45초 → 0.36초 · 무적 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
 var level: int = 1
