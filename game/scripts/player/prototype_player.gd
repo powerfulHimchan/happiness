@@ -57,6 +57,8 @@ var boss_legacy: Dictionary = {}
 var boss_legacy_store := BossLegacyStore.new()
 
 const BARRIER_CAPACITY := 20
+const FORTIFIED_BARRIER_BONUS := 10
+var fortified_barrier_unlocked: bool = false
 var barrier_unlocked: bool = false
 
 const LIFESTEAL_DAMAGE_PER_HEALTH := 20
@@ -327,16 +329,31 @@ func set_nimble_evade_unlocked(enabled: bool) -> void:
 	_emit_metrics()
 
 
+func barrier_capacity() -> int:
+	return BARRIER_CAPACITY + (FORTIFIED_BARRIER_BONUS if barrier_unlocked and fortified_barrier_unlocked else 0)
+
+
+func set_fortified_barrier_unlocked(enabled: bool, refill: bool = false) -> void:
+	var newly_unlocked := enabled and barrier_unlocked and not fortified_barrier_unlocked
+	fortified_barrier_unlocked = enabled and barrier_unlocked
+	if newly_unlocked and refill and not damage_receiver.dead:
+		damage_receiver.barrier_health += FORTIFIED_BARRIER_BONUS
+	damage_receiver.barrier_health = mini(damage_receiver.barrier_health, barrier_capacity())
+	queue_redraw()
+	_emit_metrics()
+
+
 func set_barrier_unlocked(enabled: bool) -> void:
 	barrier_unlocked = enabled
-	damage_receiver.barrier_health = BARRIER_CAPACITY if enabled else 0
+	if not enabled: fortified_barrier_unlocked = false
+	damage_receiver.barrier_health = barrier_capacity() if enabled else 0
 	queue_redraw()
 	_emit_metrics()
 
 
 func recharge_barrier() -> void:
 	if barrier_unlocked and not damage_receiver.dead:
-		damage_receiver.barrier_health = BARRIER_CAPACITY
+		damage_receiver.barrier_health = barrier_capacity()
 		queue_redraw()
 		_emit_metrics()
 
@@ -415,7 +432,7 @@ func set_job_emblem(job_id: String, color: Color) -> void:
 
 func _draw() -> void:
 	if barrier_unlocked and damage_receiver.barrier_health > 0 and not damage_receiver.dead:
-		draw_arc(Vector2(0, -38), 58.0, -PI * 0.5, -PI * 0.5 + TAU * float(damage_receiver.barrier_health) / BARRIER_CAPACITY, 48, Color("82dcec", 0.75), 4.0, true)
+		draw_arc(Vector2(0, -38), 58.0, -PI * 0.5, -PI * 0.5 + TAU * float(damage_receiver.barrier_health) / barrier_capacity(), 48, Color("82dcec", 0.75), 4.0, true)
 	if _lifesteal_flash_remaining_s > 0.0:
 		draw_arc(Vector2(0, -30), 65.0, 0.0, TAU, 32, Color(0.4, 1.0, 0.65, _lifesteal_flash_remaining_s / 0.20), 5.0, true)
 	if _air_jump_flash_remaining_s > 0.0:
@@ -532,6 +549,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 func reset_movement_test(spawn_position: Vector2) -> void:
 	nimble_evade_unlocked = false
 	barrier_unlocked = false
+	fortified_barrier_unlocked = false
 	damage_receiver.barrier_health = 0
 	lifesteal_unlocked = false
 	lifesteal_branch = ""
@@ -950,7 +968,8 @@ func _emit_metrics() -> void:
 		"double_jump_unlocked": double_jump_unlocked,
 		"barrier_unlocked": barrier_unlocked,
 		"barrier_health": damage_receiver.barrier_health,
-		"barrier_capacity": BARRIER_CAPACITY,
+		"barrier_capacity": barrier_capacity(),
+		"fortified_barrier_unlocked": fortified_barrier_unlocked,
 		"barrier_absorbed": damage_receiver.last_absorbed_damage,
 		"lifesteal_unlocked": lifesteal_unlocked,
 		"lifesteal_branch": lifesteal_branch,

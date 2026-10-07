@@ -24,6 +24,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "magic_barrier", "title": "마력 방벽", "category": "common", "lines": ["피해 20을 먼저 흡수", "다음 스테이지 진입 시 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "potion_pouch", "title": "회복약 주머니", "category": "common", "lines": ["회복약 1개 보충 · 최대 소지 +1", "기본·농축 적용 · 스테이지 간 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "nimble_evade", "title": "민첩한 회피", "category": "common", "lines": ["지상 회피 재사용 대기 -20%", "0.45초 → 0.36초 · 무적 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "fortified_barrier", "title": "견고한 방벽", "category": "common", "lines": ["방벽 최대 20→30 · 잔량 +10", "다음 스테이지에서 30 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
 ]
 
 var level: int = 1
@@ -109,6 +110,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	player.set_nimble_evade_unlocked(int(ranks.get("nimble_evade", 0)) == 1)
 	player.set_potion_pouch_unlocked(int(ranks.get("potion_pouch", 0)) == 1)
 	player.set_barrier_unlocked(int(ranks.get("magic_barrier", 0)) == 1)
+	player.set_fortified_barrier_unlocked(int(ranks.get("fortified_barrier", 0)) == 1)
 	player.set_double_jump_unlocked(int(ranks.get("air_jump", 0)) == 1)
 	player.set_lifesteal_unlocked(int(ranks.get("lifesteal", 0)) == 1)
 	for branch in ["lifesteal_depth", "lifesteal_crisis"]:
@@ -202,6 +204,7 @@ func choose_card(index: int) -> bool:
 		"potion_pouch": player.set_potion_pouch_unlocked(true, true)
 		"lifesteal_depth", "lifesteal_crisis": player.set_lifesteal_branch(card_id)
 		"magic_barrier": player.set_barrier_unlocked(true)
+		"fortified_barrier": player.set_fortified_barrier_unlocked(true, true)
 		"lifesteal": player.set_lifesteal_unlocked(true)
 		"air_jump": player.set_double_jump_unlocked(true)
 		"sword_power": player.growth_sword_bonus += 0.15

@@ -61,7 +61,7 @@ func _run() -> void:
 			controls.show_village()
 			if not await _test_book_layout(): return
 			controls.ability_codex_page = 3
-			if not _check(PrototypeAbilityCodex.definitions().size() == 16 and controls.village_snapshot().cards.filter(func(card: Dictionary) -> bool: return card.id == "nimble_evade" and card.open and card.status == "이번 도전 1등급").size() == 1, "16능력·여섯 페이지·민첩 실제 도감 표시"): return
+			if not _check(PrototypeAbilityCodex.definitions().size() == PrototypeGrowthController.CARDS.size() + PrototypeJobRewards.CARDS.size() and controls.village_snapshot().cards.filter(func(card: Dictionary) -> bool: return card.id == "nimble_evade" and card.open and card.status == "이번 도전 1등급").size() == 1, "전체 능력 원본·민첩 실제 도감 표시"): return
 		"resume":
 			if not _check(not player.nimble_evade_unlocked and is_equal_approx(player.ground_evade_cooldown_s(), 0.45) and book.snapshot().has("nimble_evade"), "영구 발견은 시작 능력 지급 없음"): return
 			for ignored in 2:

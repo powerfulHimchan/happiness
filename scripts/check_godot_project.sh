@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp136_runtime_test.gd"
   "$game_root/tests/gp135_runtime_test.gd"
   "$game_root/tests/gp134_runtime_test.gd"
   "$game_root/data/skills/sword_thrust.tres"
@@ -558,6 +559,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for fortified_phase in seed resume finish legacy combat; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp136_runtime_test.gd -- "$fortified_phase"
+  done
   for dew_phase in seed resume finish legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp135_runtime_test.gd -- "$dew_phase"
