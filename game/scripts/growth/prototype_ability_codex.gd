@@ -27,8 +27,9 @@ static func cards(discovered: Dictionary, ranks: Dictionary) -> Array[Dictionary
 		var condition := "검 관련·무작위 후보" if card.category == "sword" else "활 관련·무작위 후보" if card.category == "bow" else "공용·무작위 후보"
 		if card.has("job"):
 			condition = String(PrototypeJobProgress.profile(card.job).name) + " 발현 후"
-		elif card.has("requires"):
-			condition = String(profile(card.requires[0]).title) + " 획득 후"
+		if card.has("requires"):
+			var prerequisite := String(profile(card.requires[0]).title) + " 획득 후"
+			condition = condition + " · " + prerequisite if card.has("job") else prerequisite
 		lines.append("조건: " + condition)
 		lines.append("도전당 1회 선택" if card.get("max_rank", 99) == 1 else "선택할 때마다 효과 누적")
 		var tags: Array[String] = []

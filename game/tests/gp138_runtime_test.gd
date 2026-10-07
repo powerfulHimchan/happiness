@@ -67,7 +67,7 @@ func _run() -> void:
 			if not await _test_book_layout(): return
 			controls.ability_codex_page = 4
 			var cards: Array = controls.village_snapshot().cards
-			if not _check(PrototypeAbilityCodex.definitions().size() == 18 and cards[1].id == "time_collector" and cards[1].open and cards[1].status == "이번 도전 1등급" and cards[1].lines[0] == "적 처치마다 필살기 게이지 +5", "18능력 도감·원본 효과·영구 발견·현재등급"): return
+			if not _check(PrototypeAbilityCodex.definitions().size() == PrototypeGrowthController.CARDS.size() + PrototypeJobRewards.CARDS.size() and cards[1].id == "time_collector" and cards[1].open and cards[1].status == "이번 도전 1등급" and cards[1].lines[0] == "적 처치마다 필살기 게이지 +5", "능력 도감·원본 효과·영구 발견·현재등급"): return
 		"resume":
 			if not _check(ultimate.gauge == 0 and not growth.ranks.has("time_collector") and book.snapshot().has("time_collector") and not controls._ultimate_hud_label().contains("처치 +5"), "영구 발견만으로 효과 지급 없음"): return
 			for ignored in 2:

@@ -70,6 +70,8 @@ func _run() -> void:
 			growth.choose_card(0)
 			# 각 전용 카드의 실제 피해·체력·랭크 누적을 확인한다.
 			for card in PrototypeJobRewards.cards_for(job_id):
+				# 단일 강화 가지는 GP-140의 조건/효과 검사에서 검증한다.
+				if card.has("max_rank"): continue
 				var before_damage := player.growth_damage(100, "sword" if job_index == 0 else "bow")
 				var before_max := player.damage_receiver.max_health
 				player.damage_receiver.health = 20

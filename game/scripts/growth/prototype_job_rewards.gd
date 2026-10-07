@@ -7,6 +7,8 @@ const CARDS: Array[Dictionary] = [
 	{"id": "vanguard_vigor", "job": "vanguard", "title": "선봉의 기백", "category": "job", "lines": ["최대 체력 +30", "현재 체력 +30"], "tags": {"strength": 2.5, "determination": 1.5}},
 	{"id": "tracker_focus", "job": "tracker", "title": "추적자의 집중", "category": "job", "lines": ["활 기본 공격·스킬", "피해 +20%"], "tags": {"shooting": 2.5, "nature": 1.5}},
 	{"id": "tracker_breath", "job": "tracker", "title": "추적자의 호흡", "category": "job", "lines": ["최대 체력 +20", "체력 35 회복"], "tags": {"shooting": 2.5, "nature": 1.5}},
+	{"id": "vanguard_dawn_edge", "job": "vanguard", "title": "여명의 칼날", "category": "job", "lines": ["검 공격·스킬·필살기", "피해 +30% · 1회 강화"], "tags": {"strength": 2.5, "determination": 1.5}, "max_rank": 1, "requires": ["vanguard_edge"]},
+	{"id": "tracker_forest_aim", "job": "tracker", "title": "숲의 명중", "category": "job", "lines": ["활 공격·스킬·필살기", "피해 +30% · 1회 강화"], "tags": {"shooting": 2.5, "nature": 1.5}, "max_rank": 1, "requires": ["tracker_focus"]},
 ]
 
 const ULTIMATES: Array[Dictionary] = [

@@ -2583,7 +2583,8 @@ func _draw_village() -> void:
 		_draw_village_text(card.name, title_rect, 26, TEXT_COLOR)
 		_draw_village_text(String(card.get("status", "열림" if card.open else "잠김 · 조건을 확인하세요")), Rect2(rect.position + Vector2(12, rect.size.y * (0.27 if compact else 0.31)), Vector2(rect.size.x - 24, rect.size.y * (0.16 if compact else 0.08))), 17, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
 		for j in card.lines.size():
-			_draw_village_text(String(card.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.47 + j * 0.15 if compact else 0.44 + j * 0.08)), Vector2(rect.size.x - 24, rect.size.y * (0.13 if compact else 0.08))), 18, TEXT_COLOR)
+			var line_height := 0.48 / maxi(6, card.lines.size())
+			_draw_village_text(String(card.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.47 + j * 0.15 if compact else 0.44 + j * line_height)), Vector2(rect.size.x - 24, rect.size.y * (0.13 if compact else line_height))), 18, TEXT_COLOR)
 		if village_page == "apothecary":
 			var bottle := rect.position + Vector2(rect.size.x * 0.86, rect.size.y * 0.20)
 			draw_rect(Rect2(bottle - Vector2(8, 24), Vector2(16, 9)), Color("ba9768"))
