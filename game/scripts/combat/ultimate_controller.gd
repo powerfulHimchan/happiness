@@ -11,6 +11,7 @@ const MAX_GAUGE := 100
 const BASIC_HIT_GAIN := 4
 const SKILL_HIT_GAIN := 8
 const PRECISE_EVADE_GAIN := 12
+const DEFEAT_GAIN := 5
 const DURATION_S := 3.0
 const ENEMY_TIME_SCALE := 0.15
 
@@ -141,6 +142,10 @@ func finish_stage_effect() -> void:
 
 func grant_stage_gauge(amount: int) -> void:
 	_add_gauge(amount, "경로 보상")
+
+
+func grant_defeat_gauge() -> void:
+	_add_gauge(DEFEAT_GAIN, "시간 수집 · 처치")
 
 
 func reset_ultimate() -> void:

@@ -25,6 +25,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "potion_pouch", "title": "회복약 주머니", "category": "common", "lines": ["회복약 1개 보충 · 최대 소지 +1", "기본·농축 적용 · 스테이지 간 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "nimble_evade", "title": "민첩한 회피", "category": "common", "lines": ["지상 회피 재사용 대기 -20%", "0.45초 → 0.36초 · 무적 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "fortified_barrier", "title": "견고한 방벽", "category": "common", "lines": ["방벽 최대 20→30 · 잔량 +10", "다음 스테이지에서 30 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
+	{"id": "time_collector", "title": "시간 수집", "category": "common", "lines": ["적 처치마다 필살기 게이지 +5", "선택 이후 적용 · 최대 100"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
 var level: int = 1
@@ -149,6 +150,8 @@ func _on_enemy_defeated(target: PrototypeTarget) -> void:
 	if int(_rewarded_lives.get(instance_id, -1)) == target.spawn_generation:
 		return
 	_rewarded_lives[instance_id] = target.spawn_generation
+	if int(ranks.get("time_collector", 0)) == 1:
+		ultimate.grant_defeat_gauge()
 	var reward := ELITE_XP if target.is_in_group("elite_enemy") else ORDINARY_XP
 	experience += reward
 	total_experience += reward
