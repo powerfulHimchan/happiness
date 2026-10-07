@@ -2651,7 +2651,7 @@ func _refresh_skill_reward_layout() -> void:
 func _handle_skill_reward_touch(position: Vector2) -> void:
 	_refresh_skill_reward_layout()
 	if skill_reward_cycle_rect.has_point(position):
-		skill_reward_offset = (skill_reward_offset + 1) % 3
+		skill_reward_offset = (skill_reward_offset + 1) % PrototypeSkillRewards.offer_page_count(skill_reward_loadout)
 		skill_reward_offers = PrototypeSkillRewards.offers(skill_reward_loadout, skill_reward_offset, float(movement_metrics.get("skill_recharge_multiplier", 1.0)))
 		selected_skill_offer = -1
 		selected_skill_slot = -1
@@ -2686,7 +2686,7 @@ func _draw_skill_rewards() -> void:
 		for j in offer.lines.size():
 			_draw_village_text(String(offer.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.33 + j * 0.18)), Vector2(rect.size.x - 24, rect.size.y * 0.14)), 19, MUTED_TEXT_COLOR)
 	_draw_text_centered("기술을 고른 뒤 교체할 슬롯을 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.46), Vector2(safe.size.x * 0.62, safe.size.y * 0.06)), 19, TEXT_COLOR)
-	_draw_button(skill_reward_cycle_rect, "다른 후보 %d/3" % (skill_reward_offset + 1), true)
+	_draw_button(skill_reward_cycle_rect, "다른 후보 %d/%d" % [skill_reward_offset + 1, PrototypeSkillRewards.offer_page_count(skill_reward_loadout)], true)
 	for i in 2:
 		var rect: Rect2 = skill_reward_slot_rects[i]
 		draw_style_box(_panel_style(Color("365d68") if i == selected_skill_slot else PANEL_COLOR), rect)

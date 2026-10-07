@@ -43,6 +43,7 @@ var _slash_remaining_s: float = 0.0
 var _line_remaining_s: float = 0.0
 var _line_direction: int = 1
 var _line_range_px: float = 0.0
+var _line_half_height_m: float = LINE_HALF_HEIGHT_M
 
 @onready var player: PrototypePlayer = get_parent() as PrototypePlayer
 @onready var target_selector: AutoTargetSelector = $"../AutoTargetSelector"
@@ -92,7 +93,7 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
-	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple"]:
+	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust"]:
 		return Action.LINE_SLASH
 	return Action.DASH_SLASH if definition != null and definition.skill_id == &"sword_dash" else Action.SPIN_SLASH
 
@@ -101,7 +102,7 @@ func _draw() -> void:
 	if _line_remaining_s <= 0.0:
 		return
 	var end_x := _line_range_px * _line_direction
-	var height := LINE_HALF_HEIGHT_M * PrototypePlayer.PIXELS_PER_METER
+	var height := _line_half_height_m * PrototypePlayer.PIXELS_PER_METER
 	draw_rect(Rect2(Vector2(minf(0, end_x), -38 - height), Vector2(_line_range_px, height * 2)), Color("ffd166", 0.18))
 	draw_line(Vector2(0, -38), Vector2(end_x, -38), Color("fff2cc"), 7, true)
 	draw_line(Vector2(0, -50), Vector2(end_x * 0.95, -50), Color("ffd166"), 3, true)
@@ -224,6 +225,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 	if action == Action.LINE_SLASH:
 		_line_direction = player.facing_direction
 		_line_range_px = definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER
+		_line_half_height_m = definition.hit_half_height_m
 	_basic_remaining_s = maxf(_basic_remaining_s, definition.duration_s)
 	_combo_idle_s = 0.0
 	if slot == 1:
@@ -288,7 +290,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 				# Vector2의 2.4m 변환 오차로 정확한 경계가 빠지지 않도록 픽셀로 비교한다.
 				var offset := target.global_position - player.global_position
 				var forward := offset.x * _line_direction
-				in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and absf(offset.y) <= LINE_HALF_HEIGHT_M * PrototypePlayer.PIXELS_PER_METER
+				in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and absf(offset.y) <= _line_half_height_m * PrototypePlayer.PIXELS_PER_METER
 			if in_range:
 				targets.append(target)
 

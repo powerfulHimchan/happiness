@@ -10,6 +10,7 @@ extends Resource
 @export var hit_times_s: PackedFloat32Array = PackedFloat32Array()
 @export var damage: PackedInt32Array = PackedInt32Array()
 @export var hit_range_m: float = 0.0
+@export var hit_half_height_m: float = 0.90
 @export var movement_distance_m: float = 0.0
 @export var max_targets: int = 0
 @export var can_move: bool = false

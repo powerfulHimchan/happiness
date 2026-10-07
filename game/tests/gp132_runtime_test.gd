@@ -136,9 +136,10 @@ func _test_skill_codex(active: bool, multiplier: float) -> bool:
 		_tap(controls.village_snapshot().tabs.skills.get_center())
 		if not _check(controls.village_page == "skills" and controls.skill_codex_page == 0, "실제 스킬 도감 탭 진입·첫 페이지"): return false
 		var seen: Array[String] = []
-		for page in 4:
+		var page_count := ceili(float(PrototypeSkillRewards.SKILLS.size()) / PrototypeSkillRewards.CODEX_PAGE_SIZE)
+		for page in page_count:
 			var snapshot: Dictionary = controls.village_snapshot()
-			if not _check(snapshot.skill_page == page and snapshot.skill_pages == 4 and snapshot.cards.size() == mini(3, 10 - page * 3), "10스킬 네 페이지·마지막 한 카드"): return false
+			if not _check(snapshot.skill_page == page and snapshot.skill_pages == page_count and snapshot.cards.size() == mini(3, PrototypeSkillRewards.SKILLS.size() - page * 3), "원본 스킬 수에 맞는 페이지·카드 수"): return false
 			var safe: Rect2 = controls.layout_snapshot().safe
 			var rects: Array = snapshot.layout.cards.duplicate()
 			rects.append_array(snapshot.tabs.values())
@@ -159,6 +160,8 @@ func _test_skill_codex(active: bool, multiplier: float) -> bool:
 				var status := "이번 도전 · 슬롯 %d" % (slot + 1) if active and slot >= 0 else "미장착 · 효과 미리 보기" if active else "시작 스킬 · 슬롯 %d" % (slot + 1) if slot >= 0 else "보상 교체 스킬"
 				if not _check(card.name.ends_with(definition.display_name) and card.weapon == weapon and card.status == status and card.open == (slot >= 0), "실제 양 무기 원본 이름·현재 슬롯·시작/보상 표시"): return false
 				if not _check(card.lines.slice(0, 3) == PrototypeSkillRewards.lines(card.id, multiplier) and card.lines.size() == 6 and card.lines[4].contains("강화 전") and card.lines[5].contains("시계추") == (multiplier == 1.25), "원본 피해·타격·범위·실시간 재사용과 강화 전 안내"): return false
+				if card.id == "sword_thrust" and not _check(card.lines[0].begins_with("재사용 5.6초" if multiplier == 1.25 else "재사용 7.0초"), "찌르기 실제7초→5.6초 표시"): return false
+				if card.id == "bow_double_piercing" and not _check(card.lines[0].begins_with("재사용 6.4초" if multiplier == 1.25 else "재사용 8.0초"), "이중 관통 실제8초→6.4초 표시"): return false
 				if card.id == "bow_focus" and not _check(card.lines[0].begins_with("재사용 8.0초" if multiplier == 1.25 else "재사용 10.0초"), "집중 실제 10초→8초 표시"): return false
 				if card.id == "sword_triple" and not _check(card.lines[0].begins_with("재사용 7.2초" if multiplier == 1.25 else "재사용 9.0초"), "보조 검 삼연 실제 9초→7.2초 표시"): return false
 				var rect: Rect2 = snapshot.layout.cards[i]
@@ -171,8 +174,8 @@ func _test_skill_codex(active: bool, multiplier: float) -> bool:
 			controls.queue_redraw()
 			await process_frame
 			_tap(snapshot.pager.next.get_center())
-		if not _check(seen.size() == 10 and seen.all(func(id: String) -> bool: return seen.count(id) == 1) and controls.skill_codex_page == 3, "모든 기술 중복 없이 조회·마지막 페이지 상한"): return false
-		for ignored in 6: _tap(controls.village_snapshot().pager.previous.get_center())
+		if not _check(seen.size() == PrototypeSkillRewards.SKILLS.size() and seen.all(func(id: String) -> bool: return seen.count(id) == 1) and controls.skill_codex_page == page_count - 1, "모든 기술 중복 없이 조회·마지막 페이지 상한"): return false
+		for ignored in page_count + 1: _tap(controls.village_snapshot().pager.previous.get_center())
 		if not _check(controls.skill_codex_page == 0, "이전 페이지 하한"): return false
 		_tap(controls.village_snapshot().tabs.forge.get_center())
 		if not _check(controls.village_page == "forge" and controls.village_snapshot().cards.size() == 2, "기존 설계도 두 카드 보존"): return false

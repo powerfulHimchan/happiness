@@ -103,7 +103,7 @@ func _test_candidates() -> bool:
 	for dimensions in [Vector2(1280, 720), Vector2(2400, 1080)]:
 		controls.size = dimensions
 		var seen := {}
-		for page in 3:
+		for page in PrototypeSkillRewards.offer_page_count(weapons.skills):
 			controls._refresh_skill_reward_layout()
 			var rects: Array = controls.skill_reward_offer_rects.duplicate()
 			rects.append_array(controls.skill_reward_slot_rects)
@@ -121,7 +121,7 @@ func _test_candidates() -> bool:
 			await process_frame
 			_tap(controls.skill_reward_cycle_rect.get_center())
 			if not _check(controls.selected_skill_offer == -1 and controls.selected_skill_slot == -1, "후보 전환은 오래된 선택 초기화"): return false
-		if not _check(seen.size() == 6 and seen.has("sword_triple") and seen.has("bow_focus") and controls.skill_reward_offset == 0, "여섯 미보유 기술 전체 조회·세 번 후 첫 후보"): return false
+		if not _check(seen.size() == PrototypeSkillRewards.SKILLS.size() - 4 and seen.has("sword_triple") and seen.has("bow_focus") and controls.skill_reward_offset == 0, "전체 미보유 기술 조회·후보 순환 후 첫 화면"): return false
 	return true
 
 func _test_tactical_combat() -> bool:
