@@ -295,6 +295,8 @@ func _reset_test() -> void:
 	ultimate_controller.reset_ultimate()
 	test_recorder.start_run(run_id)
 	player.relic_run_id = run_id
+	if controls.requested_stage_limit > 0:
+		stage_runner.stage_limit = controls.requested_stage_limit
 	stage_runner.reset_run()
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
@@ -424,8 +426,15 @@ func _claim_weapon_reward(id: String) -> bool:
 		return false
 	var previous := weapon_controller.equipment.duplicate()
 	var previous_blueprints := weapon_controller.blueprints.duplicate()
-	if not id.is_empty() and not weapon_controller.equip_reward(id, stage_runner.stage_number):
-		return false
+	if not id.is_empty():
+		var offer: Dictionary = {}
+		for candidate in PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints):
+			if candidate.id == id:
+				offer = candidate
+		if offer.is_empty():
+			return false
+		if offer.name != offer.previous_name and not weapon_controller.equip_reward(id, mini(stage_runner.stage_number, 2)):
+			return false
 	stage_runner.reward_claimed = true
 	if _save_checkpoint(stage_runner.current_metrics()) != OK:
 		stage_runner.reward_claimed = false

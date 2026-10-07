@@ -95,9 +95,11 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	var legacy: Dictionary = state.get("boss_legacy", {})
 	var stage: Dictionary = state.stage
+	if not _number(stage.get("limit"), 3, 5, true) or int(stage.limit) not in [3, 5]:
+		return false
 	if not PrototypeRelic.valid_state(state.get("relic", {})):
 		return false
-	if not state.get("relic", {}).is_empty() and (not _number(stage.get("number"), 2, 3, true) or stage.get("reward_claimed") != true):
+	if not state.get("relic", {}).is_empty() and (not _number(stage.get("number"), 2, int(stage.limit), true) or (int(stage.number) == 2 and stage.get("reward_claimed") != true)):
 		return false
 	if stage.has("skills_claimed") != state.weapons.has("skills"):
 		return false
@@ -114,13 +116,13 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	if stage.has("reward_claimed") != state.weapons.has("equipment"):
 		return false
-	if not _number(stage.get("number"), 1, 3, true) or stage.get("limit") != 3 or not _valid_route(stage.get("route"), int(stage.number), legacy) or not _number(stage.get("elapsed"), 0, 1000000):
+	if not _number(stage.get("number"), 1, int(stage.limit), true) or not _valid_route(stage.get("route"), int(stage.number), legacy) or not _number(stage.get("elapsed"), 0, 1000000):
 		return false
 	if stage.has("boss_choice") and (not stage.boss_choice is String or stage.boss_choice not in ["", "rescue", "destroy"]):
 		return false
-	if int(stage.number) < 3 and stage.get("boss_choice", "") != "":
+	if int(stage.number) < int(stage.limit) and stage.get("boss_choice", "") != "":
 		return false
-	if int(stage.number) == 3 and (not stage.has("boss_choice") or not state.weapons.has("equipment") or stage.get("reward_claimed") != true):
+	if int(stage.number) == int(stage.limit) and (not stage.has("boss_choice") or not state.weapons.has("equipment") or stage.get("reward_claimed") != true):
 		return false
 	if state.weapons.has("equipment"):
 		var maximum_grade := int(stage.get("number", 0)) - (0 if stage.reward_claimed else 1)
@@ -133,7 +135,9 @@ static func valid_state(state: Dictionary) -> bool:
 		var entry: Variant = stage.history[index]
 		if not entry is Dictionary or entry.get("stage") != index + 1 or not _valid_route(entry.get("route"), index + 1, legacy) or not _number(entry.get("elapsed_s"), 0, 1000000):
 			return false
-	if int(stage.number) == 3 and stage.history[-1].get("boss_choice") != stage.boss_choice:
+		if entry.has("boss_choice") and index + 1 != int(stage.limit):
+			return false
+	if int(stage.number) == int(stage.limit) and stage.history[-1].get("boss_choice") != stage.boss_choice:
 		return false
 	for duration in stage.sections:
 		if not _number(duration, 0, 1000000):
