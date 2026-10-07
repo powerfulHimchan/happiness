@@ -172,11 +172,11 @@ func _test_ground_evade(unlocked: bool, fps: int) -> bool:
 	if not _check(player.ground_evade_count == count + 1, "동작 중 연속 입력 차단"): return false
 	player._update_mobility_timers(0.17)
 	var health := player.damage_receiver.health
-	_hit_player(5, "nimble-protected-" + str(fps))
+	_hit_player(5, "nimble-protected-%d-%d" % [fps, count])
 	if not _check(player.damage_receiver.health == health and player.invincible, "0.17초 실제 적 타격 무적 유지"): return false
 	player._update_mobility_timers(0.02)
 	player.damage_receiver.tick(1)
-	_hit_player(5, "nimble-exposed-" + str(fps))
+	_hit_player(5, "nimble-exposed-%d-%d" % [fps, count])
 	if not _check(not player.invincible and player.damage_receiver.health == health - 5, "0.19초 실제 피해·무적 연장 없음"): return false
 	player._update_mobility_timers(0.06)
 	_press_nimble_evade()
