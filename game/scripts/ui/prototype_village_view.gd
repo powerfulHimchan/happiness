@@ -45,6 +45,7 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				var ultimates := PrototypeJobRewards.ultimates_for(job.id)
 				var conditions := "%s %.0f · %s %.0f" % [PrototypeJobProgress.TAG_NAMES[job.primary], PrototypeJobProgress.PRIMARY_THRESHOLD, PrototypeJobProgress.TAG_NAMES[job.secondary], PrototypeJobProgress.SECONDARY_THRESHOLD]
 				var lines: Array[String] = [conditions, job.passive, "능력: %s · %s" % [abilities[0].title, abilities[1].title], "필살기: " + String(ultimates[0].name), "필살기: " + String(ultimates[1].name), "능력 70% · 무기 20% · 특수 10%"]
+				lines.append("전용 강화: " + String(abilities[2].title))
 				var status := "발견 · 현재 도전" if discovered and current_job == job.id else "영구 발견" if discovered else "미발견 · 성향을 채워 발현"
 				result.append({"id": job.id, "name": job.name, "open": discovered, "status": status, "lines": lines})
 		"forge":

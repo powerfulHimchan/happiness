@@ -156,7 +156,7 @@ func _test_codex_layout() -> bool:
 				for i in 2:
 					var card: Dictionary = snapshot.cards[i]
 					var job: Dictionary = PrototypeJobProgress.JOBS[i]
-					if not _check(card.id == job.id and card.open == controls.discovered_jobs.get(job.id, false) and card.lines.size() == 6 and "5" in card.lines[0] and "3" in card.lines[0] and job.passive == card.lines[1], "실제 데이터에서 조건·효과·발견 표시"): return false
+					if not _check(card.id == job.id and card.open == controls.discovered_jobs.get(job.id, false) and card.lines.size() == 7 and "5" in card.lines[0] and "3" in card.lines[0] and job.passive == card.lines[1] and card.lines[-1] == "전용 강화: " + String(PrototypeJobRewards.cards_for(job.id)[2].title), "실제 데이터에서 조건·효과·발견·강화 표시"): return false
 			controls.queue_redraw()
 			await process_frame
 		controls.village_page = "village"

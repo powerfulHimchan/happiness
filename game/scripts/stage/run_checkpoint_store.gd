@@ -206,8 +206,8 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	var ranks: Dictionary = growth.ranks
 	var expected_max := 100 + PrototypeMemoryAbilities.health_bonus(String(state.get("memory_id", ""))) + (10 if legacy.get("choice") == "rescue" else 0) + int(ranks.get("vitality", 0)) * 20 + int(ranks.get("recovery", 0)) * 10 + int(ranks.get("vanguard_vigor", 0)) * 30 + int(ranks.get("tracker_breath", 0)) * 20
-	var sword_bonus := int(ranks.get("sword_power", 0)) * 0.15 + int(ranks.get("vanguard_edge", 0)) * 0.20 + (0.10 if growth.job == "vanguard" else 0.0)
-	var bow_bonus := int(ranks.get("bow_power", 0)) * 0.15 + int(ranks.get("tracker_focus", 0)) * 0.20 + (0.10 if growth.job == "tracker" else 0.0)
+	var sword_bonus := int(ranks.get("sword_power", 0)) * 0.15 + int(ranks.get("vanguard_edge", 0)) * 0.20 + int(ranks.get("vanguard_dawn_edge", 0)) * 0.30 + (0.10 if growth.job == "vanguard" else 0.0)
+	var bow_bonus := int(ranks.get("bow_power", 0)) * 0.15 + int(ranks.get("tracker_focus", 0)) * 0.20 + int(ranks.get("tracker_forest_aim", 0)) * 0.30 + (0.10 if growth.job == "tracker" else 0.0)
 	if int(player.max_health) != expected_max or not is_equal_approx(float(player.common), int(ranks.get("power", 0)) * 0.10) or not is_equal_approx(float(player.sword), sword_bonus) or not is_equal_approx(float(player.bow), bow_bonus):
 		return false
 	if state.weapons.get("active") not in ["sword", "bow"]:

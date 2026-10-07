@@ -219,6 +219,8 @@ func choose_card(index: int) -> bool:
 		"vanguard_vigor": player.apply_growth_health(30, 30)
 		"tracker_focus": player.growth_bow_bonus += 0.20
 		"tracker_breath": player.apply_growth_health(20, 35)
+		"vanguard_dawn_edge": player.growth_sword_bonus += 0.30
+		"tracker_forest_aim": player.growth_bow_bonus += 0.30
 	choosing = false
 	offered_cards.clear()
 	if jobs_enabled:
@@ -299,7 +301,7 @@ func _draw_cards() -> Array[Dictionary]:
 	for card in CARDS:
 		if _card_available(card):
 			pool.append(card)
-	var job_cards := PrototypeJobRewards.cards_for(jobs.job_id)
+	var job_cards := PrototypeJobRewards.cards_for(jobs.job_id).filter(_card_available)
 	pool.append_array(job_cards)
 	for card in pool:
 		if card["category"] == weapons.active_weapon_id:
@@ -326,8 +328,9 @@ func _emit_metrics() -> void:
 
 
 func _card_available(card: Dictionary) -> bool:
+	if card.has("job") and card.job != jobs.job_id: return false
 	for required in card.get("requires", []):
-		if not ranks.has(required): return false
+		if int(ranks.get(required, 0)) <= 0: return false
 	for excluded in card.get("excludes", []):
 		if ranks.has(excluded): return false
 	return not card.has("max_rank") or int(ranks.get(card.id, 0)) < int(card.max_rank)
