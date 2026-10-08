@@ -208,7 +208,7 @@ func _test_echo_view() -> bool:
 	var before: Dictionary = sandbox._capture_run_build()
 	var files := _files()
 	var definition := PrototypeAbilityCodex.profile("time_echo")
-	if not _check(PrototypeAbilityCodex.definitions().size() == 22 and definition.requires == ["time_collector"] and definition.max_rank == 1, "22능력 도감·원본 선행/최대 등급"): return false
+	if not _check(PrototypeAbilityCodex.definitions().size() == PrototypeGrowthController.CARDS.size() + PrototypeJobRewards.CARDS.size() and definition.requires == ["time_collector"] and definition.max_rank == 1, "전체 능력 도감·원본 선행/최대 등급"): return false
 	if not _check(controls.open_run_build() and paused, "여운 보유 도전 상태 실제 조회"): return false
 	if not await _test_layout(): return false
 	_tap(controls.run_build_snapshot().layout.tabs[2].get_center())

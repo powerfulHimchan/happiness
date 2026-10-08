@@ -358,6 +358,18 @@ func recharge_barrier() -> void:
 		_emit_metrics()
 
 
+func recover_barrier(amount: int) -> void:
+	if not barrier_unlocked or damage_receiver.dead or amount <= 0:
+		return
+	damage_receiver.barrier_health = mini(barrier_capacity(), damage_receiver.barrier_health + amount)
+	queue_redraw()
+	_emit_metrics()
+
+
+func is_ground_evading() -> bool:
+	return _mobility_action == MobilityAction.GROUND_EVADE and invincible and _invincible_remaining_s > 0.0
+
+
 func receive_damage(event: DamageEvent) -> int:
 	# 원본 이벤트는 공유될 수 있으므로 핵의 위험 보상은 복사본에만 적용한다.
 	if event != null and boss_legacy.get("choice") == "destroy":

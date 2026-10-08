@@ -11,6 +11,7 @@ signal job_manifested(job: Dictionary)
 
 const ORDINARY_XP := 10
 const ELITE_XP := 30
+const EVASIVE_BARRIER_RECOVERY := 5
 const CARDS: Array[Dictionary] = [
 	{"id": "sword_power", "title": "예리한 검", "category": "sword", "lines": ["검 기본 공격·스킬", "피해 +15%"], "tags": {"strength": 2.5, "determination": 1.5}},
 	{"id": "bow_power", "title": "힘찬 시위", "category": "bow", "lines": ["활 기본 공격·스킬", "피해 +15%"], "tags": {"shooting": 2.5, "nature": 1.5}},
@@ -28,6 +29,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "time_collector", "title": "시간 수집", "category": "common", "lines": ["적 처치마다 필살기 게이지 +5", "선택 이후 적용 · 최대 100"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "time_echo", "title": "시간의 여운", "category": "common", "lines": ["다음 필살기부터 감속 시간 +1초", "공용·직업 적용 · 감속 비율 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_collector"]},
 	{"id": "victory_recovery", "title": "처치 회복", "category": "common", "lines": ["적 처치마다 최대 체력 2% 회복", "선택 이후 적용 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "evasive_barrier", "title": "회피 방벽", "category": "common", "lines": ["정확한 회피마다 방벽 5 회복", "회피당 한 번 · 방벽 최대치까지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
 ]
 
 var level: int = 1
@@ -40,6 +42,7 @@ var offered_cards: Array[Dictionary] = []
 var ranks: Dictionary = {}
 var record_ability: Callable
 var defeat_recovery_allowed: Callable
+var precise_evade_reward_allowed: Callable
 var selection_message: String = ""
 var rng := RandomNumberGenerator.new()
 var _rewarded_lives: Dictionary = {}
@@ -48,6 +51,7 @@ var awaiting_job_confirmation: bool = false
 var _job_passive_applied: bool = false
 var _evade_sequence: int = 0
 var _last_scored_evade: int = -1
+var _last_barrier_evade: int = -1
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
 @onready var weapons: PrototypeWeaponController = get_node("../Player/PrototypeWeaponController") as PrototypeWeaponController
@@ -90,6 +94,7 @@ func reset_run(starting_weapon: String = "sword") -> void:
 	_job_passive_applied = false
 	_evade_sequence = 0
 	_last_scored_evade = -1
+	_last_barrier_evade = -1
 	if was_choosing:
 		selection_finished.emit()
 	_emit_metrics()
@@ -254,7 +259,15 @@ func _on_evade_started() -> void:
 
 
 func _on_precise_evade() -> void:
-	if not jobs_enabled or not run_active or player.damage_receiver.dead or not player.invincible or _evade_sequence <= 0 or _last_scored_evade == _evade_sequence:
+	if not run_active or player.damage_receiver.dead or not player.invincible or _evade_sequence <= 0:
+		return
+	if evasive_barrier_amount() > 0 and _last_barrier_evade != _evade_sequence \
+	and player.is_ground_evading() \
+	and precise_evade_reward_allowed.is_valid() and precise_evade_reward_allowed.call():
+		# 가득 찬 방벽에서도 이 회피의 기회를 소비한다. 같은 회피로 재충전하지 않는다.
+		_last_barrier_evade = _evade_sequence
+		player.recover_barrier(EVASIVE_BARRIER_RECOVERY)
+	if not jobs_enabled or _last_scored_evade == _evade_sequence:
 		return
 	_last_scored_evade = _evade_sequence
 	jobs.add_special(weapons.active_weapon_id)
@@ -330,6 +343,10 @@ func _draw_cards() -> Array[Dictionary]:
 
 func victory_recovery_amount() -> int:
 	return ceili(player.damage_receiver.max_health * 0.02) if run_active and int(ranks.get("victory_recovery", 0)) == 1 else 0
+
+
+func evasive_barrier_amount() -> int:
+	return EVASIVE_BARRIER_RECOVERY if run_active and int(ranks.get("evasive_barrier", 0)) == 1 and player.barrier_unlocked else 0
 
 
 func metrics_snapshot() -> Dictionary:
