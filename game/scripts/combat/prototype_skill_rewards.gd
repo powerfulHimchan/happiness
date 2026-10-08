@@ -1,7 +1,7 @@
 class_name PrototypeSkillRewards
 extends RefCounted
 
-## 무기별 일곱 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
+## 무기별 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
 const SKILLS := {
 	"sword_dash": preload("res://data/skills/sword_dash.tres"),
 	"sword_spin": preload("res://data/skills/sword_spin.tres"),
@@ -17,9 +17,10 @@ const SKILLS := {
 	"bow_double_piercing": preload("res://data/skills/bow_double_piercing.tres"),
 	"sword_charge": preload("res://data/skills/sword_charge.tres"),
 	"bow_retreat": preload("res://data/skills/bow_retreat.tres"),
+	"bow_homing": preload("res://data/skills/bow_homing.tres"),
 }
-const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat"]}
-const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴"}
+const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing"]}
+const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적"}
 const CODEX_PAGE_SIZE := 3
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
@@ -27,8 +28,11 @@ static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1
 	var result: Array[Dictionary] = []
 	var active := valid_loadout(loadout)
 	var starting := defaults()
-	for index in POOLS.sword.size():
+	var maximum := 0
+	for weapon in POOLS: maximum = maxi(maximum, POOLS[weapon].size())
+	for index in maximum:
 		for weapon in POOLS:
+			if index >= POOLS[weapon].size(): continue
 			var id: String = POOLS[weapon][index]
 			var slot: int = loadout[weapon].find(id) if active else starting[weapon].find(id)
 			var status := "이번 도전 · 슬롯 %d" % (slot + 1) if active and slot >= 0 else "미장착 · 효과 미리 보기" if active else "시작 스킬 · 슬롯 %d" % (slot + 1) if slot >= 0 else "보상 교체 스킬"
@@ -77,6 +81,7 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 		"sword_triple": result.append("정면 2.4m · 상하 0.9m · 3타")
 		"sword_charge": result.append("전진 2.4m · 정면 2m · 2타")
 		"bow_retreat": result.append("후퇴 1.8m · 방향 고정 · 2발")
+		"bow_homing": result.append("정면 표적 고정 · 최대 1초 추적")
 		"bow_focus": result.append("0.7초 준비 · 정면 1발 · 이동 불가")
 		"bow_piercing": result.append("화살 1발 · 최대 3개체 관통")
 		"bow_arrow_rain": result.append("대상 주변 2.4m · 범위 6타")

@@ -12,6 +12,7 @@ enum Action {
 	ARROW_RAIN,
 	SPREAD_ARROW,
 	FOCUS_ARROW,
+	HOMING_ARROW,
 }
 
 const SWORD_RANGE_M := 1.6
@@ -43,6 +44,8 @@ var _action_sequence: int = 0
 var _rain_anchor: Vector2 = Vector2.ZERO
 var _piercing_projectile_id: String = ""
 var _spread_direction := Vector2.RIGHT
+var _homing_target: WeakRef
+var _homing_generation: int = -1
 
 @onready var player: PrototypePlayer = get_parent() as PrototypePlayer
 @onready var target_selector: AutoTargetSelector = $"../AutoTargetSelector"
@@ -93,6 +96,8 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
+	if definition != null and definition.skill_id == &"bow_homing":
+		return Action.HOMING_ARROW
 	if definition != null and definition.skill_id == &"bow_focus":
 		return Action.FOCUS_ARROW
 	if definition != null and definition.skill_id == &"bow_spread":
@@ -203,6 +208,12 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 		piercing_last_hit_count = 0
 		_piercing_projectile_id = "player:bow_piercing:%d" % _action_sequence
 		_spread_direction = Vector2(float(player.facing_direction), 0.0)
+		if action == Action.HOMING_ARROW:
+			target_selector.force_scan()
+			var target := target_selector.current_target
+			if is_instance_valid(target) and target.is_targetable() and not target.damage_receiver.dead and target_selector.is_target_on_screen(target):
+				_homing_target = weakref(target)
+				_homing_generation = target.spawn_generation
 	else:
 		var target := target_selector.current_target
 		_rain_anchor = (
@@ -245,6 +256,16 @@ func _update_skill_action(delta: float) -> void:
 
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
+	if _action == Action.HOMING_ARROW:
+		var target: PrototypeTarget = _homing_target.get_ref() as PrototypeTarget if _homing_target != null else null
+		if not is_instance_valid(target) or target.is_queued_for_deletion() or target.spawn_generation != _homing_generation or not target.is_targetable() or target.damage_receiver.dead or not target_selector.is_target_on_screen(target):
+			target = null
+		var direction := _spread_direction
+		if target != null:
+			direction = (target.global_position + PrototypeTarget.BODY_CENTER - _projectile_origin()).normalized()
+		_spawn_projectile("player:bow_homing:%d:%d" % [_action_sequence, hit_index], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, direction, PackedStringArray(["bow", "skill", "homing"]), target)
+		last_combat_log = "추적 사격 · 피해 %d · 표적 고정" % player.growth_damage(int(definition.damage[hit_index]), "bow", "skill") if target != null else "추적 사격 · 표적 없음 · 정면 직진"
+		return
 	if _action == Action.SPREAD_ARROW:
 		for i in SPREAD_ANGLES_DEG.size():
 			_spawn_projectile("player:bow_spread:%d:%d:%d" % [_action_sequence, hit_index, i], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, _spread_direction.rotated(deg_to_rad(SPREAD_ANGLES_DEG[i])), PackedStringArray(["bow", "skill", "spread"]))
@@ -314,7 +335,8 @@ func _spawn_projectile(
 	damage: int,
 	max_hits: int,
 	direction: Vector2,
-	tags: PackedStringArray
+	tags: PackedStringArray,
+	tracking_target: PrototypeTarget = null
 ) -> void:
 	var projectile := PROJECTILE_SCENE.instantiate() as BowProjectile
 	projectile.configure(
@@ -328,6 +350,7 @@ func _spawn_projectile(
 		tags
 	)
 	projectile.damage_handler = player.deal_weapon_damage
+	projectile.set_tracking_target(tracking_target)
 	projectile.hit_registered.connect(_on_projectile_hit.bind(tags.has("skill")))
 	get_tree().current_scene.add_child(projectile)
 	projectile.global_position = _projectile_origin()
@@ -336,7 +359,7 @@ func _spawn_projectile(
 
 
 func _projectile_origin() -> Vector2:
-	return player.global_position + Vector2(58.0 * float(player.facing_direction), -48.0)
+	return player.global_position + Vector2(58.0 * (_spread_direction.x if _action == Action.HOMING_ARROW else float(player.facing_direction)), -48.0)
 
 
 func _on_projectile_hit(
@@ -371,6 +394,8 @@ func _action_name() -> String:
 
 
 func _finish_action(reason: String) -> void:
+	_homing_target = null
+	_homing_generation = -1
 	queue_redraw()
 	if _action != Action.NONE and not reason.is_empty():
 		last_combat_log = reason
