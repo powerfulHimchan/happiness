@@ -23,6 +23,7 @@ var _hit_flash_remaining_s: float = 0.0
 var _enemy_time_scale: float = 1.0
 var last_damage_log: String = "피해 기록 대기"
 var spawn_generation: int = 0
+var last_defeat_in_combat: bool = false
 
 @onready var body_sprite: Sprite2D = $BodySprite
 @onready var selection_sprite: Sprite2D = $SelectionSprite
@@ -95,6 +96,7 @@ func receive_damage(event: DamageEvent) -> int:
 	if result == DamageReceiver.Result.APPLIED:
 		_hit_flash_remaining_s = 0.12
 		if damage_receiver.dead:
+			last_defeat_in_combat = is_in_group("combat_enemy") and is_visible_in_tree() and not get_tree().paused
 			_targetable = false
 			set_selected(false)
 			defeated.emit(self)
@@ -117,6 +119,7 @@ func set_stage_spawn(spawn_position: Vector2) -> void:
 
 func reset_target() -> void:
 	spawn_generation += 1
+	last_defeat_in_combat = false
 	_elapsed_s = 0.0
 	position = _origin_position
 	_targetable = true

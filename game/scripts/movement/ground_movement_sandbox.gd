@@ -53,6 +53,7 @@ func _ready() -> void:
 	player.phoenix_allowed = _can_collect_recovery_orb
 	player.lifesteal_allowed = _can_collect_recovery_orb
 	growth.record_ability = _record_abilities
+	growth.defeat_recovery_allowed = _can_collect_recovery_orb
 	_record_abilities([])
 	_update_boss_legacy_status()
 	growth.metrics_changed.connect(controls.update_growth_metrics)
@@ -853,6 +854,7 @@ func _capture_run_build() -> Dictionary:
 			"potion_percent": roundi(player.potion_heal_ratio() * 100),
 			"lifesteal_percent": player.lifesteal_multiplier() * 5 if player.lifesteal_unlocked else 0,
 			"air_jump": player.double_jump_unlocked,
+			"victory_recovery": growth.victory_recovery_amount(),
 		},
 		"recipe": player.potion_recipe,
 		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s},

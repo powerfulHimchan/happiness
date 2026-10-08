@@ -26,6 +26,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "nimble_evade", "title": "민첩한 회피", "category": "common", "lines": ["지상 회피 재사용 대기 -20%", "0.45초 → 0.36초 · 무적 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "fortified_barrier", "title": "견고한 방벽", "category": "common", "lines": ["방벽 최대 20→30 · 잔량 +10", "다음 스테이지에서 30 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
 	{"id": "time_collector", "title": "시간 수집", "category": "common", "lines": ["적 처치마다 필살기 게이지 +5", "선택 이후 적용 · 최대 100"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "victory_recovery", "title": "처치 회복", "category": "common", "lines": ["적 처치마다 최대 체력 2% 회복", "선택 이후 적용 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
 var level: int = 1
@@ -37,6 +38,7 @@ var run_active: bool = false
 var offered_cards: Array[Dictionary] = []
 var ranks: Dictionary = {}
 var record_ability: Callable
+var defeat_recovery_allowed: Callable
 var selection_message: String = ""
 var rng := RandomNumberGenerator.new()
 var _rewarded_lives: Dictionary = {}
@@ -150,6 +152,9 @@ func _on_enemy_defeated(target: PrototypeTarget) -> void:
 	if int(_rewarded_lives.get(instance_id, -1)) == target.spawn_generation:
 		return
 	_rewarded_lives[instance_id] = target.spawn_generation
+	# 이 처치로 열린 카드에서 얻은 능력은 다음 처치부터 적용한다.
+	if target.last_defeat_in_combat and victory_recovery_amount() > 0 and defeat_recovery_allowed.is_valid() and defeat_recovery_allowed.call():
+		player.apply_growth_health(0, victory_recovery_amount())
 	if int(ranks.get("time_collector", 0)) == 1:
 		ultimate.grant_defeat_gauge()
 	var reward := ELITE_XP if target.is_in_group("elite_enemy") else ORDINARY_XP
@@ -317,6 +322,10 @@ func _draw_cards() -> Array[Dictionary]:
 			random_pool.append(card)
 	result.append(random_pool[rng.randi_range(0, random_pool.size() - 1)])
 	return result.duplicate(true)
+
+
+func victory_recovery_amount() -> int:
+	return ceili(player.damage_receiver.max_health * 0.02) if run_active and int(ranks.get("victory_recovery", 0)) == 1 else 0
 
 
 func metrics_snapshot() -> Dictionary:
