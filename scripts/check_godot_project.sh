@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp143_runtime_test.gd"
+  "$game_root/data/skills/sword_charge.tres"
+  "$game_root/data/skills/bow_retreat.tres"
   "$game_root/tests/gp142_runtime_test.gd"
   "$game_root/scripts/ui/prototype_run_build_view.gd"
   "$game_root/tests/gp141_runtime_test.gd"
@@ -566,6 +569,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for mobility_phase in seed resume finish legacy combat-sword combat-bow flows; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp143_runtime_test.gd -- "$mobility_phase"
+  done
   for victory_recovery_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp142_runtime_test.gd -- "$victory_recovery_phase"

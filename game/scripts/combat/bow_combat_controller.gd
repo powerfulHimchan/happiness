@@ -213,7 +213,10 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 		rain_marker.global_position = _rain_anchor + Vector2(0.0, -92.0)
 		rain_marker.visible = true
 
-	player.begin_combat_action(0.0, definition.can_move, definition.can_turn)
+	var velocity_x := 0.0
+	if not is_zero_approx(definition.movement_distance_m) and definition.duration_s > 0.0:
+		velocity_x = definition.movement_distance_m * PrototypePlayer.PIXELS_PER_METER / definition.duration_s * float(player.facing_direction)
+	player.begin_combat_action(velocity_x, definition.can_move, definition.can_turn)
 	player.set_combat_evade_allowed(false)
 	last_combat_log = "%s 시작 · 취소 %.2fs부터" % [
 		definition.display_name,
@@ -251,7 +254,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		var origin := _projectile_origin()
 		var target := target_selector.current_target
 		var direction := Vector2(float(player.facing_direction), 0.0)
-		if _action == Action.FOCUS_ARROW:
+		if _action == Action.FOCUS_ARROW or definition.skill_id == &"bow_retreat":
 			direction = _spread_direction
 		elif is_instance_valid(target) and target_selector.is_target_on_screen(target):
 			direction = (

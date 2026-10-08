@@ -1,7 +1,7 @@
 class_name PrototypeSkillRewards
 extends RefCounted
 
-## 무기별 여섯 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
+## 무기별 일곱 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
 const SKILLS := {
 	"sword_dash": preload("res://data/skills/sword_dash.tres"),
 	"sword_spin": preload("res://data/skills/sword_spin.tres"),
@@ -15,9 +15,11 @@ const SKILLS := {
 	"bow_focus": preload("res://data/skills/bow_focus.tres"),
 	"sword_thrust": preload("res://data/skills/sword_thrust.tres"),
 	"bow_double_piercing": preload("res://data/skills/bow_double_piercing.tres"),
+	"sword_charge": preload("res://data/skills/sword_charge.tres"),
+	"bow_retreat": preload("res://data/skills/bow_retreat.tres"),
 }
-const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing"]}
-const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중"}
+const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat"]}
+const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴"}
 const CODEX_PAGE_SIZE := 3
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
@@ -73,6 +75,8 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 		"sword_thrust": result.append("정면 %.1fm · 상하 %.2fm · 1타" % [definition.hit_range_m, definition.hit_half_height_m])
 		"bow_double_piercing": result.append("화살 2발 · 각 최대 %d개체 관통" % definition.max_targets)
 		"sword_triple": result.append("정면 2.4m · 상하 0.9m · 3타")
+		"sword_charge": result.append("전진 2.4m · 정면 2m · 2타")
+		"bow_retreat": result.append("후퇴 1.8m · 방향 고정 · 2발")
 		"bow_focus": result.append("0.7초 준비 · 정면 1발 · 이동 불가")
 		"bow_piercing": result.append("화살 1발 · 최대 3개체 관통")
 		"bow_arrow_rain": result.append("대상 주변 2.4m · 범위 6타")
