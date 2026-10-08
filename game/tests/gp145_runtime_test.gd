@@ -312,4 +312,3 @@ func _check(condition: bool, message: String) -> bool:
 		paused = false
 		quit(1)
 	return condition
-
