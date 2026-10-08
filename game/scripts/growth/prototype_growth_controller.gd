@@ -26,6 +26,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "nimble_evade", "title": "민첩한 회피", "category": "common", "lines": ["지상 회피 재사용 대기 -20%", "0.45초 → 0.36초 · 무적 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "fortified_barrier", "title": "견고한 방벽", "category": "common", "lines": ["방벽 최대 20→30 · 잔량 +10", "다음 스테이지에서 30 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
 	{"id": "time_collector", "title": "시간 수집", "category": "common", "lines": ["적 처치마다 필살기 게이지 +5", "선택 이후 적용 · 최대 100"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "time_echo", "title": "시간의 여운", "category": "common", "lines": ["다음 필살기부터 감속 시간 +1초", "공용·직업 적용 · 감속 비율 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_collector"]},
 	{"id": "victory_recovery", "title": "처치 회복", "category": "common", "lines": ["적 처치마다 최대 체력 2% 회복", "선택 이후 적용 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
@@ -67,6 +68,7 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	ultimate.time_echo_unlocked = false
 	player.set_nimble_evade_unlocked(false)
 	player.set_potion_pouch_unlocked(false)
 	player.set_barrier_unlocked(false)
@@ -110,6 +112,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	total_experience = int(state.total_xp)
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
+	ultimate.time_echo_unlocked = int(ranks.get("time_echo", 0)) == 1
 	player.set_nimble_evade_unlocked(int(ranks.get("nimble_evade", 0)) == 1)
 	player.set_potion_pouch_unlocked(int(ranks.get("potion_pouch", 0)) == 1)
 	player.set_barrier_unlocked(int(ranks.get("magic_barrier", 0)) == 1)
@@ -208,6 +211,7 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"time_echo": ultimate.time_echo_unlocked = true
 		"nimble_evade": player.set_nimble_evade_unlocked(true)
 		"potion_pouch": player.set_potion_pouch_unlocked(true, true)
 		"lifesteal_depth", "lifesteal_crisis": player.set_lifesteal_branch(card_id)

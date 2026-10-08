@@ -180,7 +180,7 @@ func _test_recovery_view() -> bool:
 	var source := PrototypeAbilityCodex.profile(RECOVERY_ID)
 	var cards := PrototypeRunBuildView.cards(0, controls.run_build_state)
 	var card: Dictionary = cards.filter(func(item: Dictionary) -> bool: return item.id == RECOVERY_ID)[0]
-	if not _check(card.status == "이번 도전 1등급" and card.lines[0] == source.lines[0] and PrototypeAbilityCodex.definitions().size() == 21, "원본 21능력 도감·현재 보유 등급"): return false
+	if not _check(card.status == "이번 도전 1등급" and card.lines[0] == source.lines[0] and PrototypeAbilityCodex.definitions().size() == PrototypeGrowthController.CARDS.size() + PrototypeJobRewards.CARDS.size(), "원본 전체 능력 도감·현재 보유 등급"): return false
 	cards = PrototypeRunBuildView.cards(2, controls.run_build_state)
 	if not _check(cards[1].lines[-1] == "처치 회복 · 적마다 체력 +%d" % growth.victory_recovery_amount(), "최대 체력 변화가 반영된 실제 회복량 표시"): return false
 	if not await _test_layout(): return false

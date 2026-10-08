@@ -331,7 +331,7 @@ func _on_growth_choices_requested(cards: Array[Dictionary], level: int, rerolls:
 
 func _on_job_manifested(job: Dictionary) -> void:
 	_begin_growth_pause()
-	controls.show_job_manifestation(job)
+	controls.show_job_manifestation(job, UltimateController.TIME_ECHO_BONUS_S if ultimate_controller.time_echo_unlocked else 0.0)
 	_discover_job(String(job.id))
 
 
@@ -531,6 +531,7 @@ func continue_saved_run() -> bool:
 	weapon_controller.restore_checkpoint(state.weapons)
 	ultimate_controller.reset_ultimate()
 	ultimate_controller.gauge = int(state.ultimate.gauge)
+	ultimate_controller.time_echo_unlocked = int(growth.ranks.get("time_echo", 0)) == 1
 	if not String(state.ultimate.profile).is_empty():
 		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
 	_intermission_stage = int(state.stage.number)
@@ -857,7 +858,7 @@ func _capture_run_build() -> Dictionary:
 			"victory_recovery": growth.victory_recovery_amount(),
 		},
 		"recipe": player.potion_recipe,
-		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s},
+		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile)},
 		"relic": player.relic_state.duplicate(), "memory": player.memory_id, "legacy": player.boss_legacy.get("choice", ""),
 	}
 
