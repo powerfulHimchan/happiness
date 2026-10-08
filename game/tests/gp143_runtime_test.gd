@@ -39,7 +39,7 @@ func _run() -> void:
 	match phase:
 		"seed":
 			if not await _test_skill_codex(false, 1.0): return
-			if not _check(PrototypeSkillRewards.SKILLS.size() == 14 and PrototypeSkillRewards.POOLS.sword.size() == 7 and PrototypeSkillRewards.POOLS.bow.size() == 7, "14스킬·무기별7·도감5페이지"): return
+			if not _check(PrototypeSkillRewards.SKILLS.size() == PrototypeSkillRewards.POOLS.sword.size() + PrototypeSkillRewards.POOLS.bow.size() and PrototypeSkillRewards.POOLS.sword.has("sword_charge") and PrototypeSkillRewards.POOLS.bow.has("bow_retreat"), "전체 스킬·검 돌파/활 후퇴 원본 보존"): return
 			controls.begin_retry("sword", 5)
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "첫 정예 무기 유지"): return
 			if not await _replace_mobility("sword_charge", 1, true): return
@@ -116,7 +116,7 @@ func _replace_mobility(id: String, slot: int, failure: bool) -> bool:
 	_tap(controls.skill_reward_open_rect.get_center())
 	var files := _files()
 	if not await _test_candidates(): return false
-	if not _check(_files() == files and PrototypeSkillRewards.offer_page_count(weapons.skills) == 5, "순환 조회는 저장 무변경·미보유5개 모두 비교"): return false
+	if not _check(_files() == files and PrototypeSkillRewards.offer_page_count(weapons.skills) == maxi(PrototypeSkillRewards.POOLS.sword.size(), PrototypeSkillRewards.POOLS.bow.size()) - 2, "순환 조회는 저장 무변경·미보유 전체 후보 비교"): return false
 	for ignored in PrototypeSkillRewards.offer_page_count(weapons.skills):
 		if id in _offer_ids(): break
 		_tap(controls.skill_reward_cycle_rect.get_center())

@@ -11,6 +11,8 @@ signal hit_registered(
 )
 
 const HIT_RADIUS_PX := 44.0
+const HOMING_TURN_RATE_RAD_S := PI
+const HOMING_DURATION_S := 1.0
 
 var damage_handler: Callable
 var projectile_id: String = ""
@@ -24,6 +26,9 @@ var tags: PackedStringArray = PackedStringArray()
 var _travelled_px: float = 0.0
 var _hit_target_keys: Dictionary = {}
 var _hit_count: int = 0
+var _tracking_target: WeakRef
+var _tracking_generation: int = -1
+var _tracking_remaining_s: float = 0.0
 
 @onready var arrow_sprite: Sprite2D = $ArrowSprite
 
@@ -51,11 +56,40 @@ func configure(
 func _ready() -> void:
 	add_to_group("bow_projectile")
 	rotation = direction.angle()
+	if attack_id == &"bow_homing": arrow_sprite.modulate = Color("65e6ae")
+
+
+func set_tracking_target(target: PrototypeTarget) -> void:
+	if not is_instance_valid(target): return
+	_tracking_target = weakref(target)
+	_tracking_generation = target.spawn_generation
+	_tracking_remaining_s = HOMING_DURATION_S
+
+
+func _steer(delta: float) -> void:
+	if _tracking_target == null: return
+	var target := _tracking_target.get_ref() as PrototypeTarget
+	if not is_instance_valid(target) or target.is_queued_for_deletion() \
+	or target.spawn_generation != _tracking_generation or not target.is_targetable() \
+	or target.damage_receiver.dead or not Rect2(Vector2.ZERO, get_viewport_rect().size).grow(-20.0).has_point(target.get_global_transform_with_canvas() * Vector2.ZERO):
+		_tracking_target = null
+		_tracking_remaining_s = 0.0
+		return
+	var offset := target.global_position + PrototypeTarget.BODY_CENTER - global_position
+	var tracking_delta := minf(maxf(0.0, delta), _tracking_remaining_s)
+	if offset.length_squared() > 0.001:
+		var turn := wrapf(offset.angle() - direction.angle(), -PI, PI)
+		direction = direction.rotated(clampf(turn, -HOMING_TURN_RATE_RAD_S * tracking_delta, HOMING_TURN_RATE_RAD_S * tracking_delta)).normalized()
+		rotation = direction.angle()
+	_tracking_remaining_s = maxf(0.0, _tracking_remaining_s - tracking_delta)
+	if _tracking_remaining_s <= 0.0: _tracking_target = null
 
 
 func _physics_process(delta: float) -> void:
+	if is_queued_for_deletion(): return
+	_steer(delta)
 	var previous_position := global_position
-	var displacement := direction * speed_px_s * delta
+	var displacement := direction * minf(maxf(0.0, delta) * speed_px_s, maxf(0.0, max_distance_px - _travelled_px))
 	global_position += displacement
 	_travelled_px += displacement.length()
 	_check_hits(previous_position, global_position)

@@ -5,6 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp145_runtime_test.gd"
+  "$game_root/data/skills/bow_homing.tres"
   "$game_root/tests/gp144_runtime_test.gd"
   "$game_root/tests/gp143_runtime_test.gd"
   "$game_root/data/skills/sword_charge.tres"
@@ -570,6 +572,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for homing_phase in seed resume finish legacy combat-right combat-left flows; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp145_runtime_test.gd -- "$homing_phase"
+  done
   for echo_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp144_runtime_test.gd -- "$echo_phase"
