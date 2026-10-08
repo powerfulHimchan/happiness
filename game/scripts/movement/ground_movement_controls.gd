@@ -451,10 +451,12 @@ func show_growth_choices(cards: Array[Dictionary], level: int, rerolls: int) -> 
 	queue_redraw()
 
 
-func show_job_manifestation(job: Dictionary) -> void:
+func show_job_manifestation(job: Dictionary, duration_bonus: float = 0.0) -> void:
 	release_all_inputs()
 	manifested_job = job.duplicate()
 	job_ultimates = PrototypeJobRewards.ultimates_for(String(job["id"]))
+	for candidate in job_ultimates:
+		candidate.lines[1] = "%.0f초 동안 적 시간 %d%%" % [float(candidate.duration) + duration_bonus, roundi(float(candidate.slow) * 100.0)]
 	selected_job_ultimate = -1
 	screen_mode = ScreenMode.JOB_MANIFESTATION
 	_refresh_job_layout()

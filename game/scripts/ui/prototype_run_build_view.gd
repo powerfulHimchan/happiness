@@ -40,6 +40,7 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			var job := PrototypeJobProgress.profile(String(state.growth.growth_job_id))
 			var ultimate: Dictionary = state.ultimate
 			var lines: Array[String] = [String(job.passive) if not job.is_empty() else "성향을 쌓아 직업 발현", String(ultimate.name), "게이지 %d / 100" % int(ultimate.gauge), "발동 중 · 남은 %.1f초" % float(ultimate.remaining) if bool(ultimate.active) else "발동 대기", "시간 수집 · 처치 게이지 +5" if int(ranks.get("time_collector", 0)) == 1 else "공격·회피로 게이지 충전"]
+			lines.append("다음 필살기 감속 %.1f초" % float(ultimate.get("next_duration", UltimateController.DURATION_S)))
 			result.append({"id": "job", "name": "직업·필살기", "status": String(job.name) if not job.is_empty() else "직업 미발현", "lines": lines, "open": not job.is_empty()})
 			var memory := PrototypeMemoryAbilities.profile(String(state.memory))
 			lines = [PrototypeRelic.hud(state.relic), String(memory.name), String(memory.effect), "구출 조력 적용 중" if state.legacy == "rescue" else "파괴 핵 적용 중" if state.legacy == "destroy" else "일회 보상 미적용", "조회로 장비나 보상을 변경하지 않습니다"]

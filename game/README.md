@@ -37,7 +37,7 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 PR과 `main` 반영 시 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-gp113-weapon-blueprints-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 PR과 `main` 반영 시 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-gp144-time-echo-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
@@ -200,3 +200,5 @@ GP-111에서는 보스 구출로 태엽 수호(최대 체력 +5), 파괴로 핵�
 GP-112에서는 파괴 일회 보상을 적용한 다음 도전의 2스테이지에 **태엽 폐허 · 위험**을 추가한다. 좁은 발판, 첫 웨이브 세 종류, 적 체력 ×1.20과 통과 시 추가 회복 +20·필살기 게이지 +50을 적용한다. 영구 기억만으로는 열리지 않는다. [GP-112 구현 상태](../docs/prototype/GP112_RISK_ROUTE_STATUS.md)를 참고한다.
 
 GP-113에서는 보스 파괴로 태엽 검·활 설계도를 영구 해금한다. 이후 정예 무기 보상에 기본 검·활과 함께 제공한다. 태엽 무기는 무기 피해 보너스를 줄이고 고유 효과를 강화하며 보조 효과는 50% 적용한다. 선택한 설계·등급은 이어하기에 복원하고 새 도전은 초기화하며 해금만 유지한다. 상세 범위는 [GP-113 구현 상태](../docs/prototype/GP113_WEAPON_BLUEPRINTS_STATUS.md)를 참고한다.
+
+GP-144에서는 시간 수집 획득 후 **시간의 여운**을 한 번 선택해 다음 필살기부터 감속 시간을 1초 늘립니다. 공용·공격형은 4초, 회복형은 6초입니다. 현재 발동 잔량과 원본 효과는 유지하고 도감·직업 선택·HUD·도전 상태·중간 저장에 연결합니다. [구현·검증 범위](../docs/prototype/GP144_TIME_ECHO_STATUS.md)를 참고합니다.

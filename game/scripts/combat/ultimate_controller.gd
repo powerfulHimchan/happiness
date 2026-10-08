@@ -12,6 +12,7 @@ const BASIC_HIT_GAIN := 4
 const SKILL_HIT_GAIN := 8
 const PRECISE_EVADE_GAIN := 12
 const DEFEAT_GAIN := 5
+const TIME_ECHO_BONUS_S := 1.0
 const DURATION_S := 3.0
 const ENEMY_TIME_SCALE := 0.15
 
@@ -23,9 +24,11 @@ var precise_evade_count: int = 0
 var last_ultimate_log: String = "게이지 충전 대기"
 var _active: bool = false
 var _remaining_s: float = 0.0
+var _active_duration_s: float = DURATION_S
 var selected_profile: Dictionary = {}
 var _active_profile: Dictionary = {}
 var last_burst_hits: int = 0
+var time_echo_unlocked: bool = false
 
 @onready var target_selector: AutoTargetSelector = $"../AutoTargetSelector"
 
@@ -67,7 +70,8 @@ func request_ultimate() -> void:
 	gauge = 0
 	_active = true
 	_active_profile = selected_profile.duplicate(true)
-	_remaining_s = float(_active_profile.get("duration", DURATION_S))
+	_active_duration_s = duration_for(selected_profile)
+	_remaining_s = _active_duration_s
 	activation_count += 1
 	last_burst_hits = 0
 	last_ultimate_log = "%s 발동 · 적 시간 %d%%" % [_ultimate_name(), roundi(float(_active_profile.get("slow", ENEMY_TIME_SCALE)) * 100.0)]
@@ -87,6 +91,10 @@ func select_job_ultimate(job_id: String, ultimate_id: String) -> bool:
 			_emit_metrics()
 			return true
 	return false
+
+
+func duration_for(profile: Dictionary) -> float:
+	return float(profile.get("duration", DURATION_S)) + (TIME_ECHO_BONUS_S if time_echo_unlocked else 0.0)
 
 
 func _apply_job_effect() -> void:
@@ -149,6 +157,7 @@ func grant_defeat_gauge() -> void:
 
 
 func reset_ultimate() -> void:
+	time_echo_unlocked = false
 	gauge = 0
 	activation_count = 0
 	basic_gauge_gain_count = 0
@@ -157,6 +166,7 @@ func reset_ultimate() -> void:
 	last_ultimate_log = "게이지 충전 대기"
 	_active = false
 	_remaining_s = 0.0
+	_active_duration_s = DURATION_S
 	selected_profile.clear()
 	_active_profile.clear()
 	last_burst_hits = 0
@@ -215,7 +225,8 @@ func _emit_metrics() -> void:
 		"ultimate_ready": gauge >= MAX_GAUGE and not _active,
 		"ultimate_active": _active,
 		"ultimate_remaining_s": _remaining_s,
-		"ultimate_duration_s": float((_active_profile if _active else selected_profile).get("duration", DURATION_S)),
+		"ultimate_duration_s": _active_duration_s if _active else duration_for(selected_profile),
+		"ultimate_next_duration_s": duration_for(selected_profile),
 		"enemy_time_scale": float(_active_profile.get("slow", ENEMY_TIME_SCALE)) if _active else 1.0,
 		"player_time_scale": 1.0,
 		"player_projectile_time_scale": 1.0,
