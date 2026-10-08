@@ -37,7 +37,7 @@ godot --path game --editor
 
 ## GitHub Actions APK
 
-`.github/workflows/build-android-apk.yml`은 PR과 `main` 반영 시 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-gp145-homing-shot-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
+`.github/workflows/build-android-apk.yml`은 PR과 `main` 반영 시 Godot 런타임 테스트를 수행하고 ARM64 디버그 APK를 생성한다. 현재 결과물 이름은 `happiness-tale-gp146-evasive-barrier-apk`이며 APK와 SHA-256 파일을 14일간 보관한다.
 
 이 APK는 개인 기기 테스트용 임시 디버그 키로 서명된다. 다음 빌드에서는 키가 달라질 수 있으므로 설치 충돌이 발생하면 기존 진단 앱을 삭제한 뒤 다시 설치한다. Google Play 배포에는 사용할 수 없다.
 
@@ -204,3 +204,5 @@ GP-113에서는 보스 파괴로 태엽 검·활 설계도를 영구 해금한�
 GP-144에서는 시간 수집 획득 후 **시간의 여운**을 한 번 선택해 다음 필살기부터 감속 시간을 1초 늘립니다. 공용·공격형은 4초, 회복형은 6초입니다. 현재 발동 잔량과 원본 효과는 유지하고 도감·직업 선택·HUD·도전 상태·중간 저장에 연결합니다. [구현·검증 범위](../docs/prototype/GP144_TIME_ECHO_STATUS.md)를 참고합니다.
 
 GP-145에서는 활 **추적 사격**을 정예 스킬 교체·도감·중간 저장에 연결합니다. 정면의 시전 표적을 고정해 최대1초·초당180도로 유도하며 피해44·최대1개체·경로8m·재사용9초입니다. 표적 상실 뒤 재지정하지 않습니다. 검7·활8종의 서로 다른 후보 수를 도감이 모두 표시합니다. [구현·검증 범위](../docs/prototype/GP145_HOMING_SHOT_STATUS.md)를 참고합니다.
+
+GP-146에서는 마력 방벽 이후 **회피 방벽**을 선택해 정확한 지상 회피마다 방벽5를 회복합니다. 같은 회피의 여러 공격에는 한 번만 적용하며, 기본20·견고한 방벽30 상한·기존 게이지/성향·회피 시간을 유지합니다. 23능력 도감·현재 도전 상태·잔량 저장 복원에 연결합니다. [구현·검증 범위](../docs/prototype/GP146_EVASIVE_BARRIER_STATUS.md)를 참고합니다.

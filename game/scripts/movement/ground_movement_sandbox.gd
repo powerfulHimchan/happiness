@@ -54,6 +54,7 @@ func _ready() -> void:
 	player.lifesteal_allowed = _can_collect_recovery_orb
 	growth.record_ability = _record_abilities
 	growth.defeat_recovery_allowed = _can_collect_recovery_orb
+	growth.precise_evade_reward_allowed = _can_collect_recovery_orb
 	_record_abilities([])
 	_update_boss_legacy_status()
 	growth.metrics_changed.connect(controls.update_growth_metrics)
@@ -856,6 +857,7 @@ func _capture_run_build() -> Dictionary:
 			"lifesteal_percent": player.lifesteal_multiplier() * 5 if player.lifesteal_unlocked else 0,
 			"air_jump": player.double_jump_unlocked,
 			"victory_recovery": growth.victory_recovery_amount(),
+			"evasive_barrier": growth.evasive_barrier_amount(),
 		},
 		"recipe": player.potion_recipe,
 		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile)},
