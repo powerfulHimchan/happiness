@@ -227,7 +227,7 @@ func _test_invalid_save() -> bool:
 
 func _test_mastery_codex() -> bool:
 	if not await _test_book_layout(): return false
-	if not _check(PrototypeAbilityCodex.definitions().size() == 20, "20능력·일곱 페이지"): return false
+	if not _check(PrototypeAbilityCodex.definitions().size() == PrototypeGrowthController.CARDS.size() + PrototypeJobRewards.CARDS.size(), "성장/직업 원본 전체 도감"): return false
 	var cards := PrototypeAbilityCodex.cards(book.snapshot(), growth.ranks)
 	var card: Dictionary = cards.filter(func(item: Dictionary) -> bool: return item.id == mastery_id)[0]
 	var source := PrototypeAbilityCodex.profile(mastery_id)
