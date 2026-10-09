@@ -18,29 +18,28 @@ const SKILLS := {
 	"sword_charge": preload("res://data/skills/sword_charge.tres"),
 	"bow_retreat": preload("res://data/skills/bow_retreat.tres"),
 	"bow_homing": preload("res://data/skills/bow_homing.tres"),
+	"sword_wave": preload("res://data/skills/sword_wave.tres"),
 }
-const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing"]}
-const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적"}
+const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing"]}
+const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기"}
 const CODEX_PAGE_SIZE := 3
+# 새 기술을 뒤에 붙여 이전 도감의 페이지 순서를 보존한다.
+const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave"]
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
 static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var active := valid_loadout(loadout)
 	var starting := defaults()
-	var maximum := 0
-	for weapon in POOLS: maximum = maxi(maximum, POOLS[weapon].size())
-	for index in maximum:
-		for weapon in POOLS:
-			if index >= POOLS[weapon].size(): continue
-			var id: String = POOLS[weapon][index]
-			var slot: int = loadout[weapon].find(id) if active else starting[weapon].find(id)
-			var status := "이번 도전 · 슬롯 %d" % (slot + 1) if active and slot >= 0 else "미장착 · 효과 미리 보기" if active else "시작 스킬 · 슬롯 %d" % (slot + 1) if slot >= 0 else "보상 교체 스킬"
-			var effect := lines(id, recharge_multiplier if active else 1.0)
-			effect.append("시작 장착 · 새 도전마다 초기화" if id in starting[weapon] else "정예 후 스킬 보상에서 슬롯 교체")
-			effect.append("표기 피해는 강화 전 기본값")
-			effect.append("시계추 적용 · 재사용 -20%" if active and recharge_multiplier > 1.0 else "첫·두 번째 정예 후 교체 가능")
-			result.append({"id": id, "weapon": weapon, "name": ("검 · " if weapon == "sword" else "활 · ") + String(SKILLS[id].display_name), "open": slot >= 0, "status": status, "lines": effect})
+	for id in CODEX_ORDER:
+		var weapon := weapon_for(id)
+		var slot: int = loadout[weapon].find(id) if active else starting[weapon].find(id)
+		var status := "이번 도전 · 슬롯 %d" % (slot + 1) if active and slot >= 0 else "미장착 · 효과 미리 보기" if active else "시작 스킬 · 슬롯 %d" % (slot + 1) if slot >= 0 else "보상 교체 스킬"
+		var effect := lines(id, recharge_multiplier if active else 1.0)
+		effect.append("시작 장착 · 새 도전마다 초기화" if id in starting[weapon] else "정예 후 스킬 보상에서 슬롯 교체")
+		effect.append("표기 피해는 강화 전 기본값")
+		effect.append("시계추 적용 · 재사용 -20%" if active and recharge_multiplier > 1.0 else "첫·두 번째 정예 후 교체 가능")
+		result.append({"id": id, "weapon": weapon, "name": ("검 · " if weapon == "sword" else "활 · ") + String(SKILLS[id].display_name), "open": slot >= 0, "status": status, "lines": effect})
 	return result
 
 static func defaults() -> Dictionary:
@@ -79,6 +78,7 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 		"sword_thrust": result.append("정면 %.1fm · 상하 %.2fm · 1타" % [definition.hit_range_m, definition.hit_half_height_m])
 		"bow_double_piercing": result.append("화살 2발 · 각 최대 %d개체 관통" % definition.max_targets)
 		"sword_triple": result.append("정면 2.4m · 상하 0.9m · 3타")
+		"sword_wave": result.append("검기 6m · 상하 0.6m · 최대3개체 관통")
 		"sword_charge": result.append("전진 2.4m · 정면 2m · 2타")
 		"bow_retreat": result.append("후퇴 1.8m · 방향 고정 · 2발")
 		"bow_homing": result.append("정면 표적 고정 · 최대 1초 추적")

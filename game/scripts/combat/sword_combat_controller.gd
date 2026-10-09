@@ -11,6 +11,7 @@ enum Action {
 	DASH_SLASH,
 	SPIN_SLASH,
 	LINE_SLASH,
+	WAVE_SLASH,
 }
 
 const COMBO_RESET_S := 0.90
@@ -26,6 +27,7 @@ var combo_index: int = 0
 var basic_attack_count: int = 0
 var skill_hit_count: int = 0
 var total_damage: int = 0
+var projectile_fired_count: int = 0
 var last_combat_log: String = "공격 대기"
 var last_event_id: String = "없음"
 var active: bool = true
@@ -42,6 +44,7 @@ var _captured_target: PrototypeTarget
 var _slash_remaining_s: float = 0.0
 var _line_remaining_s: float = 0.0
 var _line_direction: int = 1
+var _wave_direction: int = 1
 var _line_range_px: float = 0.0
 var _line_half_height_m: float = LINE_HALF_HEIGHT_M
 
@@ -93,6 +96,7 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
+	if definition != null and definition.skill_id == &"sword_wave": return Action.WAVE_SLASH
 	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust", &"sword_charge"]:
 		return Action.LINE_SLASH
 	return Action.DASH_SLASH if definition != null and definition.skill_id == &"sword_dash" else Action.SPIN_SLASH
@@ -122,6 +126,7 @@ func set_active(enabled: bool) -> void:
 
 
 func prepare_next_stage() -> void:
+	_clear_waves()
 	_finish_action("스테이지 이동 · 검 행동 정리")
 	combo_index = 0
 	_slash_remaining_s = 0.0
@@ -132,6 +137,8 @@ func prepare_next_stage() -> void:
 
 
 func reset_combat() -> void:
+	_clear_waves()
+	projectile_fired_count = 0
 	_line_remaining_s = 0.0
 	queue_redraw()
 	combo_index = 0
@@ -222,6 +229,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 	_next_skill_hit_index = 0
 	_action_sequence += 1
 	_captured_target = target_selector.current_target
+	_wave_direction = player.facing_direction
 	if action == Action.LINE_SLASH:
 		_line_direction = player.facing_direction
 		_line_range_px = definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER
@@ -272,6 +280,10 @@ func _update_skill_action(delta: float) -> void:
 
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
+	if _action == Action.WAVE_SLASH:
+		_spawn_wave(definition, hit_index)
+		_show_slash(SKILL_FLASH_S, hit_index)
+		return
 	var targets: Array[PrototypeTarget] = []
 	if _action == Action.DASH_SLASH:
 		if is_instance_valid(_captured_target) and _captured_target.is_targetable():
@@ -367,7 +379,7 @@ func _update_slash_visual() -> void:
 		slash_sprite.visible = false
 		return
 	slash_sprite.visible = true
-	var direction := float(player.facing_direction)
+	var direction := float(_wave_direction if _action == Action.WAVE_SLASH else player.facing_direction)
 	slash_sprite.position = Vector2(88.0 * direction, -42.0)
 	slash_sprite.flip_h = direction < 0.0
 	if _action == Action.SPIN_SLASH:
@@ -406,6 +418,7 @@ func _on_player_evade_started() -> void:
 
 
 func _on_player_interrupted(reason: String) -> void:
+	_clear_waves()
 	_line_remaining_s = 0.0
 	queue_redraw()
 	if _action != Action.NONE:
@@ -436,7 +449,39 @@ func _build_metrics() -> Dictionary:
 		"combat_last_log": last_combat_log,
 		"combat_last_event_id": last_event_id,
 		"combat_target_health": target.health_summary() if is_instance_valid(target) else "대상 없음",
-		"projectile_fired_count": 0,
+		"projectile_fired_count": projectile_fired_count,
 		"near_damage_reduced_count": 0,
 		"piercing_last_hit_count": 0,
 	}
+
+
+func _spawn_wave(definition: SkillDefinition, hit_index: int) -> void:
+	var wave := SwordWave.new()
+	wave.projectile_id = "player:sword_wave:%d:%d" % [_action_sequence, hit_index]
+	wave.damage = player.growth_damage(int(definition.damage[hit_index]), "sword", "skill")
+	wave.direction = _wave_direction
+	wave.max_distance_px = definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER
+	wave.hit_radius_px = definition.hit_half_height_m * PrototypePlayer.PIXELS_PER_METER
+	wave.max_hits = definition.max_targets
+	wave.damage_handler = player.deal_weapon_damage
+	wave.hit_registered.connect(_on_wave_hit)
+	get_tree().current_scene.add_child(wave)
+	wave.global_position = player.global_position + Vector2(58 * _wave_direction, -38)
+	wave.origin = wave.global_position
+	projectile_fired_count += 1
+	last_event_id = wave.projectile_id
+	last_combat_log = "%s · 검기 발사 · 최대%d개체" % [definition.display_name, definition.max_targets]
+
+
+func _on_wave_hit(target: PrototypeTarget, damage: int, result: int, projectile_id: String) -> void:
+	last_event_id = "%s:%s" % [projectile_id, target.target_key]
+	if result == DamageReceiver.Result.APPLIED:
+		skill_hit_count += 1
+		total_damage += damage
+		hit_registered.emit(true, target, damage)
+	last_combat_log = "검기 베기 · 피해 %d · %s" % [damage, DamageReceiver.result_name(result)]
+	_emit_metrics()
+
+
+func _clear_waves() -> void:
+	for wave in get_tree().get_nodes_in_group("sword_wave"): wave.queue_free()

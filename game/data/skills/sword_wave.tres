@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"sword_wave"
+display_name = "검기 베기"
+cooldown_s = 10.0
+duration_s = 0.50
+hit_times_s = PackedFloat32Array(0.20)
+damage = PackedInt32Array(36)
+hit_range_m = 6.0
+hit_half_height_m = 0.60
+max_targets = 3
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.12
+ultimate_gain = 8
