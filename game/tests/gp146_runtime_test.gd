@@ -59,7 +59,7 @@ func _run() -> void:
 			if not await _test_book_layout(): return
 			var cards := PrototypeAbilityCodex.cards(book.snapshot(), growth.ranks)
 			var card: Dictionary = cards.filter(func(item: Dictionary) -> bool: return item.id == EVASIVE_ID)[0]
-			if not _check(cards.size() == 23 and card.open and card.status == "이번 도전 1등급" and card.lines[2] == "조건: 마력 방벽 획득 후", "23능력 전체 도감·조건/발견/현재 등급"): return
+			if not _check(cards.size() == PrototypeAbilityCodex.definitions().size() and card.open and card.status == "이번 도전 1등급" and card.lines[2] == "조건: 마력 방벽 획득 후", "전체 능력 도감·조건/발견/현재 등급"): return
 		"resume":
 			if not _check(growth.evasive_barrier_amount() == 0 and book.snapshot().has(EVASIVE_ID), "발견만으로 능력 지급 없음"): return
 			for ignored in 2:

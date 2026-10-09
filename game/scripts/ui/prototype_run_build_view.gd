@@ -39,6 +39,8 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			result[-1].lines.append("처치 회복 · 적마다 체력 +%d" % int(health.get("victory_recovery", 0)) if int(health.get("victory_recovery", 0)) > 0 else "처치 회복 미해금")
 			if int(health.get("evasive_barrier", 0)) > 0:
 				result[-1].lines[0] += " · 정확 회피 +%d" % int(health.evasive_barrier)
+			if int(health.get("potion_barrier", 0)) > 0:
+				result[-1].lines[2] += " · 방벽 +%d" % int(health.potion_barrier)
 			var job := PrototypeJobProgress.profile(String(state.growth.growth_job_id))
 			var ultimate: Dictionary = state.ultimate
 			var lines: Array[String] = [String(job.passive) if not job.is_empty() else "성향을 쌓아 직업 발현", String(ultimate.name), "게이지 %d / 100" % int(ultimate.gauge), "발동 중 · 남은 %.1f초" % float(ultimate.remaining) if bool(ultimate.active) else "발동 대기", "시간 수집 · 처치 게이지 +5" if int(ranks.get("time_collector", 0)) == 1 else "공격·회피로 게이지 충전"]

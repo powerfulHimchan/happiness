@@ -390,7 +390,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 
 
 func _use_recovery_potion() -> bool:
-	if controls.current_screen_mode() != 0 or not growth.run_active or get_tree().paused or stage_runner.stage_complete:
+	if controls.current_screen_mode() != 0 or not growth.run_active or get_tree().paused or stage_runner.stage_complete or _combat_environment_suspended:
 		return false
 	return player.use_recovery_potion()
 
@@ -858,6 +858,7 @@ func _capture_run_build() -> Dictionary:
 			"air_jump": player.double_jump_unlocked,
 			"victory_recovery": growth.victory_recovery_amount(),
 			"evasive_barrier": growth.evasive_barrier_amount(),
+			"potion_barrier": player.potion_barrier_recovery(),
 		},
 		"recipe": player.potion_recipe,
 		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile)},

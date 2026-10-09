@@ -59,6 +59,7 @@ var boss_legacy_store := BossLegacyStore.new()
 const BARRIER_CAPACITY := 20
 const FORTIFIED_BARRIER_BONUS := 10
 var fortified_barrier_unlocked: bool = false
+var restorative_barrier_unlocked: bool = false
 var barrier_unlocked: bool = false
 
 const LIFESTEAL_DAMAGE_PER_HEALTH := 20
@@ -346,6 +347,7 @@ func set_fortified_barrier_unlocked(enabled: bool, refill: bool = false) -> void
 func set_barrier_unlocked(enabled: bool) -> void:
 	barrier_unlocked = enabled
 	if not enabled: fortified_barrier_unlocked = false
+	if not enabled: restorative_barrier_unlocked = false
 	damage_receiver.barrier_health = barrier_capacity() if enabled else 0
 	queue_redraw()
 	_emit_metrics()
@@ -364,6 +366,15 @@ func recover_barrier(amount: int) -> void:
 	damage_receiver.barrier_health = mini(barrier_capacity(), damage_receiver.barrier_health + amount)
 	queue_redraw()
 	_emit_metrics()
+
+
+func set_restorative_barrier_unlocked(enabled: bool) -> void:
+	restorative_barrier_unlocked = enabled and barrier_unlocked
+	_emit_metrics()
+
+
+func potion_barrier_recovery() -> int:
+	return 10 if restorative_barrier_unlocked and barrier_unlocked else 0
 
 
 func is_ground_evading() -> bool:
@@ -488,10 +499,14 @@ func use_recovery_potion() -> bool:
 	if _is_input_locked() or potions_remaining <= 0 or damage_receiver.health >= damage_receiver.max_health:
 		return false
 	var before := damage_receiver.health
+	var barrier_before := damage_receiver.barrier_health
 	potions_remaining -= 1
 	var recipe := PrototypePotionRecipes.profile(potion_recipe)
 	apply_growth_health(0, ceili(damage_receiver.max_health * potion_heal_ratio()))
+	recover_barrier(potion_barrier_recovery())
 	potion_log = "%s +%d · 남은 %d회" % [recipe.name, damage_receiver.health - before, potions_remaining]
+	if potion_barrier_recovery() > 0:
+		potion_log += " · 방벽 +%d" % (damage_receiver.barrier_health - barrier_before)
 	_emit_metrics()
 	return true
 
@@ -562,6 +577,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	nimble_evade_unlocked = false
 	barrier_unlocked = false
 	fortified_barrier_unlocked = false
+	restorative_barrier_unlocked = false
 	damage_receiver.barrier_health = 0
 	lifesteal_unlocked = false
 	lifesteal_branch = ""
@@ -982,6 +998,8 @@ func _emit_metrics() -> void:
 		"barrier_health": damage_receiver.barrier_health,
 		"barrier_capacity": barrier_capacity(),
 		"fortified_barrier_unlocked": fortified_barrier_unlocked,
+		"restorative_barrier_unlocked": restorative_barrier_unlocked,
+		"potion_barrier_recovery": potion_barrier_recovery(),
 		"barrier_absorbed": damage_receiver.last_absorbed_damage,
 		"lifesteal_unlocked": lifesteal_unlocked,
 		"lifesteal_branch": lifesteal_branch,

@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$project_root/.github/workflows/check-godot-project.yml"
+  "$project_root/.github/workflows/build-android-apk.yml"
+  "$game_root/tests/gp148_runtime_test.gd"
   "$game_root/tests/gp147_runtime_test.gd"
   "$game_root/data/skills/sword_wave.tres"
   "$game_root/scripts/combat/sword_wave.gd"
@@ -552,6 +555,16 @@ if ! rg -q 'name="Android Debug APK"' "$game_root/export_presets.cfg"; then
   exit 1
 fi
 
+# APK는 요청 시에만 수동으로 만든다. PR/main의 자동 검증은 별도 워크플로다.
+apk_events="$(awk '/^on:$/ {in_events=1; next} in_events && /^[^ ]/ {in_events=0} in_events && /^  [a-z_]+:/ {print $1}' "$project_root/.github/workflows/build-android-apk.yml")"
+if [[ "$apk_events" != "workflow_dispatch:" ]] \
+  || ! rg -q '^  pull_request:' "$project_root/.github/workflows/check-godot-project.yml" \
+  || ! rg -q '^  push:' "$project_root/.github/workflows/check-godot-project.yml" \
+  || rg -q 'godot-export|setup-android|sdkmanager|export-debug|upload-artifact' "$project_root/.github/workflows/check-godot-project.yml"; then
+  echo "Delivery policy requires manual APK builds and automatic Godot checks without APK export." >&2
+  exit 1
+fi
+
 godot_command=""
 if command -v godot >/dev/null 2>&1; then
   godot_command="godot"
@@ -576,6 +589,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for potion_barrier_phase in seed resume finish legacy-seed legacy combat; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp148_runtime_test.gd -- "$potion_barrier_phase"
+  done
   for wave_phase in seed resume finish legacy combat-right combat-left flows; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp147_runtime_test.gd -- "$wave_phase"
