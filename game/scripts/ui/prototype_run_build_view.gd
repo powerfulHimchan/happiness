@@ -22,7 +22,7 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 				for line in item.lines: lines.append(String(line))
 				lines.append("기본 피해100 기준 %d" % int(state.damage[weapon].basic))
 				lines.append("스킬 피해100 기준 %d" % int(state.damage[weapon].skill))
-				lines.append("성장·기억·장비 반영 · 거리 보정 전")
+				lines.append("성장·기억·장비·유물 반영 · 거리 보정 전")
 				result.append({"id": weapon, "name": item.name, "status": "주 무기" if state.active == weapon else "보조 무기", "lines": lines, "open": true})
 			for weapon in ["sword", "bow"]:
 				for slot in 2:

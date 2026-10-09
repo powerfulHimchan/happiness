@@ -7,6 +7,7 @@ game_root="$project_root/game"
 required_files=(
   "$project_root/.github/workflows/check-godot-project.yml"
   "$project_root/.github/workflows/build-android-apk.yml"
+  "$game_root/tests/gp150_runtime_test.gd"
   "$game_root/tests/gp149_runtime_test.gd"
   "$game_root/tests/gp148_runtime_test.gd"
   "$game_root/tests/gp147_runtime_test.gd"
@@ -590,6 +591,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for ember_phase in seed resume finish legacy-seed legacy combat; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp150_runtime_test.gd -- "$ember_phase"
+  done
   for portioned_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp149_runtime_test.gd -- "$portioned_phase"
