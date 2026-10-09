@@ -6,6 +6,7 @@ extends Node
 
 signal summary_changed(summary: Dictionary)
 
+const RECENT_RUN_LIMIT := 12
 const SCHEMA_VERSION := 1
 const DEFAULT_RECORD_PATH := "user://local_test_records.jsonl"
 const SECTION_NAMES: Array[String] = ["전진 1", "웨이브 1", "전진 2", "웨이브 2", "정예"]
@@ -215,6 +216,7 @@ func _reload_summary() -> void:
 		if best_completion_s <= 0.0 or completion_s < best_completion_s:
 			best_completion_s = completion_s
 	_summary = {
+		"recent_runs": _recent_runs(events),
 		"completion_by_stage_count": completion_by_stage_count,
 		"boss_rescue_count": boss_rescue_count,
 		"boss_destroy_count": boss_destroy_count,
@@ -254,6 +256,7 @@ func _read_valid_events() -> Array[Dictionary]:
 
 func _empty_summary() -> Dictionary:
 	return {
+		"recent_runs": [],
 		"completion_by_stage_count": {},
 		"boss_rescue_count": 0,
 		"boss_destroy_count": 0,
@@ -268,3 +271,36 @@ func _empty_summary() -> Dictionary:
 		"last_event": "기록 없음",
 		"record_path": record_path,
 	}
+
+
+## 최초로 관측한 도전 순서의 역순. 이어하기·중복 완주는 같은 항목을 갱신한다.
+func _recent_runs(events: Array[Dictionary]) -> Array[Dictionary]:
+	var runs: Dictionary = {}
+	var order: Array[String] = []
+	for event in events:
+		var name := String(event.get("event", ""))
+		var id := String(event.get("run_id", ""))
+		if id.is_empty() or name not in ["run_started", "run_resumed", "stage_started", "stage_completed", "section_completed", "run_completed"]:
+			continue
+		if not runs.has(id):
+			if name not in ["run_started", "run_resumed", "run_completed"]:
+				continue
+			order.append(id)
+			runs[id] = {"id": id, "completed": false, "stage_number": 1, "completed_stages": 0, "completion_s": 0.0, "boss_choice": ""}
+		var run: Dictionary = runs[id]
+		if run.completed:
+			continue
+		var stage := maxi(1, int(event.get("stage_number", 1)))
+		run.stage_number = maxi(int(run.stage_number), stage)
+		if name in ["stage_completed", "run_resumed"]:
+			run.completed_stages = maxi(int(run.completed_stages), stage)
+		if name == "run_completed":
+			run.completed = true
+			run.stage_number = maxi(1, int(event.get("stage_count", 1)))
+			run.completed_stages = run.stage_number
+			run.completion_s = maxf(0.0, float(event.get("completion_s", 0.0)))
+			run.boss_choice = String(event.get("boss_choice", ""))
+	var result: Array[Dictionary] = []
+	for i in range(order.size() - 1, maxi(-1, order.size() - RECENT_RUN_LIMIT - 1), -1):
+		result.append(runs[order[i]].duplicate(true))
+	return result

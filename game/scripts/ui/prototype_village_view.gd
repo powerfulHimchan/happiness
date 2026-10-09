@@ -3,8 +3,9 @@ extends RefCounted
 
 ## GP-114: 기존 영구 해금과 로컬 기록을 읽는 마을. 방문으로 저장을 변경하지 않는다.
 const FACILITIES := ["forge", "memories", "records", "jobs", "apothecary", "atlas"]
-const TAB_LABELS := {"jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
-const TITLES := {"village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
+const HISTORY_PAGE_SIZE := 3
+const TAB_LABELS := {"records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
+const TITLES := {"history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
 
 static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictionary:
 	var cards: Array[Rect2] = []
@@ -66,6 +67,18 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 			for id in ["clockwork_guard", "core_echo"]:
 				var profile := PrototypeMemoryAbilities.profile(id)
 				result.append({"name": profile.name, "open": bool(memories.get(id, false)), "lines": [profile.effect, profile.condition, "새 도전 준비에서 하나를 선택"]})
+		"history":
+			for run in summary.get("recent_runs", []):
+				var complete := bool(run.get("completed", false))
+				var choice := String(run.get("boss_choice", ""))
+				var lines: Array[String] = []
+				if complete:
+					lines.assign(["%d스테이지 완주" % int(run.stage_number), "완주 시간 %.1f초" % float(run.completion_s), "보스 구출" if choice == "rescue" else "보스 파괴" if choice == "destroy" else "보스 선택 기록 없음"])
+				else:
+					lines.assign(["마지막 기록: %d스테이지" % int(run.stage_number), "완료한 스테이지 %d개" % int(run.completed_stages), "진행 중인 도전도 포함", "완주 시간은 완료 후 표시"])
+				result.append({"id": run.id, "name": "최근 도전 %d" % (result.size() + 1), "open": true, "status": "완주" if complete else "미완료", "lines": lines})
+			if result.is_empty():
+				result.append({"name": "아직 도전 기록 없음", "open": true, "status": "새 여행을 시작해 보세요", "lines": ["이 기기의 최근 도전 12개", "이어하기는 같은 도전으로 표시", "열람은 저장 상태를 바꾸지 않아요"]})
 		"records":
 			result.append({"name": "도전 이력", "open": true, "lines": ["총 도전 %d회" % int(summary.get("run_count", 0)), "완주 %d회" % int(summary.get("completed_run_count", 0)), "미완료 %d회" % int(summary.get("incomplete_run_count", 0)), "미완료에는 진행 중 도전도 포함"]})
 			for key in ["best_completion_s", "average_completion_s"]:
