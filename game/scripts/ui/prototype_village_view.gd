@@ -4,8 +4,9 @@ extends RefCounted
 ## GP-114: 기존 영구 해금과 로컬 기록을 읽는 마을. 방문으로 저장을 변경하지 않는다.
 const FACILITIES := ["forge", "memories", "records", "jobs", "apothecary", "atlas"]
 const HISTORY_PAGE_SIZE := 3
-const TAB_LABELS := {"records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
-const TITLES := {"history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
+const RECORD_TABS := ["records", "record_lengths", "history"]
+const TAB_LABELS := {"record_lengths": "길이별 통계", "records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
+const TITLES := {"record_lengths": "광장 · 도전 길이별 통계", "history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
 
 static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictionary:
 	var cards: Array[Rect2] = []
@@ -79,11 +80,21 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				result.append({"id": run.id, "name": "최근 도전 %d" % (result.size() + 1), "open": true, "status": "완주" if complete else "미완료", "lines": lines})
 			if result.is_empty():
 				result.append({"name": "아직 도전 기록 없음", "open": true, "status": "새 여행을 시작해 보세요", "lines": ["이 기기의 최근 도전 12개", "이어하기는 같은 도전으로 표시", "열람은 저장 상태를 바꾸지 않아요"]})
+		"record_lengths":
+			var by_length: Dictionary = summary.get("completion_by_stage_count", {})
+			for count in [3, 5]:
+				var stats: Dictionary = by_length.get(str(count), {})
+				var completed := int(stats.get("completed_run_count", 0))
+				var lines: Array[String] = []
+				for metric in [["best_completion_s", "최고"], ["average_completion_s", "평균"], ["total_completion_s", "누적"]]:
+					lines.append("%s 완주 시간 %.1f초" % [metric[1], float(stats.get(metric[0], 0.0))] if completed > 0 else "%s 시간 · 아직 기록 없음" % metric[1])
+				lines.append("같은 길이의 완주만 집계")
+				result.append({"id": str(count), "name": "%d스테이지 도전" % count, "open": true, "status": "완주 %d회" % completed, "lines": lines})
 		"records":
 			result.append({"name": "도전 이력", "open": true, "lines": ["총 도전 %d회" % int(summary.get("run_count", 0)), "완주 %d회" % int(summary.get("completed_run_count", 0)), "미완료 %d회" % int(summary.get("incomplete_run_count", 0)), "미완료에는 진행 중 도전도 포함"]})
 			for key in ["best_completion_s", "average_completion_s"]:
 				var seconds := float(summary.get(key, 0.0))
-				result.append({"name": "최고 완주" if key == "best_completion_s" else "평균 완주", "open": true, "lines": ["%.1f초" % seconds if seconds > 0 else "아직 완주 기록 없음", "로컬에 저장한 모든 완주 기준"]})
+				result.append({"name": "최고 완주" if key == "best_completion_s" else "평균 완주", "open": true, "lines": ["%.1f초" % seconds if seconds > 0 else "아직 완주 기록 없음", "모든 길이의 완주 기록 기준"]})
 		_:
 			result.assign([
 				{"name": "대장간", "open": not blueprints.is_empty(), "status": "무기·스킬 도감 언제든 조회", "lines": ["무기 설계도 %d/2" % blueprints.size(), "태엽 설계도 · 스킬 %d종" % PrototypeSkillRewards.SKILLS.size(), "등급 · 보조 효과 · 장착 상태"]},
