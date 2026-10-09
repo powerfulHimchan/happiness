@@ -2714,6 +2714,10 @@ func _draw_relic_rewards() -> void:
 			draw_colored_polygon(drop, Color("82dcec"))
 			draw_line(center + Vector2(-9, 9), center + Vector2(9, 9), Color("fff1cf"), 4, true)
 			draw_line(center + Vector2(0, 0), center + Vector2(0, 18), Color("fff1cf"), 4, true)
+		elif offer.id == PrototypeRelic.EMBER_ID:
+			var flame := PackedVector2Array([center + Vector2(0, -34), center + Vector2(23, 0), center + Vector2(15, 26), center + Vector2(-15, 26), center + Vector2(-23, 0)])
+			draw_colored_polygon(flame, Color("f28c52"))
+			draw_colored_polygon(PackedVector2Array([center + Vector2(0, -12), center + Vector2(11, 13), center + Vector2(0, 25), center + Vector2(-11, 13)]), Color("fff1a3"))
 		else:
 			draw_arc(center + Vector2(0, -12), 23, 0, TAU, 32, Color("82dcec"), 4, true)
 			draw_line(center + Vector2(0, -12), center + Vector2(0, -27), Color("fff1cf"), 3, true)

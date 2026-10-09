@@ -429,6 +429,10 @@ func skill_recharge_multiplier() -> float:
 	return PrototypeRelic.CLOCK_RECHARGE_MULTIPLIER if relic_state.get("id", "") == PrototypeRelic.CLOCK_ID and relic_state.get("used", false) == false else 1.0
 
 
+func relic_damage_multiplier() -> float:
+	return PrototypeRelic.EMBER_DAMAGE_MULTIPLIER if relic_state.get("id", "") == PrototypeRelic.EMBER_ID and relic_state.get("used", false) == false else 1.0
+
+
 func _try_phoenix_revival() -> bool:
 	if not damage_receiver.dead or relic_state.get("id", "") != PrototypeRelic.PHOENIX_ID or relic_state.used or relic_run_id.is_empty() \
 	or not phoenix_allowed.is_valid() or not phoenix_allowed.call():
@@ -479,7 +483,7 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind))
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier())
 
 
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
@@ -1036,6 +1040,7 @@ func _emit_metrics() -> void:
 		"potion_recipe": potion_recipe,
 		"potion_log": potion_log,
 		"skill_recharge_multiplier": skill_recharge_multiplier(),
+		"relic_damage_multiplier": relic_damage_multiplier(),
 		"relic_hud": PrototypeRelic.hud(relic_state),
 		"relic": relic_state.duplicate(),
 		"fall_count": fall_count,
