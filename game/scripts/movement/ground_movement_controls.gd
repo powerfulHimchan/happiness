@@ -2550,8 +2550,9 @@ func village_snapshot() -> Dictionary:
 		tabs = {"jobs": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08)), "abilities": Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08))}
 	if village_page in ["memories", "relics"]:
 		tabs = {"memories": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08)), "relics": Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08))}
-	if village_page in ["records", "history"]:
-		tabs = {"records": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08)), "history": Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08))}
+	if village_page in PrototypeVillageView.RECORD_TABS:
+		for i in PrototypeVillageView.RECORD_TABS.size():
+			tabs[PrototypeVillageView.RECORD_TABS[i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
 	if village_page in ["forge", "skills", "weapons"]:
 		for i in 3:
 			tabs[["forge", "weapons", "skills"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
@@ -2622,6 +2623,8 @@ func _draw_village() -> void:
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
 	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "세 경로의 지형·보너스·선택 조건을 비교하세요" if village_page == "atlas" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
+	if village_page == "record_lengths":
+		subtitle = "완주한 도전만 비교 · 이전 단일 스테이지 기록은 전체 통계에 포함"
 	if village_page == "history":
 		subtitle = "최근 도전 12개 · 시작 기록 순 · 이어하기는 한 도전으로 표시"
 	if village_page == "weapons":
