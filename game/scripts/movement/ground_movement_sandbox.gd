@@ -563,7 +563,7 @@ func _continue_stage(route: String) -> void:
 	feedback_controller.prepare_next_stage()
 	player.prepare_next_stage(TRACK_START)
 	ultimate_controller.finish_stage_effect()
-	for group in ["enemy_projectile", "bow_projectile"]:
+	for group in ["enemy_projectile", "bow_projectile", "sword_wave"]:
 		for projectile in get_tree().get_nodes_in_group(group):
 			projectile.free()
 	if route == "meadow":

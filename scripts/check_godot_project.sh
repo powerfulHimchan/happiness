@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp147_runtime_test.gd"
+  "$game_root/data/skills/sword_wave.tres"
+  "$game_root/scripts/combat/sword_wave.gd"
   "$game_root/tests/gp146_runtime_test.gd"
   "$game_root/tests/gp145_runtime_test.gd"
   "$game_root/data/skills/bow_homing.tres"
@@ -573,6 +576,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for wave_phase in seed resume finish legacy combat-right combat-left flows; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp147_runtime_test.gd -- "$wave_phase"
+  done
   for evasive_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp146_runtime_test.gd -- "$evasive_phase"
