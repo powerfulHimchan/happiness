@@ -97,7 +97,7 @@ func _run() -> void:
 				_press_potion(true)
 				for ignored in 20: controls._physics_process(0.01)
 				controls._handle_touch_released(7)
-				if not _check(player.potions_remaining == remaining and player.damage_receiver.health == 1 + ceili(player.damage_receiver.max_health * player.potion_heal_ratio()) and player.damage_receiver.barrier_health == 10, "별도 터치당 소분30%1개·누르고 있어도 중복 소비 없음"): return
+				if not _check(player.potions_remaining == remaining and player.damage_receiver.health == 1 + ceili(float(player.damage_receiver.max_health * 3) / 10.0) and player.damage_receiver.barrier_health == 10, "별도 터치당 소분30%1개·누르고 있어도 중복 소비 없음"): return
 			if not _check(weapons.checkpoint_snapshot() == timers and ultimate.gauge == gauge, "소분은 스킬 대기/필살기 독립"): return
 			if not _finish_to_boss() or not _check(store.load_checkpoint().player.potions_remaining == 0 and runner.stage_number == 5, "5단계 완주 대기·소진0개 저장"): return
 		"finish":
@@ -131,6 +131,7 @@ func _run() -> void:
 			sandbox._update_boss_legacy_status()
 			controls.begin_retry()
 			if not await _choose_earned("magic_barrier") or not await _choose_earned(RESTORATIVE_ID): return
+			if not _test_portioned_rounding(): return
 			if not await _test_restorative_combat(): return
 		_:
 			_check(false, "잘못된 검사 단계")
@@ -145,6 +146,16 @@ func _files() -> Dictionary:
 	for path in [GP149_SAVE, GP149_SAVE + ".bak", GP149_META, GP149_RECORD, GP149_BOOK]:
 		result[path] = FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
 	return result
+
+func _test_portioned_rounding() -> bool:
+	player.relic_state = {"id": PrototypeRelic.DEW_ID, "used": false}
+	for sample in [{"maximum": 100, "heal": 30}, {"maximum": 120, "heal": 36}, {"maximum": 101, "heal": 31}, {"maximum": 105, "heal": 32}]:
+		player.damage_receiver.max_health = sample.maximum
+		player.damage_receiver.health = 1
+		player.prepare_potions(PORTIONED_ID)
+		_press_potion()
+		if not _check(player.damage_receiver.health == 1 + sample.heal and player.potions_remaining == 2 and controls.movement_metrics.potion_heal_percent == 30, "소분20%+이슬10%는 정확한30%·정수 올림 경계·한 체력 과회복 없음"): return false
+	return true
 
 func _finish_to_boss() -> bool:
 	while not runner.awaiting_boss_choice():
