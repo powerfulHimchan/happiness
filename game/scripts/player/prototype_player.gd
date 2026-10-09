@@ -502,7 +502,9 @@ func use_recovery_potion() -> bool:
 	var barrier_before := damage_receiver.barrier_health
 	potions_remaining -= 1
 	var recipe := PrototypePotionRecipes.profile(potion_recipe)
-	apply_growth_health(0, ceili(damage_receiver.max_health * potion_heal_ratio()))
+	# 정수 백분율로 곱한 뒤 나눠 20%+10%의 소수 오차가 한 체력을 더 올리지 않게 한다.
+	var heal_percent := roundi(potion_heal_ratio() * 100)
+	apply_growth_health(0, ceili(float(damage_receiver.max_health * heal_percent) / 100.0))
 	recover_barrier(potion_barrier_recovery())
 	potion_log = "%s +%d · 남은 %d회" % [recipe.name, damage_receiver.health - before, potions_remaining]
 	if potion_barrier_recovery() > 0:

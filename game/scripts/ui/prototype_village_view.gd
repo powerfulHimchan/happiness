@@ -34,10 +34,10 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 			for id in PrototypePotionRecipes.IDS:
 				var recipe := PrototypePotionRecipes.profile(id)
 				var unlocked := PrototypePotionRecipes.available(id, memories)
-				var lines: Array[String] = ["최대 체력 %d%% 회복 · 정수 올림" % roundi(float(recipe.ratio) * 100), "도전당 %d개 · 스테이지 간 보존" % int(recipe.count), "두 번 나누어 회복" if id == PrototypePotionRecipes.BASIC else "한 번에 크게 회복", "다음 새 도전에 적용 · 이어하기 유지"]
+				var lines: Array[String] = ["최대 체력 %d%% 회복 · 정수 올림" % roundi(float(recipe.ratio) * 100), "도전당 %d개 · 스테이지 간 보존" % int(recipe.count), PrototypePotionRecipes.strategy(id), "다음 새 도전에 적용 · 이어하기 유지"]
 				if not unlocked:
-					lines[2] = "태엽 기사 구출로 약초사 정착"
-				result.append({"id": id, "name": recipe.name, "open": unlocked, "status": "다음 도전 조제 · 선택됨" if id == potion_recipe else "눌러 조제 선택" if unlocked else "잠김 · 보스 구출 필요", "lines": lines})
+					lines[2] = PrototypePotionRecipes.unlock_condition(id)
+				result.append({"id": id, "name": recipe.name, "open": unlocked, "status": "다음 도전 조제 · 선택됨" if id == potion_recipe else "눌러 조제 선택" if unlocked else "잠김 · 보스 파괴 필요" if id == PrototypePotionRecipes.PORTIONED else "잠김 · 보스 구출 필요", "lines": lines})
 		"jobs":
 			for job in PrototypeJobProgress.JOBS:
 				var discovered := bool(discovered_jobs.get(job.id, false))
@@ -77,7 +77,7 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				{"name": "기억의 쉼터", "open": not memories.is_empty(), "status": "기억 해금 · 유물 도감" if not memories.is_empty() else "유물 도감은 언제든 조회", "lines": ["영구 기억 %d/2" % memories.size(), "영구 기억 · 도전 중 유물", "효과 · 획득 조건 · 보유 상태"]},
 				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
 				{"name": "성장 도감", "open": true, "status": "직업 · 능력 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자 · 능력 도감", "조건 · 강화 가지 · 효과"]},
-				{"name": "약방", "open": bool(memories.get("clockwork_guard", false)), "status": "약초사 정착" if memories.get("clockwork_guard", false) else "보스 구출로 약초사 정착", "lines": ["기본 25% · 2개", "농축 40% · 1개", "다음 도전의 회복약 선택"]},
+				{"name": "약방", "open": bool(memories.get("clockwork_guard", false)) or bool(memories.get("core_echo", false)), "status": "약초사 정착" if memories.get("clockwork_guard", false) else "소분 조제 해금" if memories.get("core_echo", false) else "구출: 농축 · 파괴: 소분", "lines": ["기본 25% · 2개", "농축 40%·1개 / 소분 20%·3개", "다음 도전의 회복약 선택"]},
 				{"name": "지도 제작소", "open": true, "status": "언제든 경로 비교", "lines": ["답사한 경로 %d/3" % surveyed_routes.size(), "풀숲 · 바람 · 태엽 폐허", "지형 · 보너스 · 통과 기록"]},
 			])
 	return result

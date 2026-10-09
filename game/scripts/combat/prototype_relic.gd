@@ -11,7 +11,7 @@ const CLOCK_RECHARGE_MULTIPLIER := 1.25
 const OFFERS: Array[Dictionary] = [
 	{"id": PHOENIX_ID, "name": "불사조 깃털", "lines": ["치명적인 피해에서 체력 50%로 부활", "도전당 한 번 · 부활 후 1초 보호", "새 도전에는 가져갈 수 없습니다"]},
 	{"id": CLOCK_ID, "name": "시계추 조각", "lines": ["검·활 스킬 재사용 대기 -20%", "예: 10초 → 8초 · 보조 무기 포함", "새 도전에는 가져갈 수 없습니다"]},
-	{"id": DEW_ID, "name": "샘의 이슬", "lines": ["회복약 회복량 · 최대 체력 +10%p", "기본 25→35% · 농축 40→50%", "회복약 개수는 유지 · 도전 중 지속"]},
+	{"id": DEW_ID, "name": "샘의 이슬", "lines": ["회복약 회복량 · 최대 체력 +10%p", "기본35% · 농축50% · 소분30%", "회복약 개수는 유지 · 도전 중 지속"]},
 ]
 
 static func valid_id(id: String) -> bool:

@@ -2619,7 +2619,9 @@ func _draw_village() -> void:
 	if village_page == "abilities":
 		subtitle = ability_codex_message if not ability_codex_message.is_empty() else "발견 %d/%d · 직접 선택한 능력만 기록해요" % [discovered_abilities.size(), PrototypeAbilityCodex.definitions().size()]
 	_draw_text_centered(subtitle, Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, safe.size.y * 0.06)), 20, TEXT_COLOR)
-	var resident := potion_recipe_message if village_page == "apothecary" and not potion_recipe_message.is_empty() else "약초사 · 이어하기의 회복약은 바꾸지 않아요." if village_page == "apothecary" and snapshot.resident else "약초사 · 보스 구출 후 농축 조제를 열어 드려요." if village_page == "apothecary" else "정착한 태엽 기사 · 다음 여행도 무사히 돌아오세요." if snapshot.resident else "태엽 기사 · 보스 구출 후 마을에 정착합니다."
+	var resident := "정착한 태엽 기사 · 다음 여행도 무사히 돌아오세요." if snapshot.resident else "태엽 기사 · 보스 구출 후 마을에 정착합니다."
+	if village_page == "apothecary":
+		resident = potion_recipe_message if not potion_recipe_message.is_empty() else "선택은 다음 새 도전에 적용 · 이어하기는 저장한 조제 유지"
 	if village_page == "atlas":
 		resident = route_atlas_message if not route_atlas_message.is_empty() else "지도 제작자 · 실제로 통과한 길만 답사 기록에 남겨요."
 	if not snapshot.tabs.is_empty():
@@ -2648,7 +2650,7 @@ func _draw_village() -> void:
 		if village_page == "apothecary":
 			var bottle := rect.position + Vector2(rect.size.x * 0.86, rect.size.y * 0.20)
 			draw_rect(Rect2(bottle - Vector2(8, 24), Vector2(16, 9)), Color("ba9768"))
-			draw_style_box(_panel_style(Color("d47961") if card.id == PrototypePotionRecipes.BASIC else Color("cda54b")), Rect2(bottle - Vector2(16, 13), Vector2(32, 33)))
+			draw_style_box(_panel_style(Color("79bda0") if card.id == PrototypePotionRecipes.PORTIONED else Color("d47961") if card.id == PrototypePotionRecipes.BASIC else Color("cda54b")), Rect2(bottle - Vector2(16, 13), Vector2(32, 33)))
 	if village_page in ["abilities", "skills", "weapons"]:
 		_draw_button(snapshot.pager.previous, "이전", snapshot.codex_page > 0)
 		_draw_button(snapshot.pager.next, "다음", snapshot.codex_page < snapshot.codex_pages - 1)
