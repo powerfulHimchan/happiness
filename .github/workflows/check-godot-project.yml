@@ -1,0 +1,42 @@
+name: Check Godot Project
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "game/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "game/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  check-godot:
+    name: Check Godot project and runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Run Godot project and runtime checks
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ripgrep
+          mkdir -p "${RUNNER_TEMP}/godot-check"
+          curl -fsSL \
+            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" \
+            -o "${RUNNER_TEMP}/godot-check/godot.zip"
+          unzip -q "${RUNNER_TEMP}/godot-check/godot.zip" -d "${RUNNER_TEMP}/godot-check"
+          ln -s \
+            "${RUNNER_TEMP}/godot-check/Godot_v4.7.2-stable_linux.x86_64" \
+            "${RUNNER_TEMP}/godot-check/godot"
+          chmod +x "${RUNNER_TEMP}/godot-check/Godot_v4.7.2-stable_linux.x86_64"
+          PATH="${RUNNER_TEMP}/godot-check:${PATH}" bash ./scripts/check_godot_project.sh
