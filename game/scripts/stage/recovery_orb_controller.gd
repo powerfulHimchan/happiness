@@ -80,7 +80,7 @@ func _physics_process(delta: float) -> void:
 	_pulse_s += delta
 	_popup_s = maxf(0.0, _popup_s - delta)
 	for index in range(orbs.size() - 1, -1, -1):
-		if player.global_position.distance_to(orbs[index]) > PICKUP_RADIUS_PX:
+		if player.global_position.distance_to(orbs[index]) > player.recovery_orb_pickup_radius():
 			continue
 		var before := player.damage_receiver.health
 		if not player.collect_recovery_orb():
@@ -96,13 +96,19 @@ func _physics_process(delta: float) -> void:
 func _draw() -> void:
 	for point in orbs:
 		var center := point + Vector2(0, sin(_pulse_s * 4.0) * 4.0)
+		if player.orb_magnet_unlocked:
+			draw_arc(point, player.recovery_orb_pickup_radius(), 0.0, TAU, 64, Color(0.25, 0.75, 0.45, 0.18), 1.5, true)
 		draw_circle(center, 28.0, Color(0.15, 0.65, 0.35, 0.18))
 		draw_circle(center, 19.0, Color("28b46b"))
 		draw_arc(center, 20.0, 0.0, TAU, 32, Color("f3fff1"), 2.5, true)
 		draw_line(center + Vector2(-9, 0), center + Vector2(9, 0), Color.WHITE, 5.0)
 		draw_line(center + Vector2(0, -9), center + Vector2(0, 9), Color.WHITE, 5.0)
-		draw_string(ThemeDB.fallback_font, center + Vector2(-55, -34), "회복 +10%", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("174e34"))
+		draw_string(ThemeDB.fallback_font, center + Vector2(-55, -34), pickup_hint(), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("174e34"))
 	if _popup_s > 0.0:
 		var color := Color("176744")
 		color.a = minf(1.0, _popup_s * 3.0)
 		draw_string(ThemeDB.fallback_font, _popup_position + Vector2(0, -24 * (1.2 - _popup_s)), "체력 +%d" % _popup_amount, HORIZONTAL_ALIGNMENT_LEFT, -1, 25, color)
+
+
+func pickup_hint() -> String:
+	return "회복 +10%% · 자석 %.2fm" % (player.recovery_orb_pickup_radius() / PrototypePlayer.PIXELS_PER_METER) if player.orb_magnet_unlocked else "회복 +10%"

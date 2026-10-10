@@ -31,6 +31,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "victory_recovery", "title": "처치 회복", "category": "common", "lines": ["적 처치마다 최대 체력 2% 회복", "선택 이후 적용 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "evasive_barrier", "title": "회피 방벽", "category": "common", "lines": ["정확한 회피마다 방벽 5 회복", "회피당 한 번 · 방벽 최대치까지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
 	{"id": "restorative_barrier", "title": "회복 방벽", "category": "common", "lines": ["회복약 사용 시 방벽 10 회복", "실제 소비 시 · 방벽 최대치까지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
+	{"id": "orb_magnet", "title": "구슬 자석", "category": "common", "lines": ["회복 구슬 획득 거리 2배", "0.76m → 1.52m · 회복량 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 ]
 
 var level: int = 1
@@ -73,6 +74,7 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	player.set_orb_magnet_unlocked(false)
 	player.set_restorative_barrier_unlocked(false)
 	ultimate.time_echo_unlocked = false
 	player.set_nimble_evade_unlocked(false)
@@ -119,6 +121,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	total_experience = int(state.total_xp)
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
+	player.set_orb_magnet_unlocked(int(ranks.get("orb_magnet", 0)) == 1)
 	ultimate.time_echo_unlocked = int(ranks.get("time_echo", 0)) == 1
 	player.set_nimble_evade_unlocked(int(ranks.get("nimble_evade", 0)) == 1)
 	player.set_potion_pouch_unlocked(int(ranks.get("potion_pouch", 0)) == 1)
@@ -219,6 +222,7 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"orb_magnet": player.set_orb_magnet_unlocked(true)
 		"restorative_barrier": player.set_restorative_barrier_unlocked(true)
 		"time_echo": ultimate.time_echo_unlocked = true
 		"nimble_evade": player.set_nimble_evade_unlocked(true)
