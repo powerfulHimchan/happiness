@@ -50,6 +50,7 @@ var potions_remaining: int = POTIONS_PER_RUN
 var potion_log: String = "회복약 · 최대 체력 25% 회복"
 var potion_recipe: String = PrototypePotionRecipes.BASIC
 var potion_pouch_unlocked: bool = false
+var orb_magnet_unlocked: bool = false
 var relic_state: Dictionary = {}
 var relic_run_id: String = ""
 var phoenix_allowed: Callable
@@ -539,6 +540,15 @@ func set_potion_pouch_unlocked(enabled: bool, refill: bool = false) -> void:
 	_emit_metrics()
 
 
+func set_orb_magnet_unlocked(enabled: bool) -> void:
+	orb_magnet_unlocked = enabled
+	_emit_metrics()
+
+
+func recovery_orb_pickup_radius() -> float:
+	return RecoveryOrbController.PICKUP_RADIUS_PX * (2.0 if orb_magnet_unlocked else 1.0)
+
+
 func collect_recovery_orb() -> bool:
 	if _is_input_locked() or damage_receiver.health >= damage_receiver.max_health:
 		return false
@@ -580,6 +590,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	orb_magnet_unlocked = false
 	nimble_evade_unlocked = false
 	barrier_unlocked = false
 	fortified_barrier_unlocked = false
@@ -1034,6 +1045,8 @@ func _emit_metrics() -> void:
 		"invincibility_end_frame": _invincibility_end_frame,
 		"health": damage_receiver.health,
 		"max_health": damage_receiver.max_health,
+		"orb_magnet_unlocked": orb_magnet_unlocked,
+		"recovery_orb_pickup_radius_m": recovery_orb_pickup_radius() / PIXELS_PER_METER,
 		"potions_remaining": potions_remaining,
 		"potions_capacity": potions_capacity(),
 		"potion_heal_percent": roundi(potion_heal_ratio() * 100),
