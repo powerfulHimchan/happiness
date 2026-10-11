@@ -137,7 +137,7 @@ func register_precise_evade() -> void:
 		return
 	precise_evade_count += 1
 	precise_evade_registered.emit()
-	_add_gauge(PRECISE_EVADE_GAIN, "정확한 회피")
+	_add_gauge(combat_gauge_amount(PRECISE_EVADE_GAIN), "정확한 회피")
 
 
 func finish_stage_effect() -> void:
@@ -153,7 +153,7 @@ func grant_stage_gauge(amount: int) -> void:
 
 
 func grant_defeat_gauge() -> void:
-	_add_gauge(DEFEAT_GAIN, "시간 수집 · 처치")
+	_add_gauge(combat_gauge_amount(DEFEAT_GAIN), "시간 수집 · 처치")
 
 
 func reset_ultimate() -> void:
@@ -181,10 +181,14 @@ func force_emit_metrics() -> void:
 func _on_weapon_hit(is_skill: bool, _target: PrototypeTarget, _damage: int) -> void:
 	if is_skill:
 		skill_gauge_gain_count += 1
-		_add_gauge(SKILL_HIT_GAIN, "스킬 적중")
+		_add_gauge(combat_gauge_amount(SKILL_HIT_GAIN), "스킬 적중")
 	else:
 		basic_gauge_gain_count += 1
-		_add_gauge(BASIC_HIT_GAIN, "기본 공격 적중")
+		_add_gauge(combat_gauge_amount(BASIC_HIT_GAIN), "기본 공격 적중")
+
+
+func combat_gauge_amount(base_amount: int) -> int:
+	return roundi(base_amount * player.combat_gauge_multiplier())
 
 
 func _add_gauge(amount: int, reason: String) -> void:
@@ -221,6 +225,10 @@ func _emit_metrics() -> void:
 		"ultimate_selected_id": selected_profile.get("id", ""),
 		"ultimate_burst_hits": last_burst_hits,
 		"ultimate_gauge": gauge,
+		"ultimate_basic_gain": combat_gauge_amount(BASIC_HIT_GAIN),
+		"ultimate_skill_gain": combat_gauge_amount(SKILL_HIT_GAIN),
+		"ultimate_evade_gain": combat_gauge_amount(PRECISE_EVADE_GAIN),
+		"ultimate_defeat_gain": combat_gauge_amount(DEFEAT_GAIN),
 		"ultimate_gauge_ratio": float(gauge) / float(MAX_GAUGE),
 		"ultimate_ready": gauge >= MAX_GAUGE and not _active,
 		"ultimate_active": _active,

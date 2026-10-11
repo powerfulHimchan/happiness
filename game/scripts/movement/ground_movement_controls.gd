@@ -1803,7 +1803,7 @@ func _draw_header() -> void:
 func _ultimate_hud_label() -> String:
 	var label := "%s  %s" % [String(movement_metrics.get("ultimate_name", "새벽의 틈")), "발동 중" if bool(movement_metrics.get("ultimate_active", false)) else "%d%%" % int(movement_metrics.get("ultimate_gauge", 0))]
 	if bool(movement_metrics.get("growth_run_active", false)) and int(movement_metrics.get("growth_ranks", {}).get("time_collector", 0)) == 1:
-		label += " · 처치 +%d" % UltimateController.DEFEAT_GAIN
+		label += " · 처치 +%d" % int(movement_metrics.get("ultimate_defeat_gain", UltimateController.DEFEAT_GAIN))
 	return label
 
 
@@ -2731,6 +2731,12 @@ func _draw_relic_rewards() -> void:
 			draw_colored_polygon(drop, Color("82dcec"))
 			draw_line(center + Vector2(-9, 9), center + Vector2(9, 9), Color("fff1cf"), 4, true)
 			draw_line(center + Vector2(0, 0), center + Vector2(0, 18), Color("fff1cf"), 4, true)
+		elif offer.id == PrototypeRelic.HOURGLASS_ID:
+			var glass := PackedVector2Array([center + Vector2(-20, -28), center + Vector2(20, -28), center + Vector2(5, 0), center + Vector2(20, 28), center + Vector2(-20, 28), center + Vector2(-5, 0)])
+			draw_colored_polygon(glass, Color("82dcec"))
+			draw_colored_polygon(PackedVector2Array([center + Vector2(-12, 21), center + Vector2(12, 21), center + Vector2(0, 5)]), Color("ffd166"))
+			draw_line(center + Vector2(-24, -29), center + Vector2(24, -29), Color("fff1cf"), 4, true)
+			draw_line(center + Vector2(-24, 29), center + Vector2(24, 29), Color("fff1cf"), 4, true)
 		elif offer.id == PrototypeRelic.EMBER_ID:
 			var flame := PackedVector2Array([center + Vector2(0, -34), center + Vector2(23, 0), center + Vector2(15, 26), center + Vector2(-15, 26), center + Vector2(-23, 0)])
 			draw_colored_polygon(flame, Color("f28c52"))

@@ -784,10 +784,12 @@ func _claim_relic_reward(id: String = PrototypeRelic.PHOENIX_ID) -> bool:
 	if _save_checkpoint(stage_runner.current_metrics()) != OK:
 		player.relic_state = {}
 		weapon_controller.force_emit_metrics()
+		ultimate_controller.force_emit_metrics()
 		player.apply_growth_health(0, 0)
 		return false
 	player.apply_growth_health(0, 0)
 	weapon_controller.force_emit_metrics()
+	ultimate_controller.force_emit_metrics()
 	_show_intermission_routes()
 	return true
 
@@ -864,7 +866,7 @@ func _capture_run_build() -> Dictionary:
 			"orb_heal": player.recovery_orb_heal_amount(),
 		},
 		"recipe": player.potion_recipe,
-		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile)},
+		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile), "basic_gain": ultimate_controller.combat_gauge_amount(UltimateController.BASIC_HIT_GAIN), "skill_gain": ultimate_controller.combat_gauge_amount(UltimateController.SKILL_HIT_GAIN), "evade_gain": ultimate_controller.combat_gauge_amount(UltimateController.PRECISE_EVADE_GAIN), "defeat_gain": ultimate_controller.combat_gauge_amount(UltimateController.DEFEAT_GAIN)},
 		"relic": player.relic_state.duplicate(), "memory": player.memory_id, "legacy": player.boss_legacy.get("choice", ""),
 	}
 
