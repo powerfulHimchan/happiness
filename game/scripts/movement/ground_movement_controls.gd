@@ -156,6 +156,7 @@ var village_page: String = "village"
 var ability_codex_page: int = 0
 var skill_codex_page: int = 0
 var weapon_codex_page: int = 0
+var relic_codex_page: int = 0
 var record_history_page: int = 0
 var discovered_abilities: Dictionary = {}
 var ability_codex_message: String = ""
@@ -241,6 +242,9 @@ var relic_offer_available: bool = false
 var relic_reward_open_rect: Rect2
 var relic_reward_card_rect: Rect2
 var relic_reward_card_rects: Array[Rect2] = []
+var relic_reward_page: int = 0
+var relic_reward_previous_rect: Rect2
+var relic_reward_next_rect: Rect2
 var selected_relic_offer: int = 0
 var relic_reward_confirm_rect: Rect2
 var relic_reward_cancel_rect: Rect2
@@ -1242,10 +1246,20 @@ func _handle_screen_touch(position: Vector2) -> void:
 		_refresh_relic_reward_layout()
 		for i in relic_reward_card_rects.size():
 			if relic_reward_card_rects[i].has_point(position):
-				selected_relic_offer = i
+				selected_relic_offer = relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE + i
 				queue_redraw()
 				return
-		if relic_reward_cancel_rect.has_point(position):
+		if relic_reward_previous_rect.has_point(position):
+			if relic_reward_page == 0: return
+			relic_reward_page = maxi(0, relic_reward_page - 1)
+			selected_relic_offer = relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE
+			queue_redraw()
+		elif relic_reward_next_rect.has_point(position):
+			if relic_reward_page == relic_reward_pages() - 1: return
+			relic_reward_page = mini(relic_reward_pages() - 1, relic_reward_page + 1)
+			selected_relic_offer = relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE
+			queue_redraw()
+		elif relic_reward_cancel_rect.has_point(position):
 			show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, stage_route_options)
 		elif relic_reward_confirm_rect.has_point(position):
 			relic_reward_selected.emit(String(PrototypeRelic.OFFERS[selected_relic_offer].id))
@@ -1307,6 +1321,7 @@ func _handle_screen_touch(position: Vector2) -> void:
 		if relic_offer_available and relic_reward_open_rect.has_point(position):
 			release_all_inputs()
 			selected_relic_offer = 0
+			relic_reward_page = 0
 			screen_mode = ScreenMode.RELIC_REWARD
 			_refresh_relic_reward_layout()
 			queue_redraw()
@@ -2539,6 +2554,10 @@ func village_snapshot() -> Dictionary:
 	weapon_codex_page = clampi(weapon_codex_page, 0, weapon_pages - 1)
 	if village_page == "weapons":
 		cards = all_weapons.slice(weapon_codex_page * PrototypeWeaponRewards.CODEX_PAGE_SIZE, (weapon_codex_page + 1) * PrototypeWeaponRewards.CODEX_PAGE_SIZE)
+	var relic_pages := ceili(float(PrototypeRelic.OFFERS.size()) / PrototypeRelic.CODEX_PAGE_SIZE)
+	relic_codex_page = clampi(relic_codex_page, 0, relic_pages - 1)
+	if village_page == "relics":
+		cards = cards.slice(relic_codex_page * PrototypeRelic.CODEX_PAGE_SIZE, (relic_codex_page + 1) * PrototypeRelic.CODEX_PAGE_SIZE)
 	var history_pages := maxi(1, ceili(float(test_record_summary.get("recent_runs", []).size()) / PrototypeVillageView.HISTORY_PAGE_SIZE))
 	record_history_page = clampi(record_history_page, 0, history_pages - 1)
 	if village_page == "history":
@@ -2556,9 +2575,9 @@ func village_snapshot() -> Dictionary:
 	if village_page in ["forge", "skills", "weapons"]:
 		for i in 3:
 			tabs[["forge", "weapons", "skills"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
-	if village_page in ["abilities", "skills", "weapons", "history"]:
+	if village_page in ["abilities", "skills", "weapons", "history", "relics"]:
 		pager = {"previous": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06)), "next": Rect2(safe.position + Vector2(safe.size.x * 0.71, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06))}
-	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(safe, cards.size(), checkpoint_available), "tabs": tabs, "pager": pager, "ability_page": ability_codex_page, "ability_pages": pages, "skill_page": skill_codex_page, "skill_pages": skill_pages, "weapon_page": weapon_codex_page, "weapon_pages": weapon_pages, "history_page": record_history_page, "history_pages": history_pages, "codex_page": record_history_page if village_page == "history" else weapon_codex_page if village_page == "weapons" else skill_codex_page if village_page == "skills" else ability_codex_page, "codex_pages": history_pages if village_page == "history" else weapon_pages if village_page == "weapons" else skill_pages if village_page == "skills" else pages}
+	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(safe, cards.size(), checkpoint_available), "tabs": tabs, "pager": pager, "ability_page": ability_codex_page, "ability_pages": pages, "skill_page": skill_codex_page, "skill_pages": skill_pages, "weapon_page": weapon_codex_page, "weapon_pages": weapon_pages, "history_page": record_history_page, "history_pages": history_pages, "relic_page": relic_codex_page, "relic_pages": relic_pages, "codex_page": relic_codex_page if village_page == "relics" else record_history_page if village_page == "history" else weapon_codex_page if village_page == "weapons" else skill_codex_page if village_page == "skills" else ability_codex_page, "codex_pages": relic_pages if village_page == "relics" else history_pages if village_page == "history" else weapon_pages if village_page == "weapons" else skill_pages if village_page == "skills" else pages}
 
 
 func _handle_village_touch(position: Vector2) -> void:
@@ -2581,6 +2600,7 @@ func _handle_village_touch(position: Vector2) -> void:
 				ability_codex_page = 0
 				skill_codex_page = 0
 				weapon_codex_page = 0
+				relic_codex_page = 0
 				record_history_page = 0
 				break
 		if village_page == "abilities" and not snapshot.pager.is_empty():
@@ -2592,6 +2612,9 @@ func _handle_village_touch(position: Vector2) -> void:
 		if village_page == "weapons" and not snapshot.pager.is_empty():
 			if snapshot.pager.previous.has_point(position): weapon_codex_page = maxi(0, weapon_codex_page - 1)
 			elif snapshot.pager.next.has_point(position): weapon_codex_page = mini(snapshot.weapon_pages - 1, weapon_codex_page + 1)
+		if village_page == "relics" and not snapshot.pager.is_empty():
+			if snapshot.pager.previous.has_point(position): relic_codex_page = maxi(0, relic_codex_page - 1)
+			elif snapshot.pager.next.has_point(position): relic_codex_page = mini(snapshot.relic_pages - 1, relic_codex_page + 1)
 		if village_page == "history" and not snapshot.pager.is_empty():
 			if snapshot.pager.previous.has_point(position): record_history_page = maxi(0, record_history_page - 1)
 			elif snapshot.pager.next.has_point(position): record_history_page = mini(snapshot.history_pages - 1, record_history_page + 1)
@@ -2668,7 +2691,7 @@ func _draw_village() -> void:
 			var bottle := rect.position + Vector2(rect.size.x * 0.86, rect.size.y * 0.20)
 			draw_rect(Rect2(bottle - Vector2(8, 24), Vector2(16, 9)), Color("ba9768"))
 			draw_style_box(_panel_style(Color("79bda0") if card.id == PrototypePotionRecipes.PORTIONED else Color("d47961") if card.id == PrototypePotionRecipes.BASIC else Color("cda54b")), Rect2(bottle - Vector2(16, 13), Vector2(32, 33)))
-	if village_page in ["abilities", "skills", "weapons", "history"]:
+	if village_page in ["abilities", "skills", "weapons", "history", "relics"]:
 		_draw_button(snapshot.pager.previous, "이전", snapshot.codex_page > 0)
 		_draw_button(snapshot.pager.next, "다음", snapshot.codex_page < snapshot.codex_pages - 1)
 		_draw_village_text("%d / %d" % [snapshot.codex_page + 1, snapshot.codex_pages], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.78), Vector2(safe.size.x * 0.40, safe.size.y * 0.06)), 19, TEXT_COLOR)
@@ -2697,15 +2720,22 @@ func update_potion_recipe_status(id: String, message: String = "") -> void:
 	queue_redraw()
 
 
+func relic_reward_pages() -> int:
+	return ceili(float(PrototypeRelic.OFFERS.size()) / PrototypeRelic.REWARD_PAGE_SIZE)
+
+
 func _refresh_relic_reward_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	relic_reward_card_rects.clear()
-	var count := PrototypeRelic.OFFERS.size()
+	relic_reward_page = clampi(relic_reward_page, 0, relic_reward_pages() - 1)
+	var count := mini(PrototypeRelic.REWARD_PAGE_SIZE, PrototypeRelic.OFFERS.size() - relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE)
 	var gap := safe.size.x * 0.03
 	var card_width := (safe.size.x * 0.90 - gap * (count - 1)) / count
 	for i in count:
 		relic_reward_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (card_width + gap), safe.size.y * 0.21), Vector2(card_width, safe.size.y * 0.47)))
 	relic_reward_card_rect = relic_reward_card_rects[0]
+	relic_reward_previous_rect = Rect2(safe.position + Vector2(safe.size.x * 0.07, safe.size.y * 0.71), Vector2(safe.size.x * 0.20, safe.size.y * 0.06))
+	relic_reward_next_rect = Rect2(safe.position + Vector2(safe.size.x * 0.73, safe.size.y * 0.71), relic_reward_previous_rect.size)
 	var width := safe.size.x * 0.40
 	relic_reward_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.07, safe.size.y * 0.80), Vector2(width, safe.size.y * 0.09))
 	relic_reward_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.80), relic_reward_cancel_rect.size)
@@ -2716,10 +2746,11 @@ func _draw_relic_rewards() -> void:
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.97), true)
 	_draw_text_centered("유물 선택 · 이번 도전에 하나만 획득", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 50)), 30, ACTIVE_COLOR)
-	for i in PrototypeRelic.OFFERS.size():
-		var offer: Dictionary = PrototypeRelic.OFFERS[i]
+	for i in relic_reward_card_rects.size():
+		var offer_index := relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE + i
+		var offer: Dictionary = PrototypeRelic.OFFERS[offer_index]
 		var rect: Rect2 = relic_reward_card_rects[i]
-		draw_style_box(_panel_style(Color("365d68") if selected_relic_offer == i else PANEL_COLOR), rect)
+		draw_style_box(_panel_style(Color("365d68") if selected_relic_offer == offer_index else PANEL_COLOR), rect)
 		_draw_village_text("희귀 · " + String(offer.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.07), Vector2(rect.size.x - 24, 42)), 28, Color("ffca78"))
 		var center := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.37)
 		if offer.id == PrototypeRelic.PHOENIX_ID:
@@ -2741,6 +2772,8 @@ func _draw_relic_rewards() -> void:
 			var flame := PackedVector2Array([center + Vector2(0, -34), center + Vector2(23, 0), center + Vector2(15, 26), center + Vector2(-15, 26), center + Vector2(-23, 0)])
 			draw_colored_polygon(flame, Color("f28c52"))
 			draw_colored_polygon(PackedVector2Array([center + Vector2(0, -12), center + Vector2(11, 13), center + Vector2(0, 25), center + Vector2(-11, 13)]), Color("fff1a3"))
+		elif offer.id in [PrototypeRelic.SEAL_ID, PrototypeRelic.WIND_ID, PrototypeRelic.SEED_ID, PrototypeRelic.DUEL_ID]:
+			_draw_new_relic_icon(String(offer.id), center)
 		else:
 			draw_arc(center + Vector2(0, -12), 23, 0, TAU, 32, Color("82dcec"), 4, true)
 			draw_line(center + Vector2(0, -12), center + Vector2(0, -27), Color("fff1cf"), 3, true)
@@ -2749,10 +2782,31 @@ func _draw_relic_rewards() -> void:
 			draw_circle(center + Vector2(10, 40), 7, Color("ffd166"))
 		for j in offer.lines.size():
 			_draw_village_text(String(offer.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.57 + j * 0.12)), Vector2(rect.size.x - 24, 30)), 19, TEXT_COLOR)
+	_draw_button(relic_reward_previous_rect, "이전", relic_reward_page > 0)
+	_draw_button(relic_reward_next_rect, "다음", relic_reward_page < relic_reward_pages() - 1)
+	_draw_village_text("%d / %d" % [relic_reward_page + 1, relic_reward_pages()], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.71), Vector2(safe.size.x * 0.40, safe.size.y * 0.06)), 19, TEXT_COLOR)
 	_draw_button(relic_reward_cancel_rect, "나중에 선택", false)
 	_draw_button(relic_reward_confirm_rect, String(PrototypeRelic.OFFERS[selected_relic_offer].name) + " 획득", true)
 	if not checkpoint_message.is_empty():
 		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.92), Vector2(safe.size.x, 28)), 16, WAIT_COLOR)
+
+
+func _draw_new_relic_icon(id: String, center: Vector2) -> void:
+	match id:
+		PrototypeRelic.SEAL_ID:
+			draw_colored_polygon(PackedVector2Array([center + Vector2(-23, -28), center + Vector2(23, -28), center + Vector2(20, 10), center + Vector2(0, 32), center + Vector2(-20, 10)]), Color("82dcec"))
+			draw_line(center + Vector2(0, -18), center + Vector2(0, 19), Color("fff1cf"), 4, true)
+		PrototypeRelic.WIND_ID:
+			for offset in [-16, 0, 16]:
+				draw_arc(center + Vector2(0, offset), 22, -PI * 0.8, PI * 0.25, 24, Color("82dcec"), 4, true)
+		PrototypeRelic.SEED_ID:
+			draw_line(center + Vector2(0, 30), center + Vector2(0, -15), Color("a0dc86"), 4, true)
+			draw_colored_polygon(PackedVector2Array([center, center + Vector2(-26, -25), center + Vector2(-28, -2)]), Color("a0dc86"))
+			draw_colored_polygon(PackedVector2Array([center + Vector2(0, -8), center + Vector2(26, -33), center + Vector2(28, -10)]), Color("a0dc86"))
+		PrototypeRelic.DUEL_ID:
+			for direction in [-1, 1]:
+				draw_line(center + Vector2(-22 * direction, 28), center + Vector2(22 * direction, -28), Color("fff1cf"), 5, true)
+				draw_line(center + Vector2(-25 * direction, 8), center + Vector2(-5 * direction, 24), Color("ffd166"), 4, true)
 
 
 func update_skill_reward_status(loadout: Dictionary, claimed: bool) -> void:

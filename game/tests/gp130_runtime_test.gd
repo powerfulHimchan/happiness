@@ -115,25 +115,29 @@ func _test_village_codex(expected_id: String, used: bool) -> bool:
 		_tap(controls.village_snapshot().tabs.relics.get_center())
 		if not _check(controls.village_page == "relics", "실제 유물 도감 탭 터치"): return false
 		var snapshot: Dictionary = controls.village_snapshot()
-		if not _check(snapshot.cards.size() == PrototypeRelic.OFFERS.size(), "전체 유물 원본 카드 표시"): return false
-		var rects: Array = snapshot.layout.cards.duplicate()
-		rects.append_array(snapshot.tabs.values())
-		rects.append_array([snapshot.layout.back, snapshot.layout.start])
-		if controls.checkpoint_available: rects.append(snapshot.layout["continue"])
-		var safe: Rect2 = controls.layout_snapshot().safe
-		for i in rects.size():
-			if not _check(safe.encloses(rects[i]), "두 화면비 카드·탭·이동 버튼 안전 영역"): return false
-			for j in range(i + 1, rects.size()):
-				if not _check(not rects[i].intersects(rects[j]), "전체 입력 영역 비중첩"): return false
-		for i in snapshot.cards.size():
-			var card: Dictionary = snapshot.cards[i]
-			var source: Dictionary = PrototypeRelic.OFFERS[i]
-			var owned: bool = String(card.id) == expected_id
-			var expected_status := "이번 도전 · 사용 완료" if owned and used else "이번 도전 · 보유 중" if owned else "미보유 · 효과 미리 보기"
-			if not _check(card.id == source.id and card.name == source.name and card.lines.slice(0, 3) == source.lines and card.lines.size() == 5 and card.lines[3].contains("두 번째 정예") and card.open == owned and card.status == expected_status, "실제 보상 원본 효과·조건·미보유/보유/사용 완료 표시"): return false
-			_tap(snapshot.layout.cards[i].get_center())
-		controls.queue_redraw()
-		await process_frame
+		for page in snapshot.relic_pages:
+			snapshot = controls.village_snapshot()
+			if not _check(snapshot.cards.size() == mini(PrototypeRelic.CODEX_PAGE_SIZE, PrototypeRelic.OFFERS.size() - page * PrototypeRelic.CODEX_PAGE_SIZE), "전체 유물 원본 카드 표시"): return false
+			var rects: Array = snapshot.layout.cards.duplicate()
+			rects.append_array(snapshot.tabs.values())
+			rects.append_array(snapshot.pager.values())
+			rects.append_array([snapshot.layout.back, snapshot.layout.start])
+			if controls.checkpoint_available: rects.append(snapshot.layout["continue"])
+			var safe: Rect2 = controls.layout_snapshot().safe
+			for i in rects.size():
+				if not _check(safe.encloses(rects[i]), "두 화면비 카드·탭·이동 버튼 안전 영역"): return false
+				for j in range(i + 1, rects.size()):
+					if not _check(not rects[i].intersects(rects[j]), "전체 입력 영역 비중첩"): return false
+			for i in snapshot.cards.size():
+				var card: Dictionary = snapshot.cards[i]
+				var source: Dictionary = PrototypeRelic.OFFERS[page * PrototypeRelic.CODEX_PAGE_SIZE + i]
+				var owned: bool = String(card.id) == expected_id
+				var expected_status := "이번 도전 · 사용 완료" if owned and used else "이번 도전 · 보유 중" if owned else "미보유 · 효과 미리 보기"
+				if not _check(card.id == source.id and card.name == source.name and card.lines.slice(0, 3) == source.lines and card.lines.size() == 5 and card.lines[3].contains("두 번째 정예") and card.open == owned and card.status == expected_status, "실제 보상 원본 효과·조건·미보유/보유/사용 완료 표시"): return false
+				_tap(snapshot.layout.cards[i].get_center())
+			controls.queue_redraw()
+			await process_frame
+			_tap(snapshot.pager.next.get_center())
 		_tap(snapshot.tabs.memories.get_center())
 		if not _check(controls.village_page == "memories" and controls.village_snapshot().cards.size() == 2, "영구 기억 탭 기존 두 기억 유지"): return false
 		controls.queue_redraw()

@@ -190,27 +190,32 @@ func _test_dew_combat() -> bool:
 func _test_dew_text() -> bool:
 	for dimensions in [Vector2(1280, 720), Vector2(2400, 1080)]:
 		controls.size = dimensions
-		controls._refresh_relic_reward_layout()
-		for i in PrototypeRelic.OFFERS.size():
-			var rect: Rect2 = controls.relic_reward_card_rects[i]
-			for j in PrototypeRelic.OFFERS[i].lines.size():
-				var line: String = PrototypeRelic.OFFERS[i].lines[j]
-				var line_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.57 + j * 0.12)), Vector2(rect.size.x - 24, 30))
-				var font_size := 19
-				while font_size > 10 and ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > line_rect.size.x: font_size -= 1
-				if not _check(rect.encloses(line_rect) and ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= line_rect.size.x, "세 후보 설명 줄 높이/글자 폭·두 화면비"): return false
+		for page in controls.relic_reward_pages():
+			controls.relic_reward_page = page
+			controls._refresh_relic_reward_layout()
+			for i in controls.relic_reward_card_rects.size():
+				var rect: Rect2 = controls.relic_reward_card_rects[i]
+				for j in PrototypeRelic.OFFERS[page * PrototypeRelic.REWARD_PAGE_SIZE + i].lines.size():
+					var line: String = PrototypeRelic.OFFERS[page * PrototypeRelic.REWARD_PAGE_SIZE + i].lines[j]
+					var line_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.57 + j * 0.12)), Vector2(rect.size.x - 24, 30))
+					var font_size := 19
+					while font_size > 10 and ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > line_rect.size.x: font_size -= 1
+					if not _check(rect.encloses(line_rect) and ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= line_rect.size.x, "세 후보 설명 줄 높이/글자 폭·두 화면비"): return false
+		controls.relic_reward_page = 0
 		controls.show_main_screen()
 		controls.show_village()
 		controls.village_page = "relics"
-		var snapshot: Dictionary = controls.village_snapshot()
-		for i in snapshot.cards.size():
-			var rect: Rect2 = snapshot.layout.cards[i]
-			for j in snapshot.cards[i].lines.size():
-				var line: String = snapshot.cards[i].lines[j]
-				var line_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.44 + j * 0.08)), Vector2(rect.size.x - 24, rect.size.y * 0.08))
-				var font_size := mini(18, maxi(12, int(line_rect.size.y * 0.8)))
-				while font_size > 10 and ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > line_rect.size.x: font_size -= 1
-				if not _check(rect.encloses(line_rect) and ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= line_rect.size.x, "세 유물 도감 설명 실제 축소 규칙·카드 내 포함"): return false
+		for page in ceili(float(PrototypeRelic.OFFERS.size()) / PrototypeRelic.CODEX_PAGE_SIZE):
+			controls.relic_codex_page = page
+			var snapshot: Dictionary = controls.village_snapshot()
+			for i in snapshot.cards.size():
+				var rect: Rect2 = snapshot.layout.cards[i]
+				for j in snapshot.cards[i].lines.size():
+					var line: String = snapshot.cards[i].lines[j]
+					var line_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.44 + j * 0.08)), Vector2(rect.size.x - 24, rect.size.y * 0.08))
+					var font_size := mini(18, maxi(12, int(line_rect.size.y * 0.8)))
+					while font_size > 10 and ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > line_rect.size.x: font_size -= 1
+					if not _check(rect.encloses(line_rect) and ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= line_rect.size.x, "세 유물 도감 설명 실제 축소 규칙·카드 내 포함"): return false
 		controls.queue_redraw()
 		await process_frame
 	return true

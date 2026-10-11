@@ -6,6 +6,16 @@ const CLOCK_ID := "clock_fragment"
 const DEW_ID := "spring_dew"
 const EMBER_ID := "dawn_ember"
 const HOURGLASS_ID := "hourglass"
+const SEAL_ID := "guardian_seal"
+const WIND_ID := "wind_knot"
+const SEED_ID := "vital_seed"
+const DUEL_ID := "duelist_emblem"
+const REWARD_PAGE_SIZE := 5
+const CODEX_PAGE_SIZE := 3
+const SEAL_DAMAGE_MULTIPLIER := 0.90
+const WIND_COOLDOWN_MULTIPLIER := 0.80
+const SEED_ORB_BONUS := 5
+const DUEL_BASIC_MULTIPLIER := 1.20
 const HOURGLASS_GAUGE_MULTIPLIER := 1.25
 const EMBER_DAMAGE_MULTIPLIER := 1.10
 const DEW_POTION_BONUS := 0.10
@@ -18,10 +28,14 @@ const OFFERS: Array[Dictionary] = [
 	{"id": DEW_ID, "name": "샘의 이슬", "lines": ["회복약 · 최대 체력 +10%p", "기본35% · 농축50% · 소분30%", "개수 유지 · 도전 중 지속"]},
 	{"id": EMBER_ID, "name": "여명의 불씨", "lines": ["검·활 피해1.1배 · 반올림", "기본 공격·스킬·공격 필살기", "체력·게이지·대기 유지"]},
 	{"id": HOURGLASS_ID, "name": "모래시계", "lines": ["전투 게이지 획득 +25%", "적중·정확 회피·시간 수집", "경로 보상 유지 · 최종 반올림"]},
+	{"id": SEAL_ID, "name": "수호의 인장", "lines": ["받는 전투 피해 -10%", "방벽 흡수 전 · 최종 반올림", "최소1 피해 · 낙하 피해 유지"]},
+	{"id": WIND_ID, "name": "바람의 매듭", "lines": ["지상 회피 대기 -20%", "민첩한 회피와 곱연산", "무적·동작·공중 대시 유지"]},
+	{"id": SEED_ID, "name": "생명의 씨앗", "lines": ["회복 구슬 · 체력 +5%p", "기본15% · 구슬 강화25%", "드롭·거리·회복약 유지"]},
+	{"id": DUEL_ID, "name": "결투의 문장", "lines": ["검·활 기본 공격1.2배", "성장·장비 뒤 최종 반올림", "스킬·필살기·공격 속도 유지"]},
 ]
 
 static func valid_id(id: String) -> bool:
-	return id in [PHOENIX_ID, CLOCK_ID, DEW_ID, EMBER_ID, HOURGLASS_ID]
+	return OFFERS.any(func(offer: Dictionary) -> bool: return offer.id == id)
 
 static func valid_state(value: Variant) -> bool:
 	return value is Dictionary and (value.is_empty() or (value.size() == 2 and value.get("id") is String and valid_id(value.id) and value.get("used") is bool and (value.id == PHOENIX_ID or not value.used)))
@@ -29,6 +43,10 @@ static func valid_state(value: Variant) -> bool:
 static func hud(state: Dictionary) -> String:
 	if state.is_empty():
 		return "유물 없음"
+	if state.id == SEAL_ID: return "수호의 인장 · 받는 전투 피해 -10%"
+	if state.id == WIND_ID: return "바람의 매듭 · 지상 회피 대기 -20%"
+	if state.id == SEED_ID: return "생명의 씨앗 · 회복 구슬 +5%p"
+	if state.id == DUEL_ID: return "결투의 문장 · 기본 공격 1.2배"
 	if state.id == HOURGLASS_ID:
 		return "모래시계 · 전투 게이지 +25%"
 	if state.id == EMBER_ID:
@@ -46,7 +64,13 @@ static func codex_cards(state: Dictionary) -> Array[Dictionary]:
 		var lines: Array[String] = []
 		for line in offer.lines: lines.append(String(line))
 		lines.append("조건: 두 번째 정예 뒤 선택")
-		lines.append("기본5 · 스킬10 · 회피15" if offer.id == HOURGLASS_ID else "성장·장비 뒤 적용 · 감속 유지" if offer.id == EMBER_ID else "스킬만 적용 · 공격/회피 유지" if offer.id == CLOCK_ID else "구슬·휴식·흡수 회복 유지" if offer.id == DEW_ID else "소비한 깃털은 재부활 불가")
+		var detail: String = {
+			HOURGLASS_ID: "기본5 · 스킬10 · 회피15", EMBER_ID: "성장·장비 뒤 적용 · 감속 유지",
+			CLOCK_ID: "스킬만 적용 · 공격/회피 유지", DEW_ID: "구슬·휴식·흡수 회복 유지",
+			SEAL_ID: "파괴 핵 반영 후 적용 · 경직 유지", WIND_ID: "획득 전 회피의 남은 대기 유지",
+			SEED_ID: "현재 최대 체력 기준 · 소수 올림", DUEL_ID: "보조 무기도 적용 · 근접 활 보정 유지",
+		}.get(offer.id, "소비한 깃털은 재부활 불가")
+		lines.append(detail)
 		var status := "이번 도전 · 사용 완료" if owned and bool(state.get("used", false)) else "이번 도전 · 보유 중" if owned else "미보유 · 효과 미리 보기"
 		result.append({"id": offer.id, "name": offer.name, "open": owned, "status": status, "lines": lines})
 	return result
