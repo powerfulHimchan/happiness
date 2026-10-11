@@ -51,6 +51,7 @@ var potion_log: String = "회복약 · 최대 체력 25% 회복"
 var potion_recipe: String = PrototypePotionRecipes.BASIC
 var potion_pouch_unlocked: bool = false
 var orb_magnet_unlocked: bool = false
+var orb_vitality_unlocked: bool = false
 var relic_state: Dictionary = {}
 var relic_run_id: String = ""
 var phoenix_allowed: Callable
@@ -542,6 +543,7 @@ func set_potion_pouch_unlocked(enabled: bool, refill: bool = false) -> void:
 
 func set_orb_magnet_unlocked(enabled: bool) -> void:
 	orb_magnet_unlocked = enabled
+	if not enabled: orb_vitality_unlocked = false
 	_emit_metrics()
 
 
@@ -549,10 +551,23 @@ func recovery_orb_pickup_radius() -> float:
 	return RecoveryOrbController.PICKUP_RADIUS_PX * (2.0 if orb_magnet_unlocked else 1.0)
 
 
+func set_orb_vitality_unlocked(enabled: bool) -> void:
+	orb_vitality_unlocked = enabled and orb_magnet_unlocked
+	_emit_metrics()
+
+
+func recovery_orb_heal_percent() -> int:
+	return roundi(RecoveryOrbController.HEAL_RATIO * 100) * (2 if orb_vitality_unlocked else 1)
+
+
+func recovery_orb_heal_amount() -> int:
+	return ceili(float(damage_receiver.max_health * recovery_orb_heal_percent()) / 100.0)
+
+
 func collect_recovery_orb() -> bool:
 	if _is_input_locked() or damage_receiver.health >= damage_receiver.max_health:
 		return false
-	apply_growth_health(0, ceili(damage_receiver.max_health * RecoveryOrbController.HEAL_RATIO))
+	apply_growth_health(0, recovery_orb_heal_amount())
 	return true
 
 
@@ -591,6 +606,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 func reset_movement_test(spawn_position: Vector2) -> void:
 	orb_magnet_unlocked = false
+	orb_vitality_unlocked = false
 	nimble_evade_unlocked = false
 	barrier_unlocked = false
 	fortified_barrier_unlocked = false
@@ -1046,6 +1062,9 @@ func _emit_metrics() -> void:
 		"health": damage_receiver.health,
 		"max_health": damage_receiver.max_health,
 		"orb_magnet_unlocked": orb_magnet_unlocked,
+		"orb_vitality_unlocked": orb_vitality_unlocked,
+		"recovery_orb_heal_percent": recovery_orb_heal_percent(),
+		"recovery_orb_heal_amount": recovery_orb_heal_amount(),
 		"recovery_orb_pickup_radius_m": recovery_orb_pickup_radius() / PIXELS_PER_METER,
 		"potions_remaining": potions_remaining,
 		"potions_capacity": potions_capacity(),
