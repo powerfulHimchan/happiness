@@ -44,6 +44,7 @@ var _captured_target: PrototypeTarget
 var _slash_remaining_s: float = 0.0
 var _line_remaining_s: float = 0.0
 var _line_direction: int = 1
+var _line_visual_direction: int = 1
 var _wave_direction: int = 1
 var _line_range_px: float = 0.0
 var _line_half_height_m: float = LINE_HALF_HEIGHT_M
@@ -97,7 +98,7 @@ func request_skill_2() -> void:
 
 func _skill_action(definition: SkillDefinition) -> int:
 	if definition != null and definition.skill_id == &"sword_wave": return Action.WAVE_SLASH
-	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust", &"sword_charge"]:
+	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust", &"sword_charge", &"sword_cross"]:
 		return Action.LINE_SLASH
 	return Action.DASH_SLASH if definition != null and definition.skill_id == &"sword_dash" else Action.SPIN_SLASH
 
@@ -105,7 +106,7 @@ func _skill_action(definition: SkillDefinition) -> int:
 func _draw() -> void:
 	if _line_remaining_s <= 0.0:
 		return
-	var end_x := _line_range_px * _line_direction
+	var end_x := _line_range_px * _line_visual_direction
 	var height := _line_half_height_m * PrototypePlayer.PIXELS_PER_METER
 	draw_rect(Rect2(Vector2(minf(0, end_x), -38 - height), Vector2(_line_range_px, height * 2)), Color("ffd166", 0.18))
 	draw_line(Vector2(0, -38), Vector2(end_x, -38), Color("fff2cc"), 7, true)
@@ -232,6 +233,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 	_wave_direction = player.facing_direction
 	if action == Action.LINE_SLASH:
 		_line_direction = player.facing_direction
+		_line_visual_direction = _line_direction
 		_line_range_px = definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER
 		_line_half_height_m = definition.hit_half_height_m
 	_basic_remaining_s = maxf(_basic_remaining_s, definition.duration_s)
@@ -284,6 +286,10 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		_spawn_wave(definition, hit_index)
 		_show_slash(SKILL_FLASH_S, hit_index)
 		return
+	# 교차 베기의 두 번째 타격만 시전 방향의 반대쪽이다. 시전 방향은 보존한다.
+	var hit_direction := -_line_direction if definition.skill_id == &"sword_cross" and hit_index == 1 else _line_direction
+	if _action == Action.LINE_SLASH:
+		_line_visual_direction = hit_direction
 	var targets: Array[PrototypeTarget] = []
 	if _action == Action.DASH_SLASH:
 		if is_instance_valid(_captured_target) and _captured_target.is_targetable():
@@ -301,7 +307,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			if _action == Action.LINE_SLASH:
 				# Vector2의 2.4m 변환 오차로 정확한 경계가 빠지지 않도록 픽셀로 비교한다.
 				var offset := target.global_position - player.global_position
-				var forward := offset.x * _line_direction
+				var forward := offset.x * hit_direction
 				in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and absf(offset.y) <= _line_half_height_m * PrototypePlayer.PIXELS_PER_METER
 			if in_range:
 				targets.append(target)
