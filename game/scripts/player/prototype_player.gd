@@ -49,6 +49,9 @@ var memory_id: String = ""
 var potions_remaining: int = POTIONS_PER_RUN
 var potion_log: String = "회복약 · 최대 체력 25% 회복"
 var potion_recipe: String = PrototypePotionRecipes.BASIC
+var potion_pouch_boost_unlocked: bool = false
+var potion_mastery_unlocked: bool = false
+var orb_magnet_boost_unlocked: bool = false
 var potion_pouch_unlocked: bool = false
 var orb_magnet_unlocked: bool = false
 var orb_vitality_unlocked: bool = false
@@ -448,6 +451,10 @@ func basic_relic_multiplier(kind: String) -> float:
 	return PrototypeRelic.DUEL_BASIC_MULTIPLIER if kind == "basic" and has_active_relic(PrototypeRelic.DUEL_ID) else 1.0
 
 
+func skill_relic_multiplier(kind: String) -> float:
+	return PrototypeRelic.RUNE_SKILL_MULTIPLIER if kind == "skill" and has_active_relic(PrototypeRelic.RUNE_ID) else 1.0
+
+
 func skill_recharge_multiplier() -> float:
 	return PrototypeRelic.CLOCK_RECHARGE_MULTIPLIER if relic_state.get("id", "") == PrototypeRelic.CLOCK_ID and relic_state.get("used", false) == false else 1.0
 
@@ -510,7 +517,7 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind))
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind))
 
 
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
@@ -523,7 +530,7 @@ func apply_growth_health(maximum_bonus: int, healing: int) -> void:
 
 func potion_heal_ratio() -> float:
 	var bonus := PrototypeRelic.DEW_POTION_BONUS if relic_state.get("id", "") == PrototypeRelic.DEW_ID and not relic_state.get("used", false) else 0.0
-	return float(PrototypePotionRecipes.profile(potion_recipe).ratio) + bonus
+	return float(PrototypePotionRecipes.profile(potion_recipe).ratio) + bonus + (0.05 if potion_mastery_unlocked else 0.0) + (PrototypeRelic.CUP_POTION_BONUS if has_active_relic(PrototypeRelic.CUP_ID) else 0.0)
 
 
 func use_recovery_potion() -> bool:
@@ -553,12 +560,15 @@ func prepare_potions(id: String, remaining: int = -1) -> void:
 
 
 func potions_capacity() -> int:
-	return int(PrototypePotionRecipes.profile(potion_recipe).count) + (1 if potion_pouch_unlocked else 0)
+	return int(PrototypePotionRecipes.profile(potion_recipe).count) + (1 if potion_pouch_unlocked else 0) + (1 if potion_pouch_boost_unlocked else 0)
 
 
 func set_potion_pouch_unlocked(enabled: bool, refill: bool = false) -> void:
 	var newly_unlocked: bool = enabled and not potion_pouch_unlocked
 	potion_pouch_unlocked = enabled
+	if not enabled:
+		potion_pouch_boost_unlocked = false
+		potion_mastery_unlocked = false
 	potions_remaining = mini(potions_remaining, potions_capacity())
 	if newly_unlocked and refill and not damage_receiver.dead:
 		potions_remaining = mini(potions_capacity(), potions_remaining + 1)
@@ -566,14 +576,36 @@ func set_potion_pouch_unlocked(enabled: bool, refill: bool = false) -> void:
 	_emit_metrics()
 
 
+func set_potion_pouch_boost_unlocked(enabled: bool, refill: bool = false) -> void:
+	var newly_unlocked := enabled and potion_pouch_unlocked and not potion_pouch_boost_unlocked
+	potion_pouch_boost_unlocked = enabled and potion_pouch_unlocked
+	potions_remaining = mini(potions_remaining, potions_capacity())
+	if newly_unlocked and refill and not damage_receiver.dead:
+		potions_remaining = mini(potions_capacity(), potions_remaining + 1)
+		potion_log = "확장 주머니 · 1개 보충 · 남은 %d/%d" % [potions_remaining, potions_capacity()]
+	_emit_metrics()
+
+
+func set_potion_mastery_unlocked(enabled: bool) -> void:
+	potion_mastery_unlocked = enabled and potion_pouch_unlocked
+	_emit_metrics()
+
+
+func set_orb_magnet_boost_unlocked(enabled: bool) -> void:
+	orb_magnet_boost_unlocked = enabled and orb_magnet_unlocked
+	_emit_metrics()
+
+
 func set_orb_magnet_unlocked(enabled: bool) -> void:
 	orb_magnet_unlocked = enabled
-	if not enabled: orb_vitality_unlocked = false
+	if not enabled:
+		orb_vitality_unlocked = false
+		orb_magnet_boost_unlocked = false
 	_emit_metrics()
 
 
 func recovery_orb_pickup_radius() -> float:
-	return RecoveryOrbController.PICKUP_RADIUS_PX * (2.0 if orb_magnet_unlocked else 1.0)
+	return RecoveryOrbController.PICKUP_RADIUS_PX * (3.0 if orb_magnet_boost_unlocked else 2.0 if orb_magnet_unlocked else 1.0) * (PrototypeRelic.COMPASS_RADIUS_MULTIPLIER if has_active_relic(PrototypeRelic.COMPASS_ID) else 1.0)
 
 
 func set_orb_vitality_unlocked(enabled: bool) -> void:
@@ -630,6 +662,9 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	potion_pouch_boost_unlocked = false
+	potion_mastery_unlocked = false
+	orb_magnet_boost_unlocked = false
 	orb_magnet_unlocked = false
 	orb_vitality_unlocked = false
 	nimble_evade_unlocked = false
@@ -1088,6 +1123,10 @@ func _emit_metrics() -> void:
 		"invincibility_end_frame": _invincibility_end_frame,
 		"health": damage_receiver.health,
 		"max_health": damage_receiver.max_health,
+		"potion_pouch_boost_unlocked": potion_pouch_boost_unlocked,
+		"potion_mastery_unlocked": potion_mastery_unlocked,
+		"orb_magnet_boost_unlocked": orb_magnet_boost_unlocked,
+		"skill_relic_multiplier": skill_relic_multiplier("skill"),
 		"orb_magnet_unlocked": orb_magnet_unlocked,
 		"orb_vitality_unlocked": orb_vitality_unlocked,
 		"recovery_orb_heal_percent": recovery_orb_heal_percent(),

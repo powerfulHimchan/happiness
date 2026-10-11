@@ -29,6 +29,7 @@ var _active_duration_s: float = DURATION_S
 var selected_profile: Dictionary = {}
 var _active_profile: Dictionary = {}
 var last_burst_hits: int = 0
+var time_echo_boost_unlocked: bool = false
 var time_echo_unlocked: bool = false
 var time_collector_boost_unlocked: bool = false
 
@@ -96,7 +97,7 @@ func select_job_ultimate(job_id: String, ultimate_id: String) -> bool:
 
 
 func duration_for(profile: Dictionary) -> float:
-	return float(profile.get("duration", DURATION_S)) + (TIME_ECHO_BONUS_S if time_echo_unlocked else 0.0)
+	return float(profile.get("duration", DURATION_S)) + (TIME_ECHO_BONUS_S if time_echo_unlocked else 0.0) + (TIME_ECHO_BONUS_S if time_echo_unlocked and time_echo_boost_unlocked else 0.0)
 
 
 func _apply_job_effect() -> void:
@@ -154,12 +155,14 @@ func grant_stage_gauge(amount: int) -> void:
 	_add_gauge(amount, "경로 보상")
 
 
-func grant_defeat_gauge() -> void:
-	_add_gauge(defeat_gauge_amount(), "시간 수집 · 처치")
+func grant_defeat_gauge(collected: bool = true, coin_reward: bool = true) -> void:
+	_add_gauge(defeat_gauge_amount(collected, coin_reward), "처치 게이지")
 
 
-func defeat_gauge_amount() -> int:
-	return combat_gauge_amount(BOOSTED_DEFEAT_GAIN if time_collector_boost_unlocked else DEFEAT_GAIN)
+func defeat_gauge_amount(collected: bool = true, coin_reward: bool = true) -> int:
+	var amount := (BOOSTED_DEFEAT_GAIN if time_collector_boost_unlocked else DEFEAT_GAIN) if collected else 0
+	if coin_reward and player.has_active_relic(PrototypeRelic.COIN_ID): amount += PrototypeRelic.COIN_DEFEAT_GAIN
+	return combat_gauge_amount(amount)
 
 
 func set_time_collector_boost_unlocked(enabled: bool) -> void:
@@ -168,6 +171,7 @@ func set_time_collector_boost_unlocked(enabled: bool) -> void:
 
 
 func reset_ultimate() -> void:
+	time_echo_boost_unlocked = false
 	time_collector_boost_unlocked = false
 	time_echo_unlocked = false
 	gauge = 0
@@ -241,6 +245,7 @@ func _emit_metrics() -> void:
 		"ultimate_skill_gain": combat_gauge_amount(SKILL_HIT_GAIN),
 		"ultimate_evade_gain": combat_gauge_amount(PRECISE_EVADE_GAIN),
 		"ultimate_defeat_gain": defeat_gauge_amount(),
+		"ultimate_coin_gain": combat_gauge_amount(PrototypeRelic.COIN_DEFEAT_GAIN) if player.has_active_relic(PrototypeRelic.COIN_ID) else 0,
 		"ultimate_gauge_ratio": float(gauge) / float(MAX_GAUGE),
 		"ultimate_ready": gauge >= MAX_GAUGE and not _active,
 		"ultimate_active": _active,
