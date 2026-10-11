@@ -129,11 +129,10 @@ func _resolve_growth() -> bool:
 			_tap(controls.job_ultimate_rects[0].get_center())
 			_tap(controls.job_confirm_rect.get_center())
 		elif growth.choosing:
-			var index := -1
-			for i in growth.offered_cards.size():
-				if growth.offered_cards[i].id not in ["potion_pouch", "nimble_evade"]: index = i
-			if not _check(index >= 0, "유물 단독 검사에서 주머니/회피 제외 카드 선택"): return false
-			_tap(controls.growth_card_rects[index].get_center())
+			# 유물 단독 회귀 검사에 무작위 구슬/회복약/회피 강화가 섞이지 않게 한다.
+			growth.offered_cards = [PrototypeAbilityCodex.profile("vitality")]
+			sandbox._on_growth_choices_requested(growth.offered_cards, growth.level, growth.rerolls_remaining)
+			_tap(controls.growth_card_rects[0].get_center())
 		else:
 			return true
 	return _check(false, "성장 선택 대기 해소")
