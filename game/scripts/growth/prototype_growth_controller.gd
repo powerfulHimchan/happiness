@@ -34,6 +34,9 @@ const CARDS: Array[Dictionary] = [
 	{"id": "orb_magnet", "title": "구슬 자석", "category": "common", "lines": ["회복 구슬 획득 거리 2배", "0.76m → 1.52m · 회복량 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "orb_vitality", "title": "회복 구슬 강화", "category": "common", "lines": ["회복 구슬: 최대 체력 20% 회복", "10% → 20% · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["orb_magnet"]},
 	{"id": "time_collector_boost", "title": "시간 수집 강화", "category": "common", "lines": ["처치 필살기 게이지 5→8", "모래시계와 함께라면 10"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_collector"]},
+	{"id": "evasive_barrier_boost", "title": "회피 방벽 강화", "category": "common", "lines": ["정확 회피 방벽 회복 5→8", "회피당 한 번 · 방벽 최대치까지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["evasive_barrier"]},
+	{"id": "restorative_barrier_boost", "title": "회복 방벽 강화", "category": "common", "lines": ["회복약 소비 시 방벽 회복 10→15", "체력 회복량·회복약 개수 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["restorative_barrier"]},
+	{"id": "victory_recovery_boost", "title": "처치 회복 강화", "category": "common", "lines": ["처치 체력 회복 2%→3%", "최대 체력 기준 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["victory_recovery"]},
 ]
 
 var level: int = 1
@@ -133,6 +136,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	player.set_barrier_unlocked(int(ranks.get("magic_barrier", 0)) == 1)
 	player.set_fortified_barrier_unlocked(int(ranks.get("fortified_barrier", 0)) == 1)
 	player.set_restorative_barrier_unlocked(int(ranks.get("restorative_barrier", 0)) == 1)
+	player.set_restorative_barrier_boost_unlocked(int(ranks.get("restorative_barrier_boost", 0)) == 1)
 	player.set_double_jump_unlocked(int(ranks.get("air_jump", 0)) == 1)
 	player.set_lifesteal_unlocked(int(ranks.get("lifesteal", 0)) == 1)
 	for branch in ["lifesteal_depth", "lifesteal_crisis"]:
@@ -231,6 +235,7 @@ func choose_card(index: int) -> bool:
 		"orb_magnet": player.set_orb_magnet_unlocked(true)
 		"orb_vitality": player.set_orb_vitality_unlocked(true)
 		"restorative_barrier": player.set_restorative_barrier_unlocked(true)
+		"restorative_barrier_boost": player.set_restorative_barrier_boost_unlocked(true)
 		"time_echo": ultimate.time_echo_unlocked = true
 		"nimble_evade": player.set_nimble_evade_unlocked(true)
 		"potion_pouch": player.set_potion_pouch_unlocked(true, true)
@@ -281,7 +286,7 @@ func _on_precise_evade() -> void:
 	and precise_evade_reward_allowed.is_valid() and precise_evade_reward_allowed.call():
 		# 가득 찬 방벽에서도 이 회피의 기회를 소비한다. 같은 회피로 재충전하지 않는다.
 		_last_barrier_evade = _evade_sequence
-		player.recover_barrier(EVASIVE_BARRIER_RECOVERY)
+		player.recover_barrier(evasive_barrier_amount())
 	if not jobs_enabled or _last_scored_evade == _evade_sequence:
 		return
 	_last_scored_evade = _evade_sequence
@@ -357,11 +362,14 @@ func _draw_cards() -> Array[Dictionary]:
 
 
 func victory_recovery_amount() -> int:
-	return ceili(player.damage_receiver.max_health * 0.02) if run_active and int(ranks.get("victory_recovery", 0)) == 1 else 0
+	if not run_active or int(ranks.get("victory_recovery", 0)) != 1: return 0
+	var percent := 3 if int(ranks.get("victory_recovery_boost", 0)) == 1 else 2
+	return ceili(player.damage_receiver.max_health * percent / 100.0)
 
 
 func evasive_barrier_amount() -> int:
-	return EVASIVE_BARRIER_RECOVERY if run_active and int(ranks.get("evasive_barrier", 0)) == 1 and player.barrier_unlocked else 0
+	if not run_active or int(ranks.get("evasive_barrier", 0)) != 1 or not player.barrier_unlocked: return 0
+	return 8 if int(ranks.get("evasive_barrier_boost", 0)) == 1 else EVASIVE_BARRIER_RECOVERY
 
 
 func metrics_snapshot() -> Dictionary:

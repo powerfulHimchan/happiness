@@ -62,6 +62,7 @@ const BARRIER_CAPACITY := 20
 const FORTIFIED_BARRIER_BONUS := 10
 var fortified_barrier_unlocked: bool = false
 var restorative_barrier_unlocked: bool = false
+var restorative_barrier_boost_unlocked: bool = false
 var barrier_unlocked: bool = false
 
 const LIFESTEAL_DAMAGE_PER_HEALTH := 20
@@ -350,6 +351,7 @@ func set_barrier_unlocked(enabled: bool) -> void:
 	barrier_unlocked = enabled
 	if not enabled: fortified_barrier_unlocked = false
 	if not enabled: restorative_barrier_unlocked = false
+	if not enabled: restorative_barrier_boost_unlocked = false
 	damage_receiver.barrier_health = barrier_capacity() if enabled else 0
 	queue_redraw()
 	_emit_metrics()
@@ -372,11 +374,18 @@ func recover_barrier(amount: int) -> void:
 
 func set_restorative_barrier_unlocked(enabled: bool) -> void:
 	restorative_barrier_unlocked = enabled and barrier_unlocked
+	if not restorative_barrier_unlocked: restorative_barrier_boost_unlocked = false
+	_emit_metrics()
+
+
+func set_restorative_barrier_boost_unlocked(enabled: bool) -> void:
+	restorative_barrier_boost_unlocked = enabled and restorative_barrier_unlocked and barrier_unlocked
 	_emit_metrics()
 
 
 func potion_barrier_recovery() -> int:
-	return 10 if restorative_barrier_unlocked and barrier_unlocked else 0
+	if not restorative_barrier_unlocked or not barrier_unlocked: return 0
+	return 15 if restorative_barrier_boost_unlocked else 10
 
 
 func is_ground_evading() -> bool:
@@ -615,6 +624,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	barrier_unlocked = false
 	fortified_barrier_unlocked = false
 	restorative_barrier_unlocked = false
+	restorative_barrier_boost_unlocked = false
 	damage_receiver.barrier_health = 0
 	lifesteal_unlocked = false
 	lifesteal_branch = ""
@@ -1036,6 +1046,7 @@ func _emit_metrics() -> void:
 		"barrier_capacity": barrier_capacity(),
 		"fortified_barrier_unlocked": fortified_barrier_unlocked,
 		"restorative_barrier_unlocked": restorative_barrier_unlocked,
+		"restorative_barrier_boost_unlocked": restorative_barrier_boost_unlocked,
 		"potion_barrier_recovery": potion_barrier_recovery(),
 		"barrier_absorbed": damage_receiver.last_absorbed_damage,
 		"lifesteal_unlocked": lifesteal_unlocked,
