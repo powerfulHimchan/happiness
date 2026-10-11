@@ -217,4 +217,3 @@ func _earn(id: String, failure: bool = false) -> bool:
 	_tap(controls.growth_card_rects[index].get_center())
 	if failure and not _check(player.damage_receiver.health == health and player.damage_receiver.barrier_health == barrier and player.potions_remaining == (mini(player.potions_capacity(), potions + 1) if id == "potion_pouch_boost" else potions) and ultimate.gauge == gauge and weapons.checkpoint_snapshot() == timers, "같은 카드 재시도·선택 자체는 회복/보충/충전 없음"): return false
 	return _check(not paused and not growth.choosing and growth.ranks[id] == 1 and book.snapshot().has(id), "실제 터치·영구 발견·효과 적용: " + id)
-
