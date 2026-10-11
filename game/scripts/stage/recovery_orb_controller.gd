@@ -111,4 +111,5 @@ func _draw() -> void:
 
 
 func pickup_hint() -> String:
-	return "회복 +10%% · 자석 %.2fm" % (player.recovery_orb_pickup_radius() / PrototypePlayer.PIXELS_PER_METER) if player.orb_magnet_unlocked else "회복 +10%"
+	var hint := "회복 +%d%%" % player.recovery_orb_heal_percent()
+	return hint + " · 자석 %.2fm" % (player.recovery_orb_pickup_radius() / PrototypePlayer.PIXELS_PER_METER) if player.orb_magnet_unlocked else hint

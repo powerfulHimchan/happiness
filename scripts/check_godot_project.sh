@@ -7,6 +7,7 @@ game_root="$project_root/game"
 required_files=(
   "$project_root/.github/workflows/check-godot-project.yml"
   "$project_root/.github/workflows/build-android-apk.yml"
+  "$game_root/tests/gp154_runtime_test.gd"
   "$game_root/tests/gp153_runtime_test.gd"
   "$game_root/tests/gp151_runtime_test.gd"
   "$game_root/tests/gp150_runtime_test.gd"
@@ -593,6 +594,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for orb_vitality_phase in seed resume finish legacy-seed legacy combat; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp154_runtime_test.gd -- "$orb_vitality_phase"
+  done
   for magnet_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp153_runtime_test.gd -- "$magnet_phase"

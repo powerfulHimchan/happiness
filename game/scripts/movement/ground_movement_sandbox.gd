@@ -860,6 +860,8 @@ func _capture_run_build() -> Dictionary:
 			"evasive_barrier": growth.evasive_barrier_amount(),
 			"potion_barrier": player.potion_barrier_recovery(),
 			"orb_radius_m": player.recovery_orb_pickup_radius() / PrototypePlayer.PIXELS_PER_METER,
+			"orb_percent": player.recovery_orb_heal_percent(),
+			"orb_heal": player.recovery_orb_heal_amount(),
 		},
 		"recipe": player.potion_recipe,
 		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile)},

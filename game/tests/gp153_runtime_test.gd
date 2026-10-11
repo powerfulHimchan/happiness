@@ -57,7 +57,7 @@ func _run() -> void:
 			controls.show_village()
 			if not await _test_book_layout(): return
 			var card: Dictionary = PrototypeAbilityCodex.cards(book.snapshot(), growth.ranks).filter(func(item: Dictionary) -> bool: return item.id == MAGNET_ID)[0]
-			if not _check(PrototypeAbilityCodex.definitions().size() == 25 and card.open and card.status == "이번 도전 1등급" and card.lines[2] == "조건: 공용·무작위 후보", "25능력 도감·원본 효과/조건/현재 등급"): return
+			if not _check(PrototypeAbilityCodex.cards(book.snapshot(), growth.ranks).size() == PrototypeAbilityCodex.definitions().size() and card.open and card.status == "이번 도전 1등급" and card.lines[2] == "조건: 공용·무작위 후보", "전체 능력 도감·원본 효과/조건/현재 등급"): return
 		"resume":
 			if not _check(not player.orb_magnet_unlocked and player.recovery_orb_pickup_radius() == 76 and book.snapshot().has(MAGNET_ID), "영구 발견만으로 능력 지급 없음"): return
 			for ignored in 2:
@@ -156,7 +156,7 @@ func _test_magnet_view() -> bool:
 
 func _files() -> Dictionary:
 	var result := {}
-	for path in [GP153_SAVE, GP153_SAVE + ".bak", GP153_META, GP153_RECORD, GP153_BOOK]:
+	for path in [store.save_path, store.save_path + ".bak", legacy.save_path, recorder.record_path, book.save_path]:
 		result[path] = FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
 	return result
 
@@ -183,6 +183,8 @@ func _choose_earned(id: String, failure: bool = false) -> bool:
 		if growth.offered_cards[i].id == id: index = i
 	if not _check(index >= 0 and growth.choosing and paused, "실제 처치 레벨업·자연 후보 UI: " + id): return false
 	var original_radius := player.recovery_orb_pickup_radius()
+	var original_heal := player.recovery_orb_heal_amount()
+	var original_book_path := book.save_path
 	var before := growth.checkpoint_snapshot()
 	var equipment := weapons.checkpoint_snapshot()
 	var health := player.damage_receiver.health
@@ -202,8 +204,8 @@ func _choose_earned(id: String, failure: bool = false) -> bool:
 			await process_frame
 		book.save_path = "user://gp153_missing/abilities.jsonl"
 		_tap(controls.growth_card_rects[index].get_center())
-		if not _check(paused and growth.choosing and growth.checkpoint_snapshot() == before and _bonus() == bonus and player.recovery_orb_pickup_radius() == original_radius and not book.snapshot().has(id), "영구 발견 저장 실패·등급/성향/효과 미적용"): return false
-		book.save_path = GP153_BOOK
+		if not _check(paused and growth.choosing and growth.checkpoint_snapshot() == before and _bonus() == bonus and player.recovery_orb_pickup_radius() == original_radius and player.recovery_orb_heal_amount() == original_heal and not book.snapshot().has(id), "영구 발견 저장 실패·등급/성향/효과 미적용"): return false
+		book.save_path = original_book_path
 	_tap(controls.growth_card_rects[index].get_center())
 	if failure and not _check(is_equal_approx(_bonus(), bonus) and player.damage_receiver.barrier_health == barrier and player.damage_receiver.health == health and player.potions_remaining == potions and weapons.checkpoint_snapshot() == equipment and ultimate.gauge == gauge, "같은 카드 재시도·방벽 선택 자체는 즉시 회복 없음·회복/대기/게이지 보존"): return false
 	if growth.awaiting_job_confirmation:
@@ -253,12 +255,14 @@ func _test_magnet_combat() -> bool:
 		controls.screen_mode = 0
 	if not _check(weapons.checkpoint_snapshot() == timers and ultimate.gauge == gauge, "자석 획득은 양 무기 대기/게이지 변경 없음"): return false
 	orbs.clear_orbs()
-	orbs.drop_chance = 1.0
-	orbs.reset_stage()
+	orbs.drop_chance = 0.0
 	for ignored in 4:
 		if runner.current_section == PrototypeStageRunner.Section.WAVE_TWO: break
 		if not _step_section(): return false
 	if not _check(runner.current_section == PrototypeStageRunner.Section.WAVE_TWO, "실제 다음 웨이브 진입"): return false
+	# 진입 중 이전 웨이브 드롭은 제외하고 이번 웨이브의 실제 드롭을 검사한다.
+	orbs.drop_chance = 1.0
+	orbs.reset_stage()
 	_defeat(runner.leaf_slime)
 	if not _resolve_growth(): return false
 	if not _check(orbs.drops == 1 and orbs.orbs.size() == 1, "일반 적 실제 처치·안전 지면 드롭"): return false
