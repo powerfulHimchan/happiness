@@ -19,12 +19,13 @@ const SKILLS := {
 	"bow_retreat": preload("res://data/skills/bow_retreat.tres"),
 	"bow_homing": preload("res://data/skills/bow_homing.tres"),
 	"sword_wave": preload("res://data/skills/sword_wave.tres"),
+	"bow_ricochet": preload("res://data/skills/bow_ricochet.tres"),
 }
-const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing"]}
-const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기"}
+const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet"]}
+const LABELS := {"sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄"}
 const CODEX_PAGE_SIZE := 3
 # 새 기술을 뒤에 붙여 이전 도감의 페이지 순서를 보존한다.
-const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave"]
+const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet"]
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
 static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
@@ -70,6 +71,8 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 	result.append("타격 %d회 · 기본 피해 %d" % [definition.damage.size(), _total_damage(definition)])
 	if id == "bow_spread":
 		result[1] = "화살 3발 · 각 기본 피해 %d" % int(definition.damage[0])
+	if id == "bow_ricochet":
+		result[1] = "첫 피해%d · 도탄 피해%d" % [definition.damage[0], definition.ricochet_damage]
 	match id:
 		"sword_dash": result.append("전방 대상 돌진 · 이동 3.5m")
 		"sword_spin": result.append("주변 2m · 두 번 베기")
@@ -82,6 +85,7 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 		"sword_charge": result.append("전진 2.4m · 정면 2m · 2타")
 		"bow_retreat": result.append("후퇴 1.8m · 방향 고정 · 2발")
 		"bow_homing": result.append("정면 표적 고정 · 최대 1초 추적")
+		"bow_ricochet": result.append("주변 %.1fm · 다른 적에 한 번 도탄" % definition.ricochet_range_m)
 		"bow_focus": result.append("0.7초 준비 · 정면 1발 · 이동 불가")
 		"bow_piercing": result.append("화살 1발 · 최대 3개체 관통")
 		"bow_arrow_rain": result.append("대상 주변 2.4m · 범위 6타")

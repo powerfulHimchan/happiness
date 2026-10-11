@@ -13,11 +13,13 @@ enum Action {
 	SPREAD_ARROW,
 	FOCUS_ARROW,
 	HOMING_ARROW,
+	RICOCHET_ARROW,
 }
 
 const SWORD_RANGE_M := 1.6
 const CLOSE_DAMAGE_MULTIPLIER := 0.80
 const PROJECTILE_SCENE := preload("res://scenes/combat/bow_projectile.tscn")
+const RICOCHET_SCENE := preload("res://scenes/combat/ricochet_arrow.tscn")
 const SPREAD_ANGLES_DEG := [-15.0, 0.0, 15.0]
 
 @export var weapon: WeaponDefinition
@@ -96,6 +98,8 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
+	if definition != null and definition.skill_id == &"bow_ricochet":
+		return Action.RICOCHET_ARROW
 	if definition != null and definition.skill_id == &"bow_homing":
 		return Action.HOMING_ARROW
 	if definition != null and definition.skill_id == &"bow_focus":
@@ -271,11 +275,11 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			_spawn_projectile("player:bow_spread:%d:%d:%d" % [_action_sequence, hit_index, i], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, _spread_direction.rotated(deg_to_rad(SPREAD_ANGLES_DEG[i])), PackedStringArray(["bow", "skill", "spread"]))
 		last_combat_log = "산개 사격 · 화살 3발 · 각 피해 %d · 정면 30도" % player.growth_damage(int(definition.damage[hit_index]), "bow", "skill")
 		return
-	if _action in [Action.PIERCING_ARROW, Action.FOCUS_ARROW]:
+	if _action in [Action.PIERCING_ARROW, Action.FOCUS_ARROW, Action.RICOCHET_ARROW]:
 		var origin := _projectile_origin()
 		var target := target_selector.current_target
 		var direction := Vector2(float(player.facing_direction), 0.0)
-		if _action == Action.FOCUS_ARROW or definition.skill_id == &"bow_retreat":
+		if _action in [Action.FOCUS_ARROW, Action.RICOCHET_ARROW] or definition.skill_id == &"bow_retreat":
 			direction = _spread_direction
 		elif is_instance_valid(target) and target_selector.is_target_on_screen(target):
 			direction = (
@@ -338,7 +342,11 @@ func _spawn_projectile(
 	tags: PackedStringArray,
 	tracking_target: PrototypeTarget = null
 ) -> void:
-	var projectile := PROJECTILE_SCENE.instantiate() as BowProjectile
+	var projectile := (RICOCHET_SCENE if attack_id == &"bow_ricochet" else PROJECTILE_SCENE).instantiate() as BowProjectile
+	if projectile is RicochetArrow:
+		var definition: SkillDefinition = PrototypeSkillRewards.SKILLS["bow_ricochet"]
+		projectile.ricochet_damage = player.growth_damage(definition.ricochet_damage, "bow", "skill")
+		projectile.ricochet_range_px = definition.ricochet_range_m * PrototypePlayer.PIXELS_PER_METER
 	projectile.configure(
 		projectile_id,
 		attack_id,
@@ -359,7 +367,7 @@ func _spawn_projectile(
 
 
 func _projectile_origin() -> Vector2:
-	return player.global_position + Vector2(58.0 * (_spread_direction.x if _action == Action.HOMING_ARROW else float(player.facing_direction)), -48.0)
+	return player.global_position + Vector2(58.0 * (_spread_direction.x if _action in [Action.HOMING_ARROW, Action.RICOCHET_ARROW] else float(player.facing_direction)), -48.0)
 
 
 func _on_projectile_hit(

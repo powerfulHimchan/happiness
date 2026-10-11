@@ -7,6 +7,10 @@ game_root="$project_root/game"
 required_files=(
   "$project_root/.github/workflows/check-godot-project.yml"
   "$project_root/.github/workflows/build-android-apk.yml"
+  "$game_root/tests/gp157_runtime_test.gd"
+  "$game_root/data/skills/bow_ricochet.tres"
+  "$game_root/scripts/combat/ricochet_arrow.gd"
+  "$game_root/scenes/combat/ricochet_arrow.tscn"
   "$game_root/tests/gp156_runtime_test.gd"
   "$game_root/tests/gp155_runtime_test.gd"
   "$game_root/tests/gp154_runtime_test.gd"
@@ -596,6 +600,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for ricochet_phase in seed resume finish legacy combat-right combat-left flows; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp157_runtime_test.gd -- "$ricochet_phase"
+  done
   for collector_boost_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp156_runtime_test.gd -- "$collector_boost_phase"
