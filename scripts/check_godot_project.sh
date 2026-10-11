@@ -7,6 +7,7 @@ game_root="$project_root/game"
 required_files=(
   "$project_root/.github/workflows/check-godot-project.yml"
   "$project_root/.github/workflows/build-android-apk.yml"
+  "$game_root/tests/gp162_166_runtime_test.gd"
   "$game_root/tests/gp159_161_runtime_test.gd"
   "$game_root/tests/gp158_runtime_test.gd"
   "$game_root/data/skills/sword_cross.tres"
@@ -603,6 +604,12 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for relic_id in seal wind seed duel; do
+    for relic_phase in seed resume finish combat; do
+      checked_godot 45s --headless --path "$game_root" \
+        --script res://tests/gp162_166_runtime_test.gd -- "$relic_id" "$relic_phase"
+    done
+  done
   for survival_phase in seed resume finish legacy-seed legacy evasion potions victory combined; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp159_161_runtime_test.gd -- "$survival_phase"

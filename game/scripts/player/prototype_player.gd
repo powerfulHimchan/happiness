@@ -324,7 +324,7 @@ func set_combat_evade_allowed(allowed: bool) -> void:
 
 
 func ground_evade_cooldown_s() -> float:
-	return GROUND_EVADE_COOLDOWN_S * (0.8 if nimble_evade_unlocked else 1.0)
+	return GROUND_EVADE_COOLDOWN_S * (0.8 if nimble_evade_unlocked else 1.0) * (PrototypeRelic.WIND_COOLDOWN_MULTIPLIER if has_active_relic(PrototypeRelic.WIND_ID) else 1.0)
 
 
 func set_nimble_evade_unlocked(enabled: bool) -> void:
@@ -393,13 +393,13 @@ func is_ground_evading() -> bool:
 
 
 func receive_damage(event: DamageEvent) -> int:
-	# 원본 이벤트는 공유될 수 있으므로 핵의 위험 보상은 복사본에만 적용한다.
-	if event != null and boss_legacy.get("choice") == "destroy":
+	# 공유 원본을 보존하고 파괴 핵·유물 보정 후 한 번만 반올림한다.
+	if event != null and (boss_legacy.get("choice") == "destroy" or has_active_relic(PrototypeRelic.SEAL_ID)):
 		var incoming := DamageEvent.new()
 		incoming.event_id = event.event_id
 		incoming.attacker_id = event.attacker_id
 		incoming.attack_id = event.attack_id
-		incoming.damage = roundi(event.damage * 1.10)
+		incoming.damage = maxi(1, roundi(event.damage * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * incoming_damage_multiplier())) if event.damage > 0 else event.damage
 		incoming.stagger_s = event.stagger_s
 		incoming.tags = event.tags.duplicate()
 		incoming.source_position = event.source_position
@@ -434,6 +434,18 @@ func receive_damage(event: DamageEvent) -> int:
 	queue_redraw()
 	_emit_metrics()
 	return result
+
+
+func has_active_relic(id: String) -> bool:
+	return relic_state.get("id", "") == id and relic_state.get("used", false) == false
+
+
+func incoming_damage_multiplier() -> float:
+	return PrototypeRelic.SEAL_DAMAGE_MULTIPLIER if has_active_relic(PrototypeRelic.SEAL_ID) else 1.0
+
+
+func basic_relic_multiplier(kind: String) -> float:
+	return PrototypeRelic.DUEL_BASIC_MULTIPLIER if kind == "basic" and has_active_relic(PrototypeRelic.DUEL_ID) else 1.0
 
 
 func skill_recharge_multiplier() -> float:
@@ -498,7 +510,7 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier())
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind))
 
 
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
@@ -570,7 +582,7 @@ func set_orb_vitality_unlocked(enabled: bool) -> void:
 
 
 func recovery_orb_heal_percent() -> int:
-	return roundi(RecoveryOrbController.HEAL_RATIO * 100) * (2 if orb_vitality_unlocked else 1)
+	return roundi(RecoveryOrbController.HEAL_RATIO * 100) * (2 if orb_vitality_unlocked else 1) + (PrototypeRelic.SEED_ORB_BONUS if has_active_relic(PrototypeRelic.SEED_ID) else 0)
 
 
 func recovery_orb_heal_amount() -> int:
@@ -1088,6 +1100,8 @@ func _emit_metrics() -> void:
 		"potion_log": potion_log,
 		"skill_recharge_multiplier": skill_recharge_multiplier(),
 		"relic_damage_multiplier": relic_damage_multiplier(),
+		"incoming_damage_multiplier": incoming_damage_multiplier(),
+		"basic_relic_multiplier": basic_relic_multiplier("basic"),
 		"combat_gauge_multiplier": combat_gauge_multiplier(),
 		"relic_hud": PrototypeRelic.hud(relic_state),
 		"relic": relic_state.duplicate(),
