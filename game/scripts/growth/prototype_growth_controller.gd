@@ -37,6 +37,10 @@ const CARDS: Array[Dictionary] = [
 	{"id": "evasive_barrier_boost", "title": "회피 방벽 강화", "category": "common", "lines": ["정확 회피 방벽 회복 5→8", "회피당 한 번 · 방벽 최대치까지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["evasive_barrier"]},
 	{"id": "restorative_barrier_boost", "title": "회복 방벽 강화", "category": "common", "lines": ["회복약 소비 시 방벽 회복 10→15", "체력 회복량·회복약 개수 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["restorative_barrier"]},
 	{"id": "victory_recovery_boost", "title": "처치 회복 강화", "category": "common", "lines": ["처치 체력 회복 2%→3%", "최대 체력 기준 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["victory_recovery"]},
+	{"id": "potion_pouch_boost", "title": "확장 주머니", "category": "common", "lines": ["회복약 최대 소지 +1 · 1개 보충", "주머니와 합산 · 도전당 한 번"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["potion_pouch"]},
+	{"id": "orb_magnet_boost", "title": "넓은 자석", "category": "common", "lines": ["회복 구슬 획득 거리 2배→3배", "1.52m → 2.28m · 회복량 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["orb_magnet"]},
+	{"id": "time_echo_boost", "title": "깊은 여운", "category": "common", "lines": ["필살기 감속 시간 추가 +1초", "다음 발동부터 · 감속 비율 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_echo"]},
+	{"id": "potion_mastery", "title": "회복약 숙련", "category": "common", "lines": ["회복약 최대 체력 회복 +5%p", "모든 조제 · 구슬/휴식 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["potion_pouch"]},
 ]
 
 var level: int = 1
@@ -79,6 +83,10 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	ultimate.time_echo_boost_unlocked = false
+	player.set_potion_pouch_boost_unlocked(false)
+	player.set_potion_mastery_unlocked(false)
+	player.set_orb_magnet_boost_unlocked(false)
 	ultimate.set_time_collector_boost_unlocked(false)
 	player.set_orb_magnet_unlocked(false)
 	player.set_restorative_barrier_unlocked(false)
@@ -141,6 +149,10 @@ func restore_checkpoint(state: Dictionary) -> void:
 	player.set_lifesteal_unlocked(int(ranks.get("lifesteal", 0)) == 1)
 	for branch in ["lifesteal_depth", "lifesteal_crisis"]:
 		if ranks.has(branch): player.set_lifesteal_branch(branch)
+	player.set_potion_pouch_boost_unlocked(int(ranks.get("potion_pouch_boost", 0)) == 1)
+	player.set_potion_mastery_unlocked(int(ranks.get("potion_mastery", 0)) == 1)
+	player.set_orb_magnet_boost_unlocked(int(ranks.get("orb_magnet_boost", 0)) == 1)
+	ultimate.time_echo_boost_unlocked = int(ranks.get("time_echo_boost", 0)) == 1
 	jobs.job_id = String(state.job)
 	jobs.contributions = state.contributions.duplicate(true)
 	jobs.recent_ability = state.recent.duplicate(true)
@@ -178,8 +190,10 @@ func _on_enemy_defeated(target: PrototypeTarget) -> void:
 	# 이 처치로 열린 카드에서 얻은 능력은 다음 처치부터 적용한다.
 	if target.last_defeat_in_combat and victory_recovery_amount() > 0 and defeat_recovery_allowed.is_valid() and defeat_recovery_allowed.call():
 		player.apply_growth_health(0, victory_recovery_amount())
-	if int(ranks.get("time_collector", 0)) == 1:
-		ultimate.grant_defeat_gauge()
+	var collected := int(ranks.get("time_collector", 0)) == 1
+	var coin_reward: bool = player.has_active_relic(PrototypeRelic.COIN_ID) and target.last_defeat_in_combat and defeat_recovery_allowed.is_valid() and defeat_recovery_allowed.call()
+	if collected or coin_reward:
+		ultimate.grant_defeat_gauge(collected, coin_reward)
 	var reward := ELITE_XP if target.is_in_group("elite_enemy") else ORDINARY_XP
 	experience += reward
 	total_experience += reward
@@ -231,6 +245,10 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"potion_pouch_boost": player.set_potion_pouch_boost_unlocked(true, true)
+		"potion_mastery": player.set_potion_mastery_unlocked(true)
+		"orb_magnet_boost": player.set_orb_magnet_boost_unlocked(true)
+		"time_echo_boost": ultimate.time_echo_boost_unlocked = true
 		"time_collector_boost": ultimate.set_time_collector_boost_unlocked(true)
 		"orb_magnet": player.set_orb_magnet_unlocked(true)
 		"orb_vitality": player.set_orb_vitality_unlocked(true)

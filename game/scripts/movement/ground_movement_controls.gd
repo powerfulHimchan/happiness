@@ -1819,6 +1819,8 @@ func _ultimate_hud_label() -> String:
 	var label := "%s  %s" % [String(movement_metrics.get("ultimate_name", "새벽의 틈")), "발동 중" if bool(movement_metrics.get("ultimate_active", false)) else "%d%%" % int(movement_metrics.get("ultimate_gauge", 0))]
 	if bool(movement_metrics.get("growth_run_active", false)) and int(movement_metrics.get("growth_ranks", {}).get("time_collector", 0)) == 1:
 		label += " · 처치 +%d" % int(movement_metrics.get("ultimate_defeat_gain", UltimateController.DEFEAT_GAIN))
+	elif bool(movement_metrics.get("growth_run_active", false)) and int(movement_metrics.get("ultimate_coin_gain", 0)) > 0:
+		label += " · 처치 +%d" % int(movement_metrics.ultimate_coin_gain)
 	return label
 
 

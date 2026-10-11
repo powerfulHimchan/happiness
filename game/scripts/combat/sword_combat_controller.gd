@@ -98,7 +98,7 @@ func request_skill_2() -> void:
 
 func _skill_action(definition: SkillDefinition) -> int:
 	if definition != null and definition.skill_id == &"sword_wave": return Action.WAVE_SLASH
-	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust", &"sword_charge", &"sword_cross"]:
+	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust", &"sword_charge", &"sword_cross", &"sword_rising"]:
 		return Action.LINE_SLASH
 	return Action.DASH_SLASH if definition != null and definition.skill_id == &"sword_dash" else Action.SPIN_SLASH
 
@@ -108,7 +108,9 @@ func _draw() -> void:
 		return
 	var end_x := _line_range_px * _line_visual_direction
 	var height := _line_half_height_m * PrototypePlayer.PIXELS_PER_METER
-	draw_rect(Rect2(Vector2(minf(0, end_x), -38 - height), Vector2(_line_range_px, height * 2)), Color("ffd166", 0.18))
+	var rising := _current_skill() != null and _current_skill().skill_id == &"sword_rising"
+	var bottom := 0.4 * PrototypePlayer.PIXELS_PER_METER if rising else height
+	draw_rect(Rect2(Vector2(minf(0, end_x), -height if rising else -38 - height), Vector2(_line_range_px, height + bottom)), Color("ffd166", 0.18))
 	draw_line(Vector2(0, -38), Vector2(end_x, -38), Color("fff2cc"), 7, true)
 	draw_line(Vector2(0, -50), Vector2(end_x * 0.95, -50), Color("ffd166"), 3, true)
 
@@ -309,6 +311,8 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 				var offset := target.global_position - player.global_position
 				var forward := offset.x * hit_direction
 				in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and absf(offset.y) <= _line_half_height_m * PrototypePlayer.PIXELS_PER_METER
+				if definition.skill_id == &"sword_rising":
+					in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and offset.y >= -_line_half_height_m * PrototypePlayer.PIXELS_PER_METER and offset.y <= 0.4 * PrototypePlayer.PIXELS_PER_METER
 			if in_range:
 				targets.append(target)
 

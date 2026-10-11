@@ -10,6 +10,14 @@ const SEAL_ID := "guardian_seal"
 const WIND_ID := "wind_knot"
 const SEED_ID := "vital_seed"
 const DUEL_ID := "duelist_emblem"
+const RUNE_ID := "arcane_emblem"
+const COMPASS_ID := "forest_compass"
+const COIN_ID := "collector_coin"
+const CUP_ID := "dawn_cup"
+const RUNE_SKILL_MULTIPLIER := 1.20
+const COMPASS_RADIUS_MULTIPLIER := 1.50
+const COIN_DEFEAT_GAIN := 3
+const CUP_POTION_BONUS := 0.05
 const REWARD_PAGE_SIZE := 5
 const CODEX_PAGE_SIZE := 3
 const SEAL_DAMAGE_MULTIPLIER := 0.90
@@ -32,6 +40,10 @@ const OFFERS: Array[Dictionary] = [
 	{"id": WIND_ID, "name": "바람의 매듭", "lines": ["지상 회피 대기 -20%", "민첩한 회피와 곱연산", "무적·동작·공중 대시 유지"]},
 	{"id": SEED_ID, "name": "생명의 씨앗", "lines": ["회복 구슬 · 체력 +5%p", "기본15% · 구슬 강화25%", "드롭·거리·회복약 유지"]},
 	{"id": DUEL_ID, "name": "결투의 문장", "lines": ["검·활 기본 공격1.2배", "성장·장비 뒤 최종 반올림", "스킬·필살기·공격 속도 유지"]},
+	{"id": RUNE_ID, "name": "마력의 문장", "lines": ["검·활 스킬 피해1.2배", "기본 공격·필살기 유지", "성장·장비 뒤 최종 반올림"]},
+	{"id": COMPASS_ID, "name": "숲의 나침반", "lines": ["회복 구슬 획득 거리1.5배", "구슬 자석·넓은 자석과 곱연산", "회복량·드롭 확률 유지"]},
+	{"id": COIN_ID, "name": "수집가의 동전", "lines": ["실제 적 처치 게이지 +3", "시간 수집과 합산 · 최대100", "획득 즉시 충전하지 않음"]},
+	{"id": CUP_ID, "name": "새벽의 잔", "lines": ["회복약 최대 체력 회복 +5%p", "기본30% · 농축45% · 소분25%", "숙련과 합산 · 개수 유지"]},
 ]
 
 static func valid_id(id: String) -> bool:
@@ -43,6 +55,10 @@ static func valid_state(value: Variant) -> bool:
 static func hud(state: Dictionary) -> String:
 	if state.is_empty():
 		return "유물 없음"
+	if state.id == RUNE_ID: return "마력의 문장 · 스킬 피해 1.2배"
+	if state.id == COMPASS_ID: return "숲의 나침반 · 구슬 거리 1.5배"
+	if state.id == COIN_ID: return "수집가의 동전 · 처치 게이지 +3"
+	if state.id == CUP_ID: return "새벽의 잔 · 회복약 +5%p"
 	if state.id == SEAL_ID: return "수호의 인장 · 받는 전투 피해 -10%"
 	if state.id == WIND_ID: return "바람의 매듭 · 지상 회피 대기 -20%"
 	if state.id == SEED_ID: return "생명의 씨앗 · 회복 구슬 +5%p"
@@ -65,6 +81,8 @@ static func codex_cards(state: Dictionary) -> Array[Dictionary]:
 		for line in offer.lines: lines.append(String(line))
 		lines.append("조건: 두 번째 정예 뒤 선택")
 		var detail: String = {
+			RUNE_ID: "스킬만 강화 · 흡수는 실제 피해 기준", COMPASS_ID: "기본1.14m · 넓은 자석3.42m",
+			COIN_ID: "처치당 한 번 · 선택 이후 적용", CUP_ID: "현재 최대 체력 기준 · 소수 올림",
 			HOURGLASS_ID: "기본5 · 스킬10 · 회피15", EMBER_ID: "성장·장비 뒤 적용 · 감속 유지",
 			CLOCK_ID: "스킬만 적용 · 공격/회피 유지", DEW_ID: "구슬·휴식·흡수 회복 유지",
 			SEAL_ID: "파괴 핵 반영 후 적용 · 경직 유지", WIND_ID: "획득 전 회피의 남은 대기 유지",

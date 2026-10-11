@@ -534,6 +534,7 @@ func continue_saved_run() -> bool:
 	ultimate_controller.gauge = int(state.ultimate.gauge)
 	ultimate_controller.set_time_collector_boost_unlocked(int(growth.ranks.get("time_collector_boost", 0)) == 1)
 	ultimate_controller.time_echo_unlocked = int(growth.ranks.get("time_echo", 0)) == 1
+	ultimate_controller.time_echo_boost_unlocked = int(growth.ranks.get("time_echo_boost", 0)) == 1
 	if not String(state.ultimate.profile).is_empty():
 		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
 	_intermission_stage = int(state.stage.number)
@@ -868,7 +869,7 @@ func _capture_run_build() -> Dictionary:
 			"evade_cooldown": player.ground_evade_cooldown_s(), "incoming_multiplier": player.incoming_damage_multiplier(),
 		},
 		"recipe": player.potion_recipe,
-		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile), "basic_gain": ultimate_controller.combat_gauge_amount(UltimateController.BASIC_HIT_GAIN), "skill_gain": ultimate_controller.combat_gauge_amount(UltimateController.SKILL_HIT_GAIN), "evade_gain": ultimate_controller.combat_gauge_amount(UltimateController.PRECISE_EVADE_GAIN), "defeat_gain": ultimate_controller.defeat_gauge_amount()},
+		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile), "basic_gain": ultimate_controller.combat_gauge_amount(UltimateController.BASIC_HIT_GAIN), "skill_gain": ultimate_controller.combat_gauge_amount(UltimateController.SKILL_HIT_GAIN), "evade_gain": ultimate_controller.combat_gauge_amount(UltimateController.PRECISE_EVADE_GAIN), "defeat_gain": ultimate_controller.defeat_gauge_amount(int(growth.ranks.get("time_collector", 0)) == 1)},
 		"relic": player.relic_state.duplicate(), "memory": player.memory_id, "legacy": player.boss_legacy.get("choice", ""),
 	}
 

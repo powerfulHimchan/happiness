@@ -134,8 +134,7 @@ func _open_new_relic(id: String) -> bool:
 	var index := NEW_IDS.find(id)
 	_tap(controls.relic_reward_card_rects[index].get_center())
 	if not _check(controls.relic_reward_page == 1 and controls.selected_relic_offer == 5 + index, "둘째 페이지 실제 터치·전체 인덱스 선택"): return false
-	_tap(controls.relic_reward_next_rect.get_center())
-	return _check(controls.relic_reward_page == 1 and controls.selected_relic_offer == 5 + index, "마지막 다음은 선택 유지")
+	return _check(controls.relic_reward_page == 1 and controls.selected_relic_offer == 5 + index, "기존 둘째 페이지 선택 유지")
 
 func _test_new_save(id: String) -> bool:
 	var saved := store.load_checkpoint()

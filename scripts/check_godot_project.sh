@@ -5,6 +5,11 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp167_170_runtime_test.gd"
+  "$game_root/tests/gp171_174_runtime_test.gd"
+  "$game_root/tests/gp175_176_runtime_test.gd"
+  "$game_root/data/skills/sword_rising.tres"
+  "$game_root/data/skills/bow_chain.tres"
   "$project_root/.github/workflows/check-godot-project.yml"
   "$project_root/.github/workflows/build-android-apk.yml"
   "$game_root/tests/gp162_166_runtime_test.gd"
@@ -604,6 +609,20 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for growth_phase in seed resume finish legacy-seed legacy combat; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp167_170_runtime_test.gd -- "$growth_phase"
+  done
+  for relic_id in rune compass coin cup; do
+    for relic_phase in seed resume finish combat; do
+      checked_godot 45s --headless --path "$game_root" \
+        --script res://tests/gp171_174_runtime_test.gd -- "$relic_id" "$relic_phase"
+    done
+  done
+  for skill_phase in seed resume finish legacy combat-right combat-left flows; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp175_176_runtime_test.gd -- "$skill_phase"
+  done
   for relic_id in seal wind seed duel; do
     for relic_phase in seed resume finish combat; do
       checked_godot 45s --headless --path "$game_root" \
