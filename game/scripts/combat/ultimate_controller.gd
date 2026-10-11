@@ -12,6 +12,7 @@ const BASIC_HIT_GAIN := 4
 const SKILL_HIT_GAIN := 8
 const PRECISE_EVADE_GAIN := 12
 const DEFEAT_GAIN := 5
+const BOOSTED_DEFEAT_GAIN := 8
 const TIME_ECHO_BONUS_S := 1.0
 const DURATION_S := 3.0
 const ENEMY_TIME_SCALE := 0.15
@@ -29,6 +30,7 @@ var selected_profile: Dictionary = {}
 var _active_profile: Dictionary = {}
 var last_burst_hits: int = 0
 var time_echo_unlocked: bool = false
+var time_collector_boost_unlocked: bool = false
 
 @onready var target_selector: AutoTargetSelector = $"../AutoTargetSelector"
 
@@ -153,10 +155,20 @@ func grant_stage_gauge(amount: int) -> void:
 
 
 func grant_defeat_gauge() -> void:
-	_add_gauge(combat_gauge_amount(DEFEAT_GAIN), "시간 수집 · 처치")
+	_add_gauge(defeat_gauge_amount(), "시간 수집 · 처치")
+
+
+func defeat_gauge_amount() -> int:
+	return combat_gauge_amount(BOOSTED_DEFEAT_GAIN if time_collector_boost_unlocked else DEFEAT_GAIN)
+
+
+func set_time_collector_boost_unlocked(enabled: bool) -> void:
+	time_collector_boost_unlocked = enabled
+	_emit_metrics()
 
 
 func reset_ultimate() -> void:
+	time_collector_boost_unlocked = false
 	time_echo_unlocked = false
 	gauge = 0
 	activation_count = 0
@@ -228,7 +240,7 @@ func _emit_metrics() -> void:
 		"ultimate_basic_gain": combat_gauge_amount(BASIC_HIT_GAIN),
 		"ultimate_skill_gain": combat_gauge_amount(SKILL_HIT_GAIN),
 		"ultimate_evade_gain": combat_gauge_amount(PRECISE_EVADE_GAIN),
-		"ultimate_defeat_gain": combat_gauge_amount(DEFEAT_GAIN),
+		"ultimate_defeat_gain": defeat_gauge_amount(),
 		"ultimate_gauge_ratio": float(gauge) / float(MAX_GAUGE),
 		"ultimate_ready": gauge >= MAX_GAUGE and not _active,
 		"ultimate_active": _active,

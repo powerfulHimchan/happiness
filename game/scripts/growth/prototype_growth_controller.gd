@@ -33,6 +33,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "restorative_barrier", "title": "회복 방벽", "category": "common", "lines": ["회복약 사용 시 방벽 10 회복", "실제 소비 시 · 방벽 최대치까지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
 	{"id": "orb_magnet", "title": "구슬 자석", "category": "common", "lines": ["회복 구슬 획득 거리 2배", "0.76m → 1.52m · 회복량 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "orb_vitality", "title": "회복 구슬 강화", "category": "common", "lines": ["회복 구슬: 최대 체력 20% 회복", "10% → 20% · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["orb_magnet"]},
+	{"id": "time_collector_boost", "title": "시간 수집 강화", "category": "common", "lines": ["처치 필살기 게이지 5→8", "모래시계와 함께라면 10"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_collector"]},
 ]
 
 var level: int = 1
@@ -75,6 +76,7 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	ultimate.set_time_collector_boost_unlocked(false)
 	player.set_orb_magnet_unlocked(false)
 	player.set_restorative_barrier_unlocked(false)
 	ultimate.time_echo_unlocked = false
@@ -122,6 +124,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	total_experience = int(state.total_xp)
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
+	ultimate.set_time_collector_boost_unlocked(int(ranks.get("time_collector_boost", 0)) == 1)
 	player.set_orb_magnet_unlocked(int(ranks.get("orb_magnet", 0)) == 1)
 	player.set_orb_vitality_unlocked(int(ranks.get("orb_vitality", 0)) == 1)
 	ultimate.time_echo_unlocked = int(ranks.get("time_echo", 0)) == 1
@@ -224,6 +227,7 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"time_collector_boost": ultimate.set_time_collector_boost_unlocked(true)
 		"orb_magnet": player.set_orb_magnet_unlocked(true)
 		"orb_vitality": player.set_orb_vitality_unlocked(true)
 		"restorative_barrier": player.set_restorative_barrier_unlocked(true)
