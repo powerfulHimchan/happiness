@@ -157,7 +157,7 @@ func _test_ember_save() -> bool:
 		var bad := saved.duplicate(true)
 		bad.relic = relic
 		if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and store.load_checkpoint() == saved, "불씨 사용/타입/누락/추가/ID 변조 거부·정상 파일 보호"): return false
-	return _check(PrototypeRelic.OFFERS.size() == 4 and PrototypeRelic.OFFERS.slice(0, 3).map(func(item: Dictionary) -> String: return item.id) == [PrototypeRelic.PHOENIX_ID, PrototypeRelic.CLOCK_ID, PrototypeRelic.DEW_ID], "기존 세 유물 순서 유지·넷째 불씨 추가")
+	return _check(PrototypeRelic.OFFERS.size() >= 4 and PrototypeRelic.OFFERS[3].id == PrototypeRelic.EMBER_ID and PrototypeRelic.OFFERS.slice(0, 3).map(func(item: Dictionary) -> String: return item.id) == [PrototypeRelic.PHOENIX_ID, PrototypeRelic.CLOCK_ID, PrototypeRelic.DEW_ID], "기존 세 유물 순서 유지·넷째 불씨 추가")
 
 func _test_ember_view() -> bool:
 	var files := _files()

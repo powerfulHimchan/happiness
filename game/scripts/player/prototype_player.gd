@@ -431,6 +431,10 @@ func skill_recharge_multiplier() -> float:
 	return PrototypeRelic.CLOCK_RECHARGE_MULTIPLIER if relic_state.get("id", "") == PrototypeRelic.CLOCK_ID and relic_state.get("used", false) == false else 1.0
 
 
+func combat_gauge_multiplier() -> float:
+	return PrototypeRelic.HOURGLASS_GAUGE_MULTIPLIER if relic_state.get("id", "") == PrototypeRelic.HOURGLASS_ID and relic_state.get("used", false) == false else 1.0
+
+
 func relic_damage_multiplier() -> float:
 	return PrototypeRelic.EMBER_DAMAGE_MULTIPLIER if relic_state.get("id", "") == PrototypeRelic.EMBER_ID and relic_state.get("used", false) == false else 1.0
 
@@ -1073,6 +1077,7 @@ func _emit_metrics() -> void:
 		"potion_log": potion_log,
 		"skill_recharge_multiplier": skill_recharge_multiplier(),
 		"relic_damage_multiplier": relic_damage_multiplier(),
+		"combat_gauge_multiplier": combat_gauge_multiplier(),
 		"relic_hud": PrototypeRelic.hud(relic_state),
 		"relic": relic_state.duplicate(),
 		"fall_count": fall_count,
