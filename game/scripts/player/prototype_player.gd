@@ -541,7 +541,9 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind))
+	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind)
+	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
+	return roundi(snappedf(damage, 0.000000001))
 
 
 func expansion_damage_multiplier(weapon_id: String, kind: String) -> float:

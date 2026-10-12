@@ -171,9 +171,11 @@ func _test_weapon_codex(active: bool) -> bool:
 		if not _check(controls.village_page == "weapons" and controls.weapon_codex_page == 0, "실제 무기 도감 탭·첫 페이지"): return false
 		var seen: Array[String] = []
 		var equipped_count := 0
-		for page in 4:
+		var total := PrototypeWeaponRewards.codex_cards({}).size()
+		var pages := ceili(float(total) / PrototypeWeaponRewards.CODEX_PAGE_SIZE)
+		for page in pages:
 			var snapshot: Dictionary = controls.village_snapshot()
-			if not _check(snapshot.weapon_page == page and snapshot.weapon_pages == 4 and snapshot.cards.size() == (1 if page == 3 else 3), "10무기 네 페이지·마지막1개"): return false
+			if not _check(snapshot.weapon_page == page and snapshot.weapon_pages == pages and snapshot.cards.size() == mini(3, total - page * 3), "전체 무기 페이지·마지막 잔여 카드"): return false
 			var safe: Rect2 = controls.layout_snapshot().safe
 			var rects: Array = snapshot.layout.cards.duplicate()
 			rects.append_array(snapshot.tabs.values())
@@ -191,11 +193,11 @@ func _test_weapon_codex(active: bool) -> bool:
 				seen.append(String(card.id))
 				var source := PrototypeWeaponRewards.profile(card.weapon, card.grade, card.blueprint)
 				var equipped: bool = active and int(weapons.equipment[card.weapon]) == card.grade and weapons.blueprints[card.weapon] == card.blueprint
-				var available: bool = card.blueprint.is_empty() or controls.unlocked_weapon_blueprints.get(card.blueprint, false) == true
+				var available: bool = PrototypeWeaponRewards.design_available(card.blueprint, controls.unlocked_weapon_blueprints)
 				var status := "이번 도전 · 주 무기" if equipped and old_active == card.weapon else "이번 도전 · 보조 무기" if equipped else "획득 가능 · 효과 미리 보기" if available else "미해금 · 효과 미리 보기"
 				if not _check(card.name == source.name and card.lines.slice(0, 3) == source.lines and card.lines.size() == 6 and card.equipped == equipped and card.status == status and card.open == (available or equipped), "등급/이름/고유/보조 원본·해금·주/보조 장비 상태"): return false
 				if equipped: equipped_count += 1
-				if not _check(card.lines[3].contains("보스 파괴") == (not card.blueprint.is_empty()) and card.lines[5].contains("필살기 제외"), "해금 조건·피해 보정 범위 안내"): return false
+				if not _check(card.lines[3].contains("보스 파괴") == PrototypeWeaponRewards.BLUEPRINTS.has(card.blueprint) and card.lines[5].contains("필살기 제외"), "해금 조건·피해 보정 범위 안내"): return false
 				var rect: Rect2 = snapshot.layout.cards[i]
 				var texts: Array = [card.name, card.status]
 				texts.append_array(card.lines)
@@ -208,8 +210,8 @@ func _test_weapon_codex(active: bool) -> bool:
 			controls.queue_redraw()
 			await process_frame
 			_tap(snapshot.pager.next.get_center())
-		if not _check(seen.size() == 10 and seen.all(func(id: String) -> bool: return seen.count(id) == 1) and equipped_count == (2 if active else 0) and controls.weapon_codex_page == 3, "10무기 중복 없음·장착2개/비활성0개·페이지 상한"): return false
-		for ignored in 5: _tap(controls.village_snapshot().pager.previous.get_center())
+		if not _check(seen.size() == total and seen.all(func(id: String) -> bool: return seen.count(id) == 1) and equipped_count == (2 if active else 0) and controls.weapon_codex_page == pages - 1, "전체 무기 중복 없음·장착2개/비활성0개·페이지 상한"): return false
+		for ignored in pages + 1: _tap(controls.village_snapshot().pager.previous.get_center())
 		if not _check(controls.weapon_codex_page == 0, "페이지 하한"): return false
 		_tap(controls.village_snapshot().tabs.skills.get_center())
 		if not _check(controls.village_page == "skills" and controls.skill_codex_page == 0, "기존 스킬 도감 탭 동작"): return false

@@ -293,6 +293,11 @@ var weapon_reward_confirm_rect := Rect2()
 var weapon_reward_skip_rect := Rect2()
 var selected_weapon_reward: int = -1
 var weapon_reward_stage: int = 1
+var all_weapon_reward_cards: Array[Dictionary] = []
+var weapon_reward_page: int = 0
+var weapon_reward_previous_rect := Rect2()
+var weapon_reward_next_rect := Rect2()
+const WEAPON_REWARD_PAGE_SIZE := 4
 var boss_choice_rects: Array[Rect2] = []
 var boss_choice_confirm_rect := Rect2()
 var selected_boss_choice: int = -1
@@ -559,9 +564,41 @@ func _draw_boss_choice() -> void:
 func show_weapon_rewards(stage: int, cards: Array[Dictionary]) -> void:
 	release_all_inputs()
 	weapon_reward_stage = stage
-	weapon_reward_cards = cards.duplicate(true)
+	all_weapon_reward_cards = cards.duplicate(true)
+	weapon_reward_page = 0
+	_refresh_weapon_reward_page()
 	selected_weapon_reward = -1
 	screen_mode = ScreenMode.WEAPON_REWARD
+	_refresh_weapon_reward_layout()
+	queue_redraw()
+
+
+func _weapon_reward_legacy_count() -> int:
+	return all_weapon_reward_cards.filter(func(card: Dictionary) -> bool: return not PrototypeWeaponRewards.DESIGNS.has(card.id)).size()
+
+
+func weapon_reward_pages() -> int:
+	var legacy_count := _weapon_reward_legacy_count()
+	return 1 + ceili(float(maxi(0, all_weapon_reward_cards.size() - legacy_count)) / WEAPON_REWARD_PAGE_SIZE)
+
+
+func _refresh_weapon_reward_page() -> void:
+	var legacy_count := _weapon_reward_legacy_count()
+	# 이전 형식의 후보 배열도 안전하게 표시한다.
+	if legacy_count < 2:
+		legacy_count = mini(WEAPON_REWARD_PAGE_SIZE, all_weapon_reward_cards.size())
+	var start := 0 if weapon_reward_page == 0 else legacy_count + (weapon_reward_page - 1) * WEAPON_REWARD_PAGE_SIZE
+	var count := legacy_count if weapon_reward_page == 0 else WEAPON_REWARD_PAGE_SIZE
+	weapon_reward_cards.assign(all_weapon_reward_cards.slice(start, start + count))
+
+
+func _change_weapon_reward_page(direction: int) -> void:
+	var next := clampi(weapon_reward_page + direction, 0, weapon_reward_pages() - 1)
+	if next == weapon_reward_page:
+		return
+	weapon_reward_page = next
+	selected_weapon_reward = -1
+	_refresh_weapon_reward_page()
 	_refresh_weapon_reward_layout()
 	queue_redraw()
 
@@ -576,6 +613,8 @@ func _refresh_weapon_reward_layout() -> void:
 		weapon_reward_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (width + gap), safe.size.y * 0.27), Vector2(width, safe.size.y * 0.42)))
 	var button_width := minf(360.0, safe.size.x * 0.55)
 	weapon_reward_confirm_rect = Rect2(safe.position + Vector2((safe.size.x - button_width) * 0.5, safe.size.y * 0.80), Vector2(button_width, safe.size.y * 0.08))
+	weapon_reward_previous_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.80), Vector2(safe.size.x * 0.18, safe.size.y * 0.08))
+	weapon_reward_next_rect = Rect2(safe.position + Vector2(safe.size.x * 0.77, safe.size.y * 0.80), Vector2(safe.size.x * 0.18, safe.size.y * 0.08))
 	weapon_reward_skip_rect = Rect2(safe.position + Vector2((safe.size.x - button_width) * 0.5, safe.size.y * 0.91), Vector2(button_width, safe.size.y * 0.06))
 
 
@@ -584,7 +623,7 @@ func _draw_weapon_rewards() -> void:
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	_draw_text_centered("정예 처치 · 무기 보상", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 50)), 32, PASS_COLOR)
-	_draw_text_centered("설계도 무기: 일반 피해 감소 · 고유 효과 강화" if weapon_reward_cards.size() > 2 else "검·활 중 하나 교체 · 무기와 스킬 대기시간 유지", Rect2(safe.position + Vector2(0, safe.size.y * 0.17), Vector2(safe.size.x, 36)), 20, MUTED_TEXT_COLOR)
+	_draw_text_centered("검·활 장비 비교 · %d / %d 페이지" % [weapon_reward_page + 1, weapon_reward_pages()], Rect2(safe.position + Vector2(0, safe.size.y * 0.17), Vector2(safe.size.x, 36)), 20, MUTED_TEXT_COLOR)
 	for index in weapon_reward_cards.size():
 		var item := weapon_reward_cards[index]
 		var rect := weapon_reward_rects[index]
@@ -605,6 +644,9 @@ func _draw_weapon_rewards() -> void:
 		confirm_label = "이 무기 유지 · 보상 확정" if selected.name == selected.previous_name else "선택한 무기로 교체"
 	_draw_button(weapon_reward_confirm_rect, confirm_label, selected_weapon_reward >= 0)
 	_draw_button(weapon_reward_skip_rect, "현재 무기 유지", false)
+	if weapon_reward_pages() > 1:
+		_draw_button(weapon_reward_previous_rect, "이전", weapon_reward_page > 0)
+		_draw_button(weapon_reward_next_rect, "다음", weapon_reward_page < weapon_reward_pages() - 1)
 
 
 func show_stage_routes(stage: int, stage_count: int, recovered_health: int, routes: Array[Dictionary] = PrototypeStageRunner.ROUTES) -> void:
@@ -1289,6 +1331,12 @@ func _handle_screen_touch(position: Vector2) -> void:
 			if weapon_reward_rects[index].has_point(position):
 				selected_weapon_reward = index
 				return
+		if weapon_reward_previous_rect.has_point(position):
+			_change_weapon_reward_page(-1)
+			return
+		if weapon_reward_next_rect.has_point(position):
+			_change_weapon_reward_page(1)
+			return
 		if weapon_reward_skip_rect.has_point(position):
 			weapon_reward_selected.emit("")
 		elif weapon_reward_confirm_rect.has_point(position) and selected_weapon_reward >= 0:
