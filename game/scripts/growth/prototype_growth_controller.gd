@@ -41,6 +41,10 @@ const CARDS: Array[Dictionary] = [
 	{"id": "orb_magnet_boost", "title": "넓은 자석", "category": "common", "lines": ["회복 구슬 획득 거리 2배→3배", "1.52m → 2.28m · 회복량 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["orb_magnet"]},
 	{"id": "time_echo_boost", "title": "깊은 여운", "category": "common", "lines": ["필살기 감속 시간 추가 +1초", "다음 발동부터 · 감속 비율 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_echo"]},
 	{"id": "potion_mastery", "title": "회복약 숙련", "category": "common", "lines": ["회복약 최대 체력 회복 +5%p", "모든 조제 · 구슬/휴식 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["potion_pouch"]},
+	{"id": "survival_instinct", "title": "생존 본능", "category": "common", "lines": ["체력30% 이하: 전투 피해 -10%", "방벽 흡수 전 · 현재 체력 기준"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["fortified_barrier"]},
+	{"id": "calm_focus", "title": "차분한 집중", "category": "common", "lines": ["체력80% 이상: 스킬 피해1.15배", "검·활 적용 · 기본/필살기 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["power"]},
+	{"id": "healing_flow", "title": "치유의 흐름", "category": "common", "lines": ["깊은 흡수10% → 15% 회복", "실제 피해 기준 · 누적 소수 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal_depth"]},
+	{"id": "victory_resilience", "title": "회복 탄력성", "category": "common", "lines": ["강화 처치 회복3% → 4%", "현재 최대 체력 기준 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["victory_recovery_boost"]},
 ]
 
 var level: int = 1
@@ -83,6 +87,9 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	player.survival_instinct_unlocked = false
+	player.calm_focus_unlocked = false
+	player.healing_flow_unlocked = false
 	ultimate.time_echo_boost_unlocked = false
 	player.set_potion_pouch_boost_unlocked(false)
 	player.set_potion_mastery_unlocked(false)
@@ -153,6 +160,9 @@ func restore_checkpoint(state: Dictionary) -> void:
 	player.set_potion_mastery_unlocked(int(ranks.get("potion_mastery", 0)) == 1)
 	player.set_orb_magnet_boost_unlocked(int(ranks.get("orb_magnet_boost", 0)) == 1)
 	ultimate.time_echo_boost_unlocked = int(ranks.get("time_echo_boost", 0)) == 1
+	player.survival_instinct_unlocked = int(ranks.get("survival_instinct", 0)) == 1
+	player.calm_focus_unlocked = int(ranks.get("calm_focus", 0)) == 1
+	player.healing_flow_unlocked = int(ranks.get("healing_flow", 0)) == 1
 	jobs.job_id = String(state.job)
 	jobs.contributions = state.contributions.duplicate(true)
 	jobs.recent_ability = state.recent.duplicate(true)
@@ -245,6 +255,9 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"survival_instinct": player.survival_instinct_unlocked = true
+		"calm_focus": player.calm_focus_unlocked = true
+		"healing_flow": player.healing_flow_unlocked = true
 		"potion_pouch_boost": player.set_potion_pouch_boost_unlocked(true, true)
 		"potion_mastery": player.set_potion_mastery_unlocked(true)
 		"orb_magnet_boost": player.set_orb_magnet_boost_unlocked(true)
@@ -381,7 +394,7 @@ func _draw_cards() -> Array[Dictionary]:
 
 func victory_recovery_amount() -> int:
 	if not run_active or int(ranks.get("victory_recovery", 0)) != 1: return 0
-	var percent := 3 if int(ranks.get("victory_recovery_boost", 0)) == 1 else 2
+	var percent := 4 if int(ranks.get("victory_resilience", 0)) == 1 else 3 if int(ranks.get("victory_recovery_boost", 0)) == 1 else 2
 	return ceili(player.damage_receiver.max_health * percent / 100.0)
 
 

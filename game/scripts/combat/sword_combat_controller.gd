@@ -98,7 +98,7 @@ func request_skill_2() -> void:
 
 func _skill_action(definition: SkillDefinition) -> int:
 	if definition != null and definition.skill_id == &"sword_wave": return Action.WAVE_SLASH
-	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust", &"sword_charge", &"sword_cross", &"sword_rising"]:
+	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust", &"sword_charge", &"sword_cross", &"sword_rising", &"sword_revolve"]:
 		return Action.LINE_SLASH
 	return Action.DASH_SLASH if definition != null and definition.skill_id == &"sword_dash" else Action.SPIN_SLASH
 
@@ -289,7 +289,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		_show_slash(SKILL_FLASH_S, hit_index)
 		return
 	# 교차 베기의 두 번째 타격만 시전 방향의 반대쪽이다. 시전 방향은 보존한다.
-	var hit_direction := -_line_direction if definition.skill_id == &"sword_cross" and hit_index == 1 else _line_direction
+	var hit_direction := -_line_direction if definition.skill_id in [&"sword_cross", &"sword_revolve"] and hit_index == 1 else _line_direction
 	if _action == Action.LINE_SLASH:
 		_line_visual_direction = hit_direction
 	var targets: Array[PrototypeTarget] = []

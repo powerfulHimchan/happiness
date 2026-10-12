@@ -140,7 +140,11 @@ func register_precise_evade() -> void:
 		return
 	precise_evade_count += 1
 	precise_evade_registered.emit()
-	_add_gauge(combat_gauge_amount(PRECISE_EVADE_GAIN), "정확한 회피")
+	_add_gauge(precise_evade_gauge_amount(), "정확한 회피")
+
+
+func precise_evade_gauge_amount() -> int:
+	return combat_gauge_amount(PRECISE_EVADE_GAIN + (PrototypeRelic.WHISTLE_EVADE_GAIN if player.has_active_relic(PrototypeRelic.WHISTLE_ID) else 0))
 
 
 func finish_stage_effect() -> void:
@@ -243,7 +247,7 @@ func _emit_metrics() -> void:
 		"ultimate_gauge": gauge,
 		"ultimate_basic_gain": combat_gauge_amount(BASIC_HIT_GAIN),
 		"ultimate_skill_gain": combat_gauge_amount(SKILL_HIT_GAIN),
-		"ultimate_evade_gain": combat_gauge_amount(PRECISE_EVADE_GAIN),
+		"ultimate_evade_gain": precise_evade_gauge_amount(),
 		"ultimate_defeat_gain": defeat_gauge_amount(),
 		"ultimate_coin_gain": combat_gauge_amount(PrototypeRelic.COIN_DEFEAT_GAIN) if player.has_active_relic(PrototypeRelic.COIN_ID) else 0,
 		"ultimate_gauge_ratio": float(gauge) / float(MAX_GAUGE),

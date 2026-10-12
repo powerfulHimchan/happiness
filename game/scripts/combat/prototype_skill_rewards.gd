@@ -3,6 +3,8 @@ extends RefCounted
 
 ## 무기별 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
 const SKILLS := {
+	"sword_revolve": preload("res://data/skills/sword_revolve.tres"),
+	"bow_fan_piercing": preload("res://data/skills/bow_fan_piercing.tres"),
 	"sword_rising": preload("res://data/skills/sword_rising.tres"),
 	"bow_chain": preload("res://data/skills/bow_chain.tres"),
 	"sword_dash": preload("res://data/skills/sword_dash.tres"),
@@ -24,11 +26,11 @@ const SKILLS := {
 	"bow_ricochet": preload("res://data/skills/bow_ricochet.tres"),
 	"sword_cross": preload("res://data/skills/sword_cross.tres"),
 }
-const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave", "sword_cross", "sword_rising"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet", "bow_chain"]}
-const LABELS := {"sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
+const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave", "sword_cross", "sword_rising", "sword_revolve"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet", "bow_chain", "bow_fan_piercing"]}
+const LABELS := {"sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
 const CODEX_PAGE_SIZE := 3
 # 새 기술을 뒤에 붙여 이전 도감의 페이지 순서를 보존한다.
-const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain"]
+const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing"]
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
 static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
@@ -72,13 +74,15 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 	var definition: SkillDefinition = SKILLS[id]
 	var result: Array[String] = ["재사용 %.1f초 · 동작 %.2f초" % [definition.cooldown_s / recharge_multiplier, definition.duration_s]]
 	result.append("타격 %d회 · 기본 피해 %d" % [definition.damage.size(), _total_damage(definition)])
-	if id == "bow_spread":
+	if id in ["bow_spread", "bow_fan_piercing"]:
 		result[1] = "화살 3발 · 각 기본 피해 %d" % int(definition.damage[0])
 	if id == "bow_ricochet":
 		result[1] = "첫 피해%d · 도탄 피해%d" % [definition.damage[0], definition.ricochet_damage]
 	if id == "sword_cross":
 		result[1] = "정면 피해%d · 후방 피해%d" % [definition.damage[0], definition.damage[1]]
 	match id:
+		"sword_revolve": result.append("각2.2m · 앞/뒤/앞 3타 · 방향 고정")
+		"bow_fan_piercing": result.append("정면30도 · 각 최대2개체 관통")
 		"sword_rising": result.append("정면1.8m · 위로1.8m · 아래0.4m")
 		"bow_chain": result.append("화살3발 · 각 최대2개체 관통")
 		"sword_dash": result.append("전방 대상 돌진 · 이동 3.5m")

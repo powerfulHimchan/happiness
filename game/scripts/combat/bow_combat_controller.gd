@@ -104,7 +104,7 @@ func _skill_action(definition: SkillDefinition) -> int:
 		return Action.HOMING_ARROW
 	if definition != null and definition.skill_id == &"bow_focus":
 		return Action.FOCUS_ARROW
-	if definition != null and definition.skill_id == &"bow_spread":
+	if definition != null and definition.skill_id in [&"bow_spread", &"bow_fan_piercing"]:
 		return Action.SPREAD_ARROW
 	return Action.ARROW_RAIN if definition != null and definition.skill_id == &"bow_arrow_rain" else Action.PIERCING_ARROW
 
@@ -273,7 +273,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	if _action == Action.SPREAD_ARROW:
 		for i in SPREAD_ANGLES_DEG.size():
 			_spawn_projectile("player:bow_spread:%d:%d:%d" % [_action_sequence, hit_index, i], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, _spread_direction.rotated(deg_to_rad(SPREAD_ANGLES_DEG[i])), PackedStringArray(["bow", "skill", "spread"]))
-		last_combat_log = "산개 사격 · 화살 3발 · 각 피해 %d · 정면 30도" % player.growth_damage(int(definition.damage[hit_index]), "bow", "skill")
+		last_combat_log = "%s · 화살 3발 · 각 피해 %d · 정면 30도%s" % [definition.display_name, player.growth_damage(int(definition.damage[hit_index]), "bow", "skill"), " · 각 최대%d개체 관통" % definition.max_targets if definition.max_targets > 1 else ""]
 		return
 	if _action in [Action.PIERCING_ARROW, Action.FOCUS_ARROW, Action.RICOCHET_ARROW]:
 		var origin := _projectile_origin()
