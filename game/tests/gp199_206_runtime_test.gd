@@ -150,3 +150,13 @@ func _expansion_combat(id: String) -> bool:
 	if not _check(duration == (4 if id == PrototypeRelic.DAWN_DIAL_ID else 3) and ultimate._remaining_s == duration and ultimate.duration_for({}) == duration + 2, "실제 시계판 감속·활성 시간 불변·다음 발동 여운 합산"): return false
 	ultimate.finish_stage_effect()
 	return true
+
+func _test_new_view(id: String) -> bool:
+	var files := _files()
+	var before := _effect_snapshot()
+	if not _check(controls.open_run_build() and paused, "현재 도전 조회 정지"): return false
+	var data: Dictionary = controls.run_build_state.ultimate
+	if not _check(data.basic_gain == ultimate.weapon_hit_gauge_amount(false) and data.skill_gain == ultimate.weapon_hit_gauge_amount(true) and data.next_duration == ultimate.duration_for(ultimate.selected_profile), "도전 상태 신규 유물 실제 게이지/지속시간"): return false
+	controls.close_run_build()
+	controls.advance_mode_timer_for_test(3.1)
+	return _check(_files() == files and _effect_snapshot() == before and not paused, "조회는 효과/파일 보존")

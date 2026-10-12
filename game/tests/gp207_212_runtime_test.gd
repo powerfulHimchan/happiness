@@ -124,6 +124,7 @@ func _views() -> bool:
 	var files := _files()
 	var effects := _effects()
 	if not _check(controls.open_run_build(), "도전 상태 열기"): return false
+	if not _check(controls.run_build_state.ultimate.basic_gain == 5 and controls.run_build_state.ultimate.skill_gain == 10, "도전 상태 시간 조율 실제 적중 게이지"): return false
 	var cards := PrototypeRunBuildView.cards(2, controls.run_build_state)
 	if not _check(cards[1].lines.has("회복 구슬 · 체력 25%% (+%d)" % player.recovery_orb_heal_amount()), "실제 흡수/처치 회복 상태 표시"): return false
 	controls.close_run_build()
