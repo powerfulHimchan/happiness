@@ -37,7 +37,7 @@ func _run() -> void:
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "기본 도전 보상 유지"): return
 			var start := player.global_position
 			sandbox._continue_stage("clockwork")
-			if not _check(controls.stage_route_rects.size() == 2 and runner.stage_number == 1 and player.global_position == start and not runner.next_stage("clockwork"), "파괴 보상 없는 위험 길 UI·실행 차단"): return
+			if not _check(controls.stage_route_rects.size() == 3 and runner.stage_number == 1 and player.global_position == start and not runner.next_stage("clockwork"), "파괴 보상 없는 위험 길 UI·실행 차단"): return
 			if not _check(legacy.grant("gp112-skipped", "destroy") == OK, "파괴 보상 준비"): return
 			sandbox._update_boss_legacy_status()
 			controls.show_main_screen()
@@ -46,14 +46,14 @@ func _run() -> void:
 			_tap(controls.memory_card_rects[2].get_center())
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "영구 기억 도전 보상 유지"): return
-			if not _check(player.memory_id == "core_echo" and player.boss_legacy.is_empty() and controls.stage_route_options.size() == 2 and not runner.can_select_route("clockwork"), "영구 기억만 장착·일회 보상 건너뛰기는 위험 길 개방 없음"): return
+			if not _check(player.memory_id == "core_echo" and player.boss_legacy.is_empty() and controls.stage_route_options.size() == 3 and not runner.can_select_route("clockwork"), "영구 기억만 장착·일회 보상 건너뛰기는 위험 길 개방 없음"): return
 			if not _check(legacy.grant("gp112-active", "destroy") == OK, "새 파괴 보상 준비"): return
 			sandbox._update_boss_legacy_status()
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward("sword"), "위험 길 준비 무기 보상"): return
-			if not _check(player.boss_legacy.choice == "destroy" and legacy.pending_reward().is_empty() and controls.stage_route_options.size() == 3 and controls.stage_route_options[2].id == "clockwork", "적용한 일회 핵 도전만 세 번째 위험 카드"): return
+			if not _check(player.boss_legacy.choice == "destroy" and legacy.pending_reward().is_empty() and controls.stage_route_options.size() == 4 and controls.stage_route_options[2].id == "clockwork", "적용한 일회 핵 도전만 세 번째 위험 카드"): return
 			for dimensions in [Vector2(1280, 720), Vector2(2400, 1080)]:
 				controls.size = dimensions
 				controls._refresh_stage_routes()
@@ -64,7 +64,7 @@ func _run() -> void:
 						if not _check(not controls.stage_route_rects[i].intersects(controls.stage_route_rects[j]), "세 경로 터치 영역 겹침 없음"): return
 			if not _check(store.load_checkpoint().stage.number == 1 and store.load_checkpoint().stage.reward_claimed, "위험 선택 전 저장"): return
 		"resume":
-			if not _check(sandbox.continue_saved_run() and controls.stage_route_options.size() == 3, "별도 프로세스 이어하기 위험 길 선택 복원"): return
+			if not _check(sandbox.continue_saved_run() and controls.stage_route_options.size() == 4, "별도 프로세스 이어하기 위험 길 선택 복원"): return
 			_tap(controls.stage_route_rects[2].get_center())
 			if not _check(not paused and runner.stage_number == 2 and runner.route_id == "clockwork" and terrain.platforms == PrototypeRouteTerrain.CLOCKWORK_STEPS and terrain.get_child_count() == 3 and "위험" in controls.movement_metrics.run_route_name, "위험 카드 실제 터치 지형·HUD·입력 복귀"): return
 			player.global_position.x = 1240
@@ -106,7 +106,7 @@ func _run() -> void:
 		"finish":
 			var saved := store.load_checkpoint()
 			if not _check(sandbox.continue_saved_run() and runner.route_id == "clockwork" and terrain.get_child_count() == 3 and player.damage_receiver.health == saved.player.health and ultimate.gauge == 50, "별도 프로세스 위험 지형·회복·게이지 복원 중복 없음"): return
-			if not _check(sandbox._claim_weapon_reward("bow") and controls.stage_route_options.size() == 2 and not runner.next_stage("clockwork"), "통과 후 영웅 무기·보스 경로는 기존 두 종류"): return
+			if not _check(sandbox._claim_weapon_reward("bow") and controls.stage_route_options.size() == 3 and not runner.next_stage("clockwork"), "통과 후 영웅 무기·보스 경로는 기존 두 종류"): return
 			sandbox._continue_stage("wind")
 			if not _check(runner.stage_number == 3 and terrain.platforms == PrototypeRouteTerrain.WIND_STEPS and runner.leaf_slime.damage_receiver.max_health == roundi(float(runner._initial_health[runner.leaf_slime.get_path()]) * 1.50) and runner.boss.damage_receiver.max_health == 480, "다음 스테이지 위험 배율 제거·보스 기존 체력"): return
 			if not _finish_stage(): return

@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp227_236_runtime_test.gd"
+  "$game_root/tests/gp228_229_runtime_test.gd"
+  "$game_root/tests/gp230_232_runtime_test.gd"
   "$game_root/tests/gp217_226_runtime_test.gd"
   "$game_root/tests/gp187_198_runtime_test.gd"
   "$game_root/tests/gp199_206_runtime_test.gd"
@@ -628,6 +631,23 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for starting_weapon in sword bow; do
+    for forest_phase in seed resume finish legacy-seed legacy; do
+      checked_godot 45s --headless --path "$game_root" --script res://tests/gp227_236_runtime_test.gd -- "$forest_phase" "$starting_weapon"
+    done
+  done
+  for forest_phase in fault-seed fault-resume; do
+    checked_godot 45s --headless --path "$game_root" --script res://tests/gp227_236_runtime_test.gd -- "$forest_phase" sword
+  done
+  for enemy in slime seed wind; do
+    for direction in 1 -1; do
+      checked_godot 45s --headless --path "$game_root" --script res://tests/gp230_232_runtime_test.gd -- "$enemy" "$direction"
+    done
+  done
+  checked_godot 45s --headless --path "$game_root" --script res://tests/gp230_232_runtime_test.gd -- flows
+  for terrain_phase in motion cross pause; do
+    checked_godot 45s --headless --path "$game_root" --script res://tests/gp228_229_runtime_test.gd -- "$terrain_phase"
+  done
   checked_godot 45s --headless --path "$game_root" --script res://tests/gp217_226_runtime_test.gd -- catalog
   for design in duelist_sword hunter_bow runic_sword spell_bow fencer_sword precision_bow forged_sword sturdy_bow balanced_sword balanced_bow; do
     for equipment_phase in seed resume finish; do

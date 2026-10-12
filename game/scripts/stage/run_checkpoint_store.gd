@@ -230,4 +230,4 @@ static func valid_state(state: Dictionary) -> bool:
 
 
 static func _valid_route(route: Variant, stage: int, legacy: Dictionary) -> bool:
-	return route in ["meadow", "wind"] or (route == "clockwork" and stage == 2 and legacy.get("choice", "") == "destroy")
+	return route in ["meadow", "wind"] or (route == "forest" and stage >= 2) or (route == "clockwork" and stage == 2 and legacy.get("choice", "") == "destroy")

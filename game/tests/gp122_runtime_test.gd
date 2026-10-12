@@ -76,7 +76,7 @@ func _run() -> void:
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.boss_legacy.choice == "destroy" and controls.surveyed_routes.size() == 2, "새 도전은 영구 답사 유지·파괴 핵 적용"): return
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "위험 길 선택 전 중간 저장"): return
-			if not _check(controls.stage_route_options.size() == 3 and not controls.surveyed_routes.has("clockwork"), "파괴 권한 개방과 위험 답사 독립"): return
+			if not _check(controls.stage_route_options.size() == 4 and not controls.surveyed_routes.has("clockwork"), "파괴 권한 개방과 위험 답사 독립"): return
 		"finish":
 			if not _check(sandbox.continue_saved_run() and controls.surveyed_routes.size() == 2, "위험 선택 전 저장 재시작"): return
 			_tap(controls.stage_route_rects[2].get_center())
