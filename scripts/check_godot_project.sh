@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp217_226_runtime_test.gd"
   "$game_root/tests/gp187_198_runtime_test.gd"
   "$game_root/tests/gp199_206_runtime_test.gd"
   "$game_root/tests/gp207_212_runtime_test.gd"
@@ -627,6 +628,12 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  checked_godot 45s --headless --path "$game_root" --script res://tests/gp217_226_runtime_test.gd -- catalog
+  for design in duelist_sword hunter_bow runic_sword spell_bow fencer_sword precision_bow forged_sword sturdy_bow balanced_sword balanced_bow; do
+    for equipment_phase in seed resume finish; do
+      checked_godot 45s --headless --path "$game_root" --script res://tests/gp217_226_runtime_test.gd -- "$equipment_phase" "$design"
+    done
+  done
   for growth_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" --script res://tests/gp207_212_runtime_test.gd -- "$growth_phase"
   done

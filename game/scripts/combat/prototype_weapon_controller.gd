@@ -155,10 +155,10 @@ func set_loadout(value: Dictionary, designs: Dictionary) -> bool:
 
 
 func equip_reward(id: String, grade: int) -> bool:
-	var design := id if PrototypeWeaponRewards.BLUEPRINTS.has(id) else ""
-	if not design.is_empty() and unlocked_blueprints.get(design, false) != true:
+	var design := id if not PrototypeWeaponRewards.design_profile(id).is_empty() else ""
+	if not PrototypeWeaponRewards.design_available(design, unlocked_blueprints):
 		return false
-	var weapon: String = PrototypeWeaponRewards.BLUEPRINTS[design].weapon if not design.is_empty() else id
+	var weapon: String = PrototypeWeaponRewards.design_profile(design).weapon if not design.is_empty() else id
 	if weapon not in equipment or grade < 1 or grade > 2 or grade < int(equipment[weapon]) or (grade == int(equipment[weapon]) and design == blueprints[weapon]):
 		return false
 	var next := equipment.duplicate()
@@ -226,7 +226,7 @@ func _enrich_metrics(metrics: Dictionary) -> void:
 	metrics["weapon_backup_name"] = backup.name
 	metrics["weapon_equipment_summary"] = "%s · %s" % [PrototypeWeaponRewards.profile(SWORD_ID, int(equipment.sword), blueprints.sword).name, PrototypeWeaponRewards.profile(BOW_ID, int(equipment.bow), blueprints.bow).name]
 	var effect_percent := float(backup.unique) * PrototypeWeaponRewards.BACKUP_RATIO * 100
-	metrics["weapon_backup_effect"] = "보조: %s 피해 +%s%%" % ["스킬" if other == SWORD_ID else "기본", str(roundi(effect_percent)) if blueprints[other].is_empty() else "%.1f" % effect_percent]
+	metrics["weapon_backup_effect"] = "보조: %s 피해 +%s%%" % ["스킬" if backup.kind == "skill" else "기본", str(roundi(effect_percent)) if blueprints[other].is_empty() else "%.1f" % effect_percent]
 	metrics["weapon_switch_label"] = (
 		"전환 %.1f" % _switch_cooldown_remaining_s
 		if _switch_cooldown_remaining_s > 0.0
