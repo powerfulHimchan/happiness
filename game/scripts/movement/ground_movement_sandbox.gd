@@ -869,7 +869,7 @@ func _capture_run_build() -> Dictionary:
 			"evade_cooldown": player.ground_evade_cooldown_s(), "incoming_multiplier": player.incoming_damage_multiplier(),
 		},
 		"recipe": player.potion_recipe,
-		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile), "basic_gain": ultimate_controller.combat_gauge_amount(UltimateController.BASIC_HIT_GAIN), "skill_gain": ultimate_controller.combat_gauge_amount(UltimateController.SKILL_HIT_GAIN), "evade_gain": ultimate_controller.precise_evade_gauge_amount(), "defeat_gain": ultimate_controller.defeat_gauge_amount(int(growth.ranks.get("time_collector", 0)) == 1)},
+		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile), "basic_gain": ultimate_controller.weapon_hit_gauge_amount(false), "skill_gain": ultimate_controller.weapon_hit_gauge_amount(true), "evade_gain": ultimate_controller.precise_evade_gauge_amount(), "defeat_gain": ultimate_controller.defeat_gauge_amount(int(growth.ranks.get("time_collector", 0)) == 1)},
 		"relic": player.relic_state.duplicate(), "memory": player.memory_id, "legacy": player.boss_legacy.get("choice", ""),
 	}
 

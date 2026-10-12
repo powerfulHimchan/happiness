@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"bow_storm"
+display_name = "폭풍 화살비"
+execution_style = &"rain"
+effect_summary = "대상 주변3m · 범위4타 · 이동 가능"
+cooldown_s = 12
+duration_s = 0.95
+hit_times_s = PackedFloat32Array(0.25, 0.42, 0.59, 0.76)
+damage = PackedInt32Array(15, 15, 15, 15)
+hit_range_m = 3.0
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 0
+can_move = true
+can_turn = true
+evade_cancel_start_s = 0.2
+ultimate_gain = 8

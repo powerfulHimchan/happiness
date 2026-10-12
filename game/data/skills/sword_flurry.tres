@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"sword_flurry"
+display_name = "질풍 연격"
+execution_style = &"line"
+effect_summary = "정면1.8m · 빠른4타 · 방향 고정"
+cooldown_s = 7
+duration_s = 0.68
+hit_times_s = PackedFloat32Array(0.12, 0.24, 0.36, 0.48)
+damage = PackedInt32Array(14, 14, 14, 14)
+hit_range_m = 1.8
+hit_half_height_m = 0.7
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.2
+ultimate_gain = 8

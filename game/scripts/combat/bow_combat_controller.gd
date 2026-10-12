@@ -98,6 +98,14 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
+	if definition != null:
+		match definition.execution_style:
+			&"ricochet": return Action.RICOCHET_ARROW
+			&"homing": return Action.HOMING_ARROW
+			&"focus": return Action.FOCUS_ARROW
+			&"spread": return Action.SPREAD_ARROW
+			&"rain": return Action.ARROW_RAIN
+			&"piercing": return Action.PIERCING_ARROW
 	if definition != null and definition.skill_id == &"bow_ricochet":
 		return Action.RICOCHET_ARROW
 	if definition != null and definition.skill_id == &"bow_homing":
@@ -268,12 +276,12 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		if target != null:
 			direction = (target.global_position + PrototypeTarget.BODY_CENTER - _projectile_origin()).normalized()
 		_spawn_projectile("player:bow_homing:%d:%d" % [_action_sequence, hit_index], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, direction, PackedStringArray(["bow", "skill", "homing"]), target)
-		last_combat_log = "추적 사격 · 피해 %d · 표적 고정" % player.growth_damage(int(definition.damage[hit_index]), "bow", "skill") if target != null else "추적 사격 · 표적 없음 · 정면 직진"
+		last_combat_log = "%s · 피해 %d · 표적 고정" % [definition.display_name, player.growth_damage(int(definition.damage[hit_index]), "bow", "skill")] if target != null else "%s · 표적 없음 · 정면 직진" % definition.display_name
 		return
 	if _action == Action.SPREAD_ARROW:
-		for i in SPREAD_ANGLES_DEG.size():
-			_spawn_projectile("player:bow_spread:%d:%d:%d" % [_action_sequence, hit_index, i], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, _spread_direction.rotated(deg_to_rad(SPREAD_ANGLES_DEG[i])), PackedStringArray(["bow", "skill", "spread"]))
-		last_combat_log = "%s · 화살 3발 · 각 피해 %d · 정면 30도%s" % [definition.display_name, player.growth_damage(int(definition.damage[hit_index]), "bow", "skill"), " · 각 최대%d개체 관통" % definition.max_targets if definition.max_targets > 1 else ""]
+		for i in definition.spread_angles_deg.size():
+			_spawn_projectile("player:bow_spread:%d:%d:%d" % [_action_sequence, hit_index, i], definition.skill_id, int(definition.damage[hit_index]), definition.max_targets, _spread_direction.rotated(deg_to_rad(definition.spread_angles_deg[i])), PackedStringArray(["bow", "skill", "spread"]))
+		last_combat_log = "%s · 화살 %d발 · 각 피해 %d · 정면 %d도%s" % [definition.display_name, definition.spread_angles_deg.size(), player.growth_damage(int(definition.damage[hit_index]), "bow", "skill"), roundi(definition.spread_angles_deg[-1] - definition.spread_angles_deg[0]), " · 각 최대%d개체 관통" % definition.max_targets if definition.max_targets > 1 else ""]
 		return
 	if _action in [Action.PIERCING_ARROW, Action.FOCUS_ARROW, Action.RICOCHET_ARROW]:
 		var origin := _projectile_origin()
@@ -326,8 +334,8 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			skill_hit_count += 1
 			total_damage += event.damage
 			hit_registered.emit(true, rain_target, event.damage)
-	last_combat_log = "화살비 %d/6 · 피해 %d · %d개체" % [
-		hit_index + 1,
+	last_combat_log = "%s %d/%d · 피해 %d · %d개체" % [
+		definition.display_name, hit_index + 1, definition.hit_times_s.size(),
 		player.growth_damage(int(definition.damage[hit_index]), "bow", "skill"),
 		applied_targets,
 	]
@@ -342,9 +350,9 @@ func _spawn_projectile(
 	tags: PackedStringArray,
 	tracking_target: PrototypeTarget = null
 ) -> void:
-	var projectile := (RICOCHET_SCENE if attack_id == &"bow_ricochet" else PROJECTILE_SCENE).instantiate() as BowProjectile
+	var definition: SkillDefinition = PrototypeSkillRewards.SKILLS.get(String(attack_id))
+	var projectile := (RICOCHET_SCENE if definition != null and (attack_id == &"bow_ricochet" or definition.execution_style == &"ricochet") else PROJECTILE_SCENE).instantiate() as BowProjectile
 	if projectile is RicochetArrow:
-		var definition: SkillDefinition = PrototypeSkillRewards.SKILLS["bow_ricochet"]
 		projectile.ricochet_damage = player.growth_damage(definition.ricochet_damage, "bow", "skill")
 		projectile.ricochet_range_px = definition.ricochet_range_m * PrototypePlayer.PIXELS_PER_METER
 	projectile.configure(
@@ -352,7 +360,7 @@ func _spawn_projectile(
 		attack_id,
 		player.growth_damage(damage, "bow", "skill" if tags.has("skill") else "basic"),
 		weapon.projectile_speed_mps,
-		weapon.attack_range_m,
+		definition.hit_range_m if definition != null and not definition.execution_style.is_empty() and definition.execution_style != &"rain" else weapon.attack_range_m,
 		max_hits,
 		direction,
 		tags

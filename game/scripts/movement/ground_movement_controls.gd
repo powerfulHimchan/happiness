@@ -476,8 +476,12 @@ func _refresh_job_layout() -> void:
 	job_confirm_rect = Rect2(job_panel_rect.position + Vector2((panel_size.x - button_size.x) * 0.5, panel_size.y * 0.84), button_size)
 	job_ultimate_rects.clear()
 	var card_width := (panel_size.x - 72.0) * 0.5
-	for index in 2:
-		job_ultimate_rects.append(Rect2(job_panel_rect.position + Vector2(24.0 + index * (card_width + 24.0), panel_size.y * 0.43), Vector2(card_width, panel_size.y * 0.34)))
+	var rows := ceili(job_ultimates.size() / 2.0)
+	var area_height := panel_size.y * 0.39
+	var gap := 10.0
+	var card_height := (area_height - gap * (rows - 1)) / maxi(1, rows)
+	for index in job_ultimates.size():
+		job_ultimate_rects.append(Rect2(job_panel_rect.position + Vector2(24.0 + (index % 2) * (card_width + 24.0), panel_size.y * 0.42 + (index / 2) * (card_height + gap)), Vector2(card_width, card_height)))
 
 
 func _draw_job_manifestation() -> void:
@@ -494,9 +498,9 @@ func _draw_job_manifestation() -> void:
 		var rect := job_ultimate_rects[index]
 		var candidate := job_ultimates[index]
 		draw_style_box(_panel_style(Color("254f51") if selected_job_ultimate == index else PANEL_COLOR), rect)
-		_draw_text_centered(("✓ " if selected_job_ultimate == index else "") + String(candidate["name"]), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.10), Vector2(rect.size.x, 34.0)), 22, color)
+		_draw_text_centered(("✓ " if selected_job_ultimate == index else "") + String(candidate["name"]), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.04), Vector2(rect.size.x, rect.size.y * 0.29)), mini(22, int(rect.size.y * 0.21)), color)
 		for line_index in candidate["lines"].size():
-			_draw_text_centered(String(candidate["lines"][line_index]), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.40 + line_index * 32.0), Vector2(rect.size.x, 30.0)), 17, TEXT_COLOR)
+			_draw_text_centered(String(candidate["lines"][line_index]), Rect2(rect.position + Vector2(0.0, rect.size.y * (0.36 + line_index * 0.29)), Vector2(rect.size.x, rect.size.y * 0.28)), mini(17, int(rect.size.y * 0.17)), TEXT_COLOR)
 	_draw_button(job_confirm_rect, "확인 · 계속하기" if selected_job_ultimate >= 0 else "필살기를 선택하세요", selected_job_ultimate >= 0)
 
 

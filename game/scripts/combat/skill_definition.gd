@@ -5,6 +5,11 @@ extends Resource
 
 @export var skill_id: StringName = &""
 @export var display_name: String = ""
+# Empty style preserves the original skills' execution rules.
+@export var execution_style: StringName = &""
+@export var effect_summary: String = ""
+@export var hit_directions: PackedInt32Array = PackedInt32Array()
+@export var spread_angles_deg: PackedFloat32Array = PackedFloat32Array([-15, 0, 15])
 @export var cooldown_s: float = 0.0
 @export var duration_s: float = 0.0
 @export var hit_times_s: PackedFloat32Array = PackedFloat32Array()

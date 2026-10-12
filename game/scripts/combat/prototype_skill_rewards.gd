@@ -3,6 +3,19 @@ extends RefCounted
 
 ## 무기별 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
 const SKILLS := {
+	"sword_flurry": preload("res://data/skills/sword_flurry.tres"),
+	"sword_cleave": preload("res://data/skills/sword_cleave.tres"),
+	"sword_twin_wave": preload("res://data/skills/sword_twin_wave.tres"),
+	"sword_sweep": preload("res://data/skills/sword_sweep.tres"),
+	"sword_backstep": preload("res://data/skills/sword_backstep.tres"),
+	"sword_alternating": preload("res://data/skills/sword_alternating.tres"),
+	"bow_needle": preload("res://data/skills/bow_needle.tres"),
+	"bow_heavy": preload("res://data/skills/bow_heavy.tres"),
+	"bow_wide_fan": preload("res://data/skills/bow_wide_fan.tres"),
+	"bow_storm": preload("res://data/skills/bow_storm.tres"),
+	"bow_echo": preload("res://data/skills/bow_echo.tres"),
+	"bow_seeking_volley": preload("res://data/skills/bow_seeking_volley.tres"),
+
 	"sword_revolve": preload("res://data/skills/sword_revolve.tres"),
 	"bow_fan_piercing": preload("res://data/skills/bow_fan_piercing.tres"),
 	"sword_rising": preload("res://data/skills/sword_rising.tres"),
@@ -26,11 +39,11 @@ const SKILLS := {
 	"bow_ricochet": preload("res://data/skills/bow_ricochet.tres"),
 	"sword_cross": preload("res://data/skills/sword_cross.tres"),
 }
-const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave", "sword_cross", "sword_rising", "sword_revolve"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet", "bow_chain", "bow_fan_piercing"]}
-const LABELS := {"sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
+const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave", "sword_cross", "sword_rising", "sword_revolve", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet", "bow_chain", "bow_fan_piercing", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley"]}
+const LABELS := {"sword_flurry": "질풍", "sword_cleave": "대지", "sword_twin_wave": "쌍월", "sword_sweep": "삼중", "sword_backstep": "물러", "sword_alternating": "사방", "bow_needle": "바늘", "bow_heavy": "중압", "bow_wide_fan": "부채", "bow_storm": "폭풍", "bow_echo": "메아리", "bow_seeking_volley": "추적연", "sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
 const CODEX_PAGE_SIZE := 3
 # 새 기술을 뒤에 붙여 이전 도감의 페이지 순서를 보존한다.
-const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing"]
+const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley"]
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
 static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
@@ -74,12 +87,15 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 	var definition: SkillDefinition = SKILLS[id]
 	var result: Array[String] = ["재사용 %.1f초 · 동작 %.2f초" % [definition.cooldown_s / recharge_multiplier, definition.duration_s]]
 	result.append("타격 %d회 · 기본 피해 %d" % [definition.damage.size(), _total_damage(definition)])
-	if id in ["bow_spread", "bow_fan_piercing"]:
-		result[1] = "화살 3발 · 각 기본 피해 %d" % int(definition.damage[0])
+	if id in ["bow_spread", "bow_fan_piercing"] or definition.execution_style == &"spread":
+		result[1] = "화살 %d발 · 각 기본 피해 %d" % [definition.spread_angles_deg.size(), int(definition.damage[0])]
 	if id == "bow_ricochet":
 		result[1] = "첫 피해%d · 도탄 피해%d" % [definition.damage[0], definition.ricochet_damage]
 	if id == "sword_cross":
 		result[1] = "정면 피해%d · 후방 피해%d" % [definition.damage[0], definition.damage[1]]
+	if not definition.effect_summary.is_empty():
+		result.append(definition.effect_summary)
+		return result
 	match id:
 		"sword_revolve": result.append("각2.2m · 앞/뒤/앞 3타 · 방향 고정")
 		"bow_fan_piercing": result.append("정면30도 · 각 최대2개체 관통")

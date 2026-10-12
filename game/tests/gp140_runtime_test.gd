@@ -240,13 +240,13 @@ func _test_mastery_codex() -> bool:
 		for i in snapshot.cards.size():
 			var item: Dictionary = snapshot.cards[i]
 			var rect: Rect2 = snapshot.layout.cards[i]
-			if not _check(item.lines.size() == 7 and item.lines[-1].contains("전용 강화"), "직업 도감에서 두 강화 안내"): return false
+			if not _check(item.lines.size() == 5 + PrototypeJobRewards.ultimates_for(item.id).size() and item.lines[-1].contains("전용 강화") and PrototypeJobRewards.ultimates_for(item.id).all(func(profile: Dictionary) -> bool: return item.lines.has("필살기: " + String(profile.name))), "직업 도감에서 두 강화 안내"): return false
 			for j in item.lines.size():
 				var line_height := 0.48 / maxi(6, item.lines.size())
 				var line_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.44 + j * line_height)), Vector2(rect.size.x - 24, rect.size.y * line_height))
 				var font_size := mini(18, maxi(12, int(line_rect.size.y * 0.8)))
 				while font_size > 10 and ThemeDB.fallback_font.get_string_size(item.lines[j], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > line_rect.size.x: font_size -= 1
-				if not _check(rect.encloses(line_rect) and ThemeDB.fallback_font.get_string_size(item.lines[j], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= line_rect.size.x, "두 화면비 일곱 설명 줄이 카드 내부에 표시"): return false
+				if not _check(rect.encloses(line_rect) and ThemeDB.fallback_font.get_string_size(item.lines[j], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= line_rect.size.x, "두 화면비 모든 설명 줄이 카드 내부에 표시"): return false
 		controls.queue_redraw()
 		await process_frame
 	return true

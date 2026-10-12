@@ -16,6 +16,10 @@ const ULTIMATES: Array[Dictionary] = [
 	{"id": "vanguard_resolve", "job": "vanguard", "name": "불굴의 새벽", "lines": ["체력 40 회복", "5초 동안 적 시간 35%"], "duration": 5.0, "slow": 0.35, "damage": 0, "heal": 40},
 	{"id": "tracker_volley", "job": "tracker", "name": "새벽의 일제사격", "lines": ["전방 화면 안 적 · 활 피해 45", "3초 동안 적 시간 15%"], "duration": 3.0, "slow": 0.15, "damage": 45, "weapon": "bow", "range": 800.0, "forward": true, "heal": 0},
 	{"id": "tracker_breath", "job": "tracker", "name": "숲의 숨결", "lines": ["체력 30 회복", "5초 동안 적 시간 25%"], "duration": 5.0, "slow": 0.25, "damage": 0, "heal": 30},
+	{"id": "vanguard_shock", "job": "vanguard", "name": "새벽의 진동", "lines": ["주변2m · 검 피해90", "2초 동안 적 시간20%"], "duration": 2.0, "slow": 0.2, "damage": 90, "weapon": "sword", "range": 200.0, "forward": false, "heal": 0},
+	{"id": "vanguard_mend", "job": "vanguard", "name": "수호의 파동", "lines": ["주변3m · 검30 · 회복25", "4초 동안 적 시간30%"], "duration": 4.0, "slow": 0.3, "damage": 30, "weapon": "sword", "range": 300.0, "forward": false, "heal": 25},
+	{"id": "tracker_snipe", "job": "tracker", "name": "여명의 저격", "lines": ["전방10m · 활90 · 높이1m", "2초 동안 적 시간20%"], "duration": 2.0, "slow": 0.2, "damage": 90, "weapon": "bow", "range": 1000.0, "half_height": 100.0, "forward": true, "heal": 0},
+	{"id": "tracker_shelter", "job": "tracker", "name": "숲의 안식", "lines": ["체력50 회복", "4초 동안 적 시간30%"], "duration": 4.0, "slow": 0.3, "damage": 0, "heal": 50},
 ]
 
 

@@ -37,7 +37,7 @@ func _run() -> void:
 				growth.choose_card(0)
 			ultimate.gauge = 76
 			_tap(controls, controls.job_confirm_rect.get_center())
-			if not _check(paused and growth.awaiting_job_confirmation and not growth.acknowledge_job() and not growth.choose_job_ultimate(-1) and not growth.choose_job_ultimate(2), "선택 전 확인·범위 밖 선택 차단"):
+			if not _check(paused and growth.awaiting_job_confirmation and not growth.acknowledge_job() and not growth.choose_job_ultimate(-1) and not growth.choose_job_ultimate(PrototypeJobRewards.ultimates_for(job_id).size()), "선택 전 확인·범위 밖 선택 차단"):
 				return
 			for viewport_size in [Vector2(1280, 720), Vector2(2400, 1080)]:
 				controls.size = viewport_size

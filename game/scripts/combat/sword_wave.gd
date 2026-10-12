@@ -8,6 +8,7 @@ const SPEED_PX_S := 1200.0
 var damage_handler: Callable
 var projectile_id: String = ""
 var damage: int = 0
+var attack_id: StringName = &"sword_wave"
 var direction: int = 1
 var max_distance_px: float = 600.0
 var hit_radius_px: float = 60.0
@@ -66,7 +67,7 @@ func _check_hits() -> void:
 		var event := DamageEvent.new()
 		event.event_id = StringName("%s:%s" % [projectile_id, target.target_key])
 		event.attacker_id = &"player"
-		event.attack_id = &"sword_wave"
+		event.attack_id = attack_id
 		event.damage = damage
 		event.stagger_s = 0.10
 		event.tags = PackedStringArray(["sword", "skill", "wave"])

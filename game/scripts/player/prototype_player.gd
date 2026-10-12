@@ -45,6 +45,12 @@ const POST_HIT_FLASH_S := 0.12
 const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
+var barrier_focus_unlocked: bool = false
+var crisis_power_unlocked: bool = false
+var nimble_mastery_unlocked: bool = false
+var orb_bloom_unlocked: bool = false
+var potion_efficiency_unlocked: bool = false
+var time_attunement_unlocked: bool = false
 var survival_instinct_unlocked: bool = false
 var calm_focus_unlocked: bool = false
 var healing_flow_unlocked: bool = false
@@ -330,7 +336,7 @@ func set_combat_evade_allowed(allowed: bool) -> void:
 
 
 func ground_evade_cooldown_s() -> float:
-	return GROUND_EVADE_COOLDOWN_S * (0.8 if nimble_evade_unlocked else 1.0) * (PrototypeRelic.WIND_COOLDOWN_MULTIPLIER if has_active_relic(PrototypeRelic.WIND_ID) else 1.0)
+	return GROUND_EVADE_COOLDOWN_S * (0.8 if nimble_evade_unlocked else 1.0) * (0.9 if nimble_mastery_unlocked and nimble_evade_unlocked else 1.0) * (PrototypeRelic.WIND_COOLDOWN_MULTIPLIER if has_active_relic(PrototypeRelic.WIND_ID) else 1.0)
 
 
 func set_nimble_evade_unlocked(enabled: bool) -> void:
@@ -456,6 +462,7 @@ func is_calm_health() -> bool:
 
 func incoming_damage_multiplier() -> float:
 	var value := PrototypeRelic.SEAL_DAMAGE_MULTIPLIER if has_active_relic(PrototypeRelic.SEAL_ID) else 1.0
+	if has_active_relic(PrototypeRelic.IRON_LEAF_ID) and is_calm_health(): value *= 0.85
 	if is_crisis_health():
 		if survival_instinct_unlocked: value *= 0.9
 		if has_active_relic(PrototypeRelic.CHARM_ID): value *= PrototypeRelic.CHARM_DAMAGE_MULTIPLIER
@@ -534,7 +541,20 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind))
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind))
+
+
+func expansion_damage_multiplier(weapon_id: String, kind: String) -> float:
+	var value := 1.0
+	if has_active_relic(PrototypeRelic.SWORD_PENDANT_ID) and weapon_id == "sword": value *= 1.15
+	if has_active_relic(PrototypeRelic.BOW_PENDANT_ID) and weapon_id == "bow": value *= 1.15
+	if kind == "basic" and crisis_power_unlocked and is_crisis_health(): value *= 1.20
+	if kind == "skill":
+		if has_active_relic(PrototypeRelic.LAST_SPARK_ID) and is_crisis_health(): value *= 1.30
+		if damage_receiver.barrier_health > 0:
+			if barrier_focus_unlocked: value *= 1.15
+			if has_active_relic(PrototypeRelic.BARRIER_LENS_ID): value *= 1.25
+	return value
 
 
 func calm_damage_multiplier(kind: String) -> float:
@@ -551,7 +571,7 @@ func apply_growth_health(maximum_bonus: int, healing: int) -> void:
 
 func potion_heal_ratio() -> float:
 	var bonus := PrototypeRelic.DEW_POTION_BONUS if relic_state.get("id", "") == PrototypeRelic.DEW_ID and not relic_state.get("used", false) else 0.0
-	return float(PrototypePotionRecipes.profile(potion_recipe).ratio) + bonus + (0.05 if potion_mastery_unlocked else 0.0) + (PrototypeRelic.CUP_POTION_BONUS if has_active_relic(PrototypeRelic.CUP_ID) else 0.0)
+	return float(PrototypePotionRecipes.profile(potion_recipe).ratio) + bonus + (0.05 if potion_mastery_unlocked else 0.0) + (0.05 if potion_efficiency_unlocked and potion_mastery_unlocked else 0.0) + (PrototypeRelic.CUP_POTION_BONUS if has_active_relic(PrototypeRelic.CUP_ID) else 0.0)
 
 
 func use_recovery_potion() -> bool:
@@ -635,7 +655,7 @@ func set_orb_vitality_unlocked(enabled: bool) -> void:
 
 
 func recovery_orb_heal_percent() -> int:
-	return roundi(RecoveryOrbController.HEAL_RATIO * 100) * (2 if orb_vitality_unlocked else 1) + (PrototypeRelic.SEED_ORB_BONUS if has_active_relic(PrototypeRelic.SEED_ID) else 0)
+	return roundi(RecoveryOrbController.HEAL_RATIO * 100) * (2 if orb_vitality_unlocked else 1) + (5 if orb_bloom_unlocked and orb_vitality_unlocked else 0) + (PrototypeRelic.SEED_ORB_BONUS if has_active_relic(PrototypeRelic.SEED_ID) else 0)
 
 
 func recovery_orb_heal_amount() -> int:
@@ -683,6 +703,12 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	barrier_focus_unlocked = false
+	crisis_power_unlocked = false
+	nimble_mastery_unlocked = false
+	orb_bloom_unlocked = false
+	potion_efficiency_unlocked = false
+	time_attunement_unlocked = false
 	survival_instinct_unlocked = false
 	calm_focus_unlocked = false
 	healing_flow_unlocked = false

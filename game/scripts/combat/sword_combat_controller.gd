@@ -97,6 +97,11 @@ func request_skill_2() -> void:
 
 
 func _skill_action(definition: SkillDefinition) -> int:
+	if definition != null:
+		match definition.execution_style:
+			&"wave": return Action.WAVE_SLASH
+			&"line": return Action.LINE_SLASH
+			&"spin": return Action.SPIN_SLASH
 	if definition != null and definition.skill_id == &"sword_wave": return Action.WAVE_SLASH
 	if definition != null and definition.skill_id in [&"sword_line", &"sword_triple", &"sword_thrust", &"sword_charge", &"sword_cross", &"sword_rising", &"sword_revolve"]:
 		return Action.LINE_SLASH
@@ -246,7 +251,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 		_skill_2_cooldown_s = definition.cooldown_s
 
 	var velocity_x := 0.0
-	if definition.movement_distance_m > 0.0 and definition.duration_s > 0.0:
+	if not is_zero_approx(definition.movement_distance_m) and definition.duration_s > 0.0:
 		velocity_x = (
 			definition.movement_distance_m
 			* PrototypePlayer.PIXELS_PER_METER
@@ -290,6 +295,8 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		return
 	# 교차 베기의 두 번째 타격만 시전 방향의 반대쪽이다. 시전 방향은 보존한다.
 	var hit_direction := -_line_direction if definition.skill_id in [&"sword_cross", &"sword_revolve"] and hit_index == 1 else _line_direction
+	if hit_index < definition.hit_directions.size():
+		hit_direction = _line_direction * definition.hit_directions[hit_index]
 	if _action == Action.LINE_SLASH:
 		_line_visual_direction = hit_direction
 	var targets: Array[PrototypeTarget] = []
@@ -468,6 +475,7 @@ func _build_metrics() -> Dictionary:
 func _spawn_wave(definition: SkillDefinition, hit_index: int) -> void:
 	var wave := SwordWave.new()
 	wave.projectile_id = "player:sword_wave:%d:%d" % [_action_sequence, hit_index]
+	wave.attack_id = definition.skill_id
 	wave.damage = player.growth_damage(int(definition.damage[hit_index]), "sword", "skill")
 	wave.direction = _wave_direction
 	wave.max_distance_px = definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER

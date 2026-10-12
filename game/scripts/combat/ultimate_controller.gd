@@ -97,7 +97,7 @@ func select_job_ultimate(job_id: String, ultimate_id: String) -> bool:
 
 
 func duration_for(profile: Dictionary) -> float:
-	return float(profile.get("duration", DURATION_S)) + (TIME_ECHO_BONUS_S if time_echo_unlocked else 0.0) + (TIME_ECHO_BONUS_S if time_echo_unlocked and time_echo_boost_unlocked else 0.0)
+	return float(profile.get("duration", DURATION_S)) + (TIME_ECHO_BONUS_S if time_echo_unlocked else 0.0) + (TIME_ECHO_BONUS_S if time_echo_unlocked and time_echo_boost_unlocked else 0.0) + (1.0 if player.has_active_relic(PrototypeRelic.DAWN_DIAL_ID) else 0.0)
 
 
 func _apply_job_effect() -> void:
@@ -115,7 +115,7 @@ func _apply_job_effect() -> void:
 		var offset := target.global_position - player.global_position
 		var radius := float(_active_profile["range"])
 		if bool(_active_profile.get("forward", false)):
-			if offset.x * player.facing_direction < 0.0 or absf(offset.x) > radius or absf(offset.y) > 220.0 or not target_selector.is_target_on_screen(target):
+			if offset.x * player.facing_direction < 0.0 or absf(offset.x) > radius or absf(offset.y) > float(_active_profile.get("half_height", 220.0)) or not target_selector.is_target_on_screen(target):
 				continue
 		elif offset.length() > radius:
 			continue
@@ -201,10 +201,17 @@ func force_emit_metrics() -> void:
 func _on_weapon_hit(is_skill: bool, _target: PrototypeTarget, _damage: int) -> void:
 	if is_skill:
 		skill_gauge_gain_count += 1
-		_add_gauge(combat_gauge_amount(SKILL_HIT_GAIN), "스킬 적중")
+		_add_gauge(weapon_hit_gauge_amount(true), "스킬 적중")
 	else:
 		basic_gauge_gain_count += 1
-		_add_gauge(combat_gauge_amount(BASIC_HIT_GAIN), "기본 공격 적중")
+		_add_gauge(weapon_hit_gauge_amount(false), "기본 공격 적중")
+
+
+func weapon_hit_gauge_amount(is_skill: bool) -> int:
+	var amount := (10 if is_skill else 5) if player.time_attunement_unlocked else (SKILL_HIT_GAIN if is_skill else BASIC_HIT_GAIN)
+	if is_skill and player.has_active_relic(PrototypeRelic.SKILL_PRISM_ID): amount += 3
+	if not is_skill and player.has_active_relic(PrototypeRelic.TEMPO_BELL_ID): amount += 2
+	return combat_gauge_amount(amount)
 
 
 func combat_gauge_amount(base_amount: int) -> int:
@@ -245,8 +252,8 @@ func _emit_metrics() -> void:
 		"ultimate_selected_id": selected_profile.get("id", ""),
 		"ultimate_burst_hits": last_burst_hits,
 		"ultimate_gauge": gauge,
-		"ultimate_basic_gain": combat_gauge_amount(BASIC_HIT_GAIN),
-		"ultimate_skill_gain": combat_gauge_amount(SKILL_HIT_GAIN),
+		"ultimate_basic_gain": weapon_hit_gauge_amount(false),
+		"ultimate_skill_gain": weapon_hit_gauge_amount(true),
 		"ultimate_evade_gain": precise_evade_gauge_amount(),
 		"ultimate_defeat_gain": defeat_gauge_amount(),
 		"ultimate_coin_gain": combat_gauge_amount(PrototypeRelic.COIN_DEFEAT_GAIN) if player.has_active_relic(PrototypeRelic.COIN_ID) else 0,
