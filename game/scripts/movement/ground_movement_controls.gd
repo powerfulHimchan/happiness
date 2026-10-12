@@ -260,6 +260,11 @@ var selected_skill_offer: int = -1
 var selected_skill_slot: int = -1
 var stage_route_rects: Array[Rect2] = []
 var stage_route_options: Array[Dictionary] = PrototypeStageRunner.ROUTES.duplicate(true)
+var all_stage_route_options: Array[Dictionary] = PrototypeStageRunner.ROUTES.duplicate(true)
+var stage_route_page: int = 0
+var stage_route_previous_rect := Rect2()
+var stage_route_next_rect := Rect2()
+const STAGE_ROUTE_PAGE_SIZE := 4
 var cleared_stage: int = 1
 var run_stage_count: int = 3
 var stage_recovered_health: int = 0
@@ -640,6 +645,8 @@ func _draw_weapon_rewards() -> void:
 		reward_note = "태엽 폐허 통과 · 체력 +20 / 필살기 +50 추가 지급 (상한 적용)"
 	if movement_metrics.get("run_route_id", "") == "forest" and not checkpoint_message.begins_with("중간 저장 실패"):
 		reward_note = "숲 정예 통과 · 기본 회복에 체력+10 / 필살기+15 추가 (상한 적용)"
+	if movement_metrics.get("run_route_id", "") == "ruins" and not checkpoint_message.begins_with("중간 저장 실패"):
+		reward_note = "유적 정예 통과 · 보유 방벽+10 / 필살기+20 추가 (상한 적용)"
 	_draw_text_centered(reward_note, Rect2(safe.position + Vector2(0, safe.size.y * 0.72), Vector2(safe.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	var confirm_label := "무기를 선택하세요"
 	if selected_weapon_reward >= 0:
@@ -654,11 +661,28 @@ func _draw_weapon_rewards() -> void:
 
 func show_stage_routes(stage: int, stage_count: int, recovered_health: int, routes: Array[Dictionary] = PrototypeStageRunner.ROUTES) -> void:
 	release_all_inputs()
-	stage_route_options = routes.duplicate(true)
+	all_stage_route_options = routes.duplicate(true)
+	stage_route_page = 0
+	_refresh_stage_route_page()
 	cleared_stage = stage
 	run_stage_count = stage_count
 	stage_recovered_health = recovered_health
 	screen_mode = ScreenMode.STAGE_ROUTE
+	_refresh_stage_routes()
+	queue_redraw()
+
+
+func stage_route_pages() -> int:
+	return maxi(1, ceili(float(all_stage_route_options.size()) / STAGE_ROUTE_PAGE_SIZE))
+
+
+func _refresh_stage_route_page() -> void:
+	stage_route_options.assign(all_stage_route_options.slice(stage_route_page * STAGE_ROUTE_PAGE_SIZE, (stage_route_page + 1) * STAGE_ROUTE_PAGE_SIZE))
+
+
+func _change_stage_route_page(direction: int) -> void:
+	stage_route_page = clampi(stage_route_page + direction, 0, stage_route_pages() - 1)
+	_refresh_stage_route_page()
 	_refresh_stage_routes()
 	queue_redraw()
 
@@ -673,6 +697,8 @@ func _refresh_stage_routes() -> void:
 	if relic_offer_available:
 		skill_reward_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.81), Vector2(safe.size.x * 0.43, safe.size.y * 0.08))
 		relic_reward_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.52, safe.size.y * 0.81), skill_reward_open_rect.size)
+	stage_route_previous_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.35), Vector2(safe.size.x * 0.22, safe.size.y * 0.06))
+	stage_route_next_rect = Rect2(safe.position + Vector2(safe.size.x * 0.73, safe.size.y * 0.35), Vector2(safe.size.x * 0.22, safe.size.y * 0.06))
 	stage_route_rects.clear()
 	for index in count:
 		stage_route_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.43), Vector2(card_width, safe.size.y * 0.35)))
@@ -684,7 +710,11 @@ func _draw_stage_routes() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	_draw_text_centered("스테이지 %d/%d 완료" % [cleared_stage, run_stage_count], Rect2(safe.position + Vector2(0, safe.size.y * 0.08), Vector2(safe.size.x, 50)), 32, PASS_COLOR)
 	_draw_text_centered("체력 +%d 회복 · 현재 %d/%d" % [stage_recovered_health, int(movement_metrics.get("health", 0)), int(movement_metrics.get("max_health", 100))], Rect2(safe.position + Vector2(0, safe.size.y * 0.20), Vector2(safe.size.x, 40)), 22, TEXT_COLOR)
-	_draw_text_centered("성장을 유지하고 다음 경로를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.30), Vector2(safe.size.x, 40)), 20, MUTED_TEXT_COLOR)
+	_draw_text_centered("성장을 유지하고 다음 경로를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * (0.28 if stage_route_pages() > 1 else 0.30)), Vector2(safe.size.x, 40)), 20, MUTED_TEXT_COLOR)
+	if stage_route_pages() > 1:
+		_draw_button(stage_route_previous_rect, "이전 경로", stage_route_page > 0)
+		_draw_button(stage_route_next_rect, "다음 경로", stage_route_page < stage_route_pages() - 1)
+		_draw_village_text("%d / %d" % [stage_route_page + 1, stage_route_pages()], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.35), Vector2(safe.size.x * 0.40, safe.size.y * 0.06)), 19, TEXT_COLOR)
 	for index in stage_route_options.size():
 		var rect := stage_route_rects[index]
 		var route := stage_route_options[index]
@@ -1309,7 +1339,7 @@ func _handle_screen_touch(position: Vector2) -> void:
 			selected_relic_offer = relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE
 			queue_redraw()
 		elif relic_reward_cancel_rect.has_point(position):
-			show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, stage_route_options)
+			show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, all_stage_route_options)
 		elif relic_reward_confirm_rect.has_point(position):
 			relic_reward_selected.emit(String(PrototypeRelic.OFFERS[selected_relic_offer].id))
 		return
@@ -1384,6 +1414,13 @@ func _handle_screen_touch(position: Vector2) -> void:
 		if not skill_reward_claimed and skill_reward_open_rect.has_point(position):
 			show_skill_rewards()
 			return
+		if stage_route_pages() > 1:
+			if stage_route_previous_rect.has_point(position):
+				_change_stage_route_page(-1)
+				return
+			if stage_route_next_rect.has_point(position):
+				_change_stage_route_page(1)
+				return
 		for index in stage_route_rects.size():
 			if stage_route_rects[index].has_point(position):
 				stage_route_selected.emit(String(stage_route_options[index]["id"]))
@@ -2711,7 +2748,7 @@ func _draw_village() -> void:
 	draw_rect(Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.75)), Color("2b4b43"))
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
-	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "네 경로의 지형·보너스·선택 조건을 비교하세요" if village_page == "atlas" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
+	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "다섯 경로의 지형·보너스·선택 조건을 비교하세요" if village_page == "atlas" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
 	if village_page == "record_lengths":
 		subtitle = "완주한 도전만 비교 · 이전 단일 스테이지 기록은 전체 통계에 포함"
 	if village_page == "history":
@@ -2931,7 +2968,7 @@ func _handle_skill_reward_touch(position: Vector2) -> void:
 				selected_skill_slot = i
 				return
 	if skill_reward_cancel_rect.has_point(position):
-		show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, stage_route_options)
+		show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, all_stage_route_options)
 	elif skill_reward_confirm_rect.has_point(position) and selected_skill_offer >= 0 and selected_skill_slot >= 0:
 		skill_reward_selected.emit(String(skill_reward_offers[selected_skill_offer].id), selected_skill_slot)
 

@@ -104,6 +104,6 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
 				{"name": "성장 도감", "open": true, "status": "직업 · 능력 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자 · 능력 도감", "조건 · 강화 가지 · 효과"]},
 				{"name": "약방", "open": bool(memories.get("clockwork_guard", false)) or bool(memories.get("core_echo", false)), "status": "약초사 정착" if memories.get("clockwork_guard", false) else "소분 조제 해금" if memories.get("core_echo", false) else "구출: 농축 · 파괴: 소분", "lines": ["기본 25% · 2개", "농축 40%·1개 / 소분 20%·3개", "다음 도전의 회복약 선택"]},
-				{"name": "지도 제작소", "open": true, "status": "언제든 경로 비교", "lines": ["답사한 경로 %d/%d" % [surveyed_routes.size(), PrototypeRouteAtlas.IDS.size()], "풀숲 · 바람 · 태엽 · 거꾸로 숲", "지형 · 보너스 · 통과 기록"]},
+				{"name": "지도 제작소", "open": true, "status": "언제든 경로 비교", "lines": ["답사한 경로 %d/%d" % [surveyed_routes.size(), PrototypeRouteAtlas.IDS.size()], "풀숲 · 바람 · 태엽 · 숲 · 유적", "지형 · 보너스 · 통과 기록"]},
 			])
 	return result

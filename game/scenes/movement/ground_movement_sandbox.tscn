@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3]
+[gd_scene load_steps=46 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/stage/recovery_orb_controller.gd" id="36_recovery_orbs"]
@@ -37,6 +37,8 @@
 
 [ext_resource type="Script" path="res://scripts/combat/boss_clockwork_knight.gd" id="35_boss"]
 [ext_resource type="Texture2D" path="res://assets/clockwork_knight.svg" id="36_boss_texture"]
+
+[ext_resource type="Script" path="res://scripts/stage/clock_trap_controller.gd" id="37_clock_traps"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -759,6 +761,10 @@ color = Color(1, 0.419608, 0.368627, 0.78)
 
 [node name="RouteTerrain" type="Node2D" parent="."]
 script = ExtResource("34_route_terrain")
+
+[node name="ClockTrapController" type="Node2D" parent="."]
+z_index = 45
+script = ExtResource("37_clock_traps")
 
 [node name="StageRunner" type="Node" parent="."]
 script = ExtResource("30_stage_runner")

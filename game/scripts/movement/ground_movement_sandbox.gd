@@ -384,6 +384,9 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		elif stage_runner.route_id == "forest":
 			healing += 10
 			ultimate_controller.grant_stage_gauge(15)
+		elif stage_runner.route_id == "ruins":
+			player.recover_barrier(10)
+			ultimate_controller.grant_stage_gauge(20)
 		var before := player.damage_receiver.health
 		player.apply_growth_health(0, healing)
 		_stage_recovered_health = player.damage_receiver.health - before
@@ -603,7 +606,7 @@ func _suspend_combat_environment() -> void:
 		return
 	_combat_environment_suspended = true
 	_suspended_node_states.clear()
-	var nodes: Array[Node] = [stage_runner, target_selector, $RecoveryOrbController, $RouteTerrain]
+	var nodes: Array[Node] = [stage_runner, target_selector, $RecoveryOrbController, $RouteTerrain, $ClockTrapController]
 	if controls.village_environment_owned:
 		nodes.append_array([player, weapon_controller])
 	for group_name in [&"combat_enemy", &"enemy_projectile", &"targetable"]:
