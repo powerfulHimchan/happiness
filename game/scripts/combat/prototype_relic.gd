@@ -18,6 +18,14 @@ const RUNE_SKILL_MULTIPLIER := 1.20
 const COMPASS_RADIUS_MULTIPLIER := 1.50
 const COIN_DEFEAT_GAIN := 3
 const CUP_POTION_BONUS := 0.05
+const CHARM_ID := "crisis_charm"
+const FEATHER_ID := "clear_feather"
+const NECKLACE_ID := "life_necklace"
+const WHISTLE_ID := "cheering_whistle"
+const CHARM_DAMAGE_MULTIPLIER := 0.80
+const FEATHER_BASIC_MULTIPLIER := 1.25
+const NECKLACE_ABSORB_PERCENT := 5
+const WHISTLE_EVADE_GAIN := 3
 const REWARD_PAGE_SIZE := 5
 const CODEX_PAGE_SIZE := 3
 const SEAL_DAMAGE_MULTIPLIER := 0.90
@@ -44,6 +52,10 @@ const OFFERS: Array[Dictionary] = [
 	{"id": COMPASS_ID, "name": "숲의 나침반", "lines": ["회복 구슬 획득 거리1.5배", "구슬 자석·넓은 자석과 곱연산", "회복량·드롭 확률 유지"]},
 	{"id": COIN_ID, "name": "수집가의 동전", "lines": ["실제 적 처치 게이지 +3", "시간 수집과 합산 · 최대100", "획득 즉시 충전하지 않음"]},
 	{"id": CUP_ID, "name": "새벽의 잔", "lines": ["회복약 최대 체력 회복 +5%p", "기본30% · 농축45% · 소분25%", "숙련과 합산 · 개수 유지"]},
+	{"id": CHARM_ID, "name": "위기의 부적", "lines": ["체력30% 이하: 전투 피해 -20%", "생존 본능과 곱연산 · 방벽 전에", "최소1 피해 · 낙하 피해 유지"]},
+	{"id": FEATHER_ID, "name": "청명의 깃털", "lines": ["체력80% 이상: 기본 공격1.25배", "검·활 적용 · 적중 시 체력 기준", "스킬·필살기·공격 속도 유지"]},
+	{"id": NECKLACE_ID, "name": "생명의 목걸이", "lines": ["검·활 실제 피해의5% 회복", "생명 흡수/강화와 +5%p 합산", "기본·스킬 적용 · 소수 누적"]},
+	{"id": WHISTLE_ID, "name": "응원의 호루라기", "lines": ["정확 회피 게이지12 → 15", "실제 회피 판정마다 추가 +3", "회피 시간·경로 보상 유지"]},
 ]
 
 static func valid_id(id: String) -> bool:
@@ -55,6 +67,10 @@ static func valid_state(value: Variant) -> bool:
 static func hud(state: Dictionary) -> String:
 	if state.is_empty():
 		return "유물 없음"
+	if state.id == CHARM_ID: return "위기의 부적 · 위기 전투 피해 -20%"
+	if state.id == FEATHER_ID: return "청명의 깃털 · 고체력 기본1.25배"
+	if state.id == NECKLACE_ID: return "생명의 목걸이 · 생명 흡수 +5%p"
+	if state.id == WHISTLE_ID: return "응원의 호루라기 · 정확 회피 +3"
 	if state.id == RUNE_ID: return "마력의 문장 · 스킬 피해 1.2배"
 	if state.id == COMPASS_ID: return "숲의 나침반 · 구슬 거리 1.5배"
 	if state.id == COIN_ID: return "수집가의 동전 · 처치 게이지 +3"
@@ -81,6 +97,8 @@ static func codex_cards(state: Dictionary) -> Array[Dictionary]:
 		for line in offer.lines: lines.append(String(line))
 		lines.append("조건: 두 번째 정예 뒤 선택")
 		var detail: String = {
+			CHARM_ID: "타격 전 체력 기준 · 경직 유지", FEATHER_ID: "성장·장비 뒤 최종 반올림",
+			NECKLACE_ID: "과잉 피해 제외 · 만피/조회 회복 없음", WHISTLE_ID: "기존 적중/처치 게이지 유지 · 최대100",
 			RUNE_ID: "스킬만 강화 · 흡수는 실제 피해 기준", COMPASS_ID: "기본1.14m · 넓은 자석3.42m",
 			COIN_ID: "처치당 한 번 · 선택 이후 적용", CUP_ID: "현재 최대 체력 기준 · 소수 올림",
 			HOURGLASS_ID: "기본5 · 스킬10 · 회피15", EMBER_ID: "성장·장비 뒤 적용 · 감속 유지",

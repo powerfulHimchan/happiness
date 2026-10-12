@@ -45,6 +45,9 @@ const POST_HIT_FLASH_S := 0.12
 const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
+var survival_instinct_unlocked: bool = false
+var calm_focus_unlocked: bool = false
+var healing_flow_unlocked: bool = false
 var memory_id: String = ""
 var potions_remaining: int = POTIONS_PER_RUN
 var potion_log: String = "회복약 · 최대 체력 25% 회복"
@@ -397,7 +400,7 @@ func is_ground_evading() -> bool:
 
 func receive_damage(event: DamageEvent) -> int:
 	# 공유 원본을 보존하고 파괴 핵·유물 보정 후 한 번만 반올림한다.
-	if event != null and (boss_legacy.get("choice") == "destroy" or has_active_relic(PrototypeRelic.SEAL_ID)):
+	if event != null and (boss_legacy.get("choice") == "destroy" or not is_equal_approx(incoming_damage_multiplier(), 1.0)):
 		var incoming := DamageEvent.new()
 		incoming.event_id = event.event_id
 		incoming.attacker_id = event.attacker_id
@@ -443,12 +446,26 @@ func has_active_relic(id: String) -> bool:
 	return relic_state.get("id", "") == id and relic_state.get("used", false) == false
 
 
+func is_crisis_health() -> bool:
+	return damage_receiver.health * 10 <= damage_receiver.max_health * 3
+
+
+func is_calm_health() -> bool:
+	return damage_receiver.health * 5 >= damage_receiver.max_health * 4
+
+
 func incoming_damage_multiplier() -> float:
-	return PrototypeRelic.SEAL_DAMAGE_MULTIPLIER if has_active_relic(PrototypeRelic.SEAL_ID) else 1.0
+	var value := PrototypeRelic.SEAL_DAMAGE_MULTIPLIER if has_active_relic(PrototypeRelic.SEAL_ID) else 1.0
+	if is_crisis_health():
+		if survival_instinct_unlocked: value *= 0.9
+		if has_active_relic(PrototypeRelic.CHARM_ID): value *= PrototypeRelic.CHARM_DAMAGE_MULTIPLIER
+	return value
 
 
 func basic_relic_multiplier(kind: String) -> float:
-	return PrototypeRelic.DUEL_BASIC_MULTIPLIER if kind == "basic" and has_active_relic(PrototypeRelic.DUEL_ID) else 1.0
+	if kind != "basic": return 1.0
+	if has_active_relic(PrototypeRelic.FEATHER_ID) and is_calm_health(): return PrototypeRelic.FEATHER_BASIC_MULTIPLIER
+	return PrototypeRelic.DUEL_BASIC_MULTIPLIER if has_active_relic(PrototypeRelic.DUEL_ID) else 1.0
 
 
 func skill_relic_multiplier(kind: String) -> float:
@@ -517,7 +534,11 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
-	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind))
+	return roundi(float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind))
+
+
+func calm_damage_multiplier(kind: String) -> float:
+	return 1.15 if kind == "skill" and calm_focus_unlocked and is_calm_health() else 1.0
 
 
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
@@ -662,6 +683,9 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	survival_instinct_unlocked = false
+	calm_focus_unlocked = false
+	healing_flow_unlocked = false
 	potion_pouch_boost_unlocked = false
 	potion_mastery_unlocked = false
 	orb_magnet_boost_unlocked = false
@@ -1098,7 +1122,10 @@ func _emit_metrics() -> void:
 		"barrier_absorbed": damage_receiver.last_absorbed_damage,
 		"lifesteal_unlocked": lifesteal_unlocked,
 		"lifesteal_branch": lifesteal_branch,
-		"lifesteal_rate_percent": lifesteal_multiplier() * 5 if lifesteal_unlocked else 0,
+		"lifesteal_rate_percent": lifesteal_rate_percent(),
+		"survival_instinct_unlocked": survival_instinct_unlocked,
+		"calm_focus_unlocked": calm_focus_unlocked,
+		"healing_flow_unlocked": healing_flow_unlocked,
 		"lifesteal_progress": lifesteal_progress,
 		"air_jump_available": air_jump_available,
 		"double_jump_count": double_jump_count,
@@ -1207,6 +1234,7 @@ func set_double_jump_unlocked(enabled: bool) -> void:
 func set_lifesteal_unlocked(enabled: bool) -> void:
 	lifesteal_unlocked = enabled
 	if not enabled:
+		healing_flow_unlocked = false
 		lifesteal_branch = ""
 		lifesteal_progress = 0
 		_lifesteal_flash_remaining_s = 0.0
@@ -1224,16 +1252,20 @@ func set_lifesteal_branch(branch: String) -> void:
 
 
 func lifesteal_multiplier() -> int:
-	if lifesteal_branch == "lifesteal_depth": return 2
+	if lifesteal_branch == "lifesteal_depth": return 3 if healing_flow_unlocked else 2
 	if lifesteal_branch == "lifesteal_crisis" and damage_receiver.health * 10 <= damage_receiver.max_health * 3: return 3
 	return 1
+
+
+func lifesteal_rate_percent() -> int:
+	return (lifesteal_multiplier() * 5 if lifesteal_unlocked else 0) + (PrototypeRelic.NECKLACE_ABSORB_PERCENT if has_active_relic(PrototypeRelic.NECKLACE_ID) else 0)
 
 
 func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
 	if not is_instance_valid(target):
 		return DamageReceiver.Result.INVALID_EVENT
 	# 처치가 레벨업 화면을 열기 전에 공격 순간의 자격을 확보한다.
-	var can_absorb: bool = lifesteal_unlocked and not damage_receiver.dead \
+	var can_absorb: bool = lifesteal_rate_percent() > 0 and not damage_receiver.dead \
 		and lifesteal_allowed.is_valid() and lifesteal_allowed.call() \
 		and target.is_in_group("combat_enemy") and target.is_visible_in_tree() \
 		and event != null and event.attacker_id == &"player" \
@@ -1241,7 +1273,7 @@ func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
 		and (event.tags.has("basic") or event.tags.has("skill")) \
 		and damage_receiver.health < damage_receiver.max_health
 	# 회복으로 문턱을 넘는 타격도 공격 시점의 배율을 한 번만 사용한다.
-	var multiplier := lifesteal_multiplier()
+	var multiplier := lifesteal_rate_percent() / 5
 	var before := target.damage_receiver.health
 	var result := target.receive_damage(event)
 	if result == DamageReceiver.Result.APPLIED and can_absorb and not damage_receiver.dead:

@@ -5,6 +5,11 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp177_180_runtime_test.gd"
+  "$game_root/tests/gp181_184_runtime_test.gd"
+  "$game_root/tests/gp185_186_runtime_test.gd"
+  "$game_root/data/skills/sword_revolve.tres"
+  "$game_root/data/skills/bow_fan_piercing.tres"
   "$game_root/tests/gp167_170_runtime_test.gd"
   "$game_root/tests/gp171_174_runtime_test.gd"
   "$game_root/tests/gp175_176_runtime_test.gd"
@@ -609,6 +614,20 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for synergy_phase in seed resume finish legacy-seed legacy combat; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp177_180_runtime_test.gd -- "$synergy_phase"
+  done
+  for relic_id in charm feather necklace whistle; do
+    for relic_phase in seed resume finish combat; do
+      checked_godot 45s --headless --path "$game_root" \
+        --script res://tests/gp181_184_runtime_test.gd -- "$relic_id" "$relic_phase"
+    done
+  done
+  for skill_phase in seed resume finish legacy combat-right combat-left flows; do
+    checked_godot 45s --headless --path "$game_root" \
+      --script res://tests/gp185_186_runtime_test.gd -- "$skill_phase"
+  done
   for growth_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" \
       --script res://tests/gp167_170_runtime_test.gd -- "$growth_phase"

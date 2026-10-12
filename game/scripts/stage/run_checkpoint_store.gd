@@ -202,7 +202,7 @@ static func valid_state(state: Dictionary) -> bool:
 	if not _number(barrier, 0, barrier_capacity, true) or (not growth.ranks.has("magic_barrier") and barrier != 0):
 		return false
 	var progress: Variant = player.get("lifesteal_progress", 0)
-	if not _number(progress, 0, PrototypePlayer.LIFESTEAL_DAMAGE_PER_HEALTH - 1, true) or (not growth.ranks.has("lifesteal") and progress != 0):
+	if not _number(progress, 0, PrototypePlayer.LIFESTEAL_DAMAGE_PER_HEALTH - 1, true) or (not growth.ranks.has("lifesteal") and state.get("relic", {}).get("id", "") != PrototypeRelic.NECKLACE_ID and progress != 0):
 		return false
 	var ranks: Dictionary = growth.ranks
 	var expected_max := 100 + PrototypeMemoryAbilities.health_bonus(String(state.get("memory_id", ""))) + (10 if legacy.get("choice") == "rescue" else 0) + int(ranks.get("vitality", 0)) * 20 + int(ranks.get("recovery", 0)) * 10 + int(ranks.get("vanguard_vigor", 0)) * 30 + int(ranks.get("tracker_breath", 0)) * 20

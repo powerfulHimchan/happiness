@@ -104,7 +104,7 @@ func _skill_action(definition: SkillDefinition) -> int:
 		return Action.HOMING_ARROW
 	if definition != null and definition.skill_id == &"bow_focus":
 		return Action.FOCUS_ARROW
-	if definition != null and definition.skill_id == &"bow_spread":
+	if definition != null and definition.skill_id in [&"bow_spread", &"bow_fan_piercing"]:
 		return Action.SPREAD_ARROW
 	return Action.ARROW_RAIN if definition != null and definition.skill_id == &"bow_arrow_rain" else Action.PIERCING_ARROW
 
