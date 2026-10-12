@@ -18,6 +18,7 @@ enum State {
 }
 
 const SEED_PROJECTILE_SCENE := preload("res://scenes/combat/enemy_seed_projectile.tscn")
+const CLOCK_DOLL_TEXTURE := preload("res://assets/star_clock_doll.svg")
 const SLIME_WARNING_S := 0.35
 const SLIME_RECOVERY_S := 0.80
 const SEED_WARNING_S := 1.00
@@ -35,6 +36,10 @@ const DANGER_LINE_COLOR := Color("ff7043")
 @export var player_path: NodePath
 
 var forest_variant: bool = false
+var ruins_variant: bool = false
+var _original_body_texture: Texture2D
+var _clock_aim := Vector2.LEFT
+var _clock_second_warning: bool = false
 var _combo_remaining: int = 0
 var _original_body_color: Color
 var state: int = State.IDLE
@@ -61,6 +66,7 @@ var _projectile_sequence: int = 0
 func _ready() -> void:
 	super._ready()
 	_original_body_color = body_color
+	_original_body_texture = body_sprite.texture
 	_spawn_position = position
 	add_to_group("prototype_enemy")
 	add_to_group("combat_enemy")
@@ -102,6 +108,7 @@ func receive_damage(event: DamageEvent) -> int:
 		if is_zero_approx(away_sign):
 			away_sign = 1.0
 		global_position.x += away_sign * 70.0
+		_combo_remaining = 0
 		_attack_cooldown_s = maxf(_attack_cooldown_s, SEED_RECOVERY_S)
 		_set_state(State.RECOVERY, "씨앗 포대 근접 피격 · 1초 사격 중단")
 	return result
@@ -109,14 +116,18 @@ func receive_damage(event: DamageEvent) -> int:
 
 func configure_route(route: String) -> void:
 	forest_variant = route == "forest"
+	ruins_variant = route == "ruins"
+	body_sprite.texture = CLOCK_DOLL_TEXTURE if ruins_variant and enemy_type == EnemyType.SEED_SACK else _original_body_texture
 	_combo_remaining = 0
 	queue_redraw()
-	body_color = Color("b8e38b") if forest_variant else _original_body_color
+	body_color = Color("b8e38b") if forest_variant else Color.WHITE if ruins_variant else _original_body_color
 
 
 func reset_target() -> void:
 	super.reset_target()
 	state = State.IDLE
+	_clock_aim = Vector2.LEFT
+	_clock_second_warning = false
 	_combo_remaining = 0
 	attack_count = 0
 	hit_count = 0
@@ -147,6 +158,7 @@ func current_metrics() -> Dictionary:
 		"enemy_name": enemy_name(),
 		"enemy_type": enemy_type,
 		"enemy_forest_variant": forest_variant,
+		"enemy_ruins_variant": ruins_variant,
 		"enemy_combo_remaining": _combo_remaining,
 		"enemy_state": state_name(),
 		"enemy_warning": state == State.WARNING,
@@ -168,6 +180,7 @@ func warning_feedback_snapshot() -> Dictionary:
 
 
 func enemy_name() -> String:
+	if ruins_variant and enemy_type == EnemyType.SEED_SACK: return "별시계 인형"
 	match enemy_type:
 		EnemyType.LEAF_SLIME:
 			return "풀잎 슬라임"
@@ -235,14 +248,25 @@ func _update_seed_sack(delta: float) -> void:
 			elif horizontal_distance_m > 7.0:
 				position.x += signf(player.global_position.x - global_position.x) * 120.0 * delta
 			elif _attack_cooldown_s <= 0.0:
-				_begin_warning("숲 씨앗 다섯 갈래 · 1.0초 경고" if forest_variant else "씨앗 포대 조준 경고 · 1.0초")
+				if ruins_variant:
+					_combo_remaining = 1
+					_clock_second_warning = false
+					_clock_aim = (player.global_position + Vector2(0, -42) - (global_position + Vector2(0, -54))).normalized()
+				_begin_warning("별시계 인형 사격 · 1.0초 경고" if ruins_variant else "숲 씨앗 다섯 갈래 · 1.0초 경고" if forest_variant else "씨앗 포대 조준 경고 · 1.0초")
 		State.WARNING:
-			_update_aim_line(520.0, DANGER_LINE_COLOR)
-			if _state_elapsed_s >= SEED_WARNING_S:
+			if ruins_variant:
+				warning_line.points = PackedVector2Array([Vector2(0, -54), Vector2(0, -54) + _clock_aim * 520.0])
+			else:
+				_update_aim_line(520.0, DANGER_LINE_COLOR)
+			if _state_elapsed_s >= (0.70 if ruins_variant and _clock_second_warning else SEED_WARNING_S):
 				_fire_seed_volley()
 				_begin_recovery("씨앗탄 %d발 발사 · 반격 1.0초" % (5 if forest_variant else 3))
 		State.RECOVERY:
-			if _state_elapsed_s >= SEED_RECOVERY_S:
+			if ruins_variant and _combo_remaining > 0 and _state_elapsed_s >= 0.35:
+				_combo_remaining -= 1
+				_clock_second_warning = true
+				_begin_warning("기억된 방향 재사격 · 0.7초 경고")
+			elif _state_elapsed_s >= SEED_RECOVERY_S:
 				_attack_cooldown_s = 1.25
 				_set_state(State.IDLE, "씨앗 포대 거리 유지 재개")
 
@@ -301,6 +325,7 @@ func _begin_recovery(message: String) -> void:
 
 func _set_state(new_state: int, message: String) -> void:
 	state = new_state
+	if new_state == State.DEAD: _combo_remaining = 0
 	_state_elapsed_s = 0.0
 	last_enemy_log = message
 	last_event_msec = Time.get_ticks_msec()
@@ -316,7 +341,7 @@ func _set_state(new_state: int, message: String) -> void:
 func _fire_seed_volley() -> void:
 	attack_count += 1
 	var origin := global_position + Vector2(0.0, -54.0)
-	var base_direction := (player.global_position + Vector2(0.0, -42.0) - origin).normalized()
+	var base_direction := _clock_aim if ruins_variant else (player.global_position + Vector2(0.0, -42.0) - origin).normalized()
 	var angles := [-24.0, -12.0, 0.0, 12.0, 24.0] if forest_variant else [-12.0, 0.0, 12.0]
 	for angle_degrees in angles:
 		_projectile_sequence += 1
@@ -326,6 +351,10 @@ func _fire_seed_volley() -> void:
 			base_direction.rotated(deg_to_rad(angle_degrees)),
 			SEED_DAMAGE
 		)
+		if ruins_variant:
+			projectile.attack_id = &"clock_doll_volley"
+			projectile.damage_tags = PackedStringArray(["enemy", "projectile", "clock", "doll"])
+			projectile.base_color = Color("9be2ff")
 		var projectile_parent := get_tree().current_scene
 		if projectile_parent == null:
 			projectile_parent = get_tree().root

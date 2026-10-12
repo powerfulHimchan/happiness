@@ -185,7 +185,7 @@ func _test_forest_atlas(surveyed: bool) -> bool:
 		if not _check(first.cards.size() == 3 and first.cards[2].id == "clockwork" and first.route_pages == 2, "기존 세 경로 첫 페이지 유지"): return false
 		_tap(first.pager.next.get_center())
 		var second: Dictionary = controls.village_snapshot()
-		if not _check(second.cards.size() == 1 and second.cards[0].id == "forest" and second.cards[0].status.contains("완료") == surveyed and second.cards[0].lines[2].contains("15"), "둘째 페이지 숲 효과·실제 통과 답사 상태"): return false
+		if not _check(second.cards.size() == 2 and second.cards[0].id == "forest" and second.cards[0].status.contains("완료") == surveyed and second.cards[0].lines[2].contains("15"), "둘째 페이지 숲 효과·실제 통과 답사 상태"): return false
 		var rects: Array = second.layout.cards.duplicate()
 		rects.append_array(second.pager.values())
 		rects.append_array([second.layout.back, second.layout.start])
