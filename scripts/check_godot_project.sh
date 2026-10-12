@@ -619,6 +619,14 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  # Scene conversion may report an error with exit code zero. Check the actual
+  # Android resource pack and boot its converted scenes, without building an APK.
+  checked_godot 120s --headless --path "$game_root" \
+    --export-pack "Android Debug APK" "$check_data_dir/android-resources.pck"
+  test -s "$check_data_dir/android-resources.pck"
+  checked_godot 45s --headless \
+    --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
+  echo "Android resource export and packed game boot: OK"
   for growth_phase in seed resume finish legacy-seed legacy combat; do
     checked_godot 45s --headless --path "$game_root" --script res://tests/gp207_212_runtime_test.gd -- "$growth_phase"
   done

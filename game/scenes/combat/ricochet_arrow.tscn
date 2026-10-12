@@ -1,7 +1,13 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="PackedScene" path="res://scenes/combat/bow_projectile.tscn" id="1_arrow"]
-[ext_resource type="Script" path="res://scripts/combat/ricochet_arrow.gd" id="2_script"]
+[ext_resource type="Script" path="res://scripts/combat/ricochet_arrow.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/bow_arrow.svg" id="2_arrow"]
 
-[node name="RicochetArrow" instance=ExtResource("1_arrow")]
-script = ExtResource("2_script")
+[node name="RicochetArrow" type="Node2D"]
+z_index = 60
+z_as_relative = false
+script = ExtResource("1_script")
+
+[node name="ArrowSprite" type="Sprite2D" parent="."]
+scale = Vector2(0.46, 0.46)
+texture = ExtResource("2_arrow")
