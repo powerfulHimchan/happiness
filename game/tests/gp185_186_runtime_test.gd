@@ -202,7 +202,7 @@ func _test_fan_hits(direction: int) -> bool:
 	if not _check(actor.projectile_fired_count == 0 and actor._skill_1_cooldown_s == 9, "확산 준비0.2초·9초 대기"): return false
 	actor._update_skill_action(0.02)
 	var shots := get_nodes_in_group("bow_projectile")
-	if not _check(shots.size() == 3, "실제 세 방향 화살 생성"): return false
+	if not _check(shots.size() == 3 and actor.last_combat_log.contains("확산 관통") and actor.last_combat_log.contains("각 최대2개체 관통"), "실제 세 방향 화살/원본 이름/관통 로그"): return false
 	ultimate.gauge = 0
 	for i in shots.size():
 		var shot: BowProjectile = shots[i]
