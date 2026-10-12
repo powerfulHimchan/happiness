@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"bow_echo"
+display_name = "메아리 도탄"
+execution_style = &"ricochet"
+effect_summary = "화살2발 · 각 첫28/도탄18 · 주변4m"
+cooldown_s = 12
+duration_s = 0.65
+hit_times_s = PackedFloat32Array(0.16, 0.38)
+damage = PackedInt32Array(28, 28)
+hit_range_m = 8.0
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 2
+can_move = true
+can_turn = false
+evade_cancel_start_s = 0.2
+ultimate_gain = 8
+ricochet_damage = 18
+ricochet_range_m = 4.0

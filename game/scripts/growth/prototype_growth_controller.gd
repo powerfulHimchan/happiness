@@ -45,6 +45,12 @@ const CARDS: Array[Dictionary] = [
 	{"id": "calm_focus", "title": "차분한 집중", "category": "common", "lines": ["체력80% 이상: 스킬 피해1.15배", "검·활 적용 · 기본/필살기 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["power"]},
 	{"id": "healing_flow", "title": "치유의 흐름", "category": "common", "lines": ["깊은 흡수10% → 15% 회복", "실제 피해 기준 · 누적 소수 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal_depth"]},
 	{"id": "victory_resilience", "title": "회복 탄력성", "category": "common", "lines": ["강화 처치 회복3% → 4%", "현재 최대 체력 기준 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["victory_recovery_boost"]},
+	{"id": "barrier_focus", "title": "방벽 집중", "category": "common", "lines": ["방벽 잔량: 스킬1.15배", "검·활 · 타격 시 잔량 기준"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
+	{"id": "crisis_power", "title": "위기의 힘", "category": "common", "lines": ["체력30% 이하: 기본1.2배", "검·활 기본만 적용"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["power"]},
+	{"id": "nimble_mastery", "title": "회피 숙련", "category": "common", "lines": ["지상 회피 대기 추가 -10%", "민첩과 곱연산 · 무적 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["nimble_evade"]},
+	{"id": "orb_bloom", "title": "구슬 개화", "category": "common", "lines": ["회복 구슬 회복20% → 25%", "최대 체력 기준 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["orb_vitality"]},
+	{"id": "potion_efficiency", "title": "회복약 정통", "category": "common", "lines": ["숙련 회복약 회복 추가 +5%p", "모든 조제 · 개수 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["potion_mastery"]},
+	{"id": "time_attunement", "title": "시간 조율", "category": "common", "lines": ["적중 게이지 기본5/스킬10", "유물과 합산 · 최대100"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_collector"]},
 ]
 
 var level: int = 1
@@ -87,6 +93,12 @@ func _ready() -> void:
 
 
 func reset_run(starting_weapon: String = "sword") -> void:
+	player.barrier_focus_unlocked = false
+	player.crisis_power_unlocked = false
+	player.nimble_mastery_unlocked = false
+	player.orb_bloom_unlocked = false
+	player.potion_efficiency_unlocked = false
+	player.time_attunement_unlocked = false
 	player.survival_instinct_unlocked = false
 	player.calm_focus_unlocked = false
 	player.healing_flow_unlocked = false
@@ -163,6 +175,12 @@ func restore_checkpoint(state: Dictionary) -> void:
 	player.survival_instinct_unlocked = int(ranks.get("survival_instinct", 0)) == 1
 	player.calm_focus_unlocked = int(ranks.get("calm_focus", 0)) == 1
 	player.healing_flow_unlocked = int(ranks.get("healing_flow", 0)) == 1
+	player.barrier_focus_unlocked = int(ranks.get("barrier_focus", 0)) == 1
+	player.crisis_power_unlocked = int(ranks.get("crisis_power", 0)) == 1
+	player.nimble_mastery_unlocked = int(ranks.get("nimble_mastery", 0)) == 1
+	player.orb_bloom_unlocked = int(ranks.get("orb_bloom", 0)) == 1
+	player.potion_efficiency_unlocked = int(ranks.get("potion_efficiency", 0)) == 1
+	player.time_attunement_unlocked = int(ranks.get("time_attunement", 0)) == 1
 	jobs.job_id = String(state.job)
 	jobs.contributions = state.contributions.duplicate(true)
 	jobs.recent_ability = state.recent.duplicate(true)
@@ -255,6 +273,12 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	match card_id:
+		"barrier_focus": player.barrier_focus_unlocked = true
+		"crisis_power": player.crisis_power_unlocked = true
+		"nimble_mastery": player.nimble_mastery_unlocked = true
+		"orb_bloom": player.orb_bloom_unlocked = true
+		"potion_efficiency": player.potion_efficiency_unlocked = true
+		"time_attunement": player.time_attunement_unlocked = true
 		"survival_instinct": player.survival_instinct_unlocked = true
 		"calm_focus": player.calm_focus_unlocked = true
 		"healing_flow": player.healing_flow_unlocked = true

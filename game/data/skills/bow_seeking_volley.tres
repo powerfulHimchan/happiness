@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"bow_seeking_volley"
+display_name = "추적 연사"
+execution_style = &"homing"
+effect_summary = "표적 고정 · 추적3발 · 각1개체"
+cooldown_s = 11
+duration_s = 0.75
+hit_times_s = PackedFloat32Array(0.16, 0.34, 0.52)
+damage = PackedInt32Array(20, 20, 20)
+hit_range_m = 8.0
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 1
+can_move = true
+can_turn = false
+evade_cancel_start_s = 0.2
+ultimate_gain = 8

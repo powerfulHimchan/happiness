@@ -1,6 +1,14 @@
 class_name PrototypeRelic
 extends RefCounted
 
+const IRON_LEAF_ID := "iron_leaf"
+const LAST_SPARK_ID := "last_spark"
+const SWORD_PENDANT_ID := "sword_pendant"
+const BOW_PENDANT_ID := "bow_pendant"
+const TEMPO_BELL_ID := "tempo_bell"
+const SKILL_PRISM_ID := "skill_prism"
+const DAWN_DIAL_ID := "dawn_dial"
+const BARRIER_LENS_ID := "barrier_lens"
 const PHOENIX_ID := "phoenix_feather"
 const CLOCK_ID := "clock_fragment"
 const DEW_ID := "spring_dew"
@@ -56,6 +64,14 @@ const OFFERS: Array[Dictionary] = [
 	{"id": FEATHER_ID, "name": "청명의 깃털", "lines": ["체력80% 이상: 기본 공격1.25배", "검·활 적용 · 적중 시 체력 기준", "스킬·필살기·공격 속도 유지"]},
 	{"id": NECKLACE_ID, "name": "생명의 목걸이", "lines": ["검·활 실제 피해의5% 회복", "생명 흡수/강화와 +5%p 합산", "기본·스킬 적용 · 소수 누적"]},
 	{"id": WHISTLE_ID, "name": "응원의 호루라기", "lines": ["정확 회피 게이지12 → 15", "실제 회피 판정마다 추가 +3", "회피 시간·경로 보상 유지"]},
+	{"id": "iron_leaf", "name": "강철 잎", "lines": ["체력80% 이상: 전투 피해 -15%", "방벽 흡수 전 · 낙하 피해 유지", "도전 중 지속 · 하나만 보유"]},
+	{"id": "last_spark", "name": "마지막 불꽃", "lines": ["체력30% 이하: 스킬 피해1.3배", "검·활 스킬 · 현재 체력 기준", "도전 중 지속 · 하나만 보유"]},
+	{"id": "sword_pendant", "name": "검사의 펜던트", "lines": ["검 피해1.15배", "기본·스킬·공격 필살기 적용", "도전 중 지속 · 하나만 보유"]},
+	{"id": "bow_pendant", "name": "궁수의 펜던트", "lines": ["활 피해1.15배", "기본·스킬·공격 필살기 적용", "도전 중 지속 · 하나만 보유"]},
+	{"id": "tempo_bell", "name": "박자의 종", "lines": ["기본 공격 적중 게이지 +2", "검·활 · 게이지 최대100", "도전 중 지속 · 하나만 보유"]},
+	{"id": "skill_prism", "name": "기술의 프리즘", "lines": ["스킬 적중 게이지 +3", "검·활 · 게이지 최대100", "도전 중 지속 · 하나만 보유"]},
+	{"id": "dawn_dial", "name": "새벽의 시계판", "lines": ["필살기 감속 시간 +1초", "다음 발동부터 · 여운과 합산", "도전 중 지속 · 하나만 보유"]},
+	{"id": "barrier_lens", "name": "방벽 렌즈", "lines": ["방벽 잔량이 있으면 스킬1.25배", "검·활 스킬 · 적중 시 잔량 기준", "도전 중 지속 · 하나만 보유"]},
 ]
 
 static func valid_id(id: String) -> bool:
@@ -67,6 +83,14 @@ static func valid_state(value: Variant) -> bool:
 static func hud(state: Dictionary) -> String:
 	if state.is_empty():
 		return "유물 없음"
+	if state.id == IRON_LEAF_ID: return "강철 잎 · 체력80% 이상: 전투 피해 -15%"
+	if state.id == LAST_SPARK_ID: return "마지막 불꽃 · 체력30% 이하: 스킬 피해1.3배"
+	if state.id == SWORD_PENDANT_ID: return "검사의 펜던트 · 검 피해1.15배"
+	if state.id == BOW_PENDANT_ID: return "궁수의 펜던트 · 활 피해1.15배"
+	if state.id == TEMPO_BELL_ID: return "박자의 종 · 기본 공격 적중 게이지 +2"
+	if state.id == SKILL_PRISM_ID: return "기술의 프리즘 · 스킬 적중 게이지 +3"
+	if state.id == DAWN_DIAL_ID: return "새벽의 시계판 · 필살기 감속 시간 +1초"
+	if state.id == BARRIER_LENS_ID: return "방벽 렌즈 · 방벽 잔량이 있으면 스킬1.25배"
 	if state.id == CHARM_ID: return "위기의 부적 · 위기 전투 피해 -20%"
 	if state.id == FEATHER_ID: return "청명의 깃털 · 고체력 기본1.25배"
 	if state.id == NECKLACE_ID: return "생명의 목걸이 · 생명 흡수 +5%p"
@@ -97,6 +121,14 @@ static func codex_cards(state: Dictionary) -> Array[Dictionary]:
 		for line in offer.lines: lines.append(String(line))
 		lines.append("조건: 두 번째 정예 뒤 선택")
 		var detail: String = {
+			IRON_LEAF_ID: "방벽 흡수 전 · 낙하 피해 유지",
+			LAST_SPARK_ID: "검·활 스킬 · 현재 체력 기준",
+			SWORD_PENDANT_ID: "기본·스킬·공격 필살기 적용",
+			BOW_PENDANT_ID: "기본·스킬·공격 필살기 적용",
+			TEMPO_BELL_ID: "검·활 · 게이지 최대100",
+			SKILL_PRISM_ID: "검·활 · 게이지 최대100",
+			DAWN_DIAL_ID: "다음 발동부터 · 여운과 합산",
+			BARRIER_LENS_ID: "검·활 스킬 · 적중 시 잔량 기준",
 			CHARM_ID: "타격 전 체력 기준 · 경직 유지", FEATHER_ID: "성장·장비 뒤 최종 반올림",
 			NECKLACE_ID: "과잉 피해 제외 · 만피/조회 회복 없음", WHISTLE_ID: "기존 적중/처치 게이지 유지 · 최대100",
 			RUNE_ID: "스킬만 강화 · 흡수는 실제 피해 기준", COMPASS_ID: "기본1.14m · 넓은 자석3.42m",
