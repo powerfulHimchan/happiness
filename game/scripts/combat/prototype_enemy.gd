@@ -34,6 +34,9 @@ const DANGER_LINE_COLOR := Color("ff7043")
 @export_enum("풀잎 슬라임", "씨앗 포대", "바람 정령") var enemy_type: int = EnemyType.LEAF_SLIME
 @export var player_path: NodePath
 
+var forest_variant: bool = false
+var _combo_remaining: int = 0
+var _original_body_color: Color
 var state: int = State.IDLE
 var attack_count: int = 0
 var hit_count: int = 0
@@ -57,6 +60,7 @@ var _projectile_sequence: int = 0
 
 func _ready() -> void:
 	super._ready()
+	_original_body_color = body_color
 	_spawn_position = position
 	add_to_group("prototype_enemy")
 	add_to_group("combat_enemy")
@@ -103,9 +107,17 @@ func receive_damage(event: DamageEvent) -> int:
 	return result
 
 
+func configure_route(route: String) -> void:
+	forest_variant = route == "forest"
+	_combo_remaining = 0
+	queue_redraw()
+	body_color = Color("b8e38b") if forest_variant else _original_body_color
+
+
 func reset_target() -> void:
 	super.reset_target()
 	state = State.IDLE
+	_combo_remaining = 0
 	attack_count = 0
 	hit_count = 0
 	warning_count = 0
@@ -134,6 +146,8 @@ func current_metrics() -> Dictionary:
 		"enemy_key": target_key,
 		"enemy_name": enemy_name(),
 		"enemy_type": enemy_type,
+		"enemy_forest_variant": forest_variant,
+		"enemy_combo_remaining": _combo_remaining,
 		"enemy_state": state_name(),
 		"enemy_warning": state == State.WARNING,
 		"enemy_alive": is_targetable(),
@@ -148,7 +162,7 @@ func current_metrics() -> Dictionary:
 func warning_feedback_snapshot() -> Dictionary:
 	return {
 		"color": DANGER_LINE_COLOR if enemy_type == EnemyType.WIND_SPIRIT else DANGER_RING_COLOR,
-		"shape": "직선" if enemy_type == EnemyType.WIND_SPIRIT else "원형",
+		"shape": "부채" if forest_variant and enemy_type == EnemyType.SEED_SACK else "직선" if enemy_type == EnemyType.WIND_SPIRIT else "원형",
 		"uses_color_and_shape": true,
 	}
 
@@ -186,7 +200,8 @@ func _update_leaf_slime(delta: float) -> void:
 			if absf(position.x - _spawn_position.x) >= 70.0:
 				_patrol_direction *= -1.0
 			if _attack_cooldown_s <= 0.0 and _distance_to_player_m() <= 3.0:
-				_begin_warning("풀잎 슬라임 점프 경고 · 0.35초")
+				_combo_remaining = 1 if forest_variant else 0
+				_begin_warning("숲 슬라임 연속 도약 · 각0.35초 경고" if forest_variant else "풀잎 슬라임 점프 경고 · 0.35초")
 		State.WARNING:
 			if _state_elapsed_s >= SLIME_WARNING_S:
 				var direction_sign := signf(player.global_position.x - global_position.x)
@@ -202,7 +217,10 @@ func _update_leaf_slime(delta: float) -> void:
 				_velocity = Vector2.ZERO
 				_begin_recovery("풀잎 슬라임 착지 · 0.8초 빈틈")
 		State.RECOVERY:
-			if _state_elapsed_s >= SLIME_RECOVERY_S:
+			if _combo_remaining > 0 and _state_elapsed_s >= 0.30:
+				_combo_remaining -= 1
+				_begin_warning("숲 슬라임 두 번째 도약 · 0.35초 경고")
+			elif _state_elapsed_s >= SLIME_RECOVERY_S:
 				_attack_cooldown_s = 0.35
 				_set_state(State.IDLE, "풀잎 슬라임 이동 재개")
 
@@ -217,12 +235,12 @@ func _update_seed_sack(delta: float) -> void:
 			elif horizontal_distance_m > 7.0:
 				position.x += signf(player.global_position.x - global_position.x) * 120.0 * delta
 			elif _attack_cooldown_s <= 0.0:
-				_begin_warning("씨앗 포대 조준 경고 · 1.0초")
+				_begin_warning("숲 씨앗 다섯 갈래 · 1.0초 경고" if forest_variant else "씨앗 포대 조준 경고 · 1.0초")
 		State.WARNING:
 			_update_aim_line(520.0, DANGER_LINE_COLOR)
 			if _state_elapsed_s >= SEED_WARNING_S:
 				_fire_seed_volley()
-				_begin_recovery("씨앗탄 3발 발사 · 반격 1.0초")
+				_begin_recovery("씨앗탄 %d발 발사 · 반격 1.0초" % (5 if forest_variant else 3))
 		State.RECOVERY:
 			if _state_elapsed_s >= SEED_RECOVERY_S:
 				_attack_cooldown_s = 1.25
@@ -240,7 +258,8 @@ func _update_wind_spirit(delta: float) -> void:
 				_attack_direction = (
 					player.global_position + Vector2(0.0, -42.0) - global_position
 				).normalized()
-				_begin_warning("바람 정령 직선 경고 · 0.6초")
+				_combo_remaining = 1 if forest_variant else 0
+				_begin_warning("숲 정령 재돌진 · 각0.6초 경고" if forest_variant else "바람 정령 직선 경고 · 0.6초")
 		State.WARNING:
 			_update_fixed_warning_line(_attack_direction * 850.0, DANGER_LINE_COLOR)
 			if _state_elapsed_s >= WIND_WARNING_S:
@@ -251,9 +270,15 @@ func _update_wind_spirit(delta: float) -> void:
 			_attack_distance_px += displacement.length()
 			_try_contact_damage(WIND_DAMAGE, &"wind_dash")
 			if _attack_distance_px >= 850.0 or position.x <= 100.0 or position.x >= 4900.0:
+				if forest_variant:
+					position.x = clampf(position.x, 100.0, 4900.0)
 				_begin_recovery("바람 정령 빗나감 · 1.2초 빈틈")
 		State.RECOVERY:
-			if _state_elapsed_s >= WIND_RECOVERY_S:
+			if _combo_remaining > 0 and _state_elapsed_s >= 0.30:
+				_combo_remaining -= 1
+				_attack_direction = (player.global_position + Vector2(0.0, -42.0) - global_position).normalized()
+				_begin_warning("숲 정령 두 번째 돌진 · 0.6초 경고")
+			elif _state_elapsed_s >= WIND_RECOVERY_S:
 				_attack_cooldown_s = 0.55
 				_set_state(State.IDLE, "바람 정령 부유 재개")
 
@@ -279,6 +304,7 @@ func _set_state(new_state: int, message: String) -> void:
 	_state_elapsed_s = 0.0
 	last_enemy_log = message
 	last_event_msec = Time.get_ticks_msec()
+	queue_redraw()
 	if warning_ring != null:
 		warning_ring.visible = new_state == State.WARNING and enemy_type != EnemyType.WIND_SPIRIT
 		warning_ring.modulate = DANGER_RING_COLOR
@@ -291,7 +317,8 @@ func _fire_seed_volley() -> void:
 	attack_count += 1
 	var origin := global_position + Vector2(0.0, -54.0)
 	var base_direction := (player.global_position + Vector2(0.0, -42.0) - origin).normalized()
-	for angle_degrees in [-12.0, 0.0, 12.0]:
+	var angles := [-24.0, -12.0, 0.0, 12.0, 24.0] if forest_variant else [-12.0, 0.0, 12.0]
+	for angle_degrees in angles:
 		_projectile_sequence += 1
 		var projectile := SEED_PROJECTILE_SCENE.instantiate() as EnemySeedProjectile
 		projectile.configure(
@@ -353,8 +380,19 @@ func _update_fixed_warning_line(endpoint: Vector2, color: Color) -> void:
 func _update_warning_visual() -> void:
 	if state != State.WARNING:
 		return
+	if forest_variant and enemy_type == EnemyType.SEED_SACK:
+		queue_redraw()
 	var pulse := 0.58 + sin(_state_elapsed_s * 22.0) * 0.28
 	if warning_ring.visible:
 		warning_ring.modulate.a = pulse
 	if warning_line.visible:
 		warning_line.modulate.a = pulse
+
+
+func _draw() -> void:
+	if not forest_variant or enemy_type != EnemyType.SEED_SACK or state != State.WARNING:
+		return
+	var origin := Vector2(0.0, -54.0)
+	var direction := (player.global_position + Vector2(0.0, -42.0) - global_position - origin).normalized()
+	for angle in [-24.0, -12.0, 12.0, 24.0]:
+		draw_line(origin, origin + direction.rotated(deg_to_rad(angle)) * 520.0, Color(DANGER_LINE_COLOR, 0.75), 3.0)

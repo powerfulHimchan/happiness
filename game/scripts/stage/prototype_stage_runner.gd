@@ -43,6 +43,7 @@ const ROUTES: Array[Dictionary] = [
 	{"id": "wind", "name": "바람 길", "lines": ["징검 발판 · 흩어진 원거리 전투", "첫 웨이브 · 슬라임 + 바람 정령", "필살기 게이지 +25"]},
 ]
 const RISK_ROUTE := {"id": "clockwork", "name": "태엽 폐허 · 위험", "lines": ["좁은 발판 · 적 체력 +20%", "첫 웨이브 · 세 종류의 적", "통과: 체력 +20 · 필살기 +50"]}
+const FOREST_ROUTE := {"id": "forest", "name": "거꾸로 자란 숲", "lines": ["움직이는 덩굴 · 고정 쉼터", "연속 도약 · 넓은 씨앗 · 재돌진", "정예 통과: 회복+10 · 게이지+15"]}
 var stage_number: int = 1
 var route_id: String = "meadow"
 var skills_claimed: bool = false
@@ -121,6 +122,8 @@ func reset_stage() -> void:
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	for enemy in _all_combat_enemies():
+		if enemy is PrototypeEnemy:
+			(enemy as PrototypeEnemy).configure_route(route_id)
 		enemy.damage_receiver.max_health = _enemy_health(enemy)
 		enemy.reset_target()
 		_deactivate_enemy(enemy)
@@ -155,7 +158,15 @@ func available_routes() -> Array[Dictionary]:
 	var routes: Array[Dictionary] = ROUTES.duplicate(true)
 	if stage_number == 1 and player.boss_legacy.get("choice", "") == "destroy":
 		routes.append(RISK_ROUTE.duplicate(true))
+	routes.append(FOREST_ROUTE.duplicate(true))
 	return routes
+
+
+static func route_profile(id: String) -> Dictionary:
+	for route in ROUTES + [RISK_ROUTE, FOREST_ROUTE]:
+		if route.id == id:
+			return route.duplicate(true)
+	return {}
 
 
 func can_select_route(id: String) -> bool:
@@ -262,6 +273,8 @@ func current_metrics() -> Dictionary:
 		objective = "돌진·충격파·탄막 회피 · 벽 충돌 시 검 공격"
 	if route_id == "clockwork" and not stage_complete:
 		objective = ["첫 관문까지 전진", "강화된 슬라임·씨앗·바람 처치", "좁은 태엽 발판을 점프로 건너기", "강화된 혼합 웨이브 처치", "강화된 갑옷 멧돼지 처치"][display_index]
+	if route_id == "forest" and not stage_complete and current_section != Section.ELITE:
+		objective = ["숲 입구까지 전진", "연속 도약·다섯 씨앗 경고 회피", "움직이는 덩굴과 고정 쉼터 건너기", "공중 정령 재돌진·높낮이 혼합 전투"][display_index]
 	if awaiting_boss_choice():
 		objective = "승리 · 구출 또는 파괴를 선택하세요"
 	var target_s := 0.0 if stage_complete else float(SECTION_TARGET_SECONDS[display_index])
@@ -273,8 +286,8 @@ func current_metrics() -> Dictionary:
 		"run_stage_number": stage_number,
 		"run_stage_count": stage_limit,
 		"run_route_id": route_id,
-		"run_route_name": RISK_ROUTE.name if route_id == "clockwork" else ("풀숲 길" if route_id == "meadow" else "바람 길"),
-		"run_route_terrain": "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판")),
+		"run_route_name": route_profile(route_id).get("name", "알 수 없는 경로"),
+		"run_route_terrain": "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판")),
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
@@ -345,7 +358,10 @@ func _finish_current_section() -> void:
 
 func _activate_wave_one() -> void:
 	_activate_enemy(leaf_slime, Vector2(1510.0, 780.0))
-	if route_id == "clockwork":
+	if route_id == "forest":
+		_activate_enemy(seed_sack, Vector2(1980.0, 650.0))
+		_active_enemies.assign([leaf_slime, seed_sack])
+	elif route_id == "clockwork":
 		_activate_enemy(seed_sack, Vector2(1980.0, 780.0))
 		_activate_enemy(wind_spirit, Vector2(1750.0, 540.0))
 		_active_enemies.assign([leaf_slime, seed_sack, wind_spirit])
@@ -362,6 +378,10 @@ func _activate_wave_two() -> void:
 		_activate_enemy(leaf_slime, Vector2(4020.0, 780.0))
 		_activate_enemy(seed_sack, Vector2(4380.0, 780.0))
 		_activate_enemy(wind_spirit, Vector2(4200.0, 590.0))
+	elif route_id == "forest":
+		_activate_enemy(leaf_slime, Vector2(4050.0, 780.0))
+		_activate_enemy(seed_sack, Vector2(4470.0, 650.0))
+		_activate_enemy(wind_spirit, Vector2(4250.0, 480.0))
 	elif route_id == "meadow":
 		_activate_enemy(leaf_slime, Vector2(4000.0, 780.0))
 		_activate_enemy(seed_sack, Vector2(4180.0, 780.0))
@@ -406,6 +426,8 @@ func _restore_combat_sandbox() -> void:
 		if enemy == boss:
 			_deactivate_enemy(enemy)
 			continue
+		if enemy is PrototypeEnemy:
+			(enemy as PrototypeEnemy).configure_route("meadow")
 		var initial_position: Vector2 = _initial_positions.get(enemy.get_path(), enemy.position)
 		enemy.damage_receiver.max_health = int(_initial_health.get(enemy.get_path(), enemy.damage_receiver.max_health))
 		enemy.set_stage_spawn(initial_position)
