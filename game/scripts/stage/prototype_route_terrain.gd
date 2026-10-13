@@ -25,6 +25,10 @@ const FOREST_MOVING_INDICES := [1, 3]
 const FOREST_PERIOD_S := 4.0
 const RUINS_STEPS: Array[Rect2] = FOREST_STEPS
 const RUINS_PERIOD_S := 6.0
+const FESTIVAL_STEPS: Array[Rect2] = FOREST_STEPS
+const FESTIVAL_PERIOD_S := 5.0
+const FESTIVAL_ORBIT := Vector2(32, 24)
+const FESTIVAL_LIFT_PX := 45.0
 var motion_elapsed_s: float = 0.0
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
@@ -54,9 +58,11 @@ func configure(stage: int, route: String, enabled: bool = true) -> void:
 			platforms.assign(FOREST_STEPS)
 		elif route == "ruins":
 			platforms.assign(RUINS_STEPS)
+		elif route == "festival":
+			platforms.assign(FESTIVAL_STEPS)
 	for index in platforms.size():
 		var rect := platforms[index]
-		var body: PhysicsBody2D = AnimatableBody2D.new() if route in ["forest", "ruins"] and index in FOREST_MOVING_INDICES else StaticBody2D.new()
+		var body: PhysicsBody2D = AnimatableBody2D.new() if route in ["forest", "ruins", "festival"] and index in FOREST_MOVING_INDICES else StaticBody2D.new()
 		body.name = "RoutePlatform%d" % index
 		body.position = rect.get_center()
 		var shape := CollisionShape2D.new()
@@ -69,27 +75,31 @@ func configure(stage: int, route: String, enabled: bool = true) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if route_id in ["forest", "ruins"] and not platforms.is_empty():
-		var period := FOREST_PERIOD_S if route_id == "forest" else RUINS_PERIOD_S
+	if route_id in ["forest", "ruins", "festival"] and not platforms.is_empty():
+		var period := FESTIVAL_PERIOD_S if route_id == "festival" else FOREST_PERIOD_S if route_id == "forest" else RUINS_PERIOD_S
 		motion_elapsed_s = fmod(motion_elapsed_s + delta, period)
 		for index in FOREST_MOVING_INDICES:
 			var base := FOREST_STEPS[index]
 			var offset := Vector2(40.0, -20.0) * sin(motion_elapsed_s * TAU / FOREST_PERIOD_S) if route_id == "forest" else Vector2(90.0, 0.0) * ruins_motion_ratio()
 			offset *= 1.0 if index == 1 else -1.0
+			if route_id == "festival":
+				# 발판은 수평을 유지한 채 놀이기구 궤도를 돌며 탑승자를 운반한다.
+				var angle := motion_elapsed_s * TAU / FESTIVAL_PERIOD_S
+				offset = Vector2(FESTIVAL_ORBIT.x * sin(angle), FESTIVAL_ORBIT.y * (1.0 - cos(angle))) if index == 1 else Vector2(0, -FESTIVAL_LIFT_PX * sin(angle))
 			platforms[index] = Rect2(base.position + offset, base.size)
 			get_child(index).position = platforms[index].get_center()
 		queue_redraw()
 	if platforms.is_empty() or not player.is_on_floor():
 		return
 	for index in platforms.size():
-		if route_id in ["forest", "ruins"] and index in FOREST_MOVING_INDICES:
+		if route_id in ["forest", "ruins", "festival"] and index in FOREST_MOVING_INDICES:
 			continue
 		var rect := platforms[index]
 		var feet_y := player.global_position.y + PLAYER_HALF_HEIGHT
 		if absf(feet_y - rect.position.y) <= 3.0 and player.global_position.x >= rect.position.x + SAFE_EDGE_MARGIN and player.global_position.x <= rect.end.x - SAFE_EDGE_MARGIN:
 			if index != _last_landed_platform:
 				_last_landed_platform = index
-				var label := "유적 고정 쉼터" if route_id == "ruins" else "숲 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else "바람 발판"
+				var label := "축제 고정 쉼터" if route_id == "festival" else "유적 고정 쉼터" if route_id == "ruins" else "숲 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else "바람 발판"
 				player.set_safe_spawn(Vector2(rect.get_center().x, rect.position.y - PLAYER_HALF_HEIGHT), "풀숲 다리" if route_id == "meadow" else "%s %d" % [label, index + 1])
 			return
 	_last_landed_platform = -1
@@ -131,6 +141,16 @@ func _draw() -> void:
 			draw_line(center, center + Vector2(28, 14), rim, 4)
 	for index in platforms.size():
 		var rect := platforms[index]
+		if route_id == "festival":
+			base = Color("b15e74")
+			rim = Color("ffe2a3")
+			if index == 1:
+				var hub := FESTIVAL_STEPS[1].get_center() + Vector2(0, FESTIVAL_ORBIT.y)
+				draw_arc(hub, 72, 0, TAU, 32, rim, 5)
+				draw_line(hub, rect.get_center(), Color("62768d"), 8)
+			elif index == 3:
+				for x in [rect.position.x + 32, rect.end.x - 32]:
+					draw_line(Vector2(x, 660), Vector2(x, 850), Color("62768d"), 7)
 		draw_rect(rect, base, true)
 		draw_rect(Rect2(rect.position, Vector2(rect.size.x, 8)), rim, true)
 		for x in range(int(rect.position.x + 18), int(rect.end.x), 40):
@@ -143,4 +163,11 @@ func _draw() -> void:
 			draw_line(Vector2(rect.get_center().x, 300), Vector2(rect.get_center().x, rect.position.y), rim.darkened(0.30), 5)
 		if route_id == "ruins":
 			text = "시간 발판 · 멈춤/반복" if index in FOREST_MOVING_INDICES else "유적 고정 쉼터 · 안전 복귀"
+		if route_id == "festival":
+			text = "회전 놀이 발판" if index == 1 else "기계 승강대" if index == 3 else "축제 고정 쉼터 · 안전 복귀"
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, -18), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("173147"))
+	if route_id == "festival":
+		for x in range(900, 4800, 400):
+			draw_line(Vector2(x, 280), Vector2(x + 320, 280), rim, 3)
+			for flag_x in range(x, x + 320, 40):
+				draw_colored_polygon(PackedVector2Array([Vector2(flag_x, 280), Vector2(flag_x + 30, 280), Vector2(flag_x + 15, 320)]), base)

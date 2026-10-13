@@ -50,18 +50,18 @@ func _run() -> void:
 			controls.selected_starting_weapon = weapon
 			controls.selected_stage_limit = 5
 			_tap(controls.start_weapon_confirm_rect.get_center())
-			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "실제 다섯 후보 도전 준비"): return
-			if not _check(player.boss_legacy.choice == "destroy" and controls.all_stage_route_options.size() == 5, "위험 권한 실제 다섯 경로"): return
+			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "실제 여섯 후보 도전 준비"): return
+			if not _check(player.boss_legacy.choice == "destroy" and controls.all_stage_route_options.size() == 6, "위험 권한 실제 여섯 경로"): return
 			var before := store.load_checkpoint()
 			_tap(controls.stage_route_next_rect.get_center())
-			if not _check(controls.stage_route_page == 1 and controls.stage_route_options.size() == 1 and controls.stage_route_options[0].id == "ruins", "실제 페이지 터치·유적 단일 카드"): return
+			if not _check(controls.stage_route_page == 1 and controls.stage_route_options.size() == 2 and controls.stage_route_options[0].id == "ruins", "실제 페이지 터치·유적·축제 두 카드"): return
 			_tap(controls.skill_reward_open_rect.get_center())
 			_tap(controls.skill_reward_cancel_rect.get_center())
-			if not _check(controls.all_stage_route_options.size() == 5 and store.load_checkpoint() == before, "스킬 보상 취소는 숨은 경로·저장 유지"): return
+			if not _check(controls.all_stage_route_options.size() == 6 and store.load_checkpoint() == before, "스킬 보상 취소는 숨은 경로·저장 유지"): return
 			if controls.relic_offer_available:
 				_tap(controls.relic_reward_open_rect.get_center())
 				_tap(controls.relic_reward_cancel_rect.get_center())
-				if not _check(controls.all_stage_route_options.size() == 5 and store.load_checkpoint() == before, "유물 보상 취소도 전체 경로 유지"): return
+				if not _check(controls.all_stage_route_options.size() == 6 and store.load_checkpoint() == before, "유물 보상 취소도 전체 경로 유지"): return
 			if not await _select_ruins() or not _finish_stage(): return
 			if not _check(runner.route_id == "ruins" and controls.surveyed_routes.has("ruins"), "다섯 후보 둘째 페이지 선택·실제 유적 통과"): return
 		"seed", "fault-seed":
@@ -148,7 +148,7 @@ func _select_ruins() -> bool:
 		for offers in [actual, five]:
 			var typed: Array[Dictionary] = offers
 			controls.show_stage_routes(runner.stage_number, runner.stage_limit, 0, typed)
-			if not _check(controls.stage_route_options.size() == 4 and controls.stage_route_pages() == (2 if typed.size() == 5 else 1), "네 카드 상한·기존 경로 순서·위험 권한 다섯 후보 페이지"): return false
+			if not _check(controls.stage_route_options.size() == 4 and controls.stage_route_pages() == (2 if typed.size() > 4 else 1), "네 카드 상한·기존 경로 순서·위험 권한 다섯 후보 페이지"): return false
 			for page in controls.stage_route_pages():
 				controls._change_stage_route_page(page)
 				var safe: Rect2 = controls.layout_snapshot().safe
@@ -223,7 +223,7 @@ func _test_ruins_atlas(surveyed: bool) -> bool:
 		if not _check(first.cards.size() == 3 and first.cards[2].id == "clockwork" and first.route_pages == 2, "기존 세 경로 첫 페이지 유지"): return false
 		_tap(first.pager.next.get_center())
 		var second: Dictionary = controls.village_snapshot()
-		if not _check(second.cards.size() == 2 and second.cards[1].id == "ruins" and second.cards[1].status.contains("완료") == surveyed and second.cards[1].lines[2].contains("20"), "둘째 페이지 유적 효과·실제 통과 답사 상태"): return false
+		if not _check(second.cards.size() == 3 and second.cards[1].id == "ruins" and second.cards[1].status.contains("완료") == surveyed and second.cards[1].lines[2].contains("20"), "둘째 페이지 유적 효과·실제 통과 답사 상태"): return false
 		var rects: Array = second.layout.cards.duplicate()
 		rects.append_array(second.pager.values())
 		rects.append_array([second.layout.back, second.layout.start])

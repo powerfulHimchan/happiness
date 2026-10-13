@@ -19,6 +19,14 @@ enum State {
 
 const SEED_PROJECTILE_SCENE := preload("res://scenes/combat/enemy_seed_projectile.tscn")
 const CLOCK_DOLL_TEXTURE := preload("res://assets/star_clock_doll.svg")
+const FESTIVAL_SOLDIER_TEXTURE := preload("res://assets/festival_soldier.svg")
+const FESTIVAL_TURRET_TEXTURE := preload("res://assets/festival_turret.svg")
+const SOLDIER_WARNING_S := 0.65
+const SOLDIER_RECOVERY_S := 1.10
+const SOLDIER_DASH_PX := 240.0
+const TURRET_WARNING_S := 1.10
+const TURRET_RECOVERY_S := 1.40
+const TURRET_ANGLES := [-20.0, -10.0, 0.0, 10.0, 20.0]
 const SLIME_WARNING_S := 0.35
 const SLIME_RECOVERY_S := 0.80
 const SEED_WARNING_S := 1.00
@@ -37,6 +45,7 @@ const DANGER_LINE_COLOR := Color("ff7043")
 
 var forest_variant: bool = false
 var ruins_variant: bool = false
+var festival_variant: bool = false
 var _original_body_texture: Texture2D
 var _clock_aim := Vector2.LEFT
 var _clock_second_warning: bool = false
@@ -86,14 +95,23 @@ func _process(delta: float) -> void:
 	var scaled_delta := delta * enemy_time_scale()
 	_attack_cooldown_s = maxf(0.0, _attack_cooldown_s - scaled_delta)
 	_state_elapsed_s += scaled_delta
+	if festival_variant and enemy_type == EnemyType.LEAF_SLIME:
+		_update_festival_soldier(scaled_delta)
+	elif festival_variant and enemy_type == EnemyType.SEED_SACK:
+		_update_festival_turret()
+	else:
+		_update_original_enemy(scaled_delta)
+	_update_warning_visual()
+
+
+func _update_original_enemy(delta: float) -> void:
 	match enemy_type:
 		EnemyType.LEAF_SLIME:
-			_update_leaf_slime(scaled_delta)
+			_update_leaf_slime(delta)
 		EnemyType.SEED_SACK:
-			_update_seed_sack(scaled_delta)
+			_update_seed_sack(delta)
 		EnemyType.WIND_SPIRIT:
-			_update_wind_spirit(scaled_delta)
-	_update_warning_visual()
+			_update_wind_spirit(delta)
 
 
 func receive_damage(event: DamageEvent) -> int:
@@ -110,17 +128,24 @@ func receive_damage(event: DamageEvent) -> int:
 		global_position.x += away_sign * 70.0
 		_combo_remaining = 0
 		_attack_cooldown_s = maxf(_attack_cooldown_s, SEED_RECOVERY_S)
-		_set_state(State.RECOVERY, "씨앗 포대 근접 피격 · 1초 사격 중단")
+		_set_state(State.RECOVERY, "%s 근접 피격 · 사격 중단" % enemy_name())
+	elif festival_variant and enemy_type == EnemyType.LEAF_SLIME and event.tags.has("sword"):
+		_attack_cooldown_s = SOLDIER_RECOVERY_S
+		_set_state(State.RECOVERY, "장난감 병정 피격 · 행진 중단")
 	return result
 
 
 func configure_route(route: String) -> void:
 	forest_variant = route == "forest"
 	ruins_variant = route == "ruins"
+	festival_variant = route == "festival"
 	body_sprite.texture = CLOCK_DOLL_TEXTURE if ruins_variant and enemy_type == EnemyType.SEED_SACK else _original_body_texture
+	if festival_variant:
+		if enemy_type == EnemyType.LEAF_SLIME: body_sprite.texture = FESTIVAL_SOLDIER_TEXTURE
+		elif enemy_type == EnemyType.SEED_SACK: body_sprite.texture = FESTIVAL_TURRET_TEXTURE
 	_combo_remaining = 0
 	queue_redraw()
-	body_color = Color("b8e38b") if forest_variant else Color.WHITE if ruins_variant else _original_body_color
+	body_color = Color("b8e38b") if forest_variant else Color.WHITE if ruins_variant or festival_variant else _original_body_color
 
 
 func reset_target() -> void:
@@ -159,6 +184,7 @@ func current_metrics() -> Dictionary:
 		"enemy_type": enemy_type,
 		"enemy_forest_variant": forest_variant,
 		"enemy_ruins_variant": ruins_variant,
+		"enemy_festival_variant": festival_variant,
 		"enemy_combo_remaining": _combo_remaining,
 		"enemy_state": state_name(),
 		"enemy_warning": state == State.WARNING,
@@ -174,13 +200,15 @@ func current_metrics() -> Dictionary:
 func warning_feedback_snapshot() -> Dictionary:
 	return {
 		"color": DANGER_LINE_COLOR if enemy_type == EnemyType.WIND_SPIRIT else DANGER_RING_COLOR,
-		"shape": "부채" if forest_variant and enemy_type == EnemyType.SEED_SACK else "직선" if enemy_type == EnemyType.WIND_SPIRIT else "원형",
+		"shape": "부채" if (forest_variant or festival_variant) and enemy_type == EnemyType.SEED_SACK else "직선" if enemy_type == EnemyType.WIND_SPIRIT or (festival_variant and enemy_type == EnemyType.LEAF_SLIME) else "원형",
 		"uses_color_and_shape": true,
 	}
 
 
 func enemy_name() -> String:
 	if ruins_variant and enemy_type == EnemyType.SEED_SACK: return "별시계 인형"
+	if festival_variant and enemy_type == EnemyType.LEAF_SLIME: return "장난감 병정"
+	if festival_variant and enemy_type == EnemyType.SEED_SACK: return "축제 포탑"
 	match enemy_type:
 		EnemyType.LEAF_SLIME:
 			return "풀잎 슬라임"
@@ -204,6 +232,48 @@ func state_name() -> String:
 		State.DEAD:
 			return "처치"
 	return "알 수 없음"
+
+
+func _update_festival_soldier(delta: float) -> void:
+	match state:
+		State.IDLE:
+			position.x += _patrol_direction * 65.0 * delta
+			if absf(position.x - _spawn_position.x) >= 70.0: _patrol_direction *= -1.0
+			if _attack_cooldown_s <= 0.0 and _distance_to_player_m() <= 3.8:
+				var side := signf(player.global_position.x - global_position.x)
+				_attack_direction = Vector2(side if not is_zero_approx(side) else -1.0, 0)
+				_begin_warning("병정 행진 돌진 · 0.65초 경고")
+				warning_line.points = PackedVector2Array([Vector2(0, -38), Vector2(0, -38) + _attack_direction * SOLDIER_DASH_PX])
+		State.WARNING:
+			if _state_elapsed_s >= SOLDIER_WARNING_S: _begin_attack("병정 행진 돌진")
+		State.ATTACK:
+			var distance := minf(400.0 * delta, SOLDIER_DASH_PX - _attack_distance_px)
+			position.x = clampf(position.x + _attack_direction.x * distance, 100.0, 4900.0)
+			_attack_distance_px += distance
+			_try_contact_damage(9, &"soldier_march")
+			if _attack_distance_px >= SOLDIER_DASH_PX: _begin_recovery("병정 태엽 재감기 · 1.1초 빈틈")
+		State.RECOVERY:
+			if _state_elapsed_s >= SOLDIER_RECOVERY_S:
+				_attack_cooldown_s = 0.45
+				_set_state(State.IDLE, "병정 순찰 재개")
+
+
+func _update_festival_turret() -> void:
+	match state:
+		State.IDLE:
+			if _attack_cooldown_s <= 0.0 and _distance_to_player_m() <= 8.5:
+				_clock_aim = (player.global_position + Vector2(0, -42) - (global_position + Vector2(0, -54))).normalized()
+				_begin_warning("포탑 부채탄 · 1.1초 고정 조준")
+				warning_line.points = PackedVector2Array([Vector2(0, -54), Vector2(0, -54) + _clock_aim * 600.0])
+		State.WARNING:
+			warning_line.points = PackedVector2Array([Vector2(0, -54), Vector2(0, -54) + _clock_aim * 600.0])
+			if _state_elapsed_s >= TURRET_WARNING_S:
+				_fire_seed_volley()
+				_begin_recovery("포탑 다섯 발 · 1.4초 재장전")
+		State.RECOVERY:
+			if _state_elapsed_s >= TURRET_RECOVERY_S:
+				_attack_cooldown_s = 0.6
+				_set_state(State.IDLE, "포탑 조준 대기")
 
 
 func _update_leaf_slime(delta: float) -> void:
@@ -341,8 +411,8 @@ func _set_state(new_state: int, message: String) -> void:
 func _fire_seed_volley() -> void:
 	attack_count += 1
 	var origin := global_position + Vector2(0.0, -54.0)
-	var base_direction := _clock_aim if ruins_variant else (player.global_position + Vector2(0.0, -42.0) - origin).normalized()
-	var angles := [-24.0, -12.0, 0.0, 12.0, 24.0] if forest_variant else [-12.0, 0.0, 12.0]
+	var base_direction := _clock_aim if ruins_variant or festival_variant else (player.global_position + Vector2(0.0, -42.0) - origin).normalized()
+	var angles := TURRET_ANGLES if festival_variant else [-24.0, -12.0, 0.0, 12.0, 24.0] if forest_variant else [-12.0, 0.0, 12.0]
 	for angle_degrees in angles:
 		_projectile_sequence += 1
 		var projectile := SEED_PROJECTILE_SCENE.instantiate() as EnemySeedProjectile
@@ -355,6 +425,11 @@ func _fire_seed_volley() -> void:
 			projectile.attack_id = &"clock_doll_volley"
 			projectile.damage_tags = PackedStringArray(["enemy", "projectile", "clock", "doll"])
 			projectile.base_color = Color("9be2ff")
+		if festival_variant:
+			projectile.attacker_id = &"festival_turret"
+			projectile.attack_id = &"turret_fan"
+			projectile.damage_tags = PackedStringArray(["enemy", "projectile", "festival", "turret"])
+			projectile.base_color = Color("ffe2a3")
 		var projectile_parent := get_tree().current_scene
 		if projectile_parent == null:
 			projectile_parent = get_tree().root
@@ -409,7 +484,7 @@ func _update_fixed_warning_line(endpoint: Vector2, color: Color) -> void:
 func _update_warning_visual() -> void:
 	if state != State.WARNING:
 		return
-	if forest_variant and enemy_type == EnemyType.SEED_SACK:
+	if (forest_variant or festival_variant) and enemy_type == EnemyType.SEED_SACK:
 		queue_redraw()
 	var pulse := 0.58 + sin(_state_elapsed_s * 22.0) * 0.28
 	if warning_ring.visible:
@@ -419,9 +494,10 @@ func _update_warning_visual() -> void:
 
 
 func _draw() -> void:
-	if not forest_variant or enemy_type != EnemyType.SEED_SACK or state != State.WARNING:
+	if not (forest_variant or festival_variant) or enemy_type != EnemyType.SEED_SACK or state != State.WARNING:
 		return
 	var origin := Vector2(0.0, -54.0)
-	var direction := (player.global_position + Vector2(0.0, -42.0) - global_position - origin).normalized()
-	for angle in [-24.0, -12.0, 12.0, 24.0]:
-		draw_line(origin, origin + direction.rotated(deg_to_rad(angle)) * 520.0, Color(DANGER_LINE_COLOR, 0.75), 3.0)
+	var direction := _clock_aim if festival_variant else (player.global_position + Vector2(0.0, -42.0) - global_position - origin).normalized()
+	var angles := [-20.0, -10.0, 10.0, 20.0] if festival_variant else [-24.0, -12.0, 12.0, 24.0]
+	for angle in angles:
+		draw_line(origin, origin + direction.rotated(deg_to_rad(angle)) * (600.0 if festival_variant else 520.0), Color(DANGER_LINE_COLOR, 0.75), 3.0)

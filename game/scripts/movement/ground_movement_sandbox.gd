@@ -387,6 +387,9 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		elif stage_runner.route_id == "ruins":
 			player.recover_barrier(10)
 			ultimate_controller.grant_stage_gauge(20)
+		elif stage_runner.route_id == "festival":
+			healing += 15
+			ultimate_controller.grant_stage_gauge(10)
 		var before := player.damage_receiver.health
 		player.apply_growth_health(0, healing)
 		_stage_recovered_health = player.damage_receiver.health - before
