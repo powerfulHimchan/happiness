@@ -95,7 +95,9 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	var legacy: Dictionary = state.get("boss_legacy", {})
 	var stage: Dictionary = state.stage
-	if not _number(stage.get("limit"), 3, 5, true) or int(stage.limit) not in [3, 5]:
+	if stage.has("run_mode") and not stage.run_mode is String: return false
+	var mode: String = stage.get("run_mode", "standard")
+	if not _number(stage.get("limit"), 3, 10, true) or int(stage.limit) not in [3, 5, 10]:
 		return false
 	if not PrototypeRelic.valid_state(state.get("relic", {})):
 		return false
@@ -116,7 +118,7 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	if stage.has("reward_claimed") != state.weapons.has("equipment"):
 		return false
-	if not _number(stage.get("number"), 1, int(stage.limit), true) or not _valid_route(stage.get("route"), int(stage.number), legacy) or not _number(stage.get("elapsed"), 0, 1000000):
+	if not _number(stage.get("number"), 1, int(stage.limit), true) or not _valid_route(stage.get("route"), int(stage.number), legacy, mode) or not _number(stage.get("elapsed"), 0, 1000000):
 		return false
 	if stage.has("boss_choice") and (not stage.boss_choice is String or stage.boss_choice not in ["", "rescue", "destroy"]):
 		return false
@@ -133,7 +135,7 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	for index in stage.history.size():
 		var entry: Variant = stage.history[index]
-		if not entry is Dictionary or entry.get("stage") != index + 1 or not _valid_route(entry.get("route"), index + 1, legacy) or not _number(entry.get("elapsed_s"), 0, 1000000):
+		if not entry is Dictionary or entry.get("stage") != index + 1 or not _valid_route(entry.get("route"), index + 1, legacy, mode) or not _number(entry.get("elapsed_s"), 0, 1000000):
 			return false
 		if entry.has("boss_choice") and index + 1 != int(stage.limit):
 			return false
@@ -232,19 +234,23 @@ static func valid_state(state: Dictionary) -> bool:
 	return true
 
 
-static func _valid_route(route: Variant, stage: int, legacy: Dictionary) -> bool:
+static func _valid_route(route: Variant, stage: int, legacy: Dictionary, mode: String = "standard") -> bool:
+	if mode == JourneyRoutePlan.MODE:
+		return (stage <= 8 and route in PrototypeStageRunner.REGION_IDS) or (stage == 9 and route == JourneyRoutePlan.GATE) or (stage == 10 and route == JourneyRoutePlan.CORE)
 	return route in ["meadow", "wind"] or (route in ["forest", "ruins", "festival"] and stage >= 2) or (route == "clockwork" and stage == 2 and legacy.get("choice", "") == "destroy")
 
 
 static func _valid_region_run(stage: Dictionary) -> bool:
-	if not stage.has("run_mode") and not stage.has("region_order"): return true
-	if not stage.get("run_mode") is String or stage.run_mode != "regions" or int(stage.limit) != 5: return false
+	if not stage.has("run_mode") and not stage.has("region_order"): return int(stage.limit) in [3, 5]
+	if not stage.get("run_mode") is String or not PrototypeStageRunner.valid_mode_length(stage.run_mode, int(stage.limit)) or stage.run_mode == "standard": return false
 	var order: Variant = stage.get("region_order")
 	if not order is Array or order.size() != 4: return false
 	var seen: Array[String] = []
 	for id in order:
 		if not id is String or id not in PrototypeStageRunner.REGION_IDS or id in seen: return false
 		seen.append(id)
+	if stage.run_mode == JourneyRoutePlan.MODE:
+		return JourneyRoutePlan.valid_history(stage.history, order)
 	if stage.history[0].route != "meadow": return false
 	seen.clear()
 	for entry in stage.history.slice(1):

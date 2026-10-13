@@ -36,7 +36,7 @@ const ADVANCE_ONE_X := 1230.0
 const ADVANCE_TWO_X := 3830.0
 
 @export var stage_enabled: bool = true
-@export_range(1, 5) var stage_limit: int = 1
+@export_range(1, 10) var stage_limit: int = 1
 
 const ROUTES: Array[Dictionary] = [
 	{"id": "meadow", "name": "풀숲 길", "lines": ["다리로 전진 · 가까운 혼합 전투", "첫 웨이브 · 슬라임 + 씨앗 포대", "체력 20 추가 회복"]},
@@ -46,6 +46,8 @@ const RISK_ROUTE := {"id": "clockwork", "name": "태엽 폐허 · 위험", "line
 const FOREST_ROUTE := {"id": "forest", "name": "거꾸로 자란 숲", "lines": ["움직이는 덩굴 · 고정 쉼터", "연속 도약 · 넓은 씨앗 · 재돌진", "정예 통과: 회복+10 · 게이지+15"]}
 const RUINS_ROUTE := {"id": "ruins", "name": "별시계 유적", "lines": ["멈춤·반복 발판과 시간 함정", "태엽 인형의 기억된 이중 사격", "정예 통과: 방벽+10 · 게이지+20"]}
 const FESTIVAL_ROUTE := {"id": "festival", "name": "태엽 축제장", "lines": ["회전 놀이 발판 · 기계 승강대", "병정의 행진 돌진 · 포탑 부채탄", "정예 통과: 회복+15 · 게이지+10"]}
+const CITY_GATE_ROUTE := {"id": "city_gate", "name": "행복의 나라 성문", "lines": ["9스테이지 · 성문 접근 구간", "성문 다리 · 혼합 웨이브 전투", "통과 후 중심부로 이동"]}
+const CITY_CORE_ROUTE := {"id": "city_core", "name": "행복의 나라 중심부", "lines": ["10스테이지 · 마지막 관문", "웃는 태엽 기사의 마지막 관문", "승리 후 구출/파괴 선택"]}
 const REGION_IDS := ["wind", "forest", "ruins", "festival"]
 var run_mode: String = "standard"
 var region_order: Array[String] = []
@@ -123,8 +125,8 @@ func _process(delta: float) -> void:
 func reset_stage() -> void:
 	if not stage_enabled:
 		return
-	route_terrain.configure(stage_number, route_id)
-	clock_traps.configure(stage_number, route_id)
+	route_terrain.configure(stage_number, route_id, true, run_mode == JourneyRoutePlan.MODE)
+	clock_traps.configure(stage_number, route_id, run_mode == JourneyRoutePlan.MODE)
 	reward_claimed = false
 	skills_claimed = false
 	boss_choice = ""
@@ -157,13 +159,15 @@ func reset_run() -> void:
 	completed_elapsed_s = 0.0
 	stage_history.clear()
 	region_order.clear()
-	if run_mode == "regions":
+	if run_mode in ["regions", JourneyRoutePlan.MODE]:
 		region_order.assign(REGION_IDS)
 		for index in range(region_order.size() - 1, 0, -1):
 			var other := region_rng.randi_range(0, index)
 			var id := region_order[index]
 			region_order[index] = region_order[other]
 			region_order[other] = id
+	if run_mode == JourneyRoutePlan.MODE:
+		route_id = region_order[0]
 	reset_stage()
 
 
@@ -172,6 +176,16 @@ func has_next_stage() -> bool:
 
 
 func available_routes() -> Array[Dictionary]:
+	if run_mode == JourneyRoutePlan.MODE:
+		var offers: Array[Dictionary] = []
+		for id in JourneyRoutePlan.candidates(stage_number, route_id, stage_history, region_order):
+			var profile := route_profile(id)
+			if id == "wind": profile.name = "바람꽃 평원"
+			if stage_number < 8 and stage_number % 2 == 1:
+				profile.name += " · 두 번째 구간"
+				profile.lines = ["같은 지역의 2/2 구간으로 계속", "성장·장비·잔량 유지", "두 구간을 마치면 다음 지역 선택"]
+			offers.append(profile)
+		return offers
 	if run_mode == "regions":
 		var offers: Array[Dictionary] = []
 		var visited := visited_regions()
@@ -192,6 +206,8 @@ func available_routes() -> Array[Dictionary]:
 
 
 func visited_regions() -> Array[String]:
+	if run_mode == JourneyRoutePlan.MODE:
+		return JourneyRoutePlan.completed_regions(stage_history)
 	var visited: Array[String] = []
 	for entry in stage_history:
 		if entry.route in REGION_IDS and entry.route not in visited:
@@ -200,13 +216,17 @@ func visited_regions() -> Array[String]:
 
 
 func set_run_mode(mode: String) -> bool:
-	if mode not in ["standard", "regions"] or (mode == "regions" and stage_limit != 5): return false
+	if not valid_mode_length(mode, stage_limit): return false
 	run_mode = mode
 	return true
 
 
+static func valid_mode_length(mode: String, count: int) -> bool:
+	return (mode == "standard" and count in [1, 3, 5]) or (mode == "regions" and count == 5) or (mode == JourneyRoutePlan.MODE and count == JourneyRoutePlan.STAGES)
+
+
 static func route_profile(id: String) -> Dictionary:
-	for route in ROUTES + [RISK_ROUTE, FOREST_ROUTE, RUINS_ROUTE, FESTIVAL_ROUTE]:
+	for route in ROUTES + [RISK_ROUTE, FOREST_ROUTE, RUINS_ROUTE, FESTIVAL_ROUTE, CITY_GATE_ROUTE, CITY_CORE_ROUTE]:
 		if route.id == id:
 			return route.duplicate(true)
 	return {}
@@ -221,13 +241,13 @@ func can_select_route(id: String) -> bool:
 
 func _enemy_health(enemy: PrototypeTarget) -> int:
 	if enemy == boss:
-		return BossClockworkKnight.BOSS_HEALTH * 3 / 2 if stage_limit == 5 else BossClockworkKnight.BOSS_HEALTH
+		return BossClockworkKnight.BOSS_HEALTH * 2 if stage_limit == 10 else BossClockworkKnight.BOSS_HEALTH * 3 / 2 if stage_limit == 5 else BossClockworkKnight.BOSS_HEALTH
 	var multiplier := (1.0 + 0.25 * (stage_number - 1)) * (1.20 if route_id == "clockwork" else 1.0)
 	return roundi(float(_initial_health[enemy.get_path()]) * multiplier)
 
 
 func uses_boss() -> bool:
-	return stage_enabled and stage_limit in [3, 5] and stage_number == stage_limit
+	return stage_enabled and stage_limit in [3, 5, 10] and stage_number == stage_limit
 
 
 func awaiting_boss_choice() -> bool:
@@ -240,7 +260,7 @@ func final_enemy() -> PrototypeTarget:
 
 func checkpoint_snapshot() -> Dictionary:
 	var state := {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed, "skills_claimed": skills_claimed, "boss_choice": boss_choice}
-	if run_mode == "regions":
+	if run_mode in ["regions", JourneyRoutePlan.MODE]:
 		state.run_mode = run_mode
 		state.region_order = region_order.duplicate()
 	return state
@@ -338,6 +358,12 @@ func current_metrics() -> Dictionary:
 	if run_mode == "regions":
 		route_name = "연습 구간" if stage_number == 1 else "바람꽃 평원" if route_id == "wind" else route_name
 		objective += " · 지역 통과 %d/4" % visited.size()
+	if run_mode == JourneyRoutePlan.MODE:
+		route_name = "바람꽃 평원" if route_id == "wind" else route_name
+		if stage_number <= 8: route_name += " · %d/2 구간" % (1 if stage_number % 2 == 1 else 2)
+		objective += " · 지역 완료 %d/4" % visited.size()
+		if route_id in [JourneyRoutePlan.GATE, JourneyRoutePlan.CORE] and not stage_complete and current_section != Section.ELITE:
+			objective = "성문 다리를 지나 혼합 웨이브 처치" if route_id == JourneyRoutePlan.GATE else "중심부 다리를 지나 마지막 관문으로 전진"
 	var closed_gate_count := 0
 	for gate_index in gates.size():
 		if is_gate_closed(gate_index):
@@ -349,8 +375,8 @@ func current_metrics() -> Dictionary:
 		"run_route_name": route_name,
 		"run_mode": run_mode,
 		"run_visited_regions": visited,
-		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode == "regions" else 0,
-		"run_route_terrain": "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판")),
+		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
+		"run_route_terrain": "성문 다리" if route_id == JourneyRoutePlan.GATE else "중심부 다리" if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
@@ -444,7 +470,7 @@ func _activate_wave_one() -> void:
 
 
 func _activate_wave_two() -> void:
-	if stage_number == 1:
+	if stage_number == 1 and run_mode != JourneyRoutePlan.MODE:
 		_activate_enemy(leaf_slime, Vector2(4020.0, 780.0))
 		_activate_enemy(seed_sack, Vector2(4380.0, 780.0))
 		_activate_enemy(wind_spirit, Vector2(4200.0, 590.0))

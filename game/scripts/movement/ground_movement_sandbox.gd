@@ -373,7 +373,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 	if _restoring_checkpoint:
 		return
 	if not bool(metrics.get("stage_complete", false)):
-		if growth.run_active and int(metrics.get("stage_section_index", 0)) == 5 and boss_legacy_store.spend_assist(player.boss_legacy, stage_runner.stage_number):
+		if growth.run_active and int(metrics.get("stage_section_index", 0)) == 5 and boss_legacy_store.spend_assist(player.boss_legacy, stage_runner.stage_number, stage_runner.stage_limit):
 			var event := DamageEvent.new()
 			event.event_id = StringName("helper:%s:%d" % [player.boss_legacy.run_id, stage_runner.stage_number])
 			event.attacker_id = &"clockwork_helper"
@@ -453,6 +453,10 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		return job_error
 	if record_metrics:
 		test_recorder.record_stage_metrics(metrics)
+	var saved_legacy := player.boss_legacy.duplicate(true)
+	if not saved_legacy.is_empty():
+		# 이전 정상 저장으로 복귀해도 이후 사용은 독립 저널에서 복원한다.
+		saved_legacy.assisted_stages = saved_legacy.assisted_stages.filter(func(number: Variant) -> bool: return int(number) <= stage_runner.stage_number)
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
@@ -460,7 +464,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
-		"boss_legacy": player.boss_legacy.duplicate(true),
+		"boss_legacy": saved_legacy,
 		"memory_id": player.memory_id,
 		"relic": player.relic_state.duplicate(),
 	}

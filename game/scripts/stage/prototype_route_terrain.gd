@@ -38,7 +38,7 @@ var platforms: Array[Rect2] = []
 var _last_landed_platform: int = -1
 
 
-func configure(stage: int, route: String, enabled: bool = true) -> void:
+func configure(stage: int, route: String, enabled: bool = true, regional_start: bool = false) -> void:
 	for body in get_children():
 		body.free()
 	stage_number = stage
@@ -47,8 +47,8 @@ func configure(stage: int, route: String, enabled: bool = true) -> void:
 	_last_landed_platform = -1
 	motion_elapsed_s = 0.0
 	# 첫 스테이지와 자유 전투는 기존 이동 검증 지형을 사용한다.
-	if enabled and stage > 1:
-		if route == "meadow":
+	if enabled and (stage > 1 or regional_start):
+		if route in ["meadow", "city_gate", "city_core"]:
 			platforms.append(MEADOW_BRIDGE)
 		elif route == "wind":
 			platforms.assign(WIND_STEPS)
@@ -163,6 +163,8 @@ func _draw() -> void:
 			draw_line(Vector2(rect.get_center().x, 300), Vector2(rect.get_center().x, rect.position.y), rim.darkened(0.30), 5)
 		if route_id == "ruins":
 			text = "시간 발판 · 멈춤/반복" if index in FOREST_MOVING_INDICES else "유적 고정 쉼터 · 안전 복귀"
+		if route_id in ["city_gate", "city_core"]:
+			text = "성문 다리 · 앞으로 전진" if route_id == "city_gate" else "중심부 다리 · 앞으로 전진"
 		if route_id == "festival":
 			text = "회전 놀이 발판" if index == 1 else "기계 승강대" if index == 3 else "축제 고정 쉼터 · 안전 복귀"
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, -18), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("173147"))

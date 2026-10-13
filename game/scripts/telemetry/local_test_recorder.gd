@@ -44,7 +44,7 @@ func start_run(run_id: String = "", mode: String = "standard", character: String
 	_recorded_stage_completed = false
 	_active_run_completed = false
 	var fields := {"run_id": _active_run_id, "character_id": _active_character_id}
-	if mode == "regions": fields.run_mode = mode
+	if mode in ["regions", JourneyRoutePlan.MODE]: fields.run_mode = mode
 	if stories: fields.story_enabled = true
 	_append_event("run_started", fields)
 	_append_section_started(0)
@@ -63,7 +63,7 @@ func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "st
 	_recorded_stage_completed = true
 	_active_run_completed = false
 	var fields := {"run_id": _active_run_id, "stage_number": stage_number, "character_id": _active_character_id}
-	if mode == "regions": fields.run_mode = mode
+	if mode in ["regions", JourneyRoutePlan.MODE]: fields.run_mode = mode
 	if stories: fields.story_enabled = true
 	_append_event("run_resumed", fields)
 
@@ -116,7 +116,7 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 			"boss_choice": String(metrics.get("boss_choice", "")),
 			"boss_name": String(metrics.get("boss_name", "")),
 		}
-		if metrics.get("run_mode") == "regions": fields.run_mode = "regions"
+		if metrics.get("run_mode") in ["regions", JourneyRoutePlan.MODE]: fields.run_mode = metrics.run_mode
 		if _active_story_enabled:
 			fields.story_enabled = true
 			fields.chronicle = PrototypeStory.chronicle_id(metrics.get("run_stage_history", []), String(metrics.get("boss_choice", "")))
@@ -306,7 +306,7 @@ func _recent_runs(events: Array[Dictionary]) -> Array[Dictionary]:
 		var run: Dictionary = runs[id]
 		if run.completed:
 			continue
-		if event.get("run_mode") is String and event.run_mode == "regions": run.run_mode = "regions"
+		if event.get("run_mode") is String and event.run_mode in ["regions", JourneyRoutePlan.MODE]: run.run_mode = event.run_mode
 		if event.get("story_enabled") is bool and event.story_enabled: run.story_enabled = true
 		if name == "run_completed" and event.get("chronicle") is String and PrototypeStory.CHRONICLES.has(event.chronicle): run.chronicle = event.chronicle
 		var stage := maxi(1, int(event.get("stage_number", 1)))

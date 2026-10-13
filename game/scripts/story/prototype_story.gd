@@ -28,9 +28,10 @@ static func valid_ids(ids: Variant) -> bool:
 		seen.append(id)
 	return true
 
-static func regions(history: Array) -> Array[String]:
+static func regions(history: Array, paired: bool = false) -> Array[String]:
 	var result: Array[String] = []
 	for entry in history:
+		if paired and int(entry.stage) % 2 == 1: continue
 		if entry.route in ROUTE_FRAGMENT and entry.route not in result: result.append(String(entry.route))
 	return result
 
@@ -39,9 +40,9 @@ static func earned(history: Array, boss_stage: int) -> Array[String]:
 	for entry in history:
 		if int(entry.stage) == 1: result.append("dawn_watch")
 		var id: String = ROUTE_FRAGMENT.get(entry.route, "")
-		if not id.is_empty() and id not in result: result.append(id)
+		if not id.is_empty() and id not in result and (boss_stage != 10 or int(entry.stage) % 2 == 0): result.append(id)
 		if int(entry.stage) == boss_stage: result.append("knight_order")
-	var count := regions(history).size()
+	var count := regions(history, boss_stage == 10).size()
 	if count >= 3: result.append("family_note")
 	if count == 4: result.append("childhood_promise")
 	return result
@@ -58,12 +59,14 @@ static func scene(id: String, history: Array, character: String, known: Array, r
 		if rewinds > 0: lines.append("새벽으로 돌아온 횟수는 %d번. 잃어버린 시간을 다시 살펴본다." % rewinds)
 	else:
 		var entry: Dictionary = history[-1]
+		if entry.route in [JourneyRoutePlan.GATE, JourneyRoutePlan.CORE] and int(entry.stage) != boss_stage:
+			return {"id": id, "name": "행복의 나라 성문", "lines": ["{hero}는 네 갈래 길을 지나 성문 앞에 섰다.".replace("{hero}", PrototypeCharacters.display_name(character)), "이곳의 진실은 아직 시계 너머에 남아 있다.", "다음 관문에서는 태엽 기사가 마지막 길을 지킨다."]}
 		var fragment: String = "knight_order" if int(entry.stage) == boss_stage else ROUTE_FRAGMENT.get(entry.route, "dawn_watch")
 		title = String(FRAGMENTS[fragment].name)
 		lines.assign(FRAGMENTS[fragment].lines)
 		if int(entry.stage) != boss_stage and history.slice(0, -1).any(func(previous: Dictionary) -> bool: return previous.route == entry.route):
 			lines.assign(["같은 길로 돌아왔지만 새벽시계의 금은 조금 달라 보인다.", "되풀이되는 풍경보다 이번 여행에서 바뀐 선택을 살펴본다.", "이미 찾은 기억을 다음 단서와 이어 보려 한다."])
-		var visited := regions(history)
+		var visited := regions(history, boss_stage == 10)
 		if visited.size() >= 3: lines.append("흩어진 기억 %d곳이 이름 없는 가족의 편지를 잇는다." % visited.size())
 		elif visited.size() > 0: lines.append("서로 다른 길 %d곳에서 단서를 찾았다. 길의 순서보다 남은 기억이 중요하다." % visited.size())
 		else: lines.append("시계의 금을 어루만지고 첫 길을 떠날 준비를 한다.")

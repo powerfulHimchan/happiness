@@ -24,9 +24,9 @@ func _ready() -> void:
 	add_to_group("stage_hazard")
 	visible = false
 
-func configure(stage: int, route: String) -> void:
+func configure(stage: int, route: String, regional_start: bool = false) -> void:
 	stop()
-	route_id = route if stage > 1 else "meadow"
+	route_id = route if stage > 1 or regional_start else "meadow"
 	generation += 1
 	cycle = 0
 	hit_count = 0

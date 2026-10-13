@@ -82,13 +82,14 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				if run.get("story_enabled", false) == true:
 					lines.append("이야기 여행" + (" · " + PrototypeStory.CHRONICLES[String(run.chronicle)].name if PrototypeStory.CHRONICLES.has(String(run.get("chronicle", ""))) else ""))
 				lines.append("주인공 · " + PrototypeCharacters.display_name(String(run.get("character_id", "roan"))))
+				if run.get("run_mode") == JourneyRoutePlan.MODE: lines.append("전체 여정 · 10스테이지")
 				if run.get("run_mode") == "regions": lines.append("네 지역 순회 · 5스테이지")
-				result.append({"id": run.id, "name": "지역 순회 %d" % (result.size() + 1) if run.get("run_mode") == "regions" else "최근 도전 %d" % (result.size() + 1), "open": true, "status": "완주" if complete else "미완료", "lines": lines})
+				result.append({"id": run.id, "name": "전체 여정 %d" % (result.size() + 1) if run.get("run_mode") == JourneyRoutePlan.MODE else "지역 순회 %d" % (result.size() + 1) if run.get("run_mode") == "regions" else "최근 도전 %d" % (result.size() + 1), "open": true, "status": "완주" if complete else "미완료", "lines": lines})
 			if result.is_empty():
 				result.append({"name": "아직 도전 기록 없음", "open": true, "status": "새 여행을 시작해 보세요", "lines": ["이 기기의 최근 도전 12개", "이어하기는 같은 도전으로 표시", "열람은 저장 상태를 바꾸지 않아요"]})
 		"record_lengths":
 			var by_length: Dictionary = summary.get("completion_by_stage_count", {})
-			for count in [3, 5]:
+			for count in [3, 5, 10]:
 				var stats: Dictionary = by_length.get(str(count), {})
 				var completed := int(stats.get("completed_run_count", 0))
 				var lines: Array[String] = []

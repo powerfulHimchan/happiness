@@ -71,8 +71,8 @@ func spend_rescue(state: Dictionary) -> bool:
 	return true
 
 
-func spend_assist(state: Dictionary, stage: int) -> bool:
-	if not _valid_stage(stage) or state.is_empty() or state.choice != "rescue" or stage in state.assisted_stages or stage in restore_active(state).assisted_stages:
+func spend_assist(state: Dictionary, stage: int, stage_limit: int = 5) -> bool:
+	if stage_limit not in [1, 3, 5, 10] or stage > stage_limit or not _valid_stage(stage) or state.is_empty() or state.choice != "rescue" or stage in state.assisted_stages or stage in restore_active(state).assisted_stages:
 		return false
 	if _append({"event": "assist", "run_id": state.run_id, "stage": stage}) != OK:
 		return false
@@ -194,7 +194,7 @@ static func valid_active(state: Dictionary, run_id: String) -> bool:
 
 
 static func _valid_stage(value: Variant) -> bool:
-	return (value is int or value is float) and is_finite(float(value)) and float(value) == floorf(float(value)) and float(value) >= 1 and float(value) <= 5
+	return (value is int or value is float) and is_finite(float(value)) and float(value) == floorf(float(value)) and float(value) >= 1 and float(value) <= 10
 
 
 static func description(choice: String) -> String:

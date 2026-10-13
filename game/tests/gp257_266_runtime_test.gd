@@ -203,7 +203,7 @@ func _test_preview(weapon: String) -> bool:
 		rects.append_array(controls.start_weapon_card_rects)
 		rects.append_array(controls.memory_card_rects)
 		rects.append_array([controls.boss_legacy_toggle_rect, controls.start_weapon_confirm_rect, controls.start_weapon_cancel_rect])
-		if not _check(controls.start_length_rects.size() == 3, "기존3/5·새 순회 세 선택지"): return false
+		if not _check(controls.start_length_rects.size() == 4, "기존3/5·순회·전체 여정 네 선택지"): return false
 		for index in 3:
 			var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계"][index]
 			if not _check(ThemeDB.fallback_font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x <= controls.start_length_rects[index].size.x - 16, "실제18px 글꼴 길이 버튼 너비"): return false
