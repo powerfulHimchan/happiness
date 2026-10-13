@@ -5,6 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp307_runtime_test.gd"
+  "$game_root/scripts/stage/journey_route_plan.gd"
   "$game_root/tests/gp277_306_runtime_test.gd"
   "$game_root/scripts/story/prototype_story.gd"
   "$game_root/scripts/story/prototype_story_run.gd"
@@ -650,6 +652,20 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for protagonist in roan lumi; do
+    for starting_weapon in sword bow; do
+      checked_godot 45s --headless --path "$game_root" --script res://tests/gp307_runtime_test.gd -- seed "$protagonist" "$starting_weapon"
+      for completed_stage in {1..9}; do
+        checked_godot 45s --headless --path "$game_root" --script res://tests/gp307_runtime_test.gd -- resume "$protagonist" "$starting_weapon" "$completed_stage"
+      done
+      for journey_phase in finish records; do
+        checked_godot 45s --headless --path "$game_root" --script res://tests/gp307_runtime_test.gd -- "$journey_phase" "$protagonist" "$starting_weapon"
+      done
+    done
+  done
+  for journey_phase in preview orders validate fault legacy flows; do
+    checked_godot 45s --headless --path "$game_root" --script res://tests/gp307_runtime_test.gd -- "$journey_phase" roan sword
+  done
   for protagonist in roan lumi; do
     for starting_weapon in sword bow; do
       for story_phase in seed resume1 resume2 finish records; do

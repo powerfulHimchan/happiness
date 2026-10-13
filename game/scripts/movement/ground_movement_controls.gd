@@ -769,6 +769,8 @@ func _draw_stage_routes() -> void:
 	var instruction := "성장을 유지하고 다음 경로를 선택하세요"
 	if movement_metrics.get("run_mode") == "regions":
 		instruction = "지역 통과 %d/4 · 남은 %d곳 · 미방문 지역 선택" % [movement_metrics.get("run_visited_regions", []).size(), int(movement_metrics.get("run_remaining_regions", 4))]
+	if movement_metrics.get("run_mode") == JourneyRoutePlan.MODE:
+		instruction = "같은 지역의 두 번째 구간으로 이동" if cleared_stage < 8 and cleared_stage % 2 == 1 else "지역 완료 %d/4 · 다음 지역 선택" % movement_metrics.get("run_visited_regions", []).size() if cleared_stage < 8 else "네 지역 완료 · 성문으로 이동" if cleared_stage == 8 else "마지막 중심부로 이동"
 	_draw_text_centered(instruction, Rect2(safe.position + Vector2(0, safe.size.y * (0.28 if stage_route_pages() > 1 else 0.30)), Vector2(safe.size.x, 40)), 20, MUTED_TEXT_COLOR)
 	if stage_route_pages() > 1:
 		_draw_button(stage_route_previous_rect, "이전 경로", stage_route_page > 0)
@@ -926,7 +928,7 @@ func update_test_record_summary(summary: Dictionary) -> void:
 
 func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false) -> bool:
 	if not PrototypeCharacters.valid_id(character): return false
-	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5] or mode not in ["standard", "regions"] or (mode == "regions" and stage_count != 5):
+	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5, 10] or (stage_count == 0 and mode != "standard") or (stage_count != 0 and not PrototypeStageRunner.valid_mode_length(mode, stage_count)):
 		return false
 	_leave_story_journal()
 	_leave_run_build()
@@ -936,11 +938,11 @@ func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: 
 	selected_starting_weapon = starting_weapon
 	selected_character_id = character
 	requested_character_id = character
-	requested_stage_limit = stage_count
+	requested_stage_limit = 3 if stage_count == 0 and (selected_stage_limit == 10 or int(movement_metrics.get("run_stage_count", 3)) == 10) else stage_count
 	requested_run_mode = mode
 	selected_run_mode = mode
-	if stage_count > 0:
-		selected_stage_limit = stage_count
+	if requested_stage_limit > 0:
+		selected_stage_limit = requested_stage_limit
 	release_all_inputs()
 	result_snapshot.clear()
 	screen_mode = ScreenMode.COMBAT
@@ -1059,8 +1061,8 @@ func _refresh_start_weapon_layout() -> void:
 	var card_width := (safe.size.x * 0.90 - gap) * 0.5
 	character_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.70, safe.size.y * 0.105), Vector2(safe.size.x * 0.25, safe.size.y * 0.065))
 	start_length_rects.clear()
-	var length_width := (safe.size.x * 0.90 - gap * 2) / 3.0
-	for index in 3:
+	var length_width := (safe.size.x * 0.90 - gap * 3) / 4.0
+	for index in 4:
 		start_length_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (length_width + gap), safe.size.y * 0.19), Vector2(length_width, safe.size.y * 0.065)))
 	start_weapon_card_rects.clear()
 	for index in 2:
@@ -1077,7 +1079,7 @@ func _refresh_start_weapon_layout() -> void:
 
 
 func start_legacy_description() -> String:
-	if selected_run_mode == "regions" and pending_boss_legacy.get("choice", "") == "destroy":
+	if selected_run_mode in ["regions", JourneyRoutePlan.MODE] and pending_boss_legacy.get("choice", "") == "destroy":
 		return "태엽핵 · 피해/피격 +10% · 위험 길은 일반 도전에서 선택"
 	return BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "선택한 무기를 주 무기로 장착하고 새 도전을 시작합니다"
 
@@ -1086,13 +1088,13 @@ func _draw_start_weapon_selection() -> void:
 	_refresh_start_weapon_layout()
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
-	_draw_text_centered("연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
+	_draw_text_centered("네 지역 각 두 구간 · 성문과 중심부 · 약 30분" if selected_run_mode == JourneyRoutePlan.MODE else "연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
 	_draw_village_text(start_legacy_description(), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.10), Vector2(safe.size.x * 0.62, safe.size.y * 0.04)), 19, TEXT_COLOR)
 	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
 	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
-	for index in 3:
-		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계"][index]
-		var selected := selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
+	for index in 4:
+		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계", "전체 여정 · 10단계"][index]
+		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
 		_draw_button(start_length_rects[index], label, selected)
 	var ids := ["sword", "bow"]
 	var names := ["검", "활"]
@@ -1456,8 +1458,8 @@ func _show_result_screen() -> void:
 		"bow_ratio": float(bow_hits) / float(total_hits) if total_hits > 0 else 0.0,
 		"record_summary": _current_record_summary(),
 	}
-	if movement_metrics.get("run_mode") == "regions":
-		result_snapshot.run_mode = "regions"
+	if movement_metrics.get("run_mode") in ["regions", JourneyRoutePlan.MODE]:
+		result_snapshot.run_mode = movement_metrics.run_mode
 		result_snapshot.visited_regions = movement_metrics.get("run_visited_regions", []).duplicate()
 	if not active_story_state.is_empty(): result_snapshot.story = active_story_state.duplicate(true)
 	screen_mode = ScreenMode.RESULT
@@ -1564,8 +1566,8 @@ func _handle_screen_touch(position: Vector2) -> void:
 			return
 		for index in start_length_rects.size():
 			if start_length_rects[index].has_point(position):
-				selected_stage_limit = 3 if index == 0 else 5
-				selected_run_mode = "regions" if index == 2 else "standard"
+				selected_stage_limit = 10 if index == 3 else 3 if index == 0 else 5
+				selected_run_mode = JourneyRoutePlan.MODE if index == 3 else "regions" if index == 2 else "standard"
 				return
 		for index in start_weapon_card_rects.size():
 			if start_weapon_card_rects[index].has_point(position):
@@ -2119,7 +2121,7 @@ func _draw_result_screen() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.88), true)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
 	_draw_text_centered(
-		"네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
+		"전체 여정 완료 · 10스테이지" if result_snapshot.get("run_mode") == JourneyRoutePlan.MODE else "네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 24.0), Vector2(result_panel_rect.size.x, 58.0)),
 		36,
 		PASS_COLOR

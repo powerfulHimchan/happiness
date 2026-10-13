@@ -194,7 +194,7 @@ static func valid_active(state: Dictionary, run_id: String) -> bool:
 
 
 static func _valid_stage(value: Variant) -> bool:
-	return (value is int or value is float) and is_finite(float(value)) and float(value) == floorf(float(value)) and float(value) >= 1 and float(value) <= 5
+	return (value is int or value is float) and is_finite(float(value)) and float(value) == floorf(float(value)) and float(value) >= 1 and float(value) <= 10
 
 
 static func description(choice: String) -> String:
