@@ -238,7 +238,8 @@ func _test_long_flows() -> bool:
 			controls.show_main_screen()
 			if not _check(sandbox.continue_saved_run() and runner.stage_limit == 5 and runner.stage_number == number and player.damage_receiver.health == health and player.relic_state == relic and store.load_checkpoint() == saved and weapons.skills == saved.weapons.skills, "매 정예 실제 저장/복원·직업/스킬/유물/잔량·무료 보충 없음"): return false
 			var routes := runner.available_routes()
-			if not _check(routes.size() == (5 if number == 1 and weapon == "bow" else 4), "위험 경로는 파괴 적용 도전의2단계만"): return false
+			var risk_open: bool = number == 1 and weapon == "bow"
+			if not _check(routes.size() == (6 if risk_open else 5) and routes.any(func(route: Dictionary) -> bool: return route.id == "clockwork") == risk_open, "일반 다섯 경로·파괴 적용 도전의2단계만 여섯째 위험 경로"): return false
 			_tap(controls.stage_route_rects[2 if number == 1 and weapon == "bow" else number % 2].get_center())
 		if not _check(growth.jobs.job_id == ("vanguard" if weapon == "sword" else "tracker") and not ultimate.selected_profile.is_empty() and sandbox._resolve_boss_choice("destroy" if weapon == "sword" else "rescue"), "긴 검/활 직업·필살기 발현·양쪽 보스 선택 실제 완주"): return false
 	var summary: Dictionary = recorder.summary_snapshot()
