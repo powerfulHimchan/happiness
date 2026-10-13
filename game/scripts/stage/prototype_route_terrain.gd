@@ -51,7 +51,9 @@ func configure(stage: int, route: String, enabled: bool = true, regional_start: 
 	motion_elapsed_s = 0.0
 	# 첫 스테이지와 자유 전투는 기존 이동 검증 지형을 사용한다.
 	if enabled and (stage > 1 or regional_start):
-		if route in ["meadow", "city_gate", "city_core"]:
+		if route == JourneyRoutePlan.GATE:
+			platforms.assign(CityGateLayout.PLATFORMS)
+		elif route in ["meadow", "city_core"]:
 			platforms.append(MEADOW_BRIDGE)
 		elif route == "wind":
 			platforms.assign(WIND_STEPS)
@@ -106,7 +108,7 @@ func _physics_process(delta: float) -> void:
 		if absf(feet_y - rect.position.y) <= 3.0 and player.global_position.x >= rect.position.x + SAFE_EDGE_MARGIN and player.global_position.x <= rect.end.x - SAFE_EDGE_MARGIN:
 			if index != _last_landed_platform:
 				_last_landed_platform = index
-				var label := "축제 고정 쉼터" if route_id == "festival" else "유적 고정 쉼터" if route_id == "ruins" else "숲 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else "바람 발판"
+				var label := "성벽 쉼터" if route_id == JourneyRoutePlan.GATE else "축제 고정 쉼터" if route_id == "festival" else "유적 고정 쉼터" if route_id == "ruins" else "숲 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else "바람 발판"
 				player.set_safe_spawn(Vector2(rect.get_center().x, rect.position.y - PLAYER_HALF_HEIGHT), "풀숲 다리" if route_id == "meadow" else "%s %d" % [label, index + 1])
 			return
 	_last_landed_platform = -1
@@ -126,6 +128,10 @@ func layout_snapshot() -> Dictionary:
 func _draw() -> void:
 	var base := Color("729452") if route_id == "meadow" else Color("5688a9")
 	var rim := Color("d3e996") if route_id == "meadow" else Color("c5f2ff")
+	if route_id == JourneyRoutePlan.GATE and not platforms.is_empty():
+		CityGateLayout.draw_backdrop(self)
+		base = Color("839eae")
+		rim = Color("f4e1ad")
 	if route_id == "clockwork":
 		base = Color("8b5940")
 		rim = Color("ffba66")
@@ -170,8 +176,10 @@ func _draw() -> void:
 			draw_line(Vector2(rect.get_center().x, 300), Vector2(rect.get_center().x, rect.position.y), rim.darkened(0.30), 5)
 		if route_id == "ruins":
 			text = "시간 발판 · 멈춤/반복" if index in FOREST_MOVING_INDICES else "유적 고정 쉼터 · 안전 복귀"
-		if route_id in ["city_gate", "city_core"]:
-			text = "성문 다리 · 앞으로 전진" if route_id == "city_gate" else "중심부 다리 · 앞으로 전진"
+		if route_id == JourneyRoutePlan.GATE:
+			text = "성벽 쉼터 · 안전 복귀" if index in [0, 4, 5] else "성문 계단 %d · 점프" % index
+		elif route_id == JourneyRoutePlan.CORE:
+			text = "중심부 다리 · 앞으로 전진"
 		if route_id == "festival":
 			text = "회전 놀이 발판" if index == 1 else "기계 승강대" if index == 3 else "축제 고정 쉼터 · 안전 복귀"
 		if region_section == 2 and index == 0: text = String(RegionStageLayout.TITLES[route_id]) + " · 2/2"
