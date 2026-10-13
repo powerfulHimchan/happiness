@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp267_276_runtime_test.gd"
+  "$game_root/scripts/player/prototype_characters.gd"
+  "$game_root/assets/prototype_lumi.svg"
   "$game_root/tests/gp257_266_runtime_test.gd"
   "$game_root/tests/gp247_256_runtime_test.gd"
   "$game_root/tests/gp248_249_runtime_test.gd"
@@ -642,6 +645,22 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for protagonist in roan lumi; do
+    for starting_weapon in sword bow; do
+      for character_phase in seed resume finish; do
+        checked_godot 45s --headless --path "$game_root" --script res://tests/gp267_276_runtime_test.gd -- "$character_phase" "$protagonist" "$starting_weapon"
+      done
+    done
+    for character_phase in preview fault; do
+      checked_godot 45s --headless --path "$game_root" --script res://tests/gp267_276_runtime_test.gd -- "$character_phase" "$protagonist" sword
+    done
+  done
+  for starting_weapon in sword bow; do
+    checked_godot 45s --headless --path "$game_root" --script res://tests/gp267_276_runtime_test.gd -- balance lumi "$starting_weapon"
+  done
+  for character_phase in legacy-seed legacy validate records; do
+    checked_godot 45s --headless --path "$game_root" --script res://tests/gp267_276_runtime_test.gd -- "$character_phase" lumi sword
+  done
   for starting_weapon in sword bow; do
     for region_phase in seed resume2 resume3 resume4 boss finish legacy-seed legacy preview; do
       checked_godot 45s --headless --path "$game_root" --script res://tests/gp257_266_runtime_test.gd -- "$region_phase" "$starting_weapon"

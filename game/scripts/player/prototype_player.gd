@@ -45,6 +45,8 @@ const POST_HIT_FLASH_S := 0.12
 const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
+var character_id: String = "roan"
+
 var barrier_focus_unlocked: bool = false
 var crisis_power_unlocked: bool = false
 var nimble_mastery_unlocked: bool = false
@@ -1126,8 +1128,18 @@ func _update_movement_tests(delta: float) -> void:
 		reversal_test_passed = true
 
 
+func set_character(id: String) -> bool:
+	if not PrototypeCharacters.valid_id(id): return false
+	character_id = id
+	avatar_sprite.texture = PrototypeCharacters.texture(id)
+	_emit_metrics()
+	return true
+
+
 func _emit_metrics() -> void:
 	movement_metrics_changed.emit({
+		"character_id": character_id,
+		"character_name": PrototypeCharacters.display_name(character_id),
 		"speed_mps": velocity.x / PIXELS_PER_METER,
 		"target_speed_mps": move_input * MAX_SPEED_MPS,
 		"input_axis": move_input,

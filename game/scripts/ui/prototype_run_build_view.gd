@@ -33,7 +33,7 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 					result.append({"id": id, "name": PrototypeSkillRewards.SKILLS[id].display_name, "status": "%s · 슬롯 %d" % ["검" if weapon == "sword" else "활", slot + 1], "lines": lines, "open": true})
 		2:
 			var stage: Dictionary = state.stage
-			result.append({"id": "progress", "name": "이번 도전", "status": "%d / %d 스테이지" % [int(stage.run_stage_number), int(stage.run_stage_count)], "lines": [String(stage.stage_section_name), String(stage.run_route_name), "현재 스테이지 %.1f초" % float(stage.stage_elapsed_s), "레벨 %d · 경험치 %d/%d" % [int(state.growth.growth_level), int(state.growth.growth_xp), int(state.growth.growth_next_xp)], "조회 중 전투와 대기시간 정지"], "open": true})
+			result.append({"id": "progress", "name": "이번 도전", "status": "%d / %d 스테이지" % [int(stage.run_stage_number), int(stage.run_stage_count)], "lines": ["주인공 · " + PrototypeCharacters.display_name(String(state.get("character_id", "roan"))), String(stage.stage_section_name), String(stage.run_route_name), "현재 스테이지 %.1f초" % float(stage.stage_elapsed_s), "레벨 %d · 경험치 %d/%d" % [int(state.growth.growth_level), int(state.growth.growth_xp), int(state.growth.growth_next_xp)], "조회 중 전투와 대기시간 정지"], "open": true})
 			var health: Dictionary = state.health
 			if stage.get("run_mode") == "regions":
 				var regions: Array = stage.get("run_visited_regions", [])
