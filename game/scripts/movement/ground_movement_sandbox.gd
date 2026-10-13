@@ -285,6 +285,7 @@ func _reset_test() -> void:
 	_finish_growth_selection()
 	_intermission_stage = 0
 	player.reset_movement_test(TRACK_START)
+	player.set_character(controls.requested_character_id)
 	player.prepare_potions(String(boss_legacy_store.progress_snapshot().potion_recipe))
 	weapon_controller.reset_combat(controls.selected_starting_weapon)
 	growth.reset_run(weapon_controller.active_weapon_id)
@@ -301,7 +302,7 @@ func _reset_test() -> void:
 			target.reset_target()
 	target_selector.reset_selection()
 	ultimate_controller.reset_ultimate()
-	test_recorder.start_run(run_id, controls.requested_run_mode)
+	test_recorder.start_run(run_id, controls.requested_run_mode, player.character_id)
 	player.relic_run_id = run_id
 	if controls.requested_stage_limit > 0:
 		stage_runner.stage_limit = controls.requested_stage_limit
@@ -427,7 +428,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
-		"player": {"health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress, "barrier_health": player.damage_receiver.barrier_health},
+		"player": {"character_id": player.character_id, "health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress, "barrier_health": player.damage_receiver.barrier_health},
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
@@ -521,6 +522,9 @@ func continue_saved_run() -> bool:
 	_finish_growth_selection()
 	controls.release_all_inputs()
 	player.reset_movement_test(TRACK_START)
+	player.set_character(String(state.player.get("character_id", "roan")))
+	controls.selected_character_id = player.character_id
+	controls.requested_character_id = player.character_id
 	player.damage_receiver.max_health = int(state.player.max_health)
 	player.damage_receiver.health = int(state.player.health)
 	player.growth_common_bonus = float(state.player.common)
@@ -549,7 +553,7 @@ func continue_saved_run() -> bool:
 		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
 	_intermission_stage = int(state.stage.number)
 	stage_runner.restore_checkpoint(state.stage)
-	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode)
+	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode, player.character_id)
 	_restoring_checkpoint = false
 	player.apply_growth_health(0, 0)
 	ultimate_controller.force_emit_metrics()
@@ -859,6 +863,7 @@ func _capture_run_build() -> Dictionary:
 		damage[weapon] = {"basic": player.growth_damage(100, weapon, "basic"), "skill": player.growth_damage(100, weapon, "skill")}
 		cooldowns[weapon] = [float(metrics[weapon + "_skill_1_cooldown_s"]), float(metrics[weapon + "_skill_2_cooldown_s"])]
 	return {
+		"character_id": player.character_id,
 		"growth": growth.metrics_snapshot(), "stage": stage_runner.current_metrics(),
 		"equipment": weapon_controller.equipment.duplicate(), "blueprints": weapon_controller.blueprints.duplicate(),
 		"skills": weapon_controller.skills.duplicate(true), "active": weapon_controller.active_weapon_id,

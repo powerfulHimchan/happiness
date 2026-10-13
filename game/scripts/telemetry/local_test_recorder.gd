@@ -14,6 +14,7 @@ const SECTION_NAMES: Array[String] = ["전진 1", "웨이브 1", "전진 2", "�
 var record_path: String = DEFAULT_RECORD_PATH
 var _summary: Dictionary = {}
 var _active_run_id: String = ""
+var _active_character_id: String = "roan"
 var _recorded_section_count: int = 0
 var _active_run_completed: bool = false
 var _run_sequence: int = 0
@@ -26,7 +27,8 @@ func _ready() -> void:
 	_append_event("app_started", {})
 
 
-func start_run(run_id: String = "", mode: String = "standard") -> void:
+func start_run(run_id: String = "", mode: String = "standard", character: String = "roan") -> void:
+	_active_character_id = character if PrototypeCharacters.valid_id(character) else "roan"
 	_run_sequence += 1
 	_active_run_id = "%d-%d-%d" % [
 		int(Time.get_unix_time_from_system()),
@@ -39,7 +41,7 @@ func start_run(run_id: String = "", mode: String = "standard") -> void:
 	_recorded_stage_number = 1
 	_recorded_stage_completed = false
 	_active_run_completed = false
-	var fields := {"run_id": _active_run_id}
+	var fields := {"run_id": _active_run_id, "character_id": _active_character_id}
 	if mode == "regions": fields.run_mode = mode
 	_append_event("run_started", fields)
 	_append_section_started(0)
@@ -49,13 +51,14 @@ func checkpoint_snapshot() -> Dictionary:
 	return {"id": _active_run_id}
 
 
-func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "standard") -> void:
+func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "standard", character: String = "roan") -> void:
+	_active_character_id = character if PrototypeCharacters.valid_id(character) else "roan"
 	_active_run_id = String(state.id)
 	_recorded_stage_number = stage_number
 	_recorded_section_count = SECTION_NAMES.size()
 	_recorded_stage_completed = true
 	_active_run_completed = false
-	var fields := {"run_id": _active_run_id, "stage_number": stage_number}
+	var fields := {"run_id": _active_run_id, "stage_number": stage_number, "character_id": _active_character_id}
 	if mode == "regions": fields.run_mode = mode
 	_append_event("run_resumed", fields)
 
@@ -99,6 +102,7 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 	if bool(metrics.get("run_complete", metrics.get("stage_complete", false))):
 		var fields := {
 			"run_id": _active_run_id,
+			"character_id": _active_character_id,
 			"completion_s": float(metrics.get("run_elapsed_s", metrics.get("stage_elapsed_s", 0.0))),
 			"target_s": float(metrics.get("stage_target_s", 180.0)) * int(metrics.get("run_stage_count", 1)),
 			"stage_count": int(metrics.get("run_stage_count", 1)),
@@ -290,7 +294,7 @@ func _recent_runs(events: Array[Dictionary]) -> Array[Dictionary]:
 			if name not in ["run_started", "run_resumed", "run_completed"]:
 				continue
 			order.append(id)
-			runs[id] = {"id": id, "completed": false, "stage_number": 1, "completed_stages": 0, "completion_s": 0.0, "boss_choice": ""}
+			runs[id] = {"id": id, "character_id": event.character_id if PrototypeCharacters.valid_id(event.get("character_id")) else "roan", "completed": false, "stage_number": 1, "completed_stages": 0, "completion_s": 0.0, "boss_choice": ""}
 		var run: Dictionary = runs[id]
 		if run.completed:
 			continue
