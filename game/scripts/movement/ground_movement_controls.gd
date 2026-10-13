@@ -1495,6 +1495,10 @@ func _handle_screen_touch(position: Vector2) -> void:
 		_handle_skill_reward_touch(position)
 		return
 	if screen_mode == ScreenMode.VILLAGE:
+		_refresh_story_entry_layout()
+		if story_journal_open_rect.has_point(position):
+			open_story_journal()
+			return
 		_handle_village_touch(position)
 		return
 	if screen_mode == ScreenMode.BOSS_CHOICE:
