@@ -122,11 +122,15 @@ func _process(delta: float) -> void:
 		_emit_metrics()
 
 
+func region_section() -> int:
+	return RegionStageLayout.section(run_mode, stage_number, route_id)
+
+
 func reset_stage() -> void:
 	if not stage_enabled:
 		return
-	route_terrain.configure(stage_number, route_id, true, run_mode == JourneyRoutePlan.MODE)
-	clock_traps.configure(stage_number, route_id, run_mode == JourneyRoutePlan.MODE)
+	route_terrain.configure(stage_number, route_id, true, run_mode == JourneyRoutePlan.MODE, region_section())
+	clock_traps.configure(stage_number, route_id, run_mode == JourneyRoutePlan.MODE, region_section())
 	reward_claimed = false
 	skills_claimed = false
 	boss_choice = ""
@@ -182,8 +186,8 @@ func available_routes() -> Array[Dictionary]:
 			var profile := route_profile(id)
 			if id == "wind": profile.name = "바람꽃 평원"
 			if stage_number < 8 and stage_number % 2 == 1:
-				profile.name += " · 두 번째 구간"
-				profile.lines = ["같은 지역의 2/2 구간으로 계속", "성장·장비·잔량 유지", "두 구간을 마치면 다음 지역 선택"]
+				profile.name += " · " + String(RegionStageLayout.TITLES[id])
+				profile.lines = [String(RegionStageLayout.DESCRIPTIONS[id]), "성장·장비·잔량 유지", "두 구간을 마치면 다음 지역 선택"]
 			offers.append(profile)
 		return offers
 	if run_mode == "regions":
@@ -352,6 +356,9 @@ func current_metrics() -> Dictionary:
 		objective = "승리 · 구출 또는 파괴를 선택하세요"
 	if route_id == "festival" and not stage_complete and current_section != Section.ELITE:
 		objective = ["축제장 입구까지 전진", "병정 행진 돌진·포탑 부채탄 회피", "회전 발판·기계 승강대 건너기", "병정·포탑·공중 정령 혼합 전투"][display_index]
+	if region_section() == 2 and not stage_complete:
+		objective = RegionStageLayout.objective(route_id, display_index)
+		if route_id == "ruins" and clock_traps.state != ClockTrapController.State.OFF: objective += " · " + clock_traps.status_text()
 	var target_s := 0.0 if stage_complete else float(SECTION_TARGET_SECONDS[display_index])
 	var visited := visited_regions()
 	var route_name: String = route_profile(route_id).get("name", "알 수 없는 경로")
@@ -361,6 +368,7 @@ func current_metrics() -> Dictionary:
 	if run_mode == JourneyRoutePlan.MODE:
 		route_name = "바람꽃 평원" if route_id == "wind" else route_name
 		if stage_number <= 8: route_name += " · %d/2 구간" % (1 if stage_number % 2 == 1 else 2)
+		if region_section() == 2: route_name += " · " + String(RegionStageLayout.TITLES[route_id])
 		objective += " · 지역 완료 %d/4" % visited.size()
 		if route_id in [JourneyRoutePlan.GATE, JourneyRoutePlan.CORE] and not stage_complete and current_section != Section.ELITE:
 			objective = "성문 다리를 지나 혼합 웨이브 처치" if route_id == JourneyRoutePlan.GATE else "중심부 다리를 지나 마지막 관문으로 전진"
@@ -376,7 +384,8 @@ func current_metrics() -> Dictionary:
 		"run_mode": run_mode,
 		"run_visited_regions": visited,
 		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
-		"run_route_terrain": "성문 다리" if route_id == JourneyRoutePlan.GATE else "중심부 다리" if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
+		"run_region_section": region_section(),
+		"run_route_terrain": String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else "성문 다리" if route_id == JourneyRoutePlan.GATE else "중심부 다리" if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
@@ -446,6 +455,9 @@ func _finish_current_section() -> void:
 
 
 func _activate_wave_one() -> void:
+	if region_section() == 2:
+		_activate_second_region_wave(1)
+		return
 	_activate_enemy(leaf_slime, Vector2(1510.0, 780.0))
 	if route_id == "festival":
 		_activate_enemy(seed_sack, Vector2(2050.0, 780.0))
@@ -470,6 +482,9 @@ func _activate_wave_one() -> void:
 
 
 func _activate_wave_two() -> void:
+	if region_section() == 2:
+		_activate_second_region_wave(2)
+		return
 	if stage_number == 1 and run_mode != JourneyRoutePlan.MODE:
 		_activate_enemy(leaf_slime, Vector2(4020.0, 780.0))
 		_activate_enemy(seed_sack, Vector2(4380.0, 780.0))
@@ -496,6 +511,15 @@ func _activate_wave_two() -> void:
 		_activate_enemy(wind_spirit, Vector2(4320.0, 540.0))
 	_active_enemies.assign([leaf_slime, seed_sack, wind_spirit])
 	clock_traps.start_wave(2)
+
+
+func _activate_second_region_wave(number: int) -> void:
+	var positions := RegionStageLayout.wave(route_id, number)
+	_activate_enemy(leaf_slime, positions.slime)
+	_activate_enemy(seed_sack, positions.seed)
+	_activate_enemy(wind_spirit, positions.wind)
+	_active_enemies.assign([leaf_slime, seed_sack, wind_spirit])
+	clock_traps.start_wave(number)
 
 
 func _activate_elite() -> void:
