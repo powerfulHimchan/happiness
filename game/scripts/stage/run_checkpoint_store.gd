@@ -144,6 +144,7 @@ static func valid_state(state: Dictionary) -> bool:
 			return false
 	if not is_equal_approx(float(stage.elapsed), float(stage.history[-1].elapsed_s)) or stage.route != stage.history[-1].route:
 		return false
+	if not _valid_region_run(stage): return false
 	for assisted_stage in legacy.get("assisted_stages", []):
 		if float(assisted_stage) > float(stage.number):
 			return false
@@ -231,3 +232,27 @@ static func valid_state(state: Dictionary) -> bool:
 
 static func _valid_route(route: Variant, stage: int, legacy: Dictionary) -> bool:
 	return route in ["meadow", "wind"] or (route in ["forest", "ruins", "festival"] and stage >= 2) or (route == "clockwork" and stage == 2 and legacy.get("choice", "") == "destroy")
+
+
+static func _valid_region_run(stage: Dictionary) -> bool:
+	if not stage.has("run_mode") and not stage.has("region_order"): return true
+	if not stage.get("run_mode") is String or stage.run_mode != "regions" or int(stage.limit) != 5: return false
+	var order: Variant = stage.get("region_order")
+	if not order is Array or order.size() != 4: return false
+	var seen: Array[String] = []
+	for id in order:
+		if not id is String or id not in PrototypeStageRunner.REGION_IDS or id in seen: return false
+		seen.append(id)
+	if stage.history[0].route != "meadow": return false
+	seen.clear()
+	for entry in stage.history.slice(1):
+		if entry.route not in order or entry.route in seen: return false
+		# 저장된 우선순위에서 미방문 두 지역만 다음 후보로 허용한다.
+		var candidates: Array[String] = []
+		for id in order:
+			if id not in seen:
+				candidates.append(id)
+				if candidates.size() == 2: break
+		if entry.route not in candidates: return false
+		seen.append(String(entry.route))
+	return true

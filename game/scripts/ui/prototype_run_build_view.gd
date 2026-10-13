@@ -35,6 +35,12 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			var stage: Dictionary = state.stage
 			result.append({"id": "progress", "name": "이번 도전", "status": "%d / %d 스테이지" % [int(stage.run_stage_number), int(stage.run_stage_count)], "lines": [String(stage.stage_section_name), String(stage.run_route_name), "현재 스테이지 %.1f초" % float(stage.stage_elapsed_s), "레벨 %d · 경험치 %d/%d" % [int(state.growth.growth_level), int(state.growth.growth_xp), int(state.growth.growth_next_xp)], "조회 중 전투와 대기시간 정지"], "open": true})
 			var health: Dictionary = state.health
+			if stage.get("run_mode") == "regions":
+				var regions: Array = stage.get("run_visited_regions", [])
+				var names: Array[String] = []
+				for id in regions:
+					names.append("바람꽃 평원" if id == "wind" else String(PrototypeStageRunner.route_profile(String(id)).name))
+				result.append({"id": "regions", "name": "네 지역 순회", "status": "통과 %d/4 · 남은 %d곳" % [regions.size(), int(stage.run_remaining_regions)], "lines": names if not names.is_empty() else ["첫 연습 구간 이후 지역 선택", "미방문 두 지역 중 다음 목적지 선택", "네 지역을 한 번씩 통과합니다"], "open": true})
 			result.append({"id": "health", "name": "생존 상태", "status": "체력 %d / %d" % [int(health.current), int(health.maximum)], "lines": ["방벽 %d / %d" % [int(health.barrier), int(health.barrier_max)], "%s %d / %d개" % [PrototypePotionRecipes.profile(state.recipe).name, int(health.potions), int(health.potion_max)], "회복약 · 최대 체력 %d%% 회복" % int(health.potion_percent), "생명 흡수 · 현재 %d%%" % int(health.lifesteal_percent), "공중 도약 해금" if bool(health.air_jump) else "공중 도약 미해금"], "open": true})
 			result[-1].lines.append("처치 회복 · 적마다 체력 +%d" % int(health.get("victory_recovery", 0)) if int(health.get("victory_recovery", 0)) > 0 else "처치 회복 미해금")
 			if int(health.get("evasive_barrier", 0)) > 0:

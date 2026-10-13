@@ -26,7 +26,7 @@ func _ready() -> void:
 	_append_event("app_started", {})
 
 
-func start_run(run_id: String = "") -> void:
+func start_run(run_id: String = "", mode: String = "standard") -> void:
 	_run_sequence += 1
 	_active_run_id = "%d-%d-%d" % [
 		int(Time.get_unix_time_from_system()),
@@ -39,9 +39,9 @@ func start_run(run_id: String = "") -> void:
 	_recorded_stage_number = 1
 	_recorded_stage_completed = false
 	_active_run_completed = false
-	_append_event("run_started", {
-		"run_id": _active_run_id,
-	})
+	var fields := {"run_id": _active_run_id}
+	if mode == "regions": fields.run_mode = mode
+	_append_event("run_started", fields)
 	_append_section_started(0)
 
 
@@ -49,13 +49,15 @@ func checkpoint_snapshot() -> Dictionary:
 	return {"id": _active_run_id}
 
 
-func restore_checkpoint(state: Dictionary, stage_number: int) -> void:
+func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "standard") -> void:
 	_active_run_id = String(state.id)
 	_recorded_stage_number = stage_number
 	_recorded_section_count = SECTION_NAMES.size()
 	_recorded_stage_completed = true
 	_active_run_completed = false
-	_append_event("run_resumed", {"run_id": _active_run_id, "stage_number": stage_number})
+	var fields := {"run_id": _active_run_id, "stage_number": stage_number}
+	if mode == "regions": fields.run_mode = mode
+	_append_event("run_resumed", fields)
 
 
 func has_completed_run(run_id: String) -> bool:
@@ -95,7 +97,7 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 		_recorded_stage_completed = true
 		_append_event("stage_completed", {"run_id": _active_run_id, "stage_number": stage_number, "duration_s": metrics.get("stage_elapsed_s", 0.0), "route": metrics.get("run_route_id", "meadow")})
 	if bool(metrics.get("run_complete", metrics.get("stage_complete", false))):
-		_active_run_completed = _append_event("run_completed", {
+		var fields := {
 			"run_id": _active_run_id,
 			"completion_s": float(metrics.get("run_elapsed_s", metrics.get("stage_elapsed_s", 0.0))),
 			"target_s": float(metrics.get("stage_target_s", 180.0)) * int(metrics.get("run_stage_count", 1)),
@@ -104,7 +106,9 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 			"section_times": actual_times.duplicate(),
 			"boss_choice": String(metrics.get("boss_choice", "")),
 			"boss_name": String(metrics.get("boss_name", "")),
-		})
+		}
+		if metrics.get("run_mode") == "regions": fields.run_mode = "regions"
+		_active_run_completed = _append_event("run_completed", fields)
 
 
 func clear_records() -> void:
@@ -290,6 +294,7 @@ func _recent_runs(events: Array[Dictionary]) -> Array[Dictionary]:
 		var run: Dictionary = runs[id]
 		if run.completed:
 			continue
+		if event.get("run_mode") is String and event.run_mode == "regions": run.run_mode = "regions"
 		var stage := maxi(1, int(event.get("stage_number", 1)))
 		run.stage_number = maxi(int(run.stage_number), stage)
 		if name in ["stage_completed", "run_resumed"]:
