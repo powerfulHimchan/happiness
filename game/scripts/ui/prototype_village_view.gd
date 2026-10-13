@@ -79,6 +79,8 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 					lines.assign(["%d스테이지 완주" % int(run.stage_number), "완주 시간 %.1f초" % float(run.completion_s), "보스 구출" if choice == "rescue" else "보스 파괴" if choice == "destroy" else "보스 선택 기록 없음"])
 				else:
 					lines.assign(["마지막 기록: %d스테이지" % int(run.stage_number), "완료한 스테이지 %d개" % int(run.completed_stages), "진행 중인 도전도 포함", "완주 시간은 완료 후 표시"])
+				if run.get("story_enabled", false) == true:
+					lines.append("이야기 여행" + (" · " + PrototypeStory.CHRONICLES[String(run.chronicle)].name if PrototypeStory.CHRONICLES.has(String(run.get("chronicle", ""))) else ""))
 				lines.append("주인공 · " + PrototypeCharacters.display_name(String(run.get("character_id", "roan"))))
 				if run.get("run_mode") == "regions": lines.append("네 지역 순회 · 5스테이지")
 				result.append({"id": run.id, "name": "지역 순회 %d" % (result.size() + 1) if run.get("run_mode") == "regions" else "최근 도전 %d" % (result.size() + 1), "open": true, "status": "완주" if complete else "미완료", "lines": lines})

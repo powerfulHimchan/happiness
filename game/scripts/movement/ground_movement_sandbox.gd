@@ -34,6 +34,13 @@ var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
 var boss_legacy_store := BossLegacyStore.new()
 var ability_discovery_store := AbilityDiscoveryStore.new()
+var story_journal_store := StoryJournalStore.new()
+var story_run := PrototypeStoryRun.new()
+var _story_return_mode: int = 0
+var _story_message: String = ""
+var _pending_rewind_ids: Array[String] = []
+var _rewind_message: String = ""
+var _active_rewind_run_id: String = ""
 var _ability_codex_message: String = ""
 var _job_codex_message: String = ""
 var _pending_route_records: Array = []
@@ -89,6 +96,11 @@ func _ready() -> void:
 	controls.layout_test_finished.connect(_on_layout_test_finished)
 	controls.combat_configuration_started.connect(_suspend_combat_environment)
 	controls.combat_configuration_finished.connect(_restore_combat_environment)
+	controls.story_acknowledged.connect(_acknowledge_story)
+	controls.story_progress_reader = _story_progress
+	controls.story_journal_started.connect(_begin_run_build_pause)
+	controls.story_journal_finished.connect(_finish_run_build_pause)
+	controls.story_journal_retry_requested.connect(_retry_story_journal)
 	controls.run_build_reader = _capture_run_build
 	controls.run_build_started.connect(_begin_run_build_pause)
 	controls.run_build_finished.connect(_finish_run_build_pause)
@@ -99,6 +111,7 @@ func _ready() -> void:
 	player.player_died.connect(controls.release_all_inputs)
 	player.phoenix_revived.connect(controls.release_all_inputs)
 	player.player_died.connect(_finish_growth_selection)
+	player.player_died.connect(_on_story_death)
 	player.player_died.connect(_discard_checkpoint)
 	player.movement_metrics_changed.connect(controls.update_movement_metrics)
 	target_selector.target_metrics_changed.connect(controls.update_target_metrics)
@@ -272,6 +285,9 @@ func _reset_test() -> void:
 	if not _available_checkpoint.is_empty() and (not _job_codex_message.is_empty() or not _ability_codex_message.is_empty()):
 		controls.show_main_screen()
 		return
+	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _story_message.is_empty():
+		controls.show_main_screen()
+		return
 	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)):
 		controls.show_main_screen()
 		return
@@ -284,6 +300,9 @@ func _reset_test() -> void:
 	_discard_checkpoint()
 	_finish_growth_selection()
 	_intermission_stage = 0
+	_retry_pending_rewinds()
+	_story_message = ""
+	story_run.reset(controls.requested_story_enabled, story_journal_store.snapshot())
 	player.reset_movement_test(TRACK_START)
 	player.set_character(controls.requested_character_id)
 	player.prepare_potions(String(boss_legacy_store.progress_snapshot().potion_recipe))
@@ -302,7 +321,8 @@ func _reset_test() -> void:
 			target.reset_target()
 	target_selector.reset_selection()
 	ultimate_controller.reset_ultimate()
-	test_recorder.start_run(run_id, controls.requested_run_mode, player.character_id)
+	test_recorder.start_run(run_id, controls.requested_run_mode, player.character_id, story_run.enabled)
+	_active_rewind_run_id = run_id
 	player.relic_run_id = run_id
 	if controls.requested_stage_limit > 0:
 		stage_runner.stage_limit = controls.requested_stage_limit
@@ -313,6 +333,8 @@ func _reset_test() -> void:
 	_enemy_metrics_elapsed_s = 0.0
 	_emit_enemy_metrics()
 	controls.release_all_inputs()
+	_update_story_status()
+	if story_run.enabled: _open_story(0)
 
 
 func _begin_growth_pause() -> void:
@@ -364,18 +386,22 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 	if growth.run_active and not player.damage_receiver.dead:
 		_record_route_history(stage_runner.stage_history)
 	if bool(metrics.get("run_complete", true)):
+		_active_rewind_run_id = ""
 		_finish_growth_selection()
 		growth.stop_run()
 		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")))
+		if story_run.enabled: reward_saved = _record_story_completion(_story_checkpoint_context()) and reward_saved
 		test_recorder.record_stage_metrics(metrics)
 		if reward_saved and test_recorder.has_completed_run(String(test_recorder.checkpoint_snapshot().id)):
 			_discard_checkpoint()
 	elif stage_runner.awaiting_boss_choice() and growth.run_active and not player.damage_receiver.dead:
-		if controls.current_screen_mode() != 12:
+		if controls.current_screen_mode() not in [12, 18]:
 			controls.release_all_inputs()
 			_begin_growth_pause()
 			controls.show_boss_choice()
+			story_run.prepare_stage(stage_runner.stage_number)
 			_save_checkpoint(metrics)
+			if story_run.enabled: _open_story(12)
 	elif growth.run_active and not player.damage_receiver.dead and _intermission_stage != stage_runner.stage_number:
 		_intermission_stage = stage_runner.stage_number
 		controls.release_all_inputs()
@@ -397,7 +423,9 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		_stage_recovered_health = player.damage_receiver.health - before
 		_begin_growth_pause()
 		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints))
+		story_run.prepare_stage(stage_runner.stage_number)
 		_save_checkpoint(metrics)
+		if story_run.enabled: _open_story(11)
 
 
 func _use_recovery_potion() -> bool:
@@ -436,6 +464,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"memory_id": player.memory_id,
 		"relic": player.relic_state.duplicate(),
 	}
+	if story_run.enabled: state.story = story_run.snapshot()
 	var error := checkpoint_store.save_checkpoint(state)
 	if error == OK:
 		_available_checkpoint = state.duplicate(true)
@@ -493,14 +522,15 @@ func _refresh_checkpoint() -> void:
 	if not _available_checkpoint.is_empty():
 		_record_route_history(_available_checkpoint.stage.history)
 		job_error = _discover_job(String(_available_checkpoint.growth.job))
-	if job_error == OK and ability_error == OK:
+	var story_saved := _record_story_completion(_available_checkpoint)
+	if job_error == OK and ability_error == OK and story_saved:
 		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
 			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 				_discard_checkpoint()
 		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
 	_update_boss_legacy_status()
-	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), _ability_codex_message if ability_error != OK else checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
+	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), _story_message if not story_saved else _ability_codex_message if ability_error != OK else checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
 
 
 func _discard_checkpoint() -> void:
@@ -519,6 +549,9 @@ func continue_saved_run() -> bool:
 	if _discover_job(String(state.growth.job)) != OK:
 		return false
 	_restoring_checkpoint = true
+	story_run.restore(state.get("story", {}))
+	controls.selected_story_enabled = story_run.enabled
+	controls.requested_story_enabled = story_run.enabled
 	_finish_growth_selection()
 	controls.release_all_inputs()
 	player.reset_movement_test(TRACK_START)
@@ -553,7 +586,8 @@ func continue_saved_run() -> bool:
 		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
 	_intermission_stage = int(state.stage.number)
 	stage_runner.restore_checkpoint(state.stage)
-	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode, player.character_id)
+	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode, player.character_id, story_run.enabled)
+	_active_rewind_run_id = String(state.recorder.id)
 	_restoring_checkpoint = false
 	player.apply_growth_health(0, 0)
 	ultimate_controller.force_emit_metrics()
@@ -568,6 +602,8 @@ func continue_saved_run() -> bool:
 		_show_intermission_routes()
 	else:
 		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints))
+	_update_story_status()
+	if story_run.enabled and not story_run.pending.is_empty(): _open_story(controls.current_screen_mode())
 	return true
 
 
@@ -863,7 +899,7 @@ func _capture_run_build() -> Dictionary:
 		damage[weapon] = {"basic": player.growth_damage(100, weapon, "basic"), "skill": player.growth_damage(100, weapon, "skill")}
 		cooldowns[weapon] = [float(metrics[weapon + "_skill_1_cooldown_s"]), float(metrics[weapon + "_skill_2_cooldown_s"])]
 	return {
-		"character_id": player.character_id,
+		"character_id": player.character_id, "story": _active_story_status(),
 		"growth": growth.metrics_snapshot(), "stage": stage_runner.current_metrics(),
 		"equipment": weapon_controller.equipment.duplicate(), "blueprints": weapon_controller.blueprints.duplicate(),
 		"skills": weapon_controller.skills.duplicate(true), "active": weapon_controller.active_weapon_id,
@@ -903,3 +939,89 @@ func _finish_run_build_pause() -> void:
 	controls.process_mode = _run_build_previous_controls_mode
 	get_tree().paused = _run_build_previous_tree_pause
 	_run_build_pause_owned = false
+
+
+func _active_story_status() -> Dictionary:
+	if not story_run.enabled: return {}
+	var fragments := PrototypeStory.earned(stage_runner.stage_history, stage_runner.stage_limit)
+	var choice := stage_runner.boss_choice
+	return {"enabled": true, "fragments": fragments, "rewinds": story_run.rewinds, "seen": story_run.seen.duplicate(), "chronicle": PrototypeStory.chronicle_id(stage_runner.stage_history, choice) if choice in ["rescue", "destroy"] else ""}
+
+
+func _update_story_status() -> void:
+	controls.update_story_status(_active_story_status())
+
+
+func _open_story(return_mode: int) -> void:
+	if story_run.pending.is_empty(): return
+	_story_return_mode = return_mode
+	_begin_growth_pause()
+	controls.show_story(PrototypeStory.scene(story_run.pending, stage_runner.stage_history, player.character_id, story_run.known, story_run.rewinds, stage_runner.stage_limit))
+
+
+func _acknowledge_story(id: String) -> bool:
+	if controls.current_screen_mode() != 18 or id != story_run.pending or id.is_empty(): return false
+	var before := story_run.snapshot()
+	if id != "prologue":
+		var error := story_journal_store.record_fragments(PrototypeStory.earned(stage_runner.stage_history, stage_runner.stage_limit))
+		if error != OK:
+			_story_message = "기억 조각 저장 실패 · 다시 확인하세요"
+			controls.story_message = _story_message
+			return false
+	story_run.acknowledge()
+	if id != "prologue" and _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		story_run.restore(before)
+		controls.story_message = "장면 확인 저장 실패 · 다시 확인하세요"
+		return false
+	_story_message = ""
+	controls.story_message = ""
+	controls.finish_story(_story_return_mode)
+	if _story_return_mode == 0: _finish_growth_selection()
+	_update_story_status()
+	return true
+
+
+func _story_progress() -> Dictionary:
+	var result := story_journal_store.snapshot()
+	result.error = _story_message if not _story_message.is_empty() else _rewind_message
+	return result
+
+
+func _story_checkpoint_context() -> Dictionary:
+	return {"story": story_run.snapshot(), "stage": stage_runner.checkpoint_snapshot(), "recorder": test_recorder.checkpoint_snapshot(), "player": {"character_id": player.character_id}} if story_run.enabled else {}
+
+
+func _record_story_completion(state: Dictionary) -> bool:
+	if state.is_empty() or not state.has("story") or String(state.stage.get("boss_choice", "")).is_empty(): return true
+	var error := story_journal_store.record_chronicle(String(state.recorder.id), PrototypeStory.chronicle_id(state.stage.history, String(state.stage.boss_choice)), String(state.player.get("character_id", "roan")), PrototypeStory.earned(state.stage.history, int(state.stage.limit)))
+	_story_message = "여행 기록 저장 실패 · 이어하기 또는 수첩에서 재시도하세요" if error != OK else ""
+	_update_story_status()
+	return error == OK
+
+
+func _on_story_death() -> void:
+	var id := _active_rewind_run_id
+	if id.is_empty(): return
+	_active_rewind_run_id = ""
+	if id not in _pending_rewind_ids: _pending_rewind_ids.append(id)
+	_retry_pending_rewinds()
+
+
+func _retry_pending_rewinds() -> bool:
+	for id in _pending_rewind_ids.duplicate():
+		if story_journal_store.record_rewind(id) != OK:
+			_rewind_message = "되감기 기록 저장 실패 · 수첩에서 재시도하세요"
+			return false
+		_pending_rewind_ids.erase(id)
+	_rewind_message = ""
+	return true
+
+
+func _retry_story_journal() -> bool:
+	if not _retry_pending_rewinds(): return false
+	if story_run.enabled and not stage_runner.stage_history.is_empty() and story_journal_store.record_fragments(PrototypeStory.earned(stage_runner.stage_history, stage_runner.stage_limit)) != OK:
+		_story_message = "기억 조각 저장 실패 · 다시 시도하세요"
+		return false
+	_story_message = ""
+	_refresh_checkpoint()
+	return _story_message.is_empty()

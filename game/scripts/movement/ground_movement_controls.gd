@@ -36,6 +36,10 @@ signal potion_recipe_selected(id: String)
 signal route_records_retry_requested
 signal run_build_started
 signal run_build_finished
+signal story_acknowledged(id: String)
+signal story_journal_started
+signal story_journal_finished
+signal story_journal_retry_requested
 
 enum ScreenMode {
 	COMBAT,
@@ -56,6 +60,8 @@ enum ScreenMode {
 	RELIC_REWARD,
 	RUN_BUILD,
 	START_CHARACTER,
+	STORY,
+	STORY_JOURNAL,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -297,6 +303,22 @@ var start_length_rects: Array[Rect2] = []
 var selected_run_mode: String = "standard"
 var requested_run_mode: String = "standard"
 var previous_run_mode: String = "standard"
+var selected_story_enabled: bool = false
+var requested_story_enabled: bool = false
+var previous_story_enabled: bool = false
+var character_previous_story_enabled: bool = false
+var story_toggle_rect := Rect2()
+var story_journal_open_rect := Rect2()
+var story_scene: Dictionary = {}
+var story_page: int = 0
+var story_message: String = ""
+var active_story_state: Dictionary = {}
+var story_progress_reader: Callable
+var story_journal_state: Dictionary = {}
+var story_journal_owned: bool = false
+var story_journal_return_mode: int = 2
+var story_journal_tab: int = 0
+var story_journal_page: int = 0
 var selected_character_id: String = "roan"
 var requested_character_id: String = "roan"
 var previous_character_id: String = "roan"
@@ -373,6 +395,15 @@ func _notification(what: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if screen_mode == ScreenMode.STORY:
+			story_acknowledged.emit(String(story_scene.id))
+			get_viewport().set_input_as_handled()
+			return
+		if screen_mode == ScreenMode.STORY_JOURNAL:
+			close_story_journal()
+			get_viewport().set_input_as_handled()
+			return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.START_CHARACTER:
 		_close_character_selection(false)
 		get_viewport().set_input_as_handled()
@@ -413,6 +444,12 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.STORY:
+		_draw_story()
+		return
+	if screen_mode == ScreenMode.STORY_JOURNAL:
+		_draw_story_journal()
+		return
 	if screen_mode == ScreenMode.START_CHARACTER:
 		_draw_character_selection()
 		return
@@ -887,12 +924,15 @@ func update_test_record_summary(summary: Dictionary) -> void:
 	queue_redraw()
 
 
-func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan") -> bool:
+func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false) -> bool:
 	if not PrototypeCharacters.valid_id(character): return false
 	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5] or mode not in ["standard", "regions"] or (mode == "regions" and stage_count != 5):
 		return false
+	_leave_story_journal()
 	_leave_run_build()
 	_leave_village_environment()
+	selected_story_enabled = stories
+	requested_story_enabled = stories
 	selected_starting_weapon = starting_weapon
 	selected_character_id = character
 	requested_character_id = character
@@ -910,6 +950,7 @@ func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: 
 
 
 func show_main_screen() -> void:
+	_leave_story_journal()
 	_leave_run_build()
 	_leave_village_environment()
 	release_all_inputs()
@@ -1002,6 +1043,7 @@ func show_start_weapon_selection() -> void:
 	previous_stage_limit = selected_stage_limit
 	previous_run_mode = selected_run_mode
 	previous_character_id = selected_character_id
+	previous_story_enabled = selected_story_enabled
 	start_memory_previous_selection = selected_memory_id
 	selected_memory_id = preferred_memory_id
 	use_boss_legacy = not pending_boss_legacy.is_empty()
@@ -1046,7 +1088,7 @@ func _draw_start_weapon_selection() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
 	_draw_text_centered("연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
 	_draw_village_text(start_legacy_description(), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.10), Vector2(safe.size.x * 0.62, safe.size.y * 0.04)), 19, TEXT_COLOR)
-	_draw_button(character_open_rect, "주인공 · " + PrototypeCharacters.display_name(selected_character_id) + " · 변경", false)
+	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
 	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
 	for index in 3:
 		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계"][index]
@@ -1078,6 +1120,7 @@ func _draw_start_weapon_selection() -> void:
 func show_character_selection() -> void:
 	if screen_mode != ScreenMode.START_WEAPON: return
 	character_preview_previous_id = selected_character_id
+	character_previous_story_enabled = selected_story_enabled
 	release_all_inputs()
 	screen_mode = ScreenMode.START_CHARACTER
 	_refresh_character_layout()
@@ -1085,7 +1128,9 @@ func show_character_selection() -> void:
 
 
 func _close_character_selection(confirm: bool) -> void:
-	if not confirm: selected_character_id = character_preview_previous_id
+	if not confirm:
+		selected_character_id = character_preview_previous_id
+		selected_story_enabled = character_previous_story_enabled
 	release_all_inputs()
 	screen_mode = ScreenMode.START_WEAPON
 	_refresh_start_weapon_layout()
@@ -1099,6 +1144,8 @@ func _refresh_character_layout() -> void:
 	character_card_rects.clear()
 	for index in 2:
 		character_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (width + gap), safe.size.y * 0.23), Vector2(width, safe.size.y * 0.52)))
+	story_toggle_rect = Rect2(safe.position + safe.size * Vector2(0.05, 0.78), safe.size * Vector2(0.43, 0.055))
+	story_journal_open_rect = Rect2(safe.position + safe.size * Vector2(0.52, 0.78), safe.size * Vector2(0.43, 0.055))
 	var button_width := minf(280.0, safe.size.x * 0.27)
 	character_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - gap * 0.5 - button_width, safe.size.y * 0.86), Vector2(button_width, minf(64.0, safe.size.y * 0.09)))
 	character_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 + gap * 0.5, safe.size.y * 0.86), character_cancel_rect.size)
@@ -1108,8 +1155,8 @@ func _draw_character_selection() -> void:
 	_refresh_character_layout()
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
-	_draw_text_centered("여행할 주인공을 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
-	_draw_text_centered("능력과 이야기는 같습니다 · 외형을 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.13), Vector2(safe.size.x, safe.size.y * 0.05)), 20, TEXT_COLOR)
+	_draw_text_centered("주인공과 여행 이야기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
+	_draw_text_centered("두 주인공의 능력은 같습니다 · 이야기는 아래에서 켜세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.13), Vector2(safe.size.x, safe.size.y * 0.05)), 20, TEXT_COLOR)
 	for index in 2:
 		var id: String = PrototypeCharacters.IDS[index]
 		var rect := character_card_rects[index]
@@ -1121,6 +1168,8 @@ func _draw_character_selection() -> void:
 		_draw_text_centered(PrototypeCharacters.display_name(id) + (" · 선택됨" if selected else ""), Rect2(rect.position + Vector2(0, rect.size.y * 0.59), Vector2(rect.size.x, 38)), 28, ACTIVE_COLOR)
 		_draw_village_text(PrototypeCharacters.appearance(id), Rect2(rect.position + Vector2(16, rect.size.y * 0.75), Vector2(rect.size.x - 32, 30)), 18, TEXT_COLOR)
 		_draw_village_text(PrototypeCharacters.SHARED_STORY, Rect2(rect.position + Vector2(16, rect.size.y * 0.85), Vector2(rect.size.x - 32, 30)), 18, MUTED_TEXT_COLOR)
+	_draw_button(story_toggle_rect, "이야기 · " + ("켜짐" if selected_story_enabled else "꺼짐"), selected_story_enabled)
+	_draw_button(story_journal_open_rect, "기억 수첩", false)
 	_draw_button(character_cancel_rect, "선택 취소", false)
 	_draw_button(character_confirm_rect, "이 주인공으로 준비", true)
 
@@ -1410,6 +1459,7 @@ func _show_result_screen() -> void:
 	if movement_metrics.get("run_mode") == "regions":
 		result_snapshot.run_mode = "regions"
 		result_snapshot.visited_regions = movement_metrics.get("run_visited_regions", []).duplicate()
+	if not active_story_state.is_empty(): result_snapshot.story = active_story_state.duplicate(true)
 	screen_mode = ScreenMode.RESULT
 	_refresh_layout()
 	queue_redraw()
@@ -1473,8 +1523,29 @@ func _handle_screen_touch(position: Vector2) -> void:
 		elif weapon_reward_confirm_rect.has_point(position) and selected_weapon_reward >= 0:
 			weapon_reward_selected.emit(String(weapon_reward_cards[selected_weapon_reward].id))
 		return
+	if screen_mode == ScreenMode.STORY:
+		var layout := PrototypeStoryView.scene_layout(_safe_area_in_viewport())
+		if layout.skip.has_point(position): story_acknowledged.emit(String(story_scene.id))
+		elif layout.next.has_point(position):
+			if story_page < ceili(float(story_scene.lines.size()) / 2.0) - 1: story_page += 1
+			else: story_acknowledged.emit(String(story_scene.id))
+		return
+	if screen_mode == ScreenMode.STORY_JOURNAL:
+		_handle_story_journal_touch(position)
+		return
+	if screen_mode in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]:
+		_refresh_story_entry_layout()
+		if story_journal_open_rect.has_point(position):
+			open_story_journal()
+			return
 	if screen_mode == ScreenMode.START_CHARACTER:
 		_refresh_character_layout()
+		if story_toggle_rect.has_point(position):
+			selected_story_enabled = not selected_story_enabled
+			return
+		if story_journal_open_rect.has_point(position):
+			open_story_journal()
+			return
 		for index in character_card_rects.size():
 			if character_card_rects[index].has_point(position):
 				selected_character_id = PrototypeCharacters.IDS[index]
@@ -1510,10 +1581,11 @@ func _handle_screen_touch(position: Vector2) -> void:
 			selected_stage_limit = previous_stage_limit
 			selected_run_mode = previous_run_mode
 			selected_character_id = previous_character_id
+			selected_story_enabled = previous_story_enabled
 			selected_memory_id = start_memory_previous_selection
 			screen_mode = start_weapon_return_mode
 		elif start_weapon_confirm_rect.has_point(position):
-			begin_retry(selected_starting_weapon, selected_stage_limit, selected_run_mode, selected_character_id)
+			begin_retry(selected_starting_weapon, selected_stage_limit, selected_run_mode, selected_character_id, selected_story_enabled)
 		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
 		if relic_offer_available and relic_reward_open_rect.has_point(position):
@@ -2050,13 +2122,13 @@ func _draw_result_screen() -> void:
 	)
 	var completion_s := float(result_snapshot.get("completion_s", 0.0))
 	var target_s := float(result_snapshot.get("target_s", 180.0))
-	_draw_text_centered(
+	_draw_village_text(
 		"%s · 완료 %s  ·  목표 %s  ·  %s" % [
 			PrototypeCharacters.display_name(String(result_snapshot.get("character_id", "roan"))),
 			_format_clock(completion_s),
 			_format_clock(target_s),
 			"목표 이내" if completion_s <= target_s else "+%s" % _format_clock(completion_s - target_s),
-		],
+		] + (" · 기억 %d/8" % result_snapshot.story.fragments.size() if result_snapshot.has("story") else ""),
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 84.0), Vector2(result_panel_rect.size.x, 42.0)),
 		24,
 		TEXT_COLOR
@@ -2102,6 +2174,8 @@ func _draw_result_screen() -> void:
 		_format_clock(average_s) if average_s > 0.0 else "--:--",
 	]
 	_draw_result_row("로컬 테스트", record_text, content_x, content_width, y)
+	_refresh_story_entry_layout()
+	_draw_button(story_journal_open_rect, "수첩", false)
 	_draw_button(result_retry_rect, "다시 도전", true)
 	_draw_button(result_main_rect, "메인 화면", false)
 
@@ -2129,6 +2203,8 @@ func _draw_main_screen() -> void:
 	)
 	if not checkpoint_available:
 		_draw_text_centered("영구 기억 %d/2 · 무기 설계도 %d/2 해금" % [unlocked_memories.size(), unlocked_weapon_blueprints.size()], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
+	_refresh_story_entry_layout()
+	_draw_button(story_journal_open_rect, "기억 수첩", false)
 	_draw_button(main_feedback_rect, "설정", false)
 	_draw_button(main_village_rect, "시간의 닻 마을", true)
 	if checkpoint_available:
@@ -2855,6 +2931,7 @@ func _handle_village_touch(position: Vector2) -> void:
 
 
 func _draw_village() -> void:
+	_refresh_story_entry_layout()
 	var safe := _safe_area_in_viewport()
 	var snapshot := village_snapshot()
 	var layout: Dictionary = snapshot.layout
@@ -2916,6 +2993,7 @@ func _draw_village() -> void:
 	_draw_button(layout.start, "새 도전 준비", true)
 	if checkpoint_available:
 		_draw_button(layout["continue"], "이어하기", true)
+	_draw_button(story_journal_open_rect, "기억 수첩", false)
 
 
 func _draw_village_text(value: String, rect: Rect2, requested_size: int, color: Color) -> void:
@@ -3206,3 +3284,133 @@ func _draw_run_build() -> void:
 	_draw_button(layout.next, "다음", snapshot.page < snapshot.pages - 1)
 	_draw_village_text("%d / %d" % [int(snapshot.page) + 1, int(snapshot.pages)], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.78), Vector2(safe.size.x * 0.40, safe.size.y * 0.055)), 19, TEXT_COLOR)
 	_draw_button(layout.back, "전투로 돌아가기", true)
+
+
+func update_story_status(state: Dictionary) -> void:
+	active_story_state = state.duplicate(true)
+	queue_redraw()
+
+
+func show_story(scene: Dictionary) -> void:
+	release_all_inputs()
+	story_scene = scene.duplicate(true)
+	story_page = 0
+	story_message = ""
+	screen_mode = ScreenMode.STORY
+	queue_redraw()
+
+
+func finish_story(return_mode: int) -> void:
+	release_all_inputs()
+	story_scene.clear()
+	story_page = 0
+	screen_mode = return_mode
+	queue_redraw()
+
+
+func _draw_story() -> void:
+	var safe := _safe_area_in_viewport()
+	var layout := PrototypeStoryView.scene_layout(safe)
+	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
+	_draw_village_text(String(story_scene.name), Rect2(safe.position + safe.size * Vector2(0.05, 0.06), safe.size * Vector2(0.90, 0.09)), 32, ACTIVE_COLOR)
+	var portrait := Vector2(160, 180) * minf(1.5, safe.size.y * 0.35 / 180)
+	draw_texture_rect(PrototypeCharacters.texture(String(movement_metrics.get("character_id", "roan"))), Rect2(safe.position + safe.size * Vector2(0.08, 0.28), portrait), false)
+	for i in 2:
+		var index := story_page * 2 + i
+		if index >= story_scene.lines.size(): break
+		var rect: Rect2 = layout.paragraphs[i]
+		var lines := PrototypeStoryView.wrap(String(story_scene.lines[index]), ThemeDB.fallback_font, 22, rect.size.x)
+		for j in lines.size():
+			_draw_text(lines[j], rect.position + Vector2(0, 28 * (j + 1)), 22, TEXT_COLOR)
+	_draw_village_text("%d / %d" % [story_page + 1, ceili(float(story_scene.lines.size()) / 2)], Rect2(safe.position + safe.size * Vector2(0.30, 0.72), safe.size * Vector2(0.64, 0.04)), 18, MUTED_TEXT_COLOR)
+	_draw_village_text(story_message if not story_message.is_empty() else "이 여행에서 발견한 기억을 수첩에 남깁니다", Rect2(safe.position + safe.size * Vector2(0.05, 0.78), safe.size * Vector2(0.90, 0.04)), 18, WAIT_COLOR if not story_message.is_empty() else MUTED_TEXT_COLOR)
+	_draw_button(layout.skip, "장면 건너뛰기", false)
+	_draw_button(layout.next, "다음" if story_page < ceili(float(story_scene.lines.size()) / 2) - 1 else "확인", true)
+
+
+func _refresh_story_entry_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	match screen_mode:
+		ScreenMode.MAIN: story_journal_open_rect = Rect2(result_panel_rect.position + Vector2(30, 24), Vector2(160, 48))
+		ScreenMode.RESULT: story_journal_open_rect = Rect2(Vector2(result_panel_rect.position.x + 18, result_retry_rect.position.y), Vector2(90, result_retry_rect.size.y))
+		ScreenMode.VILLAGE: story_journal_open_rect = Rect2(safe.position + safe.size * Vector2(0.72, 0.035), safe.size * Vector2(0.23, 0.065))
+		ScreenMode.START_CHARACTER: _refresh_character_layout()
+
+
+func open_story_journal() -> bool:
+	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE, ScreenMode.START_CHARACTER] or not story_progress_reader.is_valid(): return false
+	story_journal_return_mode = screen_mode
+	story_journal_state = story_progress_reader.call().duplicate(true)
+	story_journal_tab = 0
+	story_journal_page = 0
+	release_all_inputs()
+	story_journal_owned = true
+	story_journal_started.emit()
+	screen_mode = ScreenMode.STORY_JOURNAL
+	queue_redraw()
+	return true
+
+
+func _leave_story_journal() -> void:
+	if not story_journal_owned: return
+	release_all_inputs()
+	story_journal_owned = false
+	story_journal_finished.emit()
+
+
+func close_story_journal() -> void:
+	if screen_mode != ScreenMode.STORY_JOURNAL: return
+	_leave_story_journal()
+	screen_mode = story_journal_return_mode
+	_refresh_story_entry_layout()
+	queue_redraw()
+
+
+func story_journal_snapshot() -> Dictionary:
+	var all := PrototypeStory.journal_cards(story_journal_tab, story_journal_state, selected_character_id)
+	var pages := maxi(1, ceili(float(all.size()) / 3.0))
+	story_journal_page = clampi(story_journal_page, 0, pages - 1)
+	var cards := all.slice(story_journal_page * 3, (story_journal_page + 1) * 3)
+	return {"cards": cards.duplicate(true), "page": story_journal_page, "pages": pages, "layout": PrototypeStoryView.journal_layout(_safe_area_in_viewport(), cards.size()), "error": story_journal_state.get("error", "")}
+
+
+func _handle_story_journal_touch(position: Vector2) -> void:
+	var snapshot := story_journal_snapshot()
+	var layout: Dictionary = snapshot.layout
+	for i in 2:
+		if layout.tabs[i].has_point(position):
+			story_journal_tab = i
+			story_journal_page = 0
+			return
+	if layout.previous.has_point(position): story_journal_page = maxi(0, story_journal_page - 1)
+	elif layout.next.has_point(position): story_journal_page = mini(int(snapshot.pages) - 1, story_journal_page + 1)
+	elif layout.back.has_point(position): close_story_journal()
+	elif not String(snapshot.error).is_empty() and layout.retry.has_point(position):
+		story_journal_retry_requested.emit()
+		story_journal_state = story_progress_reader.call().duplicate(true)
+
+
+func _draw_story_journal() -> void:
+	var safe := _safe_area_in_viewport()
+	var snapshot := story_journal_snapshot()
+	var layout: Dictionary = snapshot.layout
+	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
+	_draw_village_text("기억 수첩", Rect2(safe.position + safe.size * Vector2(0.05, 0.025), safe.size * Vector2(0.90, 0.07)), 32, ACTIVE_COLOR)
+	_draw_village_text("기억 %d/8 · 여행 기록 %d/4 · 되감기 %d번" % [story_journal_state.get("fragments", {}).size(), story_journal_state.get("chronicles", {}).size(), int(story_journal_state.get("rewind_count", 0))], Rect2(safe.position + safe.size * Vector2(0.05, 0.105), safe.size * Vector2(0.90, 0.045)), 19, TEXT_COLOR)
+	for i in 2: _draw_button(layout.tabs[i], "기억 조각" if i == 0 else "여행 기록", story_journal_tab == i)
+	for i in snapshot.cards.size():
+		var card: Dictionary = snapshot.cards[i]
+		var rect: Rect2 = layout.cards[i]
+		draw_style_box(_panel_style(), rect)
+		_draw_village_text(String(card.name), Rect2(rect.position + rect.size * Vector2(0.04, 0.06), rect.size * Vector2(0.92, 0.14)), 24, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
+		_draw_village_text(String(card.status), Rect2(rect.position + rect.size * Vector2(0.04, 0.23), rect.size * Vector2(0.92, 0.10)), 17, PASS_COLOR if card.open else MUTED_TEXT_COLOR)
+		for j in card.lines.size():
+			var body := Rect2(rect.position + rect.size * Vector2(0.05, 0.40 + j * 0.18), rect.size * Vector2(0.90, 0.17))
+			var lines := PrototypeStoryView.wrap(String(card.lines[j]), ThemeDB.fallback_font, 14, body.size.x)
+			for k in lines.size(): _draw_text(lines[k], body.position + Vector2(0, 16 * (k + 1)), 14, TEXT_COLOR)
+	_draw_button(layout.previous, "이전", snapshot.page > 0)
+	_draw_button(layout.next, "다음", snapshot.page < snapshot.pages - 1)
+	_draw_village_text("%d / %d" % [int(snapshot.page) + 1, int(snapshot.pages)], Rect2(safe.position + safe.size * Vector2(0.30, 0.77), safe.size * Vector2(0.40, 0.065)), 18, TEXT_COLOR)
+	_draw_button(layout.back, "돌아가기", true)
+	if not String(snapshot.error).is_empty(): _draw_button(layout.retry, "저장 재시도", true)
+	_draw_village_text(String(snapshot.error), Rect2(safe.position + safe.size * Vector2(0.05, 0.84), safe.size * Vector2(0.90, 0.025)), 15, WAIT_COLOR)
