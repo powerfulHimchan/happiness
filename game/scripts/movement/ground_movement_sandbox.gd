@@ -301,10 +301,11 @@ func _reset_test() -> void:
 			target.reset_target()
 	target_selector.reset_selection()
 	ultimate_controller.reset_ultimate()
-	test_recorder.start_run(run_id)
+	test_recorder.start_run(run_id, controls.requested_run_mode)
 	player.relic_run_id = run_id
 	if controls.requested_stage_limit > 0:
 		stage_runner.stage_limit = controls.requested_stage_limit
+	stage_runner.set_run_mode(controls.requested_run_mode)
 	stage_runner.reset_run()
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
@@ -548,7 +549,7 @@ func continue_saved_run() -> bool:
 		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
 	_intermission_stage = int(state.stage.number)
 	stage_runner.restore_checkpoint(state.stage)
-	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number)
+	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode)
 	_restoring_checkpoint = false
 	player.apply_growth_health(0, 0)
 	ultimate_controller.force_emit_metrics()

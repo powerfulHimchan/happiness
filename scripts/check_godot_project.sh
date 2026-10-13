@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp257_266_runtime_test.gd"
   "$game_root/tests/gp247_256_runtime_test.gd"
   "$game_root/tests/gp248_249_runtime_test.gd"
   "$game_root/tests/gp250_252_runtime_test.gd"
@@ -641,6 +642,14 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for starting_weapon in sword bow; do
+    for region_phase in seed resume2 resume3 resume4 boss finish legacy-seed legacy preview; do
+      checked_godot 45s --headless --path "$game_root" --script res://tests/gp257_266_runtime_test.gd -- "$region_phase" "$starting_weapon"
+    done
+  done
+  for region_phase in orders validate fault flows; do
+    checked_godot 45s --headless --path "$game_root" --script res://tests/gp257_266_runtime_test.gd -- "$region_phase" sword
+  done
   for starting_weapon in sword bow; do
     for festival_phase in seed resume finish legacy-seed legacy paging; do
       checked_godot 45s --headless --path "$game_root" --script res://tests/gp247_256_runtime_test.gd -- "$festival_phase" "$starting_weapon"
