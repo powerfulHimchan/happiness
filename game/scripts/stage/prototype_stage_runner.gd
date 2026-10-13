@@ -45,6 +45,7 @@ const ROUTES: Array[Dictionary] = [
 const RISK_ROUTE := {"id": "clockwork", "name": "태엽 폐허 · 위험", "lines": ["좁은 발판 · 적 체력 +20%", "첫 웨이브 · 세 종류의 적", "통과: 체력 +20 · 필살기 +50"]}
 const FOREST_ROUTE := {"id": "forest", "name": "거꾸로 자란 숲", "lines": ["움직이는 덩굴 · 고정 쉼터", "연속 도약 · 넓은 씨앗 · 재돌진", "정예 통과: 회복+10 · 게이지+15"]}
 const RUINS_ROUTE := {"id": "ruins", "name": "별시계 유적", "lines": ["멈춤·반복 발판과 시간 함정", "태엽 인형의 기억된 이중 사격", "정예 통과: 방벽+10 · 게이지+20"]}
+const FESTIVAL_ROUTE := {"id": "festival", "name": "태엽 축제장", "lines": ["회전 놀이 발판 · 기계 승강대", "병정의 행진 돌진 · 포탑 부채탄", "정예 통과: 회복+15 · 게이지+10"]}
 var stage_number: int = 1
 var route_id: String = "meadow"
 var skills_claimed: bool = false
@@ -163,11 +164,12 @@ func available_routes() -> Array[Dictionary]:
 		routes.append(RISK_ROUTE.duplicate(true))
 	routes.append(FOREST_ROUTE.duplicate(true))
 	routes.append(RUINS_ROUTE.duplicate(true))
+	routes.append(FESTIVAL_ROUTE.duplicate(true))
 	return routes
 
 
 static func route_profile(id: String) -> Dictionary:
-	for route in ROUTES + [RISK_ROUTE, FOREST_ROUTE, RUINS_ROUTE]:
+	for route in ROUTES + [RISK_ROUTE, FOREST_ROUTE, RUINS_ROUTE, FESTIVAL_ROUTE]:
 		if route.id == id:
 			return route.duplicate(true)
 	return {}
@@ -285,6 +287,8 @@ func current_metrics() -> Dictionary:
 			objective += " · " + clock_traps.status_text()
 	if awaiting_boss_choice():
 		objective = "승리 · 구출 또는 파괴를 선택하세요"
+	if route_id == "festival" and not stage_complete and current_section != Section.ELITE:
+		objective = ["축제장 입구까지 전진", "병정 행진 돌진·포탑 부채탄 회피", "회전 발판·기계 승강대 건너기", "병정·포탑·공중 정령 혼합 전투"][display_index]
 	var target_s := 0.0 if stage_complete else float(SECTION_TARGET_SECONDS[display_index])
 	var closed_gate_count := 0
 	for gate_index in gates.size():
@@ -295,7 +299,7 @@ func current_metrics() -> Dictionary:
 		"run_stage_count": stage_limit,
 		"run_route_id": route_id,
 		"run_route_name": route_profile(route_id).get("name", "알 수 없는 경로"),
-		"run_route_terrain": "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판")),
+		"run_route_terrain": "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 else ("평지 다리" if route_id == "meadow" else "징검 발판")),
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
@@ -366,7 +370,10 @@ func _finish_current_section() -> void:
 
 func _activate_wave_one() -> void:
 	_activate_enemy(leaf_slime, Vector2(1510.0, 780.0))
-	if route_id == "ruins":
+	if route_id == "festival":
+		_activate_enemy(seed_sack, Vector2(2050.0, 780.0))
+		_active_enemies.assign([leaf_slime, seed_sack])
+	elif route_id == "ruins":
 		_activate_enemy(seed_sack, Vector2(1980.0, 780.0))
 		_active_enemies.assign([leaf_slime, seed_sack])
 	elif route_id == "forest":
@@ -390,6 +397,10 @@ func _activate_wave_two() -> void:
 		_activate_enemy(leaf_slime, Vector2(4020.0, 780.0))
 		_activate_enemy(seed_sack, Vector2(4380.0, 780.0))
 		_activate_enemy(wind_spirit, Vector2(4200.0, 590.0))
+	elif route_id == "festival":
+		_activate_enemy(leaf_slime, Vector2(4030.0, 780.0))
+		_activate_enemy(seed_sack, Vector2(4570.0, 780.0))
+		_activate_enemy(wind_spirit, Vector2(4280.0, 560.0))
 	elif route_id == "ruins":
 		_activate_enemy(leaf_slime, Vector2(4020.0, 780.0))
 		_activate_enemy(seed_sack, Vector2(4530.0, 780.0))

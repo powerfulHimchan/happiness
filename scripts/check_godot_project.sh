@@ -5,6 +5,11 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp247_256_runtime_test.gd"
+  "$game_root/tests/gp248_249_runtime_test.gd"
+  "$game_root/tests/gp250_252_runtime_test.gd"
+  "$game_root/assets/festival_soldier.svg"
+  "$game_root/assets/festival_turret.svg"
   "$game_root/tests/gp237_246_runtime_test.gd"
   "$game_root/tests/gp239_runtime_test.gd"
   "$game_root/tests/gp240_242_runtime_test.gd"
@@ -636,6 +641,23 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for starting_weapon in sword bow; do
+    for festival_phase in seed resume finish legacy-seed legacy paging; do
+      checked_godot 45s --headless --path "$game_root" --script res://tests/gp247_256_runtime_test.gd -- "$festival_phase" "$starting_weapon"
+    done
+  done
+  for festival_phase in fault-seed fault-resume; do
+    checked_godot 45s --headless --path "$game_root" --script res://tests/gp247_256_runtime_test.gd -- "$festival_phase" sword
+  done
+  for terrain_phase in motion cross pause; do
+    checked_godot 45s --headless --path "$game_root" --script res://tests/gp248_249_runtime_test.gd -- "$terrain_phase"
+  done
+  for enemy in soldier turret; do
+    for direction in 1 -1; do
+      checked_godot 45s --headless --path "$game_root" --script res://tests/gp250_252_runtime_test.gd -- "$enemy" "$direction"
+    done
+  done
+  checked_godot 45s --headless --path "$game_root" --script res://tests/gp250_252_runtime_test.gd -- flows
   for starting_weapon in sword bow; do
     for ruins_phase in seed resume finish legacy-seed legacy paging; do
       checked_godot 45s --headless --path "$game_root" --script res://tests/gp237_246_runtime_test.gd -- "$ruins_phase" "$starting_weapon"
