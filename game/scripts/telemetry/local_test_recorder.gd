@@ -15,6 +15,7 @@ var record_path: String = DEFAULT_RECORD_PATH
 var _summary: Dictionary = {}
 var _active_run_id: String = ""
 var _active_character_id: String = "roan"
+var _active_story_enabled: bool = false
 var _recorded_section_count: int = 0
 var _active_run_completed: bool = false
 var _run_sequence: int = 0
@@ -27,7 +28,8 @@ func _ready() -> void:
 	_append_event("app_started", {})
 
 
-func start_run(run_id: String = "", mode: String = "standard", character: String = "roan") -> void:
+func start_run(run_id: String = "", mode: String = "standard", character: String = "roan", stories: bool = false) -> void:
+	_active_story_enabled = stories
 	_active_character_id = character if PrototypeCharacters.valid_id(character) else "roan"
 	_run_sequence += 1
 	_active_run_id = "%d-%d-%d" % [
@@ -43,6 +45,7 @@ func start_run(run_id: String = "", mode: String = "standard", character: String
 	_active_run_completed = false
 	var fields := {"run_id": _active_run_id, "character_id": _active_character_id}
 	if mode == "regions": fields.run_mode = mode
+	if stories: fields.story_enabled = true
 	_append_event("run_started", fields)
 	_append_section_started(0)
 
@@ -51,7 +54,8 @@ func checkpoint_snapshot() -> Dictionary:
 	return {"id": _active_run_id}
 
 
-func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "standard", character: String = "roan") -> void:
+func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "standard", character: String = "roan", stories: bool = false) -> void:
+	_active_story_enabled = stories
 	_active_character_id = character if PrototypeCharacters.valid_id(character) else "roan"
 	_active_run_id = String(state.id)
 	_recorded_stage_number = stage_number
@@ -60,6 +64,7 @@ func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "st
 	_active_run_completed = false
 	var fields := {"run_id": _active_run_id, "stage_number": stage_number, "character_id": _active_character_id}
 	if mode == "regions": fields.run_mode = mode
+	if stories: fields.story_enabled = true
 	_append_event("run_resumed", fields)
 
 
@@ -112,6 +117,9 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 			"boss_name": String(metrics.get("boss_name", "")),
 		}
 		if metrics.get("run_mode") == "regions": fields.run_mode = "regions"
+		if _active_story_enabled:
+			fields.story_enabled = true
+			fields.chronicle = PrototypeStory.chronicle_id(metrics.get("run_stage_history", []), String(metrics.get("boss_choice", "")))
 		_active_run_completed = _append_event("run_completed", fields)
 
 
@@ -299,6 +307,8 @@ func _recent_runs(events: Array[Dictionary]) -> Array[Dictionary]:
 		if run.completed:
 			continue
 		if event.get("run_mode") is String and event.run_mode == "regions": run.run_mode = "regions"
+		if event.get("story_enabled") is bool and event.story_enabled: run.story_enabled = true
+		if name == "run_completed" and event.get("chronicle") is String and PrototypeStory.CHRONICLES.has(event.chronicle): run.chronicle = event.chronicle
 		var stage := maxi(1, int(event.get("stage_number", 1)))
 		run.stage_number = maxi(int(run.stage_number), stage)
 		if name in ["stage_completed", "run_resumed"]:
