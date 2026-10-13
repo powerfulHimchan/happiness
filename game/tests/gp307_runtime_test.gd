@@ -109,9 +109,20 @@ func _run() -> void:
 			controls.use_boss_legacy = true
 			if not controls.begin_retry(weapon, 10, "journey", character): return
 			for number in range(1, 10):
+				if number == 6 and not _check(not legacy.spend_assist(player.boss_legacy, 6), "기존 기본 API는 범위 밖6 지원 차단"): return
 				if not _finish_stage() or not sandbox._claim_weapon_reward(""): return
 				if not _check(RunCheckpointStore.valid_state(store.load_checkpoint()), "기사 동행은6~9구간 지원 저장 가능"): return
 				if not _next_without_layout(): return
+			if not _reach_journey_elite() or not _check(player.boss_legacy.assisted_stages.has(10), "10구간 실제 기사 지원 기록"): return
+			var damaged := FileAccess.open(store.save_path, FileAccess.WRITE)
+			damaged.store_string("broken")
+			damaged.close()
+			controls.show_main_screen()
+			if not _check(sandbox.continue_saved_run() and runner.stage_number == 8 and player.boss_legacy.assisted_stages.has(10), "손상 주 파일은8구간 백업·후속 지원 소비 저널 복원"): return
+			if not _next_without_layout() or not _finish_stage() or not sandbox._claim_weapon_reward(""): return
+			if not _check(store.load_checkpoint().stage.number == 9 and not store.load_checkpoint().boss_legacy.assisted_stages.has(10), "백업 뒤9구간 정상 저장·후속 소비는 독립 저널 유지"): return
+			if not _next_without_layout() or not _reach_journey_elite(): return
+			if not _check(runner.boss.damage_receiver.health == runner.boss.damage_receiver.max_health and player.boss_legacy.assisted_stages.has(10), "복원 후10구간 기사 지원 중복 피해 없음"): return
 			var elapsed := runner.stage_elapsed_s
 			var saved := store.load_checkpoint()
 			controls.open_run_build()
@@ -251,3 +262,9 @@ func _journey_invalid() -> bool:
 	for bad in invalid:
 		if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and FileAccess.get_file_as_string(store.save_path) == raw, "이력/모드/순열/길이변조 원자적 거부"): return false
 	return true
+
+func _reach_journey_elite() -> bool:
+	for ignored in 10:
+		if runner.current_section == PrototypeStageRunner.Section.ELITE: return true
+		if not _step_section(): return false
+	return _check(false, "실제 마지막 적 구간 도달")
