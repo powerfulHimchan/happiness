@@ -5,6 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp308_runtime_test.gd"
+  "$game_root/scripts/stage/region_stage_layout.gd"
   "$game_root/tests/gp307_runtime_test.gd"
   "$game_root/scripts/stage/journey_route_plan.gd"
   "$game_root/tests/gp277_306_runtime_test.gd"
@@ -652,6 +654,12 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for second_route in wind forest ruins festival; do
+    for second_phase in seed resume motion cross flows hazard; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp308_runtime_test.gd -- "$second_phase" "$second_route"
+    done
+  done
   for protagonist in roan lumi; do
     for starting_weapon in sword bow; do
       checked_godot 45s --headless --path "$game_root" --script res://tests/gp307_runtime_test.gd -- seed "$protagonist" "$starting_weapon"

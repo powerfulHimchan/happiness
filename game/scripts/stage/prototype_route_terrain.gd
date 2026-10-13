@@ -29,6 +29,8 @@ const FESTIVAL_STEPS: Array[Rect2] = FOREST_STEPS
 const FESTIVAL_PERIOD_S := 5.0
 const FESTIVAL_ORBIT := Vector2(32, 24)
 const FESTIVAL_LIFT_PX := 45.0
+var region_section: int = 1
+var base_platforms: Array[Rect2] = []
 var motion_elapsed_s: float = 0.0
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
@@ -38,11 +40,12 @@ var platforms: Array[Rect2] = []
 var _last_landed_platform: int = -1
 
 
-func configure(stage: int, route: String, enabled: bool = true, regional_start: bool = false) -> void:
+func configure(stage: int, route: String, enabled: bool = true, regional_start: bool = false, section: int = 1) -> void:
 	for body in get_children():
 		body.free()
 	stage_number = stage
 	route_id = route
+	region_section = 2 if section == 2 and RegionStageLayout.TITLES.has(route) else 1
 	platforms.clear()
 	_last_landed_platform = -1
 	motion_elapsed_s = 0.0
@@ -60,6 +63,9 @@ func configure(stage: int, route: String, enabled: bool = true, regional_start: 
 			platforms.assign(RUINS_STEPS)
 		elif route == "festival":
 			platforms.assign(FESTIVAL_STEPS)
+	if enabled and region_section == 2:
+		platforms.assign(RegionStageLayout.platforms(route))
+	base_platforms.assign(platforms)
 	for index in platforms.size():
 		var rect := platforms[index]
 		var body: PhysicsBody2D = AnimatableBody2D.new() if route in ["forest", "ruins", "festival"] and index in FOREST_MOVING_INDICES else StaticBody2D.new()
@@ -79,13 +85,14 @@ func _physics_process(delta: float) -> void:
 		var period := FESTIVAL_PERIOD_S if route_id == "festival" else FOREST_PERIOD_S if route_id == "forest" else RUINS_PERIOD_S
 		motion_elapsed_s = fmod(motion_elapsed_s + delta, period)
 		for index in FOREST_MOVING_INDICES:
-			var base := FOREST_STEPS[index]
-			var offset := Vector2(40.0, -20.0) * sin(motion_elapsed_s * TAU / FOREST_PERIOD_S) if route_id == "forest" else Vector2(90.0, 0.0) * ruins_motion_ratio()
+			var base := base_platforms[index]
+			var offset := (Vector2(28.0, -12.0) if region_section == 2 else Vector2(40.0, -20.0)) * sin(motion_elapsed_s * TAU / FOREST_PERIOD_S) if route_id == "forest" else Vector2(55.0 if region_section == 2 else 90.0, 0.0) * ruins_motion_ratio()
 			offset *= 1.0 if index == 1 else -1.0
 			if route_id == "festival":
 				# 발판은 수평을 유지한 채 놀이기구 궤도를 돌며 탑승자를 운반한다.
 				var angle := motion_elapsed_s * TAU / FESTIVAL_PERIOD_S
-				offset = Vector2(FESTIVAL_ORBIT.x * sin(angle), FESTIVAL_ORBIT.y * (1.0 - cos(angle))) if index == 1 else Vector2(0, -FESTIVAL_LIFT_PX * sin(angle))
+				var orbit := Vector2(22, 16) if region_section == 2 else FESTIVAL_ORBIT
+				offset = Vector2(orbit.x * sin(angle), orbit.y * (1.0 - cos(angle))) if index == 1 else Vector2(0, -(30.0 if region_section == 2 else FESTIVAL_LIFT_PX) * sin(angle))
 			platforms[index] = Rect2(base.position + offset, base.size)
 			get_child(index).position = platforms[index].get_center()
 		queue_redraw()
@@ -113,7 +120,7 @@ func ruins_motion_ratio() -> float:
 
 
 func layout_snapshot() -> Dictionary:
-	return {"stage": stage_number, "route": route_id, "platforms": platforms.duplicate(), "body_count": get_child_count(), "motion_elapsed": motion_elapsed_s}
+	return {"stage": stage_number, "route": route_id, "platforms": platforms.duplicate(), "body_count": get_child_count(), "motion_elapsed": motion_elapsed_s, "region_section": region_section, "base_platforms": base_platforms.duplicate()}
 
 
 func _draw() -> void:
@@ -145,7 +152,7 @@ func _draw() -> void:
 			base = Color("b15e74")
 			rim = Color("ffe2a3")
 			if index == 1:
-				var hub := FESTIVAL_STEPS[1].get_center() + Vector2(0, FESTIVAL_ORBIT.y)
+				var hub := base_platforms[1].get_center() + Vector2(0, 16 if region_section == 2 else FESTIVAL_ORBIT.y)
 				draw_arc(hub, 72, 0, TAU, 32, rim, 5)
 				draw_line(hub, rect.get_center(), Color("62768d"), 8)
 			elif index == 3:
@@ -167,6 +174,8 @@ func _draw() -> void:
 			text = "성문 다리 · 앞으로 전진" if route_id == "city_gate" else "중심부 다리 · 앞으로 전진"
 		if route_id == "festival":
 			text = "회전 놀이 발판" if index == 1 else "기계 승강대" if index == 3 else "축제 고정 쉼터 · 안전 복귀"
+		if region_section == 2 and index == 0: text = String(RegionStageLayout.TITLES[route_id]) + " · 2/2"
+		elif region_section == 2 and index == 4: text = "출구 쉼터 · 안전 복귀"
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, -18), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("173147"))
 	if route_id == "festival":
 		for x in range(900, 4800, 400):

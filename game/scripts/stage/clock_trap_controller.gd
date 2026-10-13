@@ -8,6 +8,8 @@ const WARNING_S := 1.0
 const ACTIVE_S := 0.30
 const RECOVERY_S := 2.5
 const DAMAGE := 12
+var region_section: int = 1
+var zones: Array[Rect2] = ZONES.duplicate()
 var state: int = State.OFF
 var route_id: String = "meadow"
 var zone_index: int = -1
@@ -24,8 +26,10 @@ func _ready() -> void:
 	add_to_group("stage_hazard")
 	visible = false
 
-func configure(stage: int, route: String, regional_start: bool = false) -> void:
+func configure(stage: int, route: String, regional_start: bool = false, section: int = 1) -> void:
 	stop()
+	region_section = 2 if section == 2 and route == "ruins" else 1
+	zones.assign(RegionStageLayout.TRAP_ZONES if region_section == 2 else ZONES)
 	route_id = route if stage > 1 or regional_start else "meadow"
 	generation += 1
 	cycle = 0
@@ -83,7 +87,7 @@ func _process(delta: float) -> void:
 func _try_hit_player() -> void:
 	if _hit_consumed or state != State.ACTIVE or not player.can_continue_combat_action():
 		return
-	if not ZONES[zone_index].has_point(player.global_position + Vector2(0, -38)):
+	if not zones[zone_index].has_point(player.global_position + Vector2(0, -38)):
 		return
 	_hit_consumed = true
 	var event := DamageEvent.new()
@@ -93,7 +97,7 @@ func _try_hit_player() -> void:
 	event.damage = DAMAGE
 	event.stagger_s = 0.14
 	event.tags = PackedStringArray(["enemy", "hazard", "clock", "ruins"])
-	event.source_position = ZONES[zone_index].get_center()
+	event.source_position = zones[zone_index].get_center()
 	var evading := player.invincible
 	var result := player.receive_damage(event)
 	if result == DamageReceiver.Result.APPLIED:
@@ -109,11 +113,11 @@ func status_text() -> String:
 	return "함정 정지"
 
 func snapshot() -> Dictionary:
-	return {"state": state, "route": route_id, "zone": zone_index, "elapsed": elapsed_s, "cycle": cycle, "generation": generation, "hits": hit_count, "consumed": _hit_consumed, "time_scale": enemy_time_scale}
+	return {"state": state, "route": route_id, "zone": zone_index, "elapsed": elapsed_s, "cycle": cycle, "generation": generation, "hits": hit_count, "consumed": _hit_consumed, "time_scale": enemy_time_scale, "region_section": region_section, "zones": zones.duplicate()}
 
 func _draw() -> void:
 	if state == State.OFF or zone_index < 0: return
-	var rect := ZONES[zone_index]
+	var rect := zones[zone_index]
 	var color := Color("ffd166") if state == State.WARNING else Color("ff655b") if state == State.ACTIVE else Color("709aaa")
 	draw_rect(rect, Color(color, 0.12 if state != State.ACTIVE else 0.32))
 	if state == State.WARNING:
