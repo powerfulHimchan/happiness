@@ -5,6 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp314_runtime_test.gd"
+  "$game_root/assets/prototype_sera.svg"
   "$game_root/tests/gp313_runtime_test.gd"
   "$game_root/tests/gp312_runtime_test.gd"
   "$game_root/scripts/stage/guardian_decision.gd"
@@ -665,6 +667,24 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for reunion_character in roan lumi; do
+    for reunion_weapon in sword bow; do
+      for reunion_phase in seed pending acknowledged finish; do
+        checked_godot 60s --headless --path "$game_root" \
+          --script res://tests/gp314_runtime_test.gd -- "$reunion_phase" "$reunion_character" "$reunion_weapon"
+      done
+    done
+  done
+  for reunion_character in roan lumi; do
+    for reunion_phase in fragment-fault checkpoint-fault; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp314_runtime_test.gd -- "$reunion_phase" "$reunion_character" bow
+    done
+  done
+  for reunion_phase in legacy-pending legacy-seen rules layout; do
+    checked_godot 60s --headless --path "$game_root" \
+      --script res://tests/gp314_runtime_test.gd -- "$reunion_phase" lumi sword
+  done
   for companion_character in roan lumi; do
     for companion_weapon in sword bow; do
       for companion_choice in rescue destroy; do
