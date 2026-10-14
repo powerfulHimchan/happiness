@@ -48,6 +48,7 @@ func _run() -> void:
 			var source := String(recorder.checkpoint_snapshot().id)
 			var raw := FileAccess.get_file_as_string(legacy.save_path)
 			if not _check(legacy.grant_guardian(source, choice) == OK and legacy.grant_guardian(source, "destroy" if choice == "rescue" else "rescue") == ERR_INVALID_DATA and raw == FileAccess.get_file_as_string(legacy.save_path) and legacy.pending_reward().is_empty(), "성문 해금 멱등·충돌 거부·최종 보상 독립"): return
+			if not await _check_forge(choice): return
 			controls.selected_story_enabled = false
 			controls.selected_character_id = character
 			controls.begin_retry(weapon, 3, "standard", character)
@@ -191,3 +192,31 @@ func _next_without_layout() -> bool:
 	var route: String = controls.stage_route_options[-1].id
 	_tap(controls.stage_route_rects[-1].get_center())
 	return _check(not paused and runner.stage_number == number + 1 and runner.route_id == route, "실제 다음 경로 카드 입력")
+
+
+func _check_forge(choice: String) -> bool:
+	var saved := store.load_checkpoint()
+	var progress := legacy.progress_snapshot()
+	controls.show_main_screen()
+	controls.show_village()
+	for dimensions in [Vector2(1280, 720), Vector2(1600, 720)]:
+		controls.size = dimensions
+		controls.village_page = "forge"
+		controls.weapon_codex_page = 0
+		controls.queue_redraw()
+		for ignored in 2: await process_frame
+		var first: Dictionary = controls.village_snapshot()
+		if not _check(first.codex_pages == 2 and first.cards.map(func(card: Dictionary) -> String: return card.id) == ["clockwork_sword", "clockwork_bow"], "대장간 첫 페이지 기존 태엽 설계도 보존"): return false
+		_tap(first.pager.next.get_center())
+		var second: Dictionary = controls.village_snapshot()
+		if not _check(second.codex_page == 1 and second.cards.map(func(card: Dictionary) -> String: return card.id) == PrototypeWeaponRewards.GUARDIAN_DESIGNS and second.cards.all(func(card: Dictionary) -> bool: return card.open == (choice == "destroy") and (card.lines[0].contains("희귀") if choice == "destroy" else card.lines[0].contains("수호기사 파괴"))), "대장간 둘째 페이지 실제 입력·수호 설계도 잠금/해금 표시"): return false
+		var safe: Rect2 = controls.layout_snapshot().safe
+		for rect in second.layout.cards + [second.pager.previous, second.pager.next]:
+			if not _check(safe.encloses(rect), "두 화면비 대장간 카드/페이지 안전 영역"): return false
+		_tap(second.pager.next.get_center())
+		if not _check(controls.village_snapshot().codex_page == 1, "설계도 페이지 상한"): return false
+		_tap(second.pager.previous.get_center())
+		if not _check(controls.village_snapshot().codex_page == 0, "설계도 페이지 이전 입력"): return false
+	controls.size = Vector2(1280, 720)
+	controls.show_main_screen()
+	return _check(store.load_checkpoint() == saved and legacy.progress_snapshot() == progress, "설계도 비교·페이지 조회는 보상/저장 불변")

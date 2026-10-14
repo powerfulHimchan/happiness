@@ -53,19 +53,20 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				var status := "발견 · 현재 도전" if discovered and current_job == job.id else "영구 발견" if discovered else "미발견 · 성향을 채워 발현"
 				result.append({"id": job.id, "name": job.name, "open": discovered, "status": status, "lines": lines})
 		"forge":
-			for id in ["clockwork_sword", "clockwork_bow"]:
+			for id in ["clockwork_sword", "clockwork_bow"] + PrototypeWeaponRewards.GUARDIAN_DESIGNS:
+				var design := PrototypeWeaponRewards.design_profile(id)
 				var unlocked := bool(blueprints.get(id, false))
 				var lines: Array[String] = []
 				if unlocked:
 					for grade in [1, 2]:
-						var profile := PrototypeWeaponRewards.profile(String(PrototypeWeaponRewards.BLUEPRINTS[id].weapon), grade, id)
+						var profile := PrototypeWeaponRewards.profile(String(design.weapon), grade, id)
 						lines.append("%s · 피해 +%d%%" % [PrototypeWeaponRewards.GRADE_NAMES[grade], int(round(float(profile.damage) * 100))])
 						lines.append("고유 효과 +%d%%" % int(round(float(profile.unique) * 100)))
-					lines.append("검: 스킬 강화" if id == "clockwork_sword" else "활: 기본 공격 강화")
+					lines.append("검: 스킬 강화" if design.weapon == "sword" else "활: 기본 공격 강화")
 					lines.append("보조 고유 효과는 절반 적용")
 				else:
-					lines.assign(["보스 파괴로 영구 해금", "해금 후 정예 무기 보상에 등장"])
-				result.append({"name": String(PrototypeWeaponRewards.BLUEPRINTS[id].name), "open": unlocked, "lines": lines})
+					lines.assign(["성문 수호기사 파괴로 영구 해금" if id in PrototypeWeaponRewards.GUARDIAN_DESIGNS else "보스 파괴로 영구 해금", "해금 후 정예 무기 보상에 등장"])
+				result.append({"id": id, "name": String(design.name), "open": unlocked, "lines": lines})
 		"memories":
 			for id in ["clockwork_guard", "core_echo"]:
 				var profile := PrototypeMemoryAbilities.profile(id)
