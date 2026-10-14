@@ -1094,9 +1094,7 @@ func _draw_start_weapon_selection() -> void:
 	_draw_text_centered("네 지역 각 두 구간 · 성문과 중심부 · 약 30분" if selected_run_mode == JourneyRoutePlan.MODE else "연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
 	_draw_village_text(start_legacy_description(), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.10), Vector2(safe.size.x * 0.62, safe.size.y * 0.04)), 19, TEXT_COLOR)
 	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
-	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
-	if guardian_companion_unlocked:
-		_draw_village_text("수호기사 · 정예당 30 지원", Rect2(safe.position + Vector2(safe.size.x * 0.70, safe.size.y * 0.145), Vector2(safe.size.x * 0.28, safe.size.y * 0.03)), 17, PASS_COLOR)
+	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe) + (" · 수호기사 정예 지원30" if guardian_companion_unlocked else ""), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
 	for index in 4:
 		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계", "전체 여정 · 10단계"][index]
 		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
