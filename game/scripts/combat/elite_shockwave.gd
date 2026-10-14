@@ -6,6 +6,8 @@ extends Node2D
 const HIT_RADIUS_PX := 54.0
 
 var wave_id: String = ""
+var attacker_id: StringName = &"armored_boar"
+var attack_id: StringName = &"boar_shockwave"
 var direction_sign: float = -1.0
 var damage: int = 12
 var speed_px_s: float = 650.0
@@ -64,8 +66,8 @@ func _try_hit_player(segment_start: Vector2, segment_end: Vector2) -> bool:
 	var was_evading := player.invincible
 	var event := DamageEvent.new()
 	event.event_id = StringName("%s:player" % wave_id)
-	event.attacker_id = &"armored_boar"
-	event.attack_id = &"boar_shockwave"
+	event.attacker_id = attacker_id
+	event.attack_id = attack_id
 	event.damage = damage
 	event.stagger_s = 0.18
 	event.tags = PackedStringArray(["enemy", "projectile", "shockwave"])

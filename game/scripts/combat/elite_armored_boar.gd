@@ -66,6 +66,9 @@ var _charge_direction: float = -1.0
 var _charge_hit_consumed: bool = false
 var _shockwave_sequence: int = 0
 var _phase_two_second_wave_pending: bool = false
+var attacker_id: StringName = &"armored_boar"
+var charge_attack_id: StringName = &"boar_charge"
+var shockwave_attack_id: StringName = &"boar_shockwave"
 
 @onready var player: PrototypePlayer = get_node(player_path) as PrototypePlayer
 @onready var warning_ring: Sprite2D = $WarningRing
@@ -312,6 +315,8 @@ func _spawn_shockwaves() -> void:
 			_shockwave_damage(),
 			7.8 if phase == 2 else 6.5
 		)
+		wave.attacker_id = attacker_id
+		wave.attack_id = shockwave_attack_id
 		var wave_parent := get_tree().current_scene
 		if wave_parent == null:
 			wave_parent = get_tree().root
@@ -328,8 +333,8 @@ func _try_charge_damage() -> void:
 	var was_evading := player.invincible
 	var event := DamageEvent.new()
 	event.event_id = StringName("%s:%d:charge" % [attack_life_key(), attack_count])
-	event.attacker_id = &"armored_boar"
-	event.attack_id = &"boar_charge"
+	event.attacker_id = attacker_id
+	event.attack_id = charge_attack_id
 	event.damage = _charge_damage()
 	event.stagger_s = 0.24
 	event.tags = PackedStringArray(["enemy", "elite", "charge"])

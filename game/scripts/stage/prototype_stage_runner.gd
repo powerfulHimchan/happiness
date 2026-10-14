@@ -46,7 +46,7 @@ const RISK_ROUTE := {"id": "clockwork", "name": "태엽 폐허 · 위험", "line
 const FOREST_ROUTE := {"id": "forest", "name": "거꾸로 자란 숲", "lines": ["움직이는 덩굴 · 고정 쉼터", "연속 도약 · 넓은 씨앗 · 재돌진", "정예 통과: 회복+10 · 게이지+15"]}
 const RUINS_ROUTE := {"id": "ruins", "name": "별시계 유적", "lines": ["멈춤·반복 발판과 시간 함정", "태엽 인형의 기억된 이중 사격", "정예 통과: 방벽+10 · 게이지+20"]}
 const FESTIVAL_ROUTE := {"id": "festival", "name": "태엽 축제장", "lines": ["회전 놀이 발판 · 기계 승강대", "병정의 행진 돌진 · 포탑 부채탄", "정예 통과: 회복+15 · 게이지+10"]}
-const CITY_GATE_ROUTE := {"id": "city_gate", "name": "행복의 나라 성문", "lines": ["9스테이지 · 하얀 성벽과 미소 짓는 주민", "성문 계단 · 성벽 위 혼합 전투", "통과 후 중심부로 이동"]}
+const CITY_GATE_ROUTE := {"id": "city_gate", "name": "행복의 나라 성문", "lines": ["9스테이지 · 하얀 성벽과 미소 짓는 주민", "성문 계단 · 혼합 전투와 행복의 수호기사", "통과 후 중심부로 이동"]}
 const CITY_CORE_ROUTE := {"id": "city_core", "name": "행복의 나라 중심부", "lines": ["10스테이지 · 시계탑 회랑과 궁전 앞 광장", "혼합 웨이브 뒤 웃는 태엽 기사 전투", "승리 후 구출/파괴 선택"]}
 const REGION_IDS := ["wind", "forest", "ruins", "festival"]
 var run_mode: String = "standard"
@@ -68,6 +68,7 @@ var stage_history: Array[Dictionary] = []
 @onready var wind_spirit: PrototypeEnemy = get_node("../Targets/WindSpirit") as PrototypeEnemy
 @onready var armored_boar: EliteArmoredBoar = get_node("../Targets/ArmoredBoar") as EliteArmoredBoar
 @onready var boss: BossClockworkKnight = get_node("../Targets/ClockworkKnight") as BossClockworkKnight
+@onready var guardian: BossHappinessGuardian = get_node("../Targets/HappinessGuardian") as BossHappinessGuardian
 @onready var gates: Array[StaticBody2D] = [
 	get_node("../StageGates/GateA") as StaticBody2D,
 	get_node("../StageGates/GateB") as StaticBody2D,
@@ -244,6 +245,8 @@ func can_select_route(id: String) -> bool:
 
 
 func _enemy_health(enemy: PrototypeTarget) -> int:
+	if enemy == guardian:
+		return BossHappinessGuardian.BOSS_HEALTH
 	if enemy == boss:
 		return BossClockworkKnight.BOSS_HEALTH * 2 if stage_limit == 10 else BossClockworkKnight.BOSS_HEALTH * 3 / 2 if stage_limit == 5 else BossClockworkKnight.BOSS_HEALTH
 	var multiplier := (1.0 + 0.25 * (stage_number - 1)) * (1.20 if route_id == "clockwork" else 1.0)
@@ -254,12 +257,16 @@ func uses_boss() -> bool:
 	return stage_enabled and stage_limit in [3, 5, 10] and stage_number == stage_limit
 
 
+func uses_guardian() -> bool:
+	return stage_enabled and run_mode == JourneyRoutePlan.MODE and stage_number == 9 and route_id == JourneyRoutePlan.GATE
+
+
 func awaiting_boss_choice() -> bool:
 	return uses_boss() and stage_complete and boss_choice.is_empty()
 
 
 func final_enemy() -> PrototypeTarget:
-	return boss if uses_boss() else armored_boar
+	return guardian if uses_guardian() else boss if uses_boss() else armored_boar
 
 
 func checkpoint_snapshot() -> Dictionary:
@@ -374,6 +381,9 @@ func current_metrics() -> Dictionary:
 			objective = CityGateLayout.objective(display_index)
 		elif route_id == JourneyRoutePlan.CORE and not stage_complete and current_section != Section.ELITE:
 			objective = CityCoreLayout.objective(display_index)
+	if uses_guardian() and current_section == Section.ELITE:
+		section_name = "보스 · " + BossHappinessGuardian.BOSS_NAME
+		objective = "방패 돌진·충격파·빛의 창 회피 · 벽 충돌/공격 뒤 빈틈 공략"
 	var closed_gate_count := 0
 	for gate_index in gates.size():
 		if is_gate_closed(gate_index):
@@ -391,7 +401,7 @@ func current_metrics() -> Dictionary:
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
-		"boss_name": BossClockworkKnight.BOSS_NAME if uses_boss() else "",
+		"boss_name": BossHappinessGuardian.BOSS_NAME if uses_guardian() else BossClockworkKnight.BOSS_NAME if uses_boss() else "",
 		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s,
 		"run_stage_history": stage_history.duplicate(true),
 		"stage_enabled": stage_enabled,
@@ -584,7 +594,7 @@ func _restore_combat_sandbox() -> void:
 	for gate_index in gates.size():
 		_set_gate_closed(gate_index, false)
 	for enemy in _all_combat_enemies():
-		if enemy == boss:
+		if enemy in [boss, guardian]:
 			_deactivate_enemy(enemy)
 			continue
 		if enemy is PrototypeEnemy:
@@ -603,7 +613,7 @@ func _restore_combat_sandbox() -> void:
 
 
 func _all_combat_enemies() -> Array[PrototypeTarget]:
-	return [leaf_slime, seed_sack, wind_spirit, armored_boar, boss]
+	return [leaf_slime, seed_sack, wind_spirit, armored_boar, boss, guardian]
 
 
 func _active_enemy_count() -> int:
