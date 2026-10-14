@@ -37,6 +37,9 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			var story: Dictionary = state.get("story", {})
 			if not story.is_empty():
 				result.append({"id": "story", "name": "이번 여행의 기억", "status": "기억 조각 %d/8" % story.fragments.size(), "lines": ["이야기 장면 확인 %d개" % story.seen.size(), "시작 때까지 되감기 %d번" % story.rewinds, "이름과 외형은 실제 주인공 선택", "조각은 전투 능력을 바꾸지 않습니다"], "open": true})
+			var companion: Dictionary = state.get("guardian_companion", {})
+			if not companion.is_empty():
+				result.append({"id": "guardian_companion", "name": "수호기사 동행", "status": "정예 지원 · 영구 해금", "lines": ["이후 새 도전에 자동 동행", "스테이지마다 정예에게 30피해", "지원한 스테이지 %d개" % companion.assisted_stages.size(), "이어하기로 지원을 중복하지 않습니다"], "open": true})
 			var health: Dictionary = state.health
 			if stage.get("guardian_choice", "") != "":
 				result.append({"id": "guardian", "name": "성문 수호기사", "status": GuardianDecision.label(String(stage.guardian_choice)), "lines": GuardianDecision.lines(String(stage.guardian_choice)), "open": true})

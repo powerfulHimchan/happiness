@@ -286,6 +286,7 @@ var selected_memory_id: String = ""
 var active_memory_id: String = ""
 var start_memory_previous_selection: String = ""
 var memory_card_rects: Array[Rect2] = []
+var guardian_companion_unlocked: bool = false
 var pending_boss_legacy: Dictionary = {}
 var active_boss_legacy: Dictionary = {}
 var use_boss_legacy: bool = false
@@ -1094,6 +1095,8 @@ func _draw_start_weapon_selection() -> void:
 	_draw_village_text(start_legacy_description(), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.10), Vector2(safe.size.x * 0.62, safe.size.y * 0.04)), 19, TEXT_COLOR)
 	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
 	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
+	if guardian_companion_unlocked:
+		_draw_village_text("수호기사 · 정예당 30 지원", Rect2(safe.position + Vector2(safe.size.x * 0.70, safe.size.y * 0.145), Vector2(safe.size.x * 0.28, safe.size.y * 0.03)), 17, PASS_COLOR)
 	for index in 4:
 		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계", "전체 여정 · 10단계"][index]
 		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
@@ -2214,7 +2217,7 @@ func _draw_main_screen() -> void:
 		MUTED_TEXT_COLOR
 	)
 	if not checkpoint_available:
-		_draw_text_centered("영구 기억 %d/2 · 무기 설계도 %d/2 해금" % [unlocked_memories.size(), unlocked_weapon_blueprints.size()], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
+		_draw_text_centered("영구 기억 %d/2 · 무기 설계도 %d/4 해금%s" % [unlocked_memories.size(), unlocked_weapon_blueprints.size(), " · 수호기사 동행" if guardian_companion_unlocked else ""], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	_refresh_story_entry_layout()
 	_draw_button(story_journal_open_rect, "기억 수첩", false)
 	_draw_button(main_feedback_rect, "설정", false)

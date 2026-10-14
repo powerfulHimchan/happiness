@@ -105,7 +105,7 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				result.append({"name": "최고 완주" if key == "best_completion_s" else "평균 완주", "open": true, "lines": ["%.1f초" % seconds if seconds > 0 else "아직 완주 기록 없음", "모든 길이의 완주 기록 기준"]})
 		_:
 			result.assign([
-				{"name": "대장간", "open": not blueprints.is_empty(), "status": "무기·스킬 도감 언제든 조회", "lines": ["무기 설계도 %d/2" % blueprints.size(), "태엽 설계도 · 스킬 %d종" % PrototypeSkillRewards.SKILLS.size(), "등급 · 보조 효과 · 장착 상태"]},
+				{"name": "대장간", "open": not blueprints.is_empty(), "status": "무기·스킬 도감 언제든 조회", "lines": ["무기 설계도 %d/4" % blueprints.size(), "태엽·수호 무기 · 스킬 %d종" % PrototypeSkillRewards.SKILLS.size(), "등급 · 보조 효과 · 장착 상태"]},
 				{"name": "기억의 쉼터", "open": not memories.is_empty(), "status": "기억 해금 · 유물 도감" if not memories.is_empty() else "유물 도감은 언제든 조회", "lines": ["영구 기억 %d/2" % memories.size(), "영구 기억 · 도전 중 유물", "효과 · 획득 조건 · 보유 상태"]},
 				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
 				{"name": "성장 도감", "open": true, "status": "직업 · 능력 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자 · 능력 도감", "조건 · 강화 가지 · 효과"]},
