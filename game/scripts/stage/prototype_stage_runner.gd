@@ -47,7 +47,7 @@ const FOREST_ROUTE := {"id": "forest", "name": "거꾸로 자란 숲", "lines": 
 const RUINS_ROUTE := {"id": "ruins", "name": "별시계 유적", "lines": ["멈춤·반복 발판과 시간 함정", "태엽 인형의 기억된 이중 사격", "정예 통과: 방벽+10 · 게이지+20"]}
 const FESTIVAL_ROUTE := {"id": "festival", "name": "태엽 축제장", "lines": ["회전 놀이 발판 · 기계 승강대", "병정의 행진 돌진 · 포탑 부채탄", "정예 통과: 회복+15 · 게이지+10"]}
 const CITY_GATE_ROUTE := {"id": "city_gate", "name": "행복의 나라 성문", "lines": ["9스테이지 · 하얀 성벽과 미소 짓는 주민", "성문 계단 · 성벽 위 혼합 전투", "통과 후 중심부로 이동"]}
-const CITY_CORE_ROUTE := {"id": "city_core", "name": "행복의 나라 중심부", "lines": ["10스테이지 · 마지막 관문", "웃는 태엽 기사의 마지막 관문", "승리 후 구출/파괴 선택"]}
+const CITY_CORE_ROUTE := {"id": "city_core", "name": "행복의 나라 중심부", "lines": ["10스테이지 · 시계탑 회랑과 궁전 앞 광장", "혼합 웨이브 뒤 웃는 태엽 기사 전투", "승리 후 구출/파괴 선택"]}
 const REGION_IDS := ["wind", "forest", "ruins", "festival"]
 var run_mode: String = "standard"
 var region_order: Array[String] = []
@@ -373,7 +373,7 @@ func current_metrics() -> Dictionary:
 		if route_id == JourneyRoutePlan.GATE and not stage_complete:
 			objective = CityGateLayout.objective(display_index)
 		elif route_id == JourneyRoutePlan.CORE and not stage_complete and current_section != Section.ELITE:
-			objective = "중심부 다리를 지나 마지막 관문으로 전진"
+			objective = CityCoreLayout.objective(display_index)
 	var closed_gate_count := 0
 	for gate_index in gates.size():
 		if is_gate_closed(gate_index):
@@ -387,7 +387,7 @@ func current_metrics() -> Dictionary:
 		"run_visited_regions": visited,
 		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
 		"run_region_section": region_section(),
-		"run_route_terrain": String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else CityGateLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.GATE else "중심부 다리" if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
+		"run_route_terrain": String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else CityGateLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.GATE else CityCoreLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
@@ -457,6 +457,9 @@ func _finish_current_section() -> void:
 
 
 func _activate_wave_one() -> void:
+	if route_id == JourneyRoutePlan.CORE:
+		_activate_city_core_wave(1)
+		return
 	if route_id == JourneyRoutePlan.GATE:
 		_activate_city_gate_wave(1)
 		return
@@ -487,6 +490,9 @@ func _activate_wave_one() -> void:
 
 
 func _activate_wave_two() -> void:
+	if route_id == JourneyRoutePlan.CORE:
+		_activate_city_core_wave(2)
+		return
 	if route_id == JourneyRoutePlan.GATE:
 		_activate_city_gate_wave(2)
 		return
@@ -519,6 +525,14 @@ func _activate_wave_two() -> void:
 		_activate_enemy(wind_spirit, Vector2(4320.0, 540.0))
 	_active_enemies.assign([leaf_slime, seed_sack, wind_spirit])
 	clock_traps.start_wave(2)
+
+
+func _activate_city_core_wave(number: int) -> void:
+	var positions := CityCoreLayout.WAVE_ONE if number == 1 else CityCoreLayout.WAVE_TWO
+	_activate_enemy(leaf_slime, positions.slime)
+	_activate_enemy(seed_sack, positions.seed)
+	_activate_enemy(wind_spirit, positions.wind)
+	_active_enemies.assign([leaf_slime, seed_sack, wind_spirit])
 
 
 func _activate_city_gate_wave(number: int) -> void:

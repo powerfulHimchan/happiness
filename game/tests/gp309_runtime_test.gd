@@ -42,7 +42,7 @@ func _run() -> void:
 		if not _restore_journey(9) or not _check_gate_layout(): return
 		if not _ack_scene(false) or not sandbox._claim_weapon_reward(weapon): return
 		if not _next_without_layout(): return
-		if not _check(runner.route_id == "city_core" and festival_terrain.platforms == [PrototypeRouteTerrain.MEADOW_BRIDGE] and festival_terrain.get_child_count() == 1, "중심부 진입은 기존 다리·성문 몸체 제거"): return
+		if not _check(runner.route_id == "city_core" and festival_terrain.platforms == CityCoreLayout.PLATFORMS and festival_terrain.get_child_count() == 5, "중심부 진입은 전용 회랑·성문 몸체 제거"): return
 		if not _finish_stage() or not _ack_scene(true) or not sandbox._resolve_boss_choice("rescue" if weapon == "sword" else "destroy"): return
 		if not _check(recorder.summary_snapshot().completed_run_count == 1 and store.load_checkpoint().is_empty(), "성문 이후 중심부·최종 선택·10구간 완주 저장"): return
 	else:
