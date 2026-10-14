@@ -53,7 +53,9 @@ func configure(stage: int, route: String, enabled: bool = true, regional_start: 
 	if enabled and (stage > 1 or regional_start):
 		if route == JourneyRoutePlan.GATE:
 			platforms.assign(CityGateLayout.PLATFORMS)
-		elif route in ["meadow", "city_core"]:
+		elif route == JourneyRoutePlan.CORE:
+			platforms.assign(CityCoreLayout.PLATFORMS)
+		elif route == "meadow":
 			platforms.append(MEADOW_BRIDGE)
 		elif route == "wind":
 			platforms.assign(WIND_STEPS)
@@ -108,7 +110,7 @@ func _physics_process(delta: float) -> void:
 		if absf(feet_y - rect.position.y) <= 3.0 and player.global_position.x >= rect.position.x + SAFE_EDGE_MARGIN and player.global_position.x <= rect.end.x - SAFE_EDGE_MARGIN:
 			if index != _last_landed_platform:
 				_last_landed_platform = index
-				var label := "성벽 쉼터" if route_id == JourneyRoutePlan.GATE else "축제 고정 쉼터" if route_id == "festival" else "유적 고정 쉼터" if route_id == "ruins" else "숲 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else "바람 발판"
+				var label := "궁전 앞 쉼터" if route_id == JourneyRoutePlan.CORE else "성벽 쉼터" if route_id == JourneyRoutePlan.GATE else "축제 고정 쉼터" if route_id == "festival" else "유적 고정 쉼터" if route_id == "ruins" else "숲 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else "바람 발판"
 				player.set_safe_spawn(Vector2(rect.get_center().x, rect.position.y - PLAYER_HALF_HEIGHT), "풀숲 다리" if route_id == "meadow" else "%s %d" % [label, index + 1])
 			return
 	_last_landed_platform = -1
@@ -131,6 +133,10 @@ func _draw() -> void:
 	if route_id == JourneyRoutePlan.GATE and not platforms.is_empty():
 		CityGateLayout.draw_backdrop(self)
 		base = Color("839eae")
+		rim = Color("f4e1ad")
+	elif route_id == JourneyRoutePlan.CORE and not platforms.is_empty():
+		CityCoreLayout.draw_backdrop(self)
+		base = Color("8d88b5")
 		rim = Color("f4e1ad")
 	if route_id == "clockwork":
 		base = Color("8b5940")
@@ -179,7 +185,7 @@ func _draw() -> void:
 		if route_id == JourneyRoutePlan.GATE:
 			text = "성벽 쉼터 · 안전 복귀" if index in [0, 4, 5] else "성문 계단 %d · 점프" % index
 		elif route_id == JourneyRoutePlan.CORE:
-			text = "중심부 다리 · 앞으로 전진"
+			text = "궁전 앞 쉼터 · 안전 복귀" if index == 4 else "시계탑 회랑 %d · 점프" % (index + 1)
 		if route_id == "festival":
 			text = "회전 놀이 발판" if index == 1 else "기계 승강대" if index == 3 else "축제 고정 쉼터 · 안전 복귀"
 		if region_section == 2 and index == 0: text = String(RegionStageLayout.TITLES[route_id]) + " · 2/2"
