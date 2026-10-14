@@ -20,7 +20,7 @@ func grant(source: String, choice: String) -> Error:
 
 func progress_snapshot() -> Dictionary:
 	var data := _load()
-	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate(), "potion_recipe": data.potion_recipe, "routes": data.routes.duplicate()}
+	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate(), "potion_recipe": data.potion_recipe, "routes": data.routes.duplicate(), "guardian_companion": data.guardian_companion}
 
 
 func select_potion_recipe(id: String) -> Error:
@@ -111,7 +111,7 @@ func _append(event: Dictionary) -> Error:
 
 
 func _load() -> Dictionary:
-	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}, "potion_recipe": PrototypePotionRecipes.BASIC, "routes": {}}
+	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}, "potion_recipe": PrototypePotionRecipes.BASIC, "routes": {}, "guardian_rewards": {}, "guardian_companion": false, "guardian_usage": {}}
 	if not FileAccess.file_exists(save_path):
 		return result
 	var file := FileAccess.open(save_path, FileAccess.READ)
@@ -135,6 +135,18 @@ func _load() -> Dictionary:
 		var source: String = event.get("source", "") if event.get("source", "") is String else ""
 		var run_id: String = event.get("run_id", "") if event.get("run_id", "") is String else ""
 		match event.get("event"):
+			"guardian_reward":
+				if not source.is_empty() and event.get("choice") in ["rescue", "destroy"] and not result.guardian_rewards.has(source):
+					result.guardian_rewards[source] = event.choice
+					if event.choice == "rescue":
+						result.guardian_companion = true
+					else:
+						for id in PrototypeWeaponRewards.GUARDIAN_DESIGNS: result.blueprints[id] = true
+			"guardian_assist":
+				if result.guardian_companion and not run_id.is_empty() and _valid_stage(event.get("stage")):
+					var stages: Array = result.guardian_usage.get(run_id, [])
+					if int(event.stage) not in stages: stages.append(int(event.stage))
+					result.guardian_usage[run_id] = stages
 			"routes":
 				if PrototypeRouteAtlas.valid_ids(event.get("ids")):
 					for id in event.ids:
@@ -221,3 +233,43 @@ func discover_routes(ids: Array) -> Error:
 		if not known.has(id):
 			fresh.append(id)
 	return OK if fresh.is_empty() else _append({"event": "routes", "ids": fresh})
+
+
+## GP-313: 성문 선택은 최종 태엽 기사 보상·소비와 별도로 영구 보존한다.
+func grant_guardian(source: String, choice: String) -> Error:
+	if choice in ["", GuardianDecision.LEGACY]: return OK
+	if source.is_empty() or choice not in ["rescue", "destroy"]: return ERR_INVALID_DATA
+	var rewards: Dictionary = _load().guardian_rewards
+	if rewards.has(source): return OK if rewards[source] == choice else ERR_INVALID_DATA
+	return _append({"event": "guardian_reward", "source": source, "choice": choice})
+
+
+func guardian_for_run(run_id: String) -> Dictionary:
+	return {"run_id": run_id, "assisted_stages": []} if not run_id.is_empty() and _load().guardian_companion else {}
+
+
+func restore_guardian(state: Dictionary) -> Dictionary:
+	if state.is_empty(): return {}
+	var restored := state.duplicate(true)
+	restored.assisted_stages = state.assisted_stages.map(func(stage: Variant) -> int: return int(stage))
+	for stage in _load().guardian_usage.get(state.run_id, []):
+		if stage not in restored.assisted_stages: restored.assisted_stages.append(stage)
+	return restored
+
+
+func spend_guardian_assist(state: Dictionary, stage: int, limit: int) -> bool:
+	if state.is_empty() or limit not in [1, 3, 5, 10] or not _valid_stage(stage) or stage > limit or stage in restore_guardian(state).assisted_stages: return false
+	if not _load().guardian_companion or _append({"event": "guardian_assist", "run_id": state.run_id, "stage": stage}) != OK: return false
+	state.assisted_stages.append(stage)
+	return true
+
+
+static func valid_guardian(state: Variant, run_id: String, stage_number: int) -> bool:
+	if not state is Dictionary: return false
+	if state.is_empty(): return true
+	if state.size() != 2 or run_id.is_empty() or state.get("run_id") != run_id or not state.get("assisted_stages") is Array: return false
+	var seen: Array = []
+	for stage in state.assisted_stages:
+		if not _valid_stage(stage) or int(stage) > stage_number or int(stage) in seen: return false
+		seen.append(int(stage))
+	return true

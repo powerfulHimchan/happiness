@@ -286,6 +286,7 @@ var selected_memory_id: String = ""
 var active_memory_id: String = ""
 var start_memory_previous_selection: String = ""
 var memory_card_rects: Array[Rect2] = []
+var guardian_companion_unlocked: bool = false
 var pending_boss_legacy: Dictionary = {}
 var active_boss_legacy: Dictionary = {}
 var use_boss_legacy: bool = false
@@ -1093,7 +1094,7 @@ func _draw_start_weapon_selection() -> void:
 	_draw_text_centered("네 지역 각 두 구간 · 성문과 중심부 · 약 30분" if selected_run_mode == JourneyRoutePlan.MODE else "연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
 	_draw_village_text(start_legacy_description(), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.10), Vector2(safe.size.x * 0.62, safe.size.y * 0.04)), 19, TEXT_COLOR)
 	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
-	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
+	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe) + (" · 수호기사 정예 지원30" if guardian_companion_unlocked else ""), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
 	for index in 4:
 		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계", "전체 여정 · 10단계"][index]
 		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
@@ -2214,7 +2215,7 @@ func _draw_main_screen() -> void:
 		MUTED_TEXT_COLOR
 	)
 	if not checkpoint_available:
-		_draw_text_centered("영구 기억 %d/2 · 무기 설계도 %d/2 해금" % [unlocked_memories.size(), unlocked_weapon_blueprints.size()], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
+		_draw_text_centered("영구 기억 %d/2 · 무기 설계도 %d/4 해금%s" % [unlocked_memories.size(), unlocked_weapon_blueprints.size(), " · 수호기사 동행" if guardian_companion_unlocked else ""], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	_refresh_story_entry_layout()
 	_draw_button(story_journal_open_rect, "기억 수첩", false)
 	_draw_button(main_feedback_rect, "설정", false)
@@ -2851,8 +2852,10 @@ func village_snapshot() -> Dictionary:
 		cards = all_skills.slice(skill_codex_page * PrototypeSkillRewards.CODEX_PAGE_SIZE, (skill_codex_page + 1) * PrototypeSkillRewards.CODEX_PAGE_SIZE)
 	var active_run := bool(movement_metrics.get("growth_run_active", false))
 	var all_weapons := PrototypeWeaponRewards.codex_cards(unlocked_weapon_blueprints, movement_metrics.get("weapon_equipment", {}) if active_run else {}, movement_metrics.get("weapon_blueprints", {}) if active_run else {}, String(movement_metrics.get("active_weapon_id", "")) if active_run else "")
-	var weapon_pages := ceili(float(all_weapons.size()) / PrototypeWeaponRewards.CODEX_PAGE_SIZE)
+	var weapon_pages := ceili(float(cards.size()) / 2.0) if village_page == "forge" else ceili(float(all_weapons.size()) / PrototypeWeaponRewards.CODEX_PAGE_SIZE)
 	weapon_codex_page = clampi(weapon_codex_page, 0, weapon_pages - 1)
+	if village_page == "forge":
+		cards = cards.slice(weapon_codex_page * 2, (weapon_codex_page + 1) * 2)
 	if village_page == "weapons":
 		cards = all_weapons.slice(weapon_codex_page * PrototypeWeaponRewards.CODEX_PAGE_SIZE, (weapon_codex_page + 1) * PrototypeWeaponRewards.CODEX_PAGE_SIZE)
 	var relic_pages := ceili(float(PrototypeRelic.OFFERS.size()) / PrototypeRelic.CODEX_PAGE_SIZE)
@@ -2876,9 +2879,9 @@ func village_snapshot() -> Dictionary:
 	if village_page in ["forge", "skills", "weapons"]:
 		for i in 3:
 			tabs[["forge", "weapons", "skills"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
-	if village_page in ["abilities", "skills", "weapons", "history", "relics", "atlas"]:
+	if village_page in ["abilities", "skills", "forge", "weapons", "history", "relics", "atlas"]:
 		pager = {"previous": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06)), "next": Rect2(safe.position + Vector2(safe.size.x * 0.71, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06))}
-	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(safe, cards.size(), checkpoint_available), "tabs": tabs, "pager": pager, "ability_page": ability_codex_page, "ability_pages": pages, "skill_page": skill_codex_page, "skill_pages": skill_pages, "weapon_page": weapon_codex_page, "weapon_pages": weapon_pages, "history_page": record_history_page, "history_pages": history_pages, "relic_page": relic_codex_page, "relic_pages": relic_pages, "route_page": route_atlas_page, "route_pages": route_pages, "codex_page": route_atlas_page if village_page == "atlas" else relic_codex_page if village_page == "relics" else record_history_page if village_page == "history" else weapon_codex_page if village_page == "weapons" else skill_codex_page if village_page == "skills" else ability_codex_page, "codex_pages": route_pages if village_page == "atlas" else relic_pages if village_page == "relics" else history_pages if village_page == "history" else weapon_pages if village_page == "weapons" else skill_pages if village_page == "skills" else pages}
+	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(safe, cards.size(), checkpoint_available), "tabs": tabs, "pager": pager, "ability_page": ability_codex_page, "ability_pages": pages, "skill_page": skill_codex_page, "skill_pages": skill_pages, "weapon_page": weapon_codex_page, "weapon_pages": weapon_pages, "history_page": record_history_page, "history_pages": history_pages, "relic_page": relic_codex_page, "relic_pages": relic_pages, "route_page": route_atlas_page, "route_pages": route_pages, "codex_page": route_atlas_page if village_page == "atlas" else relic_codex_page if village_page == "relics" else record_history_page if village_page == "history" else weapon_codex_page if village_page in ["forge", "weapons"] else skill_codex_page if village_page == "skills" else ability_codex_page, "codex_pages": route_pages if village_page == "atlas" else relic_pages if village_page == "relics" else history_pages if village_page == "history" else weapon_pages if village_page in ["forge", "weapons"] else skill_pages if village_page == "skills" else pages}
 
 
 func _handle_village_touch(position: Vector2) -> void:
@@ -2910,7 +2913,7 @@ func _handle_village_touch(position: Vector2) -> void:
 		if village_page == "skills" and not snapshot.pager.is_empty():
 			if snapshot.pager.previous.has_point(position): skill_codex_page = maxi(0, skill_codex_page - 1)
 			elif snapshot.pager.next.has_point(position): skill_codex_page = mini(snapshot.skill_pages - 1, skill_codex_page + 1)
-		if village_page == "weapons" and not snapshot.pager.is_empty():
+		if village_page in ["forge", "weapons"] and not snapshot.pager.is_empty():
 			if snapshot.pager.previous.has_point(position): weapon_codex_page = maxi(0, weapon_codex_page - 1)
 			elif snapshot.pager.next.has_point(position): weapon_codex_page = mini(snapshot.weapon_pages - 1, weapon_codex_page + 1)
 		if village_page == "relics" and not snapshot.pager.is_empty():
@@ -2924,6 +2927,7 @@ func _handle_village_touch(position: Vector2) -> void:
 			if layout.cards[i].has_point(position):
 				village_page = PrototypeVillageView.FACILITIES[i]
 				route_atlas_page = 0
+				weapon_codex_page = 0
 				potion_recipe_message = ""
 				break
 	elif village_page == "atlas":
@@ -2997,7 +3001,7 @@ func _draw_village() -> void:
 			var bottle := rect.position + Vector2(rect.size.x * 0.86, rect.size.y * 0.20)
 			draw_rect(Rect2(bottle - Vector2(8, 24), Vector2(16, 9)), Color("ba9768"))
 			draw_style_box(_panel_style(Color("79bda0") if card.id == PrototypePotionRecipes.PORTIONED else Color("d47961") if card.id == PrototypePotionRecipes.BASIC else Color("cda54b")), Rect2(bottle - Vector2(16, 13), Vector2(32, 33)))
-	if village_page in ["abilities", "skills", "weapons", "history", "relics", "atlas"]:
+	if village_page in ["abilities", "skills", "forge", "weapons", "history", "relics", "atlas"]:
 		_draw_button(snapshot.pager.previous, "이전", snapshot.codex_page > 0)
 		_draw_button(snapshot.pager.next, "다음", snapshot.codex_page < snapshot.codex_pages - 1)
 		_draw_village_text("%d / %d" % [snapshot.codex_page + 1, snapshot.codex_pages], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.78), Vector2(safe.size.x * 0.40, safe.size.y * 0.06)), 19, TEXT_COLOR)

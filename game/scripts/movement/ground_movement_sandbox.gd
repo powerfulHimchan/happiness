@@ -47,6 +47,8 @@ var _pending_route_records: Array = []
 var _route_atlas_message: String = ""
 var _last_legacy_grant_source: String = ""
 var _last_legacy_grant_path: String = ""
+var guardian_companion: Dictionary = {}
+var _guardian_reward_saved: bool = true
 var _restoring_checkpoint: bool = false
 var _available_checkpoint: Dictionary = {}
 
@@ -291,6 +293,9 @@ func _reset_test() -> void:
 	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)):
 		controls.show_main_screen()
 		return
+	if not _guardian_reward_saved:
+		controls.show_main_screen()
+		return
 	var run_id := "%d-%d-%d" % [int(Time.get_unix_time_from_system() * 1000), Time.get_ticks_usec(), randi()]
 	var claimed := boss_legacy_store.claim(run_id, controls.use_boss_legacy, controls.selected_memory_id)
 	if claimed.error != OK:
@@ -308,6 +313,7 @@ func _reset_test() -> void:
 	player.prepare_potions(String(boss_legacy_store.progress_snapshot().potion_recipe))
 	weapon_controller.reset_combat(controls.selected_starting_weapon)
 	growth.reset_run(weapon_controller.active_weapon_id)
+	guardian_companion = boss_legacy_store.guardian_for_run(run_id)
 	player.boss_legacy = claimed.state
 	player.memory_id = claimed.memory_id
 	var memory_health := PrototypeMemoryAbilities.health_bonus(player.memory_id)
@@ -373,6 +379,8 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 	if _restoring_checkpoint:
 		return
 	if not bool(metrics.get("stage_complete", false)):
+		if growth.run_active and not player.damage_receiver.dead and int(metrics.get("stage_section_index", 0)) == 5:
+			_guardian_assist()
 		if growth.run_active and int(metrics.get("stage_section_index", 0)) == 5 and boss_legacy_store.spend_assist(player.boss_legacy, stage_runner.stage_number, stage_runner.stage_limit):
 			var event := DamageEvent.new()
 			event.event_id = StringName("helper:%s:%d" % [player.boss_legacy.run_id, stage_runner.stage_number])
@@ -390,6 +398,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		_finish_growth_selection()
 		growth.stop_run()
 		player.guardian_choice = ""
+		guardian_companion = {}
 		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")))
 		if story_run.enabled: reward_saved = _record_story_completion(_story_checkpoint_context()) and reward_saved
 		test_recorder.record_stage_metrics(metrics)
@@ -467,6 +476,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
 		"boss_legacy": saved_legacy,
+		"guardian_companion": _guardian_checkpoint(),
 		"memory_id": player.memory_id,
 		"relic": player.relic_state.duplicate(),
 	}
@@ -474,13 +484,15 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	var error := checkpoint_store.save_checkpoint(state)
 	if error == OK:
 		_available_checkpoint = state.duplicate(true)
-	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message if error == OK else "중간 저장 실패 · 오류 %d" % error)
+		_sync_guardian_reward(state)
+	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), checkpoint_store.message if error == OK and _guardian_reward_saved else "중간 저장 실패 · 수호기사 보상 기록을 재시도하세요" if error == OK else "중간 저장 실패 · 오류 %d" % error)
 	return error
 
 
 func _claim_weapon_reward(id: String) -> bool:
 	if controls.current_screen_mode() != 11 or not stage_runner.has_next_stage() or stage_runner.reward_claimed or stage_runner.awaiting_guardian_choice() or not growth.run_active or player.damage_receiver.dead:
 		return false
+	if not _sync_guardian_reward(_available_checkpoint): return false
 	var previous := weapon_controller.equipment.duplicate()
 	var previous_blueprints := weapon_controller.blueprints.duplicate()
 	if not id.is_empty():
@@ -556,15 +568,16 @@ func _refresh_checkpoint() -> void:
 	if not _available_checkpoint.is_empty():
 		_record_route_history(_available_checkpoint.stage.history)
 		job_error = _discover_job(String(_available_checkpoint.growth.job))
+	var guardian_saved := _sync_guardian_reward(_available_checkpoint)
 	var story_saved := _record_story_completion(_available_checkpoint)
-	if job_error == OK and ability_error == OK and story_saved:
+	if job_error == OK and ability_error == OK and story_saved and guardian_saved:
 		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
 			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 				_discard_checkpoint()
 		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
 	_update_boss_legacy_status()
-	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), _story_message if not story_saved else _ability_codex_message if ability_error != OK else checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
+	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), "중간 저장 실패 · 수호기사 보상 기록을 재시도하세요" if not guardian_saved else _story_message if not story_saved else _ability_codex_message if ability_error != OK else checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
 
 
 func _discard_checkpoint() -> void:
@@ -575,7 +588,7 @@ func _discard_checkpoint() -> void:
 
 func continue_saved_run() -> bool:
 	_refresh_checkpoint()
-	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2:
+	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2 or not _guardian_reward_saved:
 		return false
 	var state := _available_checkpoint.duplicate(true)
 	if _record_abilities(state.growth.ranks.keys()) != OK:
@@ -597,6 +610,7 @@ func continue_saved_run() -> bool:
 	player.growth_common_bonus = float(state.player.common)
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)
+	guardian_companion = boss_legacy_store.restore_guardian(state.get("guardian_companion", {}))
 	player.boss_legacy = boss_legacy_store.restore_active(state.get("boss_legacy", {}))
 	player.memory_id = String(state.get("memory_id", ""))
 	player.relic_state = state.get("relic", {}).duplicate()
@@ -647,6 +661,7 @@ func continue_saved_run() -> bool:
 func _continue_stage(route: String) -> void:
 	if not stage_runner.has_next_stage() or not stage_runner.reward_claimed or stage_runner.awaiting_guardian_choice() or not growth.run_active or player.damage_receiver.dead or not stage_runner.can_select_route(route) or controls.current_screen_mode() != 9:
 		return
+	if not _sync_guardian_reward(_available_checkpoint): return
 	controls.release_all_inputs()
 	weapon_controller.prepare_next_stage()
 	feedback_controller.prepare_next_stage()
@@ -812,6 +827,7 @@ func _grant_boss_legacy(source: String, choice: String) -> bool:
 
 func _update_boss_legacy_status() -> void:
 	var progress := boss_legacy_store.progress_snapshot()
+	controls.guardian_companion_unlocked = progress.guardian_companion
 	controls.update_boss_legacy_status(progress.pending, player.boss_legacy)
 	controls.update_memory_status(progress.unlocked, progress.selected_memory, player.memory_id)
 	weapon_controller.unlocked_blueprints = progress.blueprints.duplicate()
@@ -959,6 +975,7 @@ func _capture_run_build() -> Dictionary:
 		},
 		"recipe": player.potion_recipe,
 		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile), "basic_gain": ultimate_controller.weapon_hit_gauge_amount(false), "skill_gain": ultimate_controller.weapon_hit_gauge_amount(true), "evade_gain": ultimate_controller.precise_evade_gauge_amount(), "defeat_gain": ultimate_controller.defeat_gauge_amount(int(growth.ranks.get("time_collector", 0)) == 1)},
+		"guardian_companion": guardian_companion.duplicate(true),
 		"relic": player.relic_state.duplicate(), "memory": player.memory_id, "legacy": player.boss_legacy.get("choice", ""),
 	}
 
@@ -1038,6 +1055,7 @@ func _record_story_completion(state: Dictionary) -> bool:
 
 
 func _on_story_death() -> void:
+	guardian_companion = {}
 	player.guardian_choice = ""
 	var id := _active_rewind_run_id
 	if id.is_empty(): return
@@ -1064,3 +1082,28 @@ func _retry_story_journal() -> bool:
 	_story_message = ""
 	_refresh_checkpoint()
 	return _story_message.is_empty()
+
+
+func _sync_guardian_reward(state: Dictionary) -> bool:
+	_guardian_reward_saved = state.is_empty() or boss_legacy_store.grant_guardian(String(state.recorder.id), String(state.stage.get("guardian_choice", ""))) == OK
+	_update_boss_legacy_status()
+	if not _guardian_reward_saved: controls.update_checkpoint_status(true, "중간 저장 실패 · 수호기사 보상 기록을 재시도하세요")
+	return _guardian_reward_saved
+
+
+func _guardian_checkpoint() -> Dictionary:
+	var state := guardian_companion.duplicate(true)
+	if not state.is_empty(): state.assisted_stages = state.assisted_stages.filter(func(stage: Variant) -> bool: return int(stage) <= stage_runner.stage_number)
+	return state
+
+
+func _guardian_assist() -> void:
+	var enemy := stage_runner.final_enemy()
+	if enemy == null or not enemy.is_targetable() or not boss_legacy_store.spend_guardian_assist(guardian_companion, stage_runner.stage_number, stage_runner.stage_limit): return
+	var event := DamageEvent.new()
+	event.event_id = StringName("guardian:%s:%d" % [guardian_companion.run_id, stage_runner.stage_number])
+	event.attacker_id = &"guardian_companion"
+	event.attack_id = &"guardian_support"
+	event.damage = 30
+	event.tags = PackedStringArray(["helper"])
+	enemy.receive_damage(event)

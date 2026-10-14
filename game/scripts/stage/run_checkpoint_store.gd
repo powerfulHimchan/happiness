@@ -120,6 +120,7 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	if not _number(stage.get("number"), 1, int(stage.limit), true) or not _valid_route(stage.get("route"), int(stage.number), legacy, mode) or not _number(stage.get("elapsed"), 0, 1000000):
 		return false
+	if not BossLegacyStore.valid_guardian(state.get("guardian_companion", {}), String(state.recorder.get("id", "")), int(state.stage.get("number", 0))): return false
 	if stage.has("boss_choice") and (not stage.boss_choice is String or stage.boss_choice not in ["", "rescue", "destroy"]):
 		return false
 	if int(stage.number) < int(stage.limit) and stage.get("boss_choice", "") != "":
