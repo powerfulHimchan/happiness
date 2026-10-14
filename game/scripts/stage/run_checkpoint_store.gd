@@ -147,6 +147,7 @@ static func valid_state(state: Dictionary) -> bool:
 	if not is_equal_approx(float(stage.elapsed), float(stage.history[-1].elapsed_s)) or stage.route != stage.history[-1].route:
 		return false
 	if not _valid_region_run(stage): return false
+	if not GuardianDecision.valid_checkpoint(stage): return false
 	if state.has("story") and not PrototypeStoryRun.valid_checkpoint(state.story, stage): return false
 	for assisted_stage in legacy.get("assisted_stages", []):
 		if float(assisted_stage) > float(stage.number):

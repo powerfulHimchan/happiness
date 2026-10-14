@@ -341,6 +341,7 @@ const WEAPON_REWARD_PAGE_SIZE := 4
 var boss_choice_rects: Array[Rect2] = []
 var boss_choice_confirm_rect := Rect2()
 var selected_boss_choice: int = -1
+var boss_choice_profile: Dictionary = {}
 
 
 func _ready() -> void:
@@ -582,8 +583,9 @@ func finish_growth_selection() -> void:
 	queue_redraw()
 
 
-func show_boss_choice() -> void:
+func show_boss_choice(profile: Dictionary = {}) -> void:
 	release_all_inputs()
+	boss_choice_profile = profile.duplicate(true)
 	selected_boss_choice = -1
 	screen_mode = ScreenMode.BOSS_CHOICE
 	_refresh_boss_choice_layout()
@@ -605,12 +607,12 @@ func _draw_boss_choice() -> void:
 	_refresh_boss_choice_layout()
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
-	_draw_text_centered("보스 승리 · 웃는 태엽 기사", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 48)), 30, PASS_COLOR)
-	_draw_text_centered("기사는 사람들을 돌려보내라는 태엽 명령에 묶여 있었습니다.", Rect2(safe.position + Vector2(0, safe.size.y * 0.18), Vector2(safe.size.x, 32)), 20, TEXT_COLOR)
+	_draw_text_centered("보스 승리 · " + String(boss_choice_profile.get("name", "웃는 태엽 기사")), Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 48)), 30, PASS_COLOR)
+	_draw_text_centered(String(boss_choice_profile.get("intro", "기사는 사람들을 돌려보내라는 태엽 명령에 묶여 있었습니다.")), Rect2(safe.position + Vector2(0, safe.size.y * 0.18), Vector2(safe.size.x, 32)), 20, TEXT_COLOR)
 	_draw_text_centered("이제 기사의 운명을 선택하세요.", Rect2(safe.position + Vector2(0, safe.size.y * 0.24), Vector2(safe.size.x, 30)), 19, MUTED_TEXT_COLOR)
 	var cards := [{"title": "구출", "lines": ["기사를 자유롭게 합니다.", "태엽 수호 영구 해금 · 체력 +5", "다음 도전 1회 · 체력 +10", "정예 지원 · 위기 회복 1회"]}, {"title": "파괴", "lines": ["태엽 검·활 설계도 영구 해금", "핵의 잔향 영구 해금 · 스킬 +10%", "다음 도전 1회 · 피해 +10%", "피격 +10% · 다음 도전 위험 길"]}]
 	for index in cards.size():
-		var card: Dictionary = cards[index]
+		var card: Dictionary = boss_choice_profile.get("cards", cards)[index]
 		var rect := boss_choice_rects[index]
 		draw_style_box(_panel_style(PANEL_COLOR), rect)
 		if selected_boss_choice == index:
@@ -620,7 +622,7 @@ func _draw_boss_choice() -> void:
 			_draw_text_centered(String(card.lines[line]), Rect2(rect.position + Vector2(0, rect.size.y * (0.30 + line * 0.16)), Vector2(rect.size.x, 30)), 19, TEXT_COLOR)
 	var note := checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "선택 후 확정하세요 · 다른 도전에서는 다시 선택할 수 있습니다."
 	_draw_text_centered(note, Rect2(safe.position + Vector2(0, safe.size.y * 0.75), Vector2(safe.size.x, 32)), 18, MUTED_TEXT_COLOR)
-	_draw_button(boss_choice_confirm_rect, "선택 확정 · 도전 완료" if selected_boss_choice >= 0 else "구출 또는 파괴를 선택하세요", selected_boss_choice >= 0)
+	_draw_button(boss_choice_confirm_rect, String(boss_choice_profile.get("confirm", "선택 확정 · 도전 완료")) if selected_boss_choice >= 0 else "구출 또는 파괴를 선택하세요", selected_boss_choice >= 0)
 
 
 func show_weapon_rewards(stage: int, cards: Array[Dictionary]) -> void:
@@ -1445,6 +1447,7 @@ func _show_result_screen() -> void:
 		"stage_count": int(movement_metrics.get("run_stage_count", 1)),
 		"stage_history": movement_metrics.get("run_stage_history", []).duplicate(true),
 		"boss_choice": String(movement_metrics.get("boss_choice", "")),
+		"guardian_choice": String(movement_metrics.get("guardian_choice", "")),
 		"boss_name": String(movement_metrics.get("boss_name", "")),
 		"memory_id": active_memory_id,
 		"weapon_blueprints": movement_metrics.get("weapon_blueprints", {"sword": "", "bow": ""}).duplicate(),
@@ -2140,11 +2143,14 @@ func _draw_result_screen() -> void:
 		TEXT_COLOR
 	)
 	var choice := String(result_snapshot.get("boss_choice", ""))
+	var guardian := String(result_snapshot.get("guardian_choice", ""))
 	if choice in ["rescue", "destroy"]:
-		_draw_text_centered("태엽 기사 %s · %s 영구 해금" % [("구출" if choice == "rescue" else "파괴"), PrototypeMemoryAbilities.profile(PrototypeMemoryAbilities.CHOICE_IDS[choice]).name + (" / 태엽 검·활 설계도" if choice == "destroy" else "")], Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
+		var caption := "태엽 기사 %s · %s 영구 해금" % [("구출" if choice == "rescue" else "파괴"), PrototypeMemoryAbilities.profile(PrototypeMemoryAbilities.CHOICE_IDS[choice]).name + (" / 태엽 검·활 설계도" if choice == "destroy" else "")]
+		if guardian in ["rescue", "destroy"]: caption += " · 성문 수호기사 " + GuardianDecision.label(guardian)
+		_draw_text_centered(caption, Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
 	var content_x := result_panel_rect.position.x + 54.0
 	var content_width := result_panel_rect.size.x - 108.0
-	var y := result_panel_rect.position.y + 158.0
+	var y := result_panel_rect.position.y + (190.0 if choice in ["rescue", "destroy"] else 158.0)
 	_draw_result_row("스테이지 기록" if int(result_snapshot.get("stage_count", 1)) > 1 else "구간 기록", _section_time_summary(), content_x, content_width, y)
 	y += 66.0
 	_draw_result_row("피격 원인", String(result_snapshot.get("damage_causes", "피격 없음")), content_x, content_width, y)
