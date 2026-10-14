@@ -389,6 +389,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		_active_rewind_run_id = ""
 		_finish_growth_selection()
 		growth.stop_run()
+		player.guardian_choice = ""
 		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")))
 		if story_run.enabled: reward_saved = _record_story_completion(_story_checkpoint_context()) and reward_saved
 		test_recorder.record_stage_metrics(metrics)
@@ -423,9 +424,10 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		_stage_recovered_health = player.damage_receiver.health - before
 		_begin_growth_pause()
 		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints))
+		if stage_runner.awaiting_guardian_choice(): controls.show_boss_choice(GuardianDecision.PROFILE)
 		story_run.prepare_stage(stage_runner.stage_number)
 		_save_checkpoint(metrics)
-		if story_run.enabled: _open_story(11)
+		if story_run.enabled: _open_story(controls.current_screen_mode())
 
 
 func _use_recovery_potion() -> bool:
@@ -477,7 +479,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 
 
 func _claim_weapon_reward(id: String) -> bool:
-	if controls.current_screen_mode() != 11 or not stage_runner.has_next_stage() or stage_runner.reward_claimed or not growth.run_active or player.damage_receiver.dead:
+	if controls.current_screen_mode() != 11 or not stage_runner.has_next_stage() or stage_runner.reward_claimed or stage_runner.awaiting_guardian_choice() or not growth.run_active or player.damage_receiver.dead:
 		return false
 	var previous := weapon_controller.equipment.duplicate()
 	var previous_blueprints := weapon_controller.blueprints.duplicate()
@@ -500,6 +502,7 @@ func _claim_weapon_reward(id: String) -> bool:
 
 
 func _resolve_boss_choice(choice: String) -> bool:
+	if stage_runner.awaiting_guardian_choice(): return _resolve_guardian_choice(choice)
 	if controls.current_screen_mode() != 12 or not stage_runner.awaiting_boss_choice() or not growth.run_active or player.damage_receiver.dead or choice not in ["rescue", "destroy"]:
 		return false
 	stage_runner.boss_choice = choice
@@ -510,6 +513,33 @@ func _resolve_boss_choice(choice: String) -> bool:
 		stage_runner.stage_history[-1]["boss_choice"] = ""
 		return false
 	_finish_growth_selection()
+	stage_runner.force_emit_metrics()
+	return true
+
+
+func _resolve_guardian_choice(choice: String) -> bool:
+	if controls.current_screen_mode() != 12 or not stage_runner.awaiting_guardian_choice() or not growth.run_active or player.damage_receiver.dead or choice not in ["rescue", "destroy"] or not story_run.pending.is_empty(): return false
+	var previous := [player.damage_receiver.health, player.damage_receiver.barrier_health, ultimate_controller.gauge, _stage_recovered_health]
+	stage_runner.guardian_choice = choice
+	stage_runner.stage_history[8].guardian_choice = choice
+	player.guardian_choice = choice
+	if choice == "rescue":
+		player.apply_growth_health(0, ceili(player.damage_receiver.max_health * 0.20))
+		_stage_recovered_health += player.damage_receiver.health - int(previous[0])
+		player.recover_barrier(20)
+		ultimate_controller.grant_stage_gauge(25)
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		stage_runner.guardian_choice = ""
+		stage_runner.stage_history[8].guardian_choice = ""
+		player.guardian_choice = ""
+		player.damage_receiver.health = int(previous[0])
+		player.damage_receiver.barrier_health = int(previous[1])
+		ultimate_controller.gauge = float(previous[2])
+		_stage_recovered_health = int(previous[3])
+		player.apply_growth_health(0, 0)
+		ultimate_controller.force_emit_metrics()
+		return false
+	controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints))
 	stage_runner.force_emit_metrics()
 	return true
 
@@ -590,6 +620,7 @@ func continue_saved_run() -> bool:
 		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
 	_intermission_stage = int(state.stage.number)
 	stage_runner.restore_checkpoint(state.stage)
+	player.guardian_choice = stage_runner.guardian_choice
 	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode, player.character_id, story_run.enabled)
 	_active_rewind_run_id = String(state.recorder.id)
 	_restoring_checkpoint = false
@@ -602,6 +633,8 @@ func continue_saved_run() -> bool:
 		if not stage_runner.boss_choice.is_empty():
 			_finish_growth_selection()
 			stage_runner.force_emit_metrics()
+	elif stage_runner.awaiting_guardian_choice():
+		controls.show_boss_choice(GuardianDecision.PROFILE)
 	elif stage_runner.reward_claimed:
 		_show_intermission_routes()
 	else:
@@ -612,7 +645,7 @@ func continue_saved_run() -> bool:
 
 
 func _continue_stage(route: String) -> void:
-	if not stage_runner.has_next_stage() or not stage_runner.reward_claimed or not growth.run_active or player.damage_receiver.dead or not stage_runner.can_select_route(route) or controls.current_screen_mode() != 9:
+	if not stage_runner.has_next_stage() or not stage_runner.reward_claimed or stage_runner.awaiting_guardian_choice() or not growth.run_active or player.damage_receiver.dead or not stage_runner.can_select_route(route) or controls.current_screen_mode() != 9:
 		return
 	controls.release_all_inputs()
 	weapon_controller.prepare_next_stage()
@@ -1005,6 +1038,7 @@ func _record_story_completion(state: Dictionary) -> bool:
 
 
 func _on_story_death() -> void:
+	player.guardian_choice = ""
 	var id := _active_rewind_run_id
 	if id.is_empty(): return
 	_active_rewind_run_id = ""

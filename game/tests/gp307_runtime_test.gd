@@ -1,5 +1,7 @@
 extends "res://tests/gp277_306_runtime_test.gd"
 
+var auto_guardian_choice := true
+
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var phase := args[0]
@@ -268,3 +270,20 @@ func _reach_journey_elite() -> bool:
 		if runner.current_section == PrototypeStageRunner.Section.ELITE: return true
 		if not _step_section(): return false
 	return _check(false, "실제 마지막 적 구간 도달")
+
+# 기존 여정 회귀는 성문 선택을 실제 입력으로 확정하고 기존 보상 흐름을 계속 검사한다.
+func _ack_scene(skip: bool) -> bool:
+	if not super._ack_scene(skip): return false
+	return _choose_guardian_for_regression()
+
+func _finish_stage() -> bool:
+	if not super._finish_stage(): return false
+	return _choose_guardian_for_regression() if not sandbox.story_run.enabled else true
+
+func _choose_guardian_for_regression() -> bool:
+	if auto_guardian_choice and runner.awaiting_guardian_choice():
+		if not _check(controls.current_screen_mode() == 12, "성문 수호기사 실제 선택 화면"): return false
+		_tap(controls.boss_choice_rects[0].get_center())
+		_tap(controls.boss_choice_confirm_rect.get_center())
+		return _check(runner.guardian_choice == "rescue" and controls.current_screen_mode() == 11, "성문 선택 후 기존 보상 흐름 회귀")
+	return true

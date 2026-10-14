@@ -40,4 +40,5 @@ static func valid_checkpoint(state: Variant, stage: Dictionary) -> bool:
 	if state.pending.is_empty(): expected.append("stage:%d" % int(stage.number))
 	elif state.pending != "stage:%d" % int(stage.number): return false
 	if state.seen != expected: return false
+	if int(stage.number) == 9 and stage.get("guardian_choice") in ["rescue", "destroy"] and not state.pending.is_empty(): return false
 	return String(stage.get("boss_choice", "")).is_empty() or state.pending.is_empty()

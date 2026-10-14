@@ -67,6 +67,7 @@ var potion_pouch_unlocked: bool = false
 var orb_magnet_unlocked: bool = false
 var orb_vitality_unlocked: bool = false
 var relic_state: Dictionary = {}
+var guardian_choice: String = ""
 var relic_run_id: String = ""
 var phoenix_allowed: Callable
 var boss_legacy: Dictionary = {}
@@ -464,6 +465,7 @@ func is_calm_health() -> bool:
 
 func incoming_damage_multiplier() -> float:
 	var value := PrototypeRelic.SEAL_DAMAGE_MULTIPLIER if has_active_relic(PrototypeRelic.SEAL_ID) else 1.0
+	if guardian_choice == "destroy": value *= 1.10
 	if has_active_relic(PrototypeRelic.IRON_LEAF_ID) and is_calm_health(): value *= 0.85
 	if is_crisis_health():
 		if survival_instinct_unlocked: value *= 0.9
@@ -545,7 +547,7 @@ func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") 
 	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
 	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
-	return roundi(snappedf(damage, 0.000000001))
+	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
 
 
 func expansion_damage_multiplier(weapon_id: String, kind: String) -> float:
@@ -744,6 +746,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	potion_pouch_unlocked = false
 	memory_id = ""
 	boss_legacy = {}
+	guardian_choice = ""
 	set_job_emblem("", Color.WHITE)
 	growth_common_bonus = 0.0
 	growth_sword_bonus = 0.0

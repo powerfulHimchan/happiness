@@ -57,6 +57,7 @@ var route_id: String = "meadow"
 var skills_claimed: bool = false
 var reward_claimed: bool = false
 var boss_choice: String = ""
+var guardian_choice: String = ""
 var completed_elapsed_s: float = 0.0
 var stage_history: Array[Dictionary] = []
 
@@ -159,6 +160,7 @@ func reset_stage() -> void:
 
 
 func reset_run() -> void:
+	guardian_choice = ""
 	stage_number = 1
 	route_id = "meadow"
 	completed_elapsed_s = 0.0
@@ -177,10 +179,11 @@ func reset_run() -> void:
 
 
 func has_next_stage() -> bool:
-	return stage_enabled and stage_complete and stage_number < stage_limit
+	return stage_enabled and stage_complete and stage_number < stage_limit and not awaiting_guardian_choice()
 
 
 func available_routes() -> Array[Dictionary]:
+	if awaiting_guardian_choice(): return []
 	if run_mode == JourneyRoutePlan.MODE:
 		var offers: Array[Dictionary] = []
 		for id in JourneyRoutePlan.candidates(stage_number, route_id, stage_history, region_order):
@@ -265,6 +268,10 @@ func awaiting_boss_choice() -> bool:
 	return uses_boss() and stage_complete and boss_choice.is_empty()
 
 
+func awaiting_guardian_choice() -> bool:
+	return uses_guardian() and stage_complete and guardian_choice.is_empty()
+
+
 func final_enemy() -> PrototypeTarget:
 	return guardian if uses_guardian() else boss if uses_boss() else armored_boar
 
@@ -274,6 +281,8 @@ func checkpoint_snapshot() -> Dictionary:
 	if run_mode in ["regions", JourneyRoutePlan.MODE]:
 		state.run_mode = run_mode
 		state.region_order = region_order.duplicate()
+	if run_mode == JourneyRoutePlan.MODE and stage_number >= 9:
+		state.guardian_choice = guardian_choice
 	return state
 
 
@@ -284,6 +293,9 @@ func restore_checkpoint(state: Dictionary) -> void:
 	stage_limit = int(state.limit)
 	route_id = String(state.route)
 	stage_history.assign(state.history)
+	guardian_choice = String(state.get("guardian_choice", GuardianDecision.LEGACY if run_mode == JourneyRoutePlan.MODE and stage_number >= 9 else ""))
+	if run_mode == JourneyRoutePlan.MODE and stage_number >= 9:
+		stage_history[8].guardian_choice = guardian_choice
 	completed_elapsed_s = 0.0
 	for entry in stage_history.slice(0, -1):
 		completed_elapsed_s += float(entry.elapsed_s)
@@ -361,6 +373,8 @@ func current_metrics() -> Dictionary:
 			objective += " · " + clock_traps.status_text()
 	if awaiting_boss_choice():
 		objective = "승리 · 구출 또는 파괴를 선택하세요"
+	if awaiting_guardian_choice():
+		objective = "성문 승리 · 수호기사 구출 또는 파괴를 선택하세요"
 	if route_id == "festival" and not stage_complete and current_section != Section.ELITE:
 		objective = ["축제장 입구까지 전진", "병정 행진 돌진·포탑 부채탄 회피", "회전 발판·기계 승강대 건너기", "병정·포탑·공중 정령 혼합 전투"][display_index]
 	if region_section() == 2 and not stage_complete:
@@ -401,6 +415,8 @@ func current_metrics() -> Dictionary:
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
+		"guardian_choice": guardian_choice,
+		"guardian_choice_pending": awaiting_guardian_choice(),
 		"boss_name": BossHappinessGuardian.BOSS_NAME if uses_guardian() else BossClockworkKnight.BOSS_NAME if uses_boss() else "",
 		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s,
 		"run_stage_history": stage_history.duplicate(true),
@@ -456,6 +472,8 @@ func _finish_current_section() -> void:
 
 	if uses_boss() and stage_complete:
 		stage_history[-1]["boss_choice"] = boss_choice
+	if uses_guardian() and stage_complete:
+		stage_history[-1].guardian_choice = guardian_choice
 	if stage_complete:
 		_last_stage_log = "스테이지 완료 · %s" % _format_seconds(stage_elapsed_s)
 	else:

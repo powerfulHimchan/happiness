@@ -5,6 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp312_runtime_test.gd"
+  "$game_root/scripts/stage/guardian_decision.gd"
   "$game_root/tests/gp311_runtime_test.gd"
   "$game_root/scripts/combat/boss_happiness_guardian.gd"
   "$game_root/assets/happiness_guardian.svg"
@@ -662,6 +664,22 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for decision_character in roan lumi; do
+    for decision_weapon in sword bow; do
+      for guardian_decision in rescue destroy; do
+        for decision_phase in seed resume selected finish; do
+          checked_godot 60s --headless --path "$game_root" \
+            --script res://tests/gp312_runtime_test.gd -- "$decision_phase" "$decision_character" "$decision_weapon" "$guardian_decision"
+        done
+      done
+    done
+  done
+  for guardian_decision in rescue destroy; do
+    for decision_phase in fault legacy validate effects flows; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp312_runtime_test.gd -- "$decision_phase" lumi bow "$guardian_decision"
+    done
+  done
   for guardian_character in roan lumi; do
     for guardian_weapon in sword bow; do
       for guardian_phase in seed resume finish combat flows regress; do

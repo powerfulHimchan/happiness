@@ -117,6 +117,7 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 			"boss_name": String(metrics.get("boss_name", "")),
 		}
 		if metrics.get("run_mode") in ["regions", JourneyRoutePlan.MODE]: fields.run_mode = metrics.run_mode
+		if metrics.get("run_mode") == JourneyRoutePlan.MODE: fields.guardian_choice = String(metrics.get("guardian_choice", ""))
 		if _active_story_enabled:
 			fields.story_enabled = true
 			fields.chronicle = PrototypeStory.chronicle_id(metrics.get("run_stage_history", []), String(metrics.get("boss_choice", "")))
@@ -319,6 +320,7 @@ func _recent_runs(events: Array[Dictionary]) -> Array[Dictionary]:
 			run.completed_stages = run.stage_number
 			run.completion_s = maxf(0.0, float(event.get("completion_s", 0.0)))
 			run.boss_choice = String(event.get("boss_choice", ""))
+			if run.get("run_mode") == JourneyRoutePlan.MODE and event.get("guardian_choice") in ["rescue", "destroy", GuardianDecision.LEGACY]: run.guardian_choice = event.guardian_choice
 	var result: Array[Dictionary] = []
 	for i in range(order.size() - 1, maxi(-1, order.size() - RECENT_RUN_LIMIT - 1), -1):
 		result.append(runs[order[i]].duplicate(true))
