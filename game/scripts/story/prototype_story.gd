@@ -60,7 +60,7 @@ static func scene(id: String, history: Array, character: String, known: Array, r
 	else:
 		var entry: Dictionary = history[-1]
 		if entry.route in [JourneyRoutePlan.GATE, JourneyRoutePlan.CORE] and int(entry.stage) != boss_stage:
-			return {"id": id, "name": "성벽 위의 같은 미소", "lines": ["{hero}가 성문을 지나자 주민들은 똑같은 인사를 건넸다.".replace("{hero}", PrototypeCharacters.display_name(character)), "서로 다른 얼굴인데도 웃음의 모양은 하나였다. 새벽시계가 잠깐 떨린다.", "중심부로 이어지는 길에서 태엽 소리가 들린다. 아직 묻지 못한 질문을 품고 걸음을 옮긴다."]}
+			return {"id": id, "name": "성벽 위의 같은 미소", "lines": ["{hero}가 성문을 지나자 주민들은 똑같은 인사를 건넸다.".replace("{hero}", PrototypeCharacters.display_name(character)), "서로 다른 얼굴인데도 웃음의 모양은 하나였다. 새벽시계가 잠깐 떨린다.", "쓰러진 수호기사는 여전히 '성문을 지켜라'라는 명령을 되뇌었다. 중심부의 태엽 소리를 따라 걸음을 옮긴다."]}
 		var fragment: String = "knight_order" if int(entry.stage) == boss_stage else ROUTE_FRAGMENT.get(entry.route, "dawn_watch")
 		title = String(FRAGMENTS[fragment].name)
 		lines.assign(FRAGMENTS[fragment].lines)

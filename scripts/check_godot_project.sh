@@ -5,6 +5,10 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp311_runtime_test.gd"
+  "$game_root/scripts/combat/boss_happiness_guardian.gd"
+  "$game_root/assets/happiness_guardian.svg"
+  "$game_root/assets/guardian_lance.svg"
   "$game_root/tests/gp310_runtime_test.gd"
   "$game_root/scripts/stage/city_core_layout.gd"
   "$game_root/tests/gp309_runtime_test.gd"
@@ -658,6 +662,14 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for guardian_character in roan lumi; do
+    for guardian_weapon in sword bow; do
+      for guardian_phase in seed resume finish combat flows regress; do
+        checked_godot 60s --headless --path "$game_root" \
+          --script res://tests/gp311_runtime_test.gd -- "$guardian_phase" "$guardian_character" "$guardian_weapon"
+      done
+    done
+  done
   for core_character in roan lumi; do
     for core_weapon in sword bow; do
       for core_phase in seed resume finish cross combat flows; do

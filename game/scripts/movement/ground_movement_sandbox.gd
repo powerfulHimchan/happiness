@@ -710,10 +710,11 @@ func _emit_enemy_metrics() -> void:
 	var newest_event_msec := -1
 	var elite_metrics: Dictionary = {}
 	for enemy in get_tree().get_nodes_in_group("combat_enemy"):
-		if enemy == stage_runner.boss and not stage_runner.uses_boss():
-			continue
-		if enemy == stage_runner.armored_boar and stage_runner.uses_boss():
-			continue
+		if enemy in [stage_runner.boss, stage_runner.guardian, stage_runner.armored_boar]:
+			if stage_runner.stage_enabled and enemy != stage_runner.final_enemy():
+				continue
+			if not stage_runner.stage_enabled and enemy != stage_runner.armored_boar:
+				continue
 		if not enemy.has_method("current_metrics"):
 			continue
 		var metrics: Dictionary = enemy.current_metrics()
