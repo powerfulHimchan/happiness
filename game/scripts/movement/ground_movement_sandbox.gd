@@ -37,6 +37,8 @@ var ability_discovery_store := AbilityDiscoveryStore.new()
 var story_journal_store := StoryJournalStore.new()
 var story_run := PrototypeStoryRun.new()
 var _story_return_mode: int = 0
+var _sera_intro_seen: bool = false
+var _sera_intro_active: bool = false
 var _story_message: String = ""
 var _pending_rewind_ids: Array[String] = []
 var _rewind_message: String = ""
@@ -99,6 +101,7 @@ func _ready() -> void:
 	controls.combat_configuration_started.connect(_suspend_combat_environment)
 	controls.combat_configuration_finished.connect(_restore_combat_environment)
 	controls.story_acknowledged.connect(_acknowledge_story)
+	stage_runner.stage_reset.connect(_reset_sera_intro)
 	controls.story_progress_reader = _story_progress
 	controls.story_journal_started.connect(_begin_run_build_pause)
 	controls.story_journal_finished.connect(_finish_run_build_pause)
@@ -290,7 +293,7 @@ func _reset_test() -> void:
 	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _story_message.is_empty():
 		controls.show_main_screen()
 		return
-	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)):
+	if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty() and not _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice), SeraEncounter.boss_id(_available_checkpoint.stage)):
 		controls.show_main_screen()
 		return
 	if not _guardian_reward_saved:
@@ -379,6 +382,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 	if _restoring_checkpoint:
 		return
 	if not bool(metrics.get("stage_complete", false)):
+		if _try_open_sera_intro() or _sera_intro_active: return
 		if growth.run_active and not player.damage_receiver.dead and int(metrics.get("stage_section_index", 0)) == 5:
 			_guardian_assist()
 		if growth.run_active and int(metrics.get("stage_section_index", 0)) == 5 and boss_legacy_store.spend_assist(player.boss_legacy, stage_runner.stage_number, stage_runner.stage_limit):
@@ -399,7 +403,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		growth.stop_run()
 		player.guardian_choice = ""
 		guardian_companion = {}
-		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")))
+		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")), stage_runner.final_boss_id)
 		if story_run.enabled: reward_saved = _record_story_completion(_story_checkpoint_context()) and reward_saved
 		test_recorder.record_stage_metrics(metrics)
 		if reward_saved and test_recorder.has_completed_run(String(test_recorder.checkpoint_snapshot().id)):
@@ -408,7 +412,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		if controls.current_screen_mode() not in [12, 18]:
 			controls.release_all_inputs()
 			_begin_growth_pause()
-			controls.show_boss_choice()
+			controls.show_boss_choice(SeraEncounter.PROFILE if stage_runner.uses_sera() else {})
 			story_run.prepare_stage(stage_runner.stage_number)
 			_save_checkpoint(metrics)
 			if story_run.enabled: _open_story(12)
@@ -572,7 +576,7 @@ func _refresh_checkpoint() -> void:
 	var story_saved := _record_story_completion(_available_checkpoint)
 	if job_error == OK and ability_error == OK and story_saved and guardian_saved:
 		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
-			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice), SeraEncounter.boss_id(_available_checkpoint.stage)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 				_discard_checkpoint()
 		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
@@ -643,7 +647,7 @@ func continue_saved_run() -> bool:
 	_begin_growth_pause()
 	_stage_recovered_health = 0
 	if stage_runner.uses_boss():
-		controls.show_boss_choice()
+		controls.show_boss_choice(SeraEncounter.PROFILE if stage_runner.uses_sera() else {})
 		if not stage_runner.boss_choice.is_empty():
 			_finish_growth_selection()
 			stage_runner.force_emit_metrics()
@@ -758,7 +762,7 @@ func _emit_enemy_metrics() -> void:
 	var newest_event_msec := -1
 	var elite_metrics: Dictionary = {}
 	for enemy in get_tree().get_nodes_in_group("combat_enemy"):
-		if enemy in [stage_runner.boss, stage_runner.guardian, stage_runner.armored_boar]:
+		if enemy in [stage_runner.boss, stage_runner.guardian, stage_runner.armored_boar, stage_runner.sera]:
 			if stage_runner.stage_enabled and enemy != stage_runner.final_enemy():
 				continue
 			if not stage_runner.stage_enabled and enemy != stage_runner.armored_boar:
@@ -810,7 +814,8 @@ func _on_safe_zone_entered(
 	player.set_safe_spawn(spawn_position, safe_label)
 
 
-func _grant_boss_legacy(source: String, choice: String) -> bool:
+func _grant_boss_legacy(source: String, choice: String, final_boss: String = SeraEncounter.LEGACY) -> bool:
+	if final_boss == SeraEncounter.ID: return true
 	if choice.is_empty():
 		return true
 	if source == _last_legacy_grant_source and boss_legacy_store.save_path == _last_legacy_grant_path:
@@ -1015,6 +1020,13 @@ func _open_story(return_mode: int) -> void:
 
 
 func _acknowledge_story(id: String) -> bool:
+	if id == "sera_intro":
+		if controls.current_screen_mode() != 18 or not _sera_intro_active or controls.story_scene.get("id") != "sera_intro" or stage_runner.stage_complete: return false
+		_sera_intro_active = false
+		controls.finish_story(0)
+		_finish_growth_selection()
+		stage_runner.force_emit_metrics()
+		return true
 	if controls.current_screen_mode() != 18 or id != story_run.pending or id.is_empty(): return false
 	var before := story_run.snapshot()
 	if id != "prologue":
@@ -1033,6 +1045,20 @@ func _acknowledge_story(id: String) -> bool:
 	controls.finish_story(_story_return_mode)
 	if _story_return_mode == 0: _finish_growth_selection()
 	_update_story_status()
+	return true
+
+
+func _reset_sera_intro() -> void:
+	_sera_intro_seen = false
+	_sera_intro_active = false
+
+
+func _try_open_sera_intro() -> bool:
+	if not story_run.enabled or _sera_intro_seen or controls.current_screen_mode() != 0 or growth.choosing or growth.awaiting_job_confirmation or not stage_runner.uses_sera() or stage_runner.current_section != PrototypeStageRunner.Section.ELITE or not growth.run_active or player.damage_receiver.dead: return false
+	_sera_intro_seen = true
+	_sera_intro_active = true
+	_begin_growth_pause()
+	controls.show_story(SeraEncounter.intro(player.character_id, stage_runner.guardian_choice, story_run.known))
 	return true
 
 

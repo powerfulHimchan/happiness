@@ -57,6 +57,7 @@ var route_id: String = "meadow"
 var skills_claimed: bool = false
 var reward_claimed: bool = false
 var boss_choice: String = ""
+var final_boss_id: String = SeraEncounter.LEGACY
 var guardian_choice: String = ""
 var completed_elapsed_s: float = 0.0
 var stage_history: Array[Dictionary] = []
@@ -70,6 +71,7 @@ var stage_history: Array[Dictionary] = []
 @onready var armored_boar: EliteArmoredBoar = get_node("../Targets/ArmoredBoar") as EliteArmoredBoar
 @onready var boss: BossClockworkKnight = get_node("../Targets/ClockworkKnight") as BossClockworkKnight
 @onready var guardian: BossHappinessGuardian = get_node("../Targets/HappinessGuardian") as BossHappinessGuardian
+@onready var sera: BossSera = get_node("../Targets/Sera") as BossSera
 @onready var gates: Array[StaticBody2D] = [
 	get_node("../StageGates/GateA") as StaticBody2D,
 	get_node("../StageGates/GateB") as StaticBody2D,
@@ -160,6 +162,7 @@ func reset_stage() -> void:
 
 
 func reset_run() -> void:
+	final_boss_id = SeraEncounter.ID if run_mode == JourneyRoutePlan.MODE else SeraEncounter.LEGACY
 	guardian_choice = ""
 	stage_number = 1
 	route_id = "meadow"
@@ -188,6 +191,8 @@ func available_routes() -> Array[Dictionary]:
 		var offers: Array[Dictionary] = []
 		for id in JourneyRoutePlan.candidates(stage_number, route_id, stage_history, region_order):
 			var profile := route_profile(id)
+			if id == JourneyRoutePlan.CORE and final_boss_id == SeraEncounter.ID:
+				profile.lines = ["10스테이지 · 시계탑 회랑과 궁전 앞 광장", "혼합 웨이브 뒤 미소의 여왕 세라 전투", "승리 후 세라 구출/파괴 선택"]
 			if id == "wind": profile.name = "바람꽃 평원"
 			if stage_number < 8 and stage_number % 2 == 1:
 				profile.name += " · " + String(RegionStageLayout.TITLES[id])
@@ -248,6 +253,7 @@ func can_select_route(id: String) -> bool:
 
 
 func _enemy_health(enemy: PrototypeTarget) -> int:
+	if enemy == sera: return BossSera.BOSS_HEALTH
 	if enemy == guardian:
 		return BossHappinessGuardian.BOSS_HEALTH
 	if enemy == boss:
@@ -264,6 +270,10 @@ func uses_guardian() -> bool:
 	return stage_enabled and run_mode == JourneyRoutePlan.MODE and stage_number == 9 and route_id == JourneyRoutePlan.GATE
 
 
+func uses_sera() -> bool:
+	return uses_boss() and run_mode == JourneyRoutePlan.MODE and route_id == JourneyRoutePlan.CORE and final_boss_id == SeraEncounter.ID
+
+
 func awaiting_boss_choice() -> bool:
 	return uses_boss() and stage_complete and boss_choice.is_empty()
 
@@ -273,7 +283,7 @@ func awaiting_guardian_choice() -> bool:
 
 
 func final_enemy() -> PrototypeTarget:
-	return guardian if uses_guardian() else boss if uses_boss() else armored_boar
+	return sera if uses_sera() else guardian if uses_guardian() else boss if uses_boss() else armored_boar
 
 
 func checkpoint_snapshot() -> Dictionary:
@@ -281,12 +291,14 @@ func checkpoint_snapshot() -> Dictionary:
 	if run_mode in ["regions", JourneyRoutePlan.MODE]:
 		state.run_mode = run_mode
 		state.region_order = region_order.duplicate()
+	if run_mode == JourneyRoutePlan.MODE: state.final_boss = final_boss_id
 	if run_mode == JourneyRoutePlan.MODE and stage_number >= 9:
 		state.guardian_choice = guardian_choice
 	return state
 
 
 func restore_checkpoint(state: Dictionary) -> void:
+	final_boss_id = SeraEncounter.boss_id(state)
 	run_mode = String(state.get("run_mode", "standard"))
 	region_order.assign(state.get("region_order", []))
 	stage_number = int(state.number)
@@ -363,6 +375,9 @@ func current_metrics() -> Dictionary:
 	if uses_boss() and current_section == Section.ELITE:
 		section_name = "보스 · 웃는 태엽 기사"
 		objective = "돌진·충격파·탄막 회피 · 벽 충돌 시 검 공격"
+		if uses_sera():
+			section_name = "보스 · " + BossSera.BOSS_NAME
+			objective = "돌진 경고·지면 파문·빛살 틈 회피 · 공격 뒤 왕관 빈틈"
 	if route_id == "clockwork" and not stage_complete:
 		objective = ["첫 관문까지 전진", "강화된 슬라임·씨앗·바람 처치", "좁은 태엽 발판을 점프로 건너기", "강화된 혼합 웨이브 처치", "강화된 갑옷 멧돼지 처치"][display_index]
 	if route_id == "forest" and not stage_complete and current_section != Section.ELITE:
@@ -415,9 +430,10 @@ func current_metrics() -> Dictionary:
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice(),
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
+		"final_boss": final_boss_id,
 		"guardian_choice": guardian_choice,
 		"guardian_choice_pending": awaiting_guardian_choice(),
-		"boss_name": BossHappinessGuardian.BOSS_NAME if uses_guardian() else BossClockworkKnight.BOSS_NAME if uses_boss() else "",
+		"boss_name": BossSera.BOSS_NAME if uses_sera() else BossHappinessGuardian.BOSS_NAME if uses_guardian() else BossClockworkKnight.BOSS_NAME if uses_boss() else "",
 		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s,
 		"run_stage_history": stage_history.duplicate(true),
 		"stage_enabled": stage_enabled,
@@ -472,6 +488,7 @@ func _finish_current_section() -> void:
 
 	if uses_boss() and stage_complete:
 		stage_history[-1]["boss_choice"] = boss_choice
+		if run_mode == JourneyRoutePlan.MODE: stage_history[-1].final_boss = final_boss_id
 	if uses_guardian() and stage_complete:
 		stage_history[-1].guardian_choice = guardian_choice
 	if stage_complete:
@@ -612,7 +629,7 @@ func _restore_combat_sandbox() -> void:
 	for gate_index in gates.size():
 		_set_gate_closed(gate_index, false)
 	for enemy in _all_combat_enemies():
-		if enemy in [boss, guardian]:
+		if enemy in [boss, guardian, sera]:
 			_deactivate_enemy(enemy)
 			continue
 		if enemy is PrototypeEnemy:
@@ -631,7 +648,7 @@ func _restore_combat_sandbox() -> void:
 
 
 func _all_combat_enemies() -> Array[PrototypeTarget]:
-	return [leaf_slime, seed_sack, wind_spirit, armored_boar, boss, guardian]
+	return [leaf_slime, seed_sack, wind_spirit, armored_boar, boss, guardian, sera]
 
 
 func _active_enemy_count() -> int:

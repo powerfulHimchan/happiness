@@ -8,7 +8,7 @@ const FRAGMENTS := {
 	"forest_song": {"name": "거꾸로 들리는 자장가", "hint": "이야기 여행에서 거꾸로 자란 숲 통과", "lines": ["숲의 잎사귀가 가족의 자장가를 거꾸로 부른다.", "잊어야 할 노래라면 왜 몸이 먼저 기억할까.", "나무 아래에는 아이 한 명을 숨길 만큼 작은 자리가 있다."]},
 	"ruins_shadow": {"name": "늦게 따라오는 그림자", "hint": "이야기 여행에서 별시계 유적 통과", "lines": ["멈춘 시계 앞에서 그림자가 한 박자 늦게 움직인다.", "몸의 이상과 새벽시계의 금이 함께 늘어난다.", "병과 시계는 서로 다른 문제가 아닐지도 모른다."]},
 	"festival_smile": {"name": "반복되는 미소", "hint": "이야기 여행에서 태엽 축제장 통과", "lines": ["장난감 병정은 같은 순간에 같은 미소를 짓는다.", "즐거운 노래도 슬픈 표정이 나올 부분에서 처음으로 돌아간다.", "슬픔이 없다는 것과 행복하다는 것은 같은 뜻일까."]},
-	"knight_order": {"name": "기사에게 남은 명령", "hint": "이야기 여행에서 태엽 기사 격파", "lines": ["기사의 태엽에는 사람을 지키라는 말이 새겨져 있다.", "그 아래 지워진 글자는 웃음을 멈추지 말라는 명령이다.", "누구를 위한 보호였는지 기사는 대답하지 못한다."]},
+	"knight_order": {"name": "기사에게 남은 명령", "hint": "이야기 여행에서 마지막 보스 격파", "lines": ["기사의 태엽에는 사람을 지키라는 말이 새겨져 있다.", "그 아래 지워진 글자는 웃음을 멈추지 말라는 명령이다.", "누구를 위한 보호였는지 기사는 대답하지 못한다."]},
 	"family_note": {"name": "빈 이름의 가족 편지", "hint": "한 이야기 여행에서 세 접근 지역 통과", "lines": ["흩어진 단서가 이름 없는 편지의 문장을 잇는다.", "아이를 잊으라는 명령에 따르지 않은 사람이 있었다.", "새벽시계를 쥐여 준 손은 마지막까지 놓기를 망설였다."]},
 	"childhood_promise": {"name": "시계탑의 약속", "hint": "한 이야기 여행에서 네 접근 지역 통과", "lines": ["시계탑 위에서 두 아이가 진짜 행복을 함께 찾자고 약속했다.", "한 아이는 이름을 잃었고 다른 아이는 약속만 기억했다.", "행복의 나라에서 그 친구가 아직 기다리고 있을까."]},
 	"queen_pendant": {"name": "여왕의 시계 장식", "hint": "이야기를 켠 전체 여정의 중심부에서 세라와 첫 만남", "lines": ["미소의 여왕 세라가 간직한 장식에는 새벽시계와 같은 문양이 있다.", "세라는 시계탑의 약속을 기억하지만 함께 약속한 친구의 얼굴은 떠올리지 못한다.", "두 사람의 시계가 나란히 놓이자 멈춘 초침이 한 번 움직였다."]},
@@ -19,6 +19,8 @@ const CHRONICLES := {
 	"destroy": {"name": "부서진 태엽의 목소리", "hint": "이야기 여행 완주 뒤 기사 파괴", "lines": ["태엽핵이 남기고 간 힘은 강하지만 손끝을 아프게 한다.", "기사에게 질문할 기회는 이번 여행에서 사라졌다.", "{hero}는 다음번에는 다른 답을 선택할 수 있음을 기억한다."]},
 	"regions_rescue": {"name": "네 갈래 길과 작은 동행", "hint": "한 이야기 여행에서 네 지역 통과·기사 구출", "lines": ["바람과 숲, 유적과 축제의 기억이 시계탑의 약속을 잇는다.", "기사는 행복의 나라를 향하는 길을 가리킨다.", "{hero}는 모두가 웃는 곳에서 잃어버린 친구를 찾으려 한다."]},
 	"regions_destroy": {"name": "네 갈래 길과 태엽핵", "hint": "한 이야기 여행에서 네 지역 통과·기사 파괴", "lines": ["네 지역의 단서가 남겨진 약속을 되살린다.", "태엽핵은 행복의 나라로 가는 위험한 길에서 힘이 될 것이다.", "{hero}는 그곳의 미소 뒤에 남은 슬픔을 확인하려 한다."]},
+	"sera_rescue": {"name": "다시 기억한 시계탑의 약속", "hint": "이야기 전체 여정에서 세라 구출", "lines": ["왕관의 명령에서 풀려난 세라는 잃어버린 친구의 이름을 부른다.", "{hero}와 세라는 어린 시절의 약속을 다시 기억한다.", "나라의 미소 뒤에 남은 질문은 아직 끝나지 않았다."]},
+	"sera_destroy": {"name": "왕관이 부서진 자리", "hint": "이야기 전체 여정에서 세라 파괴", "lines": ["세라와 왕관이 사라진 자리에서 멈췄던 시계가 움직인다.", "{hero}는 되찾은 친구의 이름과 마지막 선택을 기억한다.", "나라의 행복을 움직이는 힘에 대한 질문이 남았다."]},
 }
 
 static func valid_ids(ids: Variant) -> bool:
@@ -50,6 +52,7 @@ static func earned(history: Array, boss_stage: int) -> Array[String]:
 	return result
 
 static func chronicle_id(history: Array, choice: String) -> String:
+	if not history.is_empty() and history[-1].get("final_boss") == SeraEncounter.ID: return "sera_" + choice
 	return ("regions_" if regions(history).size() == 4 else "") + choice
 
 static func scene(id: String, history: Array, character: String, known: Array, rewinds: int, boss_stage: int = 0) -> Dictionary:
@@ -61,6 +64,7 @@ static func scene(id: String, history: Array, character: String, known: Array, r
 		if rewinds > 0: lines.append("새벽으로 돌아온 횟수는 %d번. 잃어버린 시간을 다시 살펴본다." % rewinds)
 	else:
 		var entry: Dictionary = history[-1]
+		if entry.get("final_boss") == SeraEncounter.ID: return SeraEncounter.victory(id, character)
 		if boss_stage == 10 and int(entry.stage) == 10 and entry.route == JourneyRoutePlan.CORE:
 			return _sera_reunion(id, history, character, known)
 		if entry.route in [JourneyRoutePlan.GATE, JourneyRoutePlan.CORE] and int(entry.stage) != boss_stage:
