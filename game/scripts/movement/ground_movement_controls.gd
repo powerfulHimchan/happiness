@@ -287,6 +287,8 @@ var active_memory_id: String = ""
 var start_memory_previous_selection: String = ""
 var memory_card_rects: Array[Rect2] = []
 var guardian_companion_unlocked: bool = false
+var sera_companion_unlocked: bool = false
+var sera_choices: Dictionary = {}
 var pending_boss_legacy: Dictionary = {}
 var active_boss_legacy: Dictionary = {}
 var use_boss_legacy: bool = false
@@ -1094,7 +1096,7 @@ func _draw_start_weapon_selection() -> void:
 	_draw_text_centered("네 지역 각 두 구간 · 성문과 중심부 · 약 30분" if selected_run_mode == JourneyRoutePlan.MODE else "연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
 	_draw_village_text(start_legacy_description(), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.10), Vector2(safe.size.x * 0.62, safe.size.y * 0.04)), 19, TEXT_COLOR)
 	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
-	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe) + (" · 수호기사 정예 지원30" if guardian_companion_unlocked else ""), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
+	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe) + (" · 수호기사 지원30" if guardian_companion_unlocked else "") + (" · 세라 지원40" if sera_companion_unlocked else ""), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
 	for index in 4:
 		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계", "전체 여정 · 10단계"][index]
 		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
@@ -2217,7 +2219,7 @@ func _draw_main_screen() -> void:
 		MUTED_TEXT_COLOR
 	)
 	if not checkpoint_available:
-		_draw_text_centered("영구 기억 %d/2 · 무기 설계도 %d/4 해금%s" % [unlocked_memories.size(), unlocked_weapon_blueprints.size(), " · 수호기사 동행" if guardian_companion_unlocked else ""], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
+		_draw_text_centered("영구 기억 %d/2 · 설계도 %d/%d%s%s" % [unlocked_memories.size(), unlocked_weapon_blueprints.size(), PrototypeWeaponRewards.PERMANENT_DESIGNS.size(), " · 수호기사 동행" if guardian_companion_unlocked else "", " · 세라 동행" if sera_companion_unlocked else ""], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
 	_refresh_story_entry_layout()
 	_draw_button(story_journal_open_rect, "기억 수첩", false)
 	_draw_button(main_feedback_rect, "설정", false)
@@ -2834,7 +2836,7 @@ func _leave_village_environment() -> void:
 
 
 func village_snapshot() -> Dictionary:
-	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary, discovered_jobs, String(movement_metrics.get("growth_job_id", "")) if bool(movement_metrics.get("growth_run_active", false)) else "", preferred_potion_recipe, surveyed_routes, movement_metrics.get("relic", {}) if bool(movement_metrics.get("growth_run_active", false)) else {})
+	var cards := PrototypeVillageView.cards(village_page, unlocked_memories, unlocked_weapon_blueprints, test_record_summary, discovered_jobs, String(movement_metrics.get("growth_job_id", "")) if bool(movement_metrics.get("growth_run_active", false)) else "", preferred_potion_recipe, surveyed_routes, movement_metrics.get("relic", {}) if bool(movement_metrics.get("growth_run_active", false)) else {}, sera_choices)
 	var route_pages := ceili(float(PrototypeRouteAtlas.IDS.size()) / 3.0)
 	route_atlas_page = clampi(route_atlas_page, 0, route_pages - 1)
 	if village_page == "atlas":
@@ -2873,8 +2875,9 @@ func village_snapshot() -> Dictionary:
 	var pager := {}
 	if village_page in ["jobs", "abilities"]:
 		tabs = {"jobs": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08)), "abilities": Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08))}
-	if village_page in ["memories", "relics"]:
-		tabs = {"memories": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08)), "relics": Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08))}
+	if village_page in ["memories", "relics", "bonds"]:
+		for i in 3:
+			tabs[["memories", "relics", "bonds"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
 	if village_page in PrototypeVillageView.RECORD_TABS:
 		for i in PrototypeVillageView.RECORD_TABS.size():
 			tabs[PrototypeVillageView.RECORD_TABS[i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
@@ -2958,6 +2961,8 @@ func _draw_village() -> void:
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
 	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "다섯 경로의 지형·보너스·선택 조건을 비교하세요" if village_page == "atlas" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
+	if village_page == "bonds":
+		subtitle = "전체 여정의 선택을 영구 보존 · 지원은 다음 새 도전부터"
 	if village_page == "record_lengths":
 		subtitle = "완주한 도전만 비교 · 이전 단일 스테이지 기록은 전체 통계에 포함"
 	if village_page == "history":

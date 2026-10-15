@@ -5,8 +5,8 @@ extends RefCounted
 const FACILITIES := ["forge", "memories", "records", "jobs", "apothecary", "atlas"]
 const HISTORY_PAGE_SIZE := 3
 const RECORD_TABS := ["records", "record_lengths", "history"]
-const TAB_LABELS := {"record_lengths": "길이별 통계", "records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
-const TITLES := {"record_lengths": "광장 · 도전 길이별 통계", "history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
+const TAB_LABELS := {"bonds": "세라의 인연", "record_lengths": "길이별 통계", "records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
+const TITLES := {"bonds": "기억의 쉼터 · 세라의 인연", "record_lengths": "광장 · 도전 길이별 통계", "history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
 
 static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictionary:
 	var cards: Array[Rect2] = []
@@ -25,9 +25,13 @@ static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictiona
 		buttons.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (button_width + gap), safe.size.y * 0.85), Vector2(button_width, safe.size.y * 0.09)))
 	return {"cards": cards, "back": buttons[0], "start": buttons[1], "continue": buttons[2] if can_continue else Rect2()}
 
-static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary, discovered_jobs: Dictionary = {}, current_job: String = "", potion_recipe: String = PrototypePotionRecipes.BASIC, surveyed_routes: Dictionary = {}, current_relic: Dictionary = {}) -> Array[Dictionary]:
+static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary, discovered_jobs: Dictionary = {}, current_job: String = "", potion_recipe: String = PrototypePotionRecipes.BASIC, surveyed_routes: Dictionary = {}, current_relic: Dictionary = {}, sera_choices: Dictionary = {}) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	match page:
+		"bonds":
+			for choice in ["rescue", "destroy"]:
+				var unlocked: bool = sera_choices.get(choice, false) == true
+				result.append({"id": "sera_" + choice, "name": "세라 " + GuardianDecision.label(choice), "open": unlocked, "status": "영구 기록 · 해금 완료" if unlocked else "미발견 · 전체 여정에서 선택", "lines": ["왕관의 명령에서 친구를 구출" if choice == "rescue" else "세라와 왕관의 힘을 끝낸 선택", "다음 새 도전 정예마다 40피해 지원" if choice == "rescue" else "약속의 검·왕관의 활 설계도 해금", "다른 여정에서 두 선택 모두 기록 가능", "도전 기록 초기화와 별도로 유지"]})
 		"relics":
 			result = PrototypeRelic.codex_cards(current_relic)
 		"atlas":
@@ -53,7 +57,7 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				var status := "발견 · 현재 도전" if discovered and current_job == job.id else "영구 발견" if discovered else "미발견 · 성향을 채워 발현"
 				result.append({"id": job.id, "name": job.name, "open": discovered, "status": status, "lines": lines})
 		"forge":
-			for id in ["clockwork_sword", "clockwork_bow"] + PrototypeWeaponRewards.GUARDIAN_DESIGNS:
+			for id in PrototypeWeaponRewards.PERMANENT_DESIGNS:
 				var design := PrototypeWeaponRewards.design_profile(id)
 				var unlocked := bool(blueprints.get(id, false))
 				var lines: Array[String] = []
@@ -62,10 +66,10 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 						var profile := PrototypeWeaponRewards.profile(String(design.weapon), grade, id)
 						lines.append("%s · 피해 +%d%%" % [PrototypeWeaponRewards.GRADE_NAMES[grade], int(round(float(profile.damage) * 100))])
 						lines.append("고유 효과 +%d%%" % int(round(float(profile.unique) * 100)))
-					lines.append("검: 스킬 강화" if design.weapon == "sword" else "활: 기본 공격 강화")
+					lines.append(("검: " if design.weapon == "sword" else "활: ") + ("스킬 강화" if design.get("kind", "skill" if design.weapon == "sword" else "basic") == "skill" else "기본 공격 강화"))
 					lines.append("보조 고유 효과는 절반 적용")
 				else:
-					lines.assign(["성문 수호기사 파괴로 영구 해금" if id in PrototypeWeaponRewards.GUARDIAN_DESIGNS else "보스 파괴로 영구 해금", "해금 후 정예 무기 보상에 등장"])
+					lines.assign(["세라 파괴로 영구 해금" if id in PrototypeWeaponRewards.SERA_DESIGNS else "성문 수호기사 파괴로 영구 해금" if id in PrototypeWeaponRewards.GUARDIAN_DESIGNS else "보스 파괴로 영구 해금", "해금 후 정예 무기 보상에 등장"])
 				result.append({"id": id, "name": String(design.name), "open": unlocked, "lines": lines})
 		"memories":
 			for id in ["clockwork_guard", "core_echo"]:
@@ -107,8 +111,8 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				result.append({"name": "최고 완주" if key == "best_completion_s" else "평균 완주", "open": true, "lines": ["%.1f초" % seconds if seconds > 0 else "아직 완주 기록 없음", "모든 길이의 완주 기록 기준"]})
 		_:
 			result.assign([
-				{"name": "대장간", "open": not blueprints.is_empty(), "status": "무기·스킬 도감 언제든 조회", "lines": ["무기 설계도 %d/4" % blueprints.size(), "태엽·수호 무기 · 스킬 %d종" % PrototypeSkillRewards.SKILLS.size(), "등급 · 보조 효과 · 장착 상태"]},
-				{"name": "기억의 쉼터", "open": not memories.is_empty(), "status": "기억 해금 · 유물 도감" if not memories.is_empty() else "유물 도감은 언제든 조회", "lines": ["영구 기억 %d/2" % memories.size(), "영구 기억 · 도전 중 유물", "효과 · 획득 조건 · 보유 상태"]},
+				{"name": "대장간", "open": not blueprints.is_empty(), "status": "무기·스킬 도감 언제든 조회", "lines": ["무기 설계도 %d/%d" % [blueprints.size(), PrototypeWeaponRewards.PERMANENT_DESIGNS.size()], "태엽·수호·세라 무기 · 스킬 %d종" % PrototypeSkillRewards.SKILLS.size(), "등급 · 보조 효과 · 장착 상태"]},
+				{"name": "기억의 쉼터", "open": not memories.is_empty() or not sera_choices.is_empty(), "status": "기억 · 유물 · 세라의 인연", "lines": ["영구 기억 %d/2 · 세라 인연 %d/2" % [memories.size(), sera_choices.size()], "영구 기억 · 유물 · 세라 지원", "효과 · 획득 조건 · 보유 상태"]},
 				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
 				{"name": "성장 도감", "open": true, "status": "직업 · 능력 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자 · 능력 도감", "조건 · 강화 가지 · 효과"]},
 				{"name": "약방", "open": bool(memories.get("clockwork_guard", false)) or bool(memories.get("core_echo", false)), "status": "약초사 정착" if memories.get("clockwork_guard", false) else "소분 조제 해금" if memories.get("core_echo", false) else "구출: 농축 · 파괴: 소분", "lines": ["기본 25% · 2개", "농축 40%·1개 / 소분 20%·3개", "다음 도전의 회복약 선택"]},

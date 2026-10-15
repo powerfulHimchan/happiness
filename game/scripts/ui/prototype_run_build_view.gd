@@ -40,6 +40,9 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			var companion: Dictionary = state.get("guardian_companion", {})
 			if not companion.is_empty():
 				result.append({"id": "guardian_companion", "name": "수호기사 동행", "status": "정예 지원 · 영구 해금", "lines": ["이후 새 도전에 자동 동행", "스테이지마다 정예에게 30피해", "지원한 스테이지 %d개" % companion.assisted_stages.size(), "이어하기로 지원을 중복하지 않습니다"], "open": true})
+			var sera: Dictionary = state.get("sera_companion", {})
+			if not sera.is_empty():
+				result.append({"id": "sera_companion", "name": "세라 동행", "status": "정예 지원 · 영구 해금", "lines": ["이후 새 도전에 자동 동행", "스테이지마다 정예에게 40피해", "지원한 스테이지 %d개" % sera.assisted_stages.size(), "이어하기로 지원을 중복하지 않습니다"], "open": true})
 			var health: Dictionary = state.health
 			if stage.get("guardian_choice", "") != "":
 				result.append({"id": "guardian", "name": "성문 수호기사", "status": GuardianDecision.label(String(stage.guardian_choice)), "lines": GuardianDecision.lines(String(stage.guardian_choice)), "open": true})

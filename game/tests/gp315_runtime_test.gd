@@ -59,11 +59,11 @@ func _run() -> void:
 			if not _ack_scene(weapon == "bow") or not _check(controls.current_screen_mode() == 12 and controls.boss_choice_profile == SeraEncounter.PROFILE and journal.snapshot().fragments.size() == 9, "장면 확인·건너뛰기 뒤 세라 전용 선택·기억9종"): return
 		"finish":
 			if not _restore_journey(10) or not _check(controls.current_screen_mode() == 12 and controls.boss_choice_profile == SeraEncounter.PROFILE, "확인 뒤 반복 복원은 세라 전용 선택"): return
-			var old_meta := FileAccess.get_file_as_string(legacy.save_path)
+			var old_progress := legacy.progress_snapshot()
 			if not _choose_sera(choice): return
 			var result: Dictionary = controls.current_result_snapshot()
 			var recent: Dictionary = recorder.summary_snapshot().recent_runs[0]
-			if not _check(result.boss_name == BossSera.BOSS_NAME and result.final_boss == SeraEncounter.ID and result.boss_choice == choice and recent.final_boss == SeraEncounter.ID and recent.boss_choice == choice and journal.snapshot().chronicles.has("sera_" + choice) and old_meta == FileAccess.get_file_as_string(legacy.save_path) and legacy.pending_reward().is_empty() and store.load_checkpoint().is_empty() and recorder.summary_snapshot().completed_run_count == 1, "결과·광장 이력·세라 여행 기록·단일 완주·태엽 기사 보상 독립"): return
+			if not _check(result.boss_name == BossSera.BOSS_NAME and result.final_boss == SeraEncounter.ID and result.boss_choice == choice and recent.final_boss == SeraEncounter.ID and recent.boss_choice == choice and journal.snapshot().chronicles.has("sera_" + choice) and legacy.progress_snapshot().guardian_companion == old_progress.guardian_companion and legacy.progress_snapshot().unlocked == old_progress.unlocked and legacy.progress_snapshot().sera_choices.get(choice, false) and legacy.pending_reward().is_empty() and store.load_checkpoint().is_empty() and recorder.summary_snapshot().completed_run_count == 1, "결과·광장 이력·세라 여행 기록·단일 완주·태엽 기사 보상 독립"): return
 			controls.show_main_screen()
 			controls.show_village()
 			controls.village_page = "history"
