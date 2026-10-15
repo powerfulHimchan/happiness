@@ -5,6 +5,10 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/assets/characters/roan_lumi_idle.png"
+  "$game_root/assets/characters/roan_idle.tres"
+  "$game_root/assets/characters/lumi_idle.tres"
+  "$game_root/tests/character_art_runtime_test.gd"
   "$game_root/tests/gp316_runtime_test.gd"
   "$game_root/tests/gp315_runtime_test.gd"
   "$game_root/scripts/combat/boss_sera.gd"
@@ -665,6 +669,8 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/character_art_runtime_test.gd
   # Scene conversion may report an error with exit code zero. Check the actual
   # Android resource pack and boot its converted scenes, without building an APK.
   checked_godot 120s --headless --path "$game_root" \
