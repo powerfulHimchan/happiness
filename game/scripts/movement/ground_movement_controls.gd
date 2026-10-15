@@ -2138,7 +2138,7 @@ func _draw_result_screen() -> void:
 			_format_clock(completion_s),
 			_format_clock(target_s),
 			"목표 이내" if completion_s <= target_s else "+%s" % _format_clock(completion_s - target_s),
-		] + (" · 기억 %d/8" % result_snapshot.story.fragments.size() if result_snapshot.has("story") else ""),
+		] + (" · 기억 %d/%d" % [result_snapshot.story.fragments.size(), PrototypeStory.FRAGMENTS.size()] if result_snapshot.has("story") else ""),
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 84.0), Vector2(result_panel_rect.size.x, 42.0)),
 		24,
 		TEXT_COLOR
@@ -3329,8 +3329,12 @@ func _draw_story() -> void:
 	var layout := PrototypeStoryView.scene_layout(safe)
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
 	_draw_village_text(String(story_scene.name), Rect2(safe.position + safe.size * Vector2(0.05, 0.06), safe.size * Vector2(0.90, 0.09)), 32, ACTIVE_COLOR)
-	var portrait := Vector2(160, 180) * minf(1.5, safe.size.y * 0.35 / 180)
-	draw_texture_rect(PrototypeCharacters.texture(String(movement_metrics.get("character_id", "roan"))), Rect2(safe.position + safe.size * Vector2(0.08, 0.28), portrait), false)
+	var character := String(movement_metrics.get("character_id", "roan"))
+	var texture := PrototypeStoryView.SERA_PORTRAIT if story_scene.get("portrait") == "sera" else PrototypeCharacters.texture(character)
+	var bounds: Rect2 = layout.portrait
+	var portrait := Vector2(160, 180) * minf(1.5, minf(bounds.size.x / 160, bounds.size.y / 180))
+	draw_texture_rect(texture, Rect2(bounds.position + (bounds.size - portrait) * 0.5, portrait), false)
+	_draw_village_text(String(story_scene.get("speaker", PrototypeCharacters.display_name(character))), layout.speaker, 20, ACTIVE_COLOR)
 	for i in 2:
 		var index := story_page * 2 + i
 		if index >= story_scene.lines.size(): break
@@ -3412,7 +3416,7 @@ func _draw_story_journal() -> void:
 	var layout: Dictionary = snapshot.layout
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
 	_draw_village_text("기억 수첩", Rect2(safe.position + safe.size * Vector2(0.05, 0.025), safe.size * Vector2(0.90, 0.07)), 32, ACTIVE_COLOR)
-	_draw_village_text("기억 %d/8 · 여행 기록 %d/4 · 되감기 %d번" % [story_journal_state.get("fragments", {}).size(), story_journal_state.get("chronicles", {}).size(), int(story_journal_state.get("rewind_count", 0))], Rect2(safe.position + safe.size * Vector2(0.05, 0.105), safe.size * Vector2(0.90, 0.045)), 19, TEXT_COLOR)
+	_draw_village_text("기억 %d/%d · 여행 기록 %d/%d · 되감기 %d번" % [story_journal_state.get("fragments", {}).size(), PrototypeStory.FRAGMENTS.size(), story_journal_state.get("chronicles", {}).size(), PrototypeStory.CHRONICLES.size(), int(story_journal_state.get("rewind_count", 0))], Rect2(safe.position + safe.size * Vector2(0.05, 0.105), safe.size * Vector2(0.90, 0.045)), 19, TEXT_COLOR)
 	for i in 2: _draw_button(layout.tabs[i], "기억 조각" if i == 0 else "여행 기록", story_journal_tab == i)
 	for i in snapshot.cards.size():
 		var card: Dictionary = snapshot.cards[i]

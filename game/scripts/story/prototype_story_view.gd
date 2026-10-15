@@ -1,6 +1,8 @@
 class_name PrototypeStoryView
 extends RefCounted
 
+const SERA_PORTRAIT := preload("res://assets/prototype_sera.svg")
+
 static func wrap(value: String, font: Font, font_size: int, width: float) -> Array[String]:
 	var lines: Array[String] = []
 	var line := ""
@@ -14,6 +16,8 @@ static func wrap(value: String, font: Font, font_size: int, width: float) -> Arr
 
 static func scene_layout(safe: Rect2) -> Dictionary:
 	return {
+		"portrait": Rect2(safe.position + safe.size * Vector2(0.06, 0.27), safe.size * Vector2(0.20, 0.35)),
+		"speaker": Rect2(safe.position + safe.size * Vector2(0.05, 0.65), safe.size * Vector2(0.22, 0.07)),
 		"paragraphs": [Rect2(safe.position + safe.size * Vector2(0.30, 0.26), safe.size * Vector2(0.64, 0.20)), Rect2(safe.position + safe.size * Vector2(0.30, 0.50), safe.size * Vector2(0.64, 0.20))],
 		"next": Rect2(safe.position + safe.size * Vector2(0.53, 0.86), safe.size * Vector2(0.40, 0.09)),
 		"skip": Rect2(safe.position + safe.size * Vector2(0.07, 0.86), safe.size * Vector2(0.40, 0.09)),

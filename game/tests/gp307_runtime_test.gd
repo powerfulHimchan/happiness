@@ -68,7 +68,7 @@ func _run() -> void:
 			var result: Dictionary = controls.current_result_snapshot()
 			var summary := recorder.summary_snapshot()
 			if not _check(result.run_mode == "journey" and result.stage_count == 10 and result.visited_regions.size() == 4 and summary.completed_run_count == 1 and summary.completion_by_stage_count["10"].completed_run_count == 1 and store.load_checkpoint().is_empty(), "10구간 결과·길이 통계·체크포인트 정리"): return
-			if not _check(journal.snapshot().fragments.size() == 8 and journal.snapshot().chronicles.has("regions_rescue" if weapon == "sword" else "regions_destroy"), "각 두 구간에서도 중복 조각 없이8종·기존 여행 기록"): return
+			if not _check(journal.snapshot().fragments.size() == 9 and journal.snapshot().fragments.has("queen_pendant") and journal.snapshot().chronicles.has("regions_rescue" if weapon == "sword" else "regions_destroy"), "각 두 구간의 기존8종과 중심부 재회1종·기존 여행 기록"): return
 		"records":
 			controls.show_main_screen()
 			controls.show_village()
