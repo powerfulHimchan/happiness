@@ -5,6 +5,11 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp315_runtime_test.gd"
+  "$game_root/scripts/combat/boss_sera.gd"
+  "$game_root/scripts/story/sera_encounter.gd"
+  "$game_root/assets/sera_spark.svg"
+  "$game_root/assets/prototype_sera_awakened.svg"
   "$game_root/tests/gp314_runtime_test.gd"
   "$game_root/assets/prototype_sera.svg"
   "$game_root/tests/gp313_runtime_test.gd"
@@ -667,6 +672,32 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for sera_character in roan lumi; do
+    for sera_weapon in sword bow; do
+      for sera_phase in seed resume defeated finish; do
+        checked_godot 60s --headless --path "$game_root" \
+          --script res://tests/gp315_runtime_test.gd -- "$sera_phase" "$sera_character" "$sera_weapon"
+      done
+    done
+  done
+  for sera_weapon in sword bow; do
+    for sera_pattern in dash wave ring; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp315_runtime_test.gd -- "patterns-$sera_pattern" roan "$sera_weapon"
+    done
+  done
+  for sera_phase in fault-choice fault-story fault-record; do
+    checked_godot 60s --headless --path "$game_root" \
+      --script res://tests/gp315_runtime_test.gd -- "$sera_phase" lumi bow
+  done
+  for sera_phase in legacy-gate legacy-final legacy-standard; do
+    checked_godot 60s --headless --path "$game_root" \
+      --script res://tests/gp315_runtime_test.gd -- "$sera_phase" roan sword
+  done
+  for sera_phase in flows story-off validation layout; do
+    checked_godot 60s --headless --path "$game_root" \
+      --script res://tests/gp315_runtime_test.gd -- "$sera_phase" lumi sword
+  done
   for reunion_character in roan lumi; do
     for reunion_weapon in sword bow; do
       for reunion_phase in seed pending acknowledged finish; do

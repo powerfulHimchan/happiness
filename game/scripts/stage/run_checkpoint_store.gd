@@ -142,6 +142,7 @@ static func valid_state(state: Dictionary) -> bool:
 			return false
 	if int(stage.number) == int(stage.limit) and stage.history[-1].get("boss_choice") != stage.boss_choice:
 		return false
+	if not SeraEncounter.valid_checkpoint(stage): return false
 	for duration in stage.sections:
 		if not _number(duration, 0, 1000000):
 			return false

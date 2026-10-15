@@ -141,6 +141,8 @@ func _run() -> void:
 	print("GP-307 runtime test: OK (%s %s %s)" % [phase, character, weapon])
 	quit(0)
 
+var legacy_final_boss_for_tests: bool = true
+
 func _start_journey(character: String, weapon: String) -> bool:
 	controls.show_main_screen()
 	controls.show_start_weapon_selection()
@@ -150,6 +152,9 @@ func _start_journey(character: String, weapon: String) -> bool:
 	runner.region_rng.seed = 307 if character == "roan" else 308
 	_tap(controls.start_length_rects[3].get_center())
 	_tap(controls.start_weapon_confirm_rect.get_center())
+	# GP-307~314의 기존 여정·보상 검사는 태엽 기사 버전 저장 흐름을 유지한다.
+	# 새 도전의 기본 세라는 GP-315에서 이 전환 없이 실제 시작 입력으로 검사한다.
+	if legacy_final_boss_for_tests: runner.final_boss_id = SeraEncounter.LEGACY
 	if not _check(runner.run_mode == "journey" and runner.stage_limit == 10 and runner.route_id == runner.region_order[0] and player.character_id == character and festival_terrain.get_child_count() >= 3, "실제10구간 입력·무작위 첫 지역·첫 구간 실제 지형"): return false
 	return _ack_scene(true)
 
