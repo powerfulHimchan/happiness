@@ -50,6 +50,8 @@ var _route_atlas_message: String = ""
 var _last_legacy_grant_source: String = ""
 var _last_legacy_grant_path: String = ""
 var guardian_companion: Dictionary = {}
+var sera_companion: Dictionary = {}
+var _sera_reward_saved: bool = true
 var _guardian_reward_saved: bool = true
 var _restoring_checkpoint: bool = false
 var _available_checkpoint: Dictionary = {}
@@ -317,6 +319,7 @@ func _reset_test() -> void:
 	weapon_controller.reset_combat(controls.selected_starting_weapon)
 	growth.reset_run(weapon_controller.active_weapon_id)
 	guardian_companion = boss_legacy_store.guardian_for_run(run_id)
+	sera_companion = boss_legacy_store.sera_for_run(run_id)
 	player.boss_legacy = claimed.state
 	player.memory_id = claimed.memory_id
 	var memory_health := PrototypeMemoryAbilities.health_bonus(player.memory_id)
@@ -385,6 +388,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		if _try_open_sera_intro() or _sera_intro_active: return
 		if growth.run_active and not player.damage_receiver.dead and int(metrics.get("stage_section_index", 0)) == 5:
 			_guardian_assist()
+			_sera_assist()
 		if growth.run_active and int(metrics.get("stage_section_index", 0)) == 5 and boss_legacy_store.spend_assist(player.boss_legacy, stage_runner.stage_number, stage_runner.stage_limit):
 			var event := DamageEvent.new()
 			event.event_id = StringName("helper:%s:%d" % [player.boss_legacy.run_id, stage_runner.stage_number])
@@ -403,6 +407,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		growth.stop_run()
 		player.guardian_choice = ""
 		guardian_companion = {}
+		sera_companion = {}
 		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")), stage_runner.final_boss_id)
 		if story_run.enabled: reward_saved = _record_story_completion(_story_checkpoint_context()) and reward_saved
 		test_recorder.record_stage_metrics(metrics)
@@ -481,6 +486,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"recorder": test_recorder.checkpoint_snapshot(),
 		"boss_legacy": saved_legacy,
 		"guardian_companion": _guardian_checkpoint(),
+		"sera_companion": _sera_checkpoint(),
 		"memory_id": player.memory_id,
 		"relic": player.relic_state.duplicate(),
 	}
@@ -566,6 +572,7 @@ func _record_stage_metrics(metrics: Dictionary) -> void:
 
 
 func _refresh_checkpoint() -> void:
+	_sera_reward_saved = true
 	_available_checkpoint = checkpoint_store.load_checkpoint()
 	var job_error: Error = OK
 	var ability_error: Error = _record_abilities(_available_checkpoint.growth.ranks.keys() if not _available_checkpoint.is_empty() else [])
@@ -581,7 +588,7 @@ func _refresh_checkpoint() -> void:
 		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
 	_update_boss_legacy_status()
-	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), "중간 저장 실패 · 수호기사 보상 기록을 재시도하세요" if not guardian_saved else _story_message if not story_saved else _ability_codex_message if ability_error != OK else checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
+	controls.update_checkpoint_status(not _available_checkpoint.is_empty(), "세라 보상 저장 실패 · 이어하기로 다시 저장하세요" if not _sera_reward_saved else "중간 저장 실패 · 수호기사 보상 기록을 재시도하세요" if not guardian_saved else _story_message if not story_saved else _ability_codex_message if ability_error != OK else checkpoint_store.message if job_error == OK else "직업 기록 저장 실패 · 이어하기로 다시 시도하세요")
 
 
 func _discard_checkpoint() -> void:
@@ -592,7 +599,7 @@ func _discard_checkpoint() -> void:
 
 func continue_saved_run() -> bool:
 	_refresh_checkpoint()
-	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2 or not _guardian_reward_saved:
+	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2 or not _guardian_reward_saved or not _sera_reward_saved:
 		return false
 	var state := _available_checkpoint.duplicate(true)
 	if _record_abilities(state.growth.ranks.keys()) != OK:
@@ -615,6 +622,7 @@ func continue_saved_run() -> bool:
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)
 	guardian_companion = boss_legacy_store.restore_guardian(state.get("guardian_companion", {}))
+	sera_companion = boss_legacy_store.restore_sera(state.get("sera_companion", {}))
 	player.boss_legacy = boss_legacy_store.restore_active(state.get("boss_legacy", {}))
 	player.memory_id = String(state.get("memory_id", ""))
 	player.relic_state = state.get("relic", {}).duplicate()
@@ -815,7 +823,19 @@ func _on_safe_zone_entered(
 
 
 func _grant_boss_legacy(source: String, choice: String, final_boss: String = SeraEncounter.LEGACY) -> bool:
-	if final_boss == SeraEncounter.ID: return true
+	if final_boss == SeraEncounter.ID:
+		if choice.is_empty(): return true
+		if source == _last_legacy_grant_source and boss_legacy_store.save_path == _last_legacy_grant_path:
+			_sera_reward_saved = true
+			return true
+		var sera_error := boss_legacy_store.grant_sera(source, choice)
+		_sera_reward_saved = sera_error == OK
+		if sera_error == OK:
+			_last_legacy_grant_source = source
+			_last_legacy_grant_path = boss_legacy_store.save_path
+		_update_boss_legacy_status()
+		if sera_error != OK: controls.update_checkpoint_status(true, "세라 보상 저장 실패 · 이어하기로 다시 저장하세요")
+		return sera_error == OK
 	if choice.is_empty():
 		return true
 	if source == _last_legacy_grant_source and boss_legacy_store.save_path == _last_legacy_grant_path:
@@ -833,6 +853,8 @@ func _grant_boss_legacy(source: String, choice: String, final_boss: String = Ser
 func _update_boss_legacy_status() -> void:
 	var progress := boss_legacy_store.progress_snapshot()
 	controls.guardian_companion_unlocked = progress.guardian_companion
+	controls.sera_companion_unlocked = progress.sera_companion
+	controls.sera_choices = progress.sera_choices.duplicate()
 	controls.update_boss_legacy_status(progress.pending, player.boss_legacy)
 	controls.update_memory_status(progress.unlocked, progress.selected_memory, player.memory_id)
 	weapon_controller.unlocked_blueprints = progress.blueprints.duplicate()
@@ -981,6 +1003,7 @@ func _capture_run_build() -> Dictionary:
 		"recipe": player.potion_recipe,
 		"ultimate": {"name": ultimate_controller.selected_profile.get("name", "새벽의 틈"), "gauge": ultimate_controller.gauge, "active": ultimate_controller._active, "remaining": ultimate_controller._remaining_s, "next_duration": ultimate_controller.duration_for(ultimate_controller.selected_profile), "basic_gain": ultimate_controller.weapon_hit_gauge_amount(false), "skill_gain": ultimate_controller.weapon_hit_gauge_amount(true), "evade_gain": ultimate_controller.precise_evade_gauge_amount(), "defeat_gain": ultimate_controller.defeat_gauge_amount(int(growth.ranks.get("time_collector", 0)) == 1)},
 		"guardian_companion": guardian_companion.duplicate(true),
+		"sera_companion": sera_companion.duplicate(true),
 		"relic": player.relic_state.duplicate(), "memory": player.memory_id, "legacy": player.boss_legacy.get("choice", ""),
 	}
 
@@ -1082,6 +1105,7 @@ func _record_story_completion(state: Dictionary) -> bool:
 
 func _on_story_death() -> void:
 	guardian_companion = {}
+	sera_companion = {}
 	player.guardian_choice = ""
 	var id := _active_rewind_run_id
 	if id.is_empty(): return
@@ -1131,5 +1155,23 @@ func _guardian_assist() -> void:
 	event.attacker_id = &"guardian_companion"
 	event.attack_id = &"guardian_support"
 	event.damage = 30
+	event.tags = PackedStringArray(["helper"])
+	enemy.receive_damage(event)
+
+
+func _sera_checkpoint() -> Dictionary:
+	var state := sera_companion.duplicate(true)
+	if not state.is_empty(): state.assisted_stages = state.assisted_stages.filter(func(stage: Variant) -> bool: return int(stage) <= stage_runner.stage_number)
+	return state
+
+
+func _sera_assist() -> void:
+	var enemy := stage_runner.final_enemy()
+	if enemy == null or not enemy.is_targetable() or not boss_legacy_store.spend_sera_assist(sera_companion, stage_runner.stage_number, stage_runner.stage_limit): return
+	var event := DamageEvent.new()
+	event.event_id = StringName("sera:%s:%d" % [sera_companion.run_id, stage_runner.stage_number])
+	event.attacker_id = &"sera_companion"
+	event.attack_id = &"sera_support"
+	event.damage = 40
 	event.tags = PackedStringArray(["helper"])
 	enemy.receive_damage(event)

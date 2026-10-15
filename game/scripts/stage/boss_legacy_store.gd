@@ -20,7 +20,7 @@ func grant(source: String, choice: String) -> Error:
 
 func progress_snapshot() -> Dictionary:
 	var data := _load()
-	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate(), "potion_recipe": data.potion_recipe, "routes": data.routes.duplicate(), "guardian_companion": data.guardian_companion}
+	return {"pending": data.pending.duplicate(true), "unlocked": data.unlocked.duplicate(), "selected_memory": data.selected_memory, "blueprints": data.blueprints.duplicate(), "jobs": data.jobs.duplicate(), "potion_recipe": data.potion_recipe, "routes": data.routes.duplicate(), "guardian_companion": data.guardian_companion, "sera_companion": data.sera_companion, "sera_choices": data.sera_choices.duplicate()}
 
 
 func select_potion_recipe(id: String) -> Error:
@@ -111,7 +111,7 @@ func _append(event: Dictionary) -> Error:
 
 
 func _load() -> Dictionary:
-	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}, "potion_recipe": PrototypePotionRecipes.BASIC, "routes": {}, "guardian_rewards": {}, "guardian_companion": false, "guardian_usage": {}}
+	var result := {"pending": {}, "rewards": {}, "claims": {}, "usage": {}, "unlocked": {}, "selected_memory": "", "blueprints": {}, "jobs": {}, "phoenix": {}, "potion_recipe": PrototypePotionRecipes.BASIC, "routes": {}, "guardian_rewards": {}, "guardian_companion": false, "guardian_usage": {}, "sera_rewards": {}, "sera_choices": {}, "sera_companion": false, "sera_usage": {}}
 	if not FileAccess.file_exists(save_path):
 		return result
 	var file := FileAccess.open(save_path, FileAccess.READ)
@@ -135,6 +135,19 @@ func _load() -> Dictionary:
 		var source: String = event.get("source", "") if event.get("source", "") is String else ""
 		var run_id: String = event.get("run_id", "") if event.get("run_id", "") is String else ""
 		match event.get("event"):
+			"sera_reward":
+				if not source.is_empty() and event.get("choice") in ["rescue", "destroy"] and not result.sera_rewards.has(source):
+					result.sera_rewards[source] = event.choice
+					result.sera_choices[event.choice] = true
+					if event.choice == "rescue":
+						result.sera_companion = true
+					else:
+						for id in PrototypeWeaponRewards.SERA_DESIGNS: result.blueprints[id] = true
+			"sera_assist":
+				if result.sera_companion and not run_id.is_empty() and _valid_stage(event.get("stage")):
+					var stages: Array = result.sera_usage.get(run_id, [])
+					if int(event.stage) not in stages: stages.append(int(event.stage))
+					result.sera_usage[run_id] = stages
 			"guardian_reward":
 				if not source.is_empty() and event.get("choice") in ["rescue", "destroy"] and not result.guardian_rewards.has(source):
 					result.guardian_rewards[source] = event.choice
@@ -272,4 +285,32 @@ static func valid_guardian(state: Variant, run_id: String, stage_number: int) ->
 	for stage in state.assisted_stages:
 		if not _valid_stage(stage) or int(stage) > stage_number or int(stage) in seen: return false
 		seen.append(int(stage))
+	return true
+
+
+## 세라 기록은 태엽 기사 일회 보상·성문 해금과 독립적이다.
+func grant_sera(source: String, choice: String) -> Error:
+	if source.is_empty() or choice not in ["rescue", "destroy"]: return ERR_INVALID_DATA
+	var rewards: Dictionary = _load().sera_rewards
+	if rewards.has(source): return OK if rewards[source] == choice else ERR_INVALID_DATA
+	return _append({"event": "sera_reward", "source": source, "choice": choice})
+
+
+func sera_for_run(run_id: String) -> Dictionary:
+	return {"run_id": run_id, "assisted_stages": []} if not run_id.is_empty() and _load().sera_companion else {}
+
+
+func restore_sera(state: Dictionary) -> Dictionary:
+	if state.is_empty(): return {}
+	var restored := state.duplicate(true)
+	restored.assisted_stages = state.assisted_stages.map(func(stage: Variant) -> int: return int(stage))
+	for stage in _load().sera_usage.get(state.run_id, []):
+		if stage not in restored.assisted_stages: restored.assisted_stages.append(stage)
+	return restored
+
+
+func spend_sera_assist(state: Dictionary, stage: int, limit: int) -> bool:
+	if state.is_empty() or limit not in [1, 3, 5, 10] or not _valid_stage(stage) or stage > limit or stage in restore_sera(state).assisted_stages: return false
+	if not _load().sera_companion or _append({"event": "sera_assist", "run_id": state.run_id, "stage": stage}) != OK: return false
+	state.assisted_stages.append(stage)
 	return true

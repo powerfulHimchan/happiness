@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp316_runtime_test.gd"
   "$game_root/tests/gp315_runtime_test.gd"
   "$game_root/scripts/combat/boss_sera.gd"
   "$game_root/scripts/story/sera_encounter.gd"
@@ -672,6 +673,26 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for legacy_character in roan lumi; do
+    for legacy_weapon in sword bow; do
+      for legacy_choice in rescue destroy; do
+        for legacy_phase in seed resume finish; do
+          checked_godot 60s --headless --path "$game_root" \
+            --script res://tests/gp316_runtime_test.gd -- "$legacy_phase" "$legacy_character" "$legacy_weapon" "$legacy_choice"
+        done
+      done
+    done
+  done
+  for legacy_choice in rescue destroy; do
+    for legacy_phase in fault validate previous-choice; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp316_runtime_test.gd -- "$legacy_phase" lumi bow "$legacy_choice"
+    done
+  done
+  for legacy_phase in journal modes; do
+    checked_godot 60s --headless --path "$game_root" \
+      --script res://tests/gp316_runtime_test.gd -- "$legacy_phase" roan sword rescue
+  done
   for sera_character in roan lumi; do
     for sera_weapon in sword bow; do
       for sera_phase in seed resume defeated finish; do

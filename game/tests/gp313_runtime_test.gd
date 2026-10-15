@@ -206,7 +206,7 @@ func _check_forge(choice: String) -> bool:
 		controls.queue_redraw()
 		for ignored in 2: await process_frame
 		var first: Dictionary = controls.village_snapshot()
-		if not _check(first.codex_pages == 2 and first.cards.map(func(card: Dictionary) -> String: return card.id) == ["clockwork_sword", "clockwork_bow"], "대장간 첫 페이지 기존 태엽 설계도 보존"): return false
+		if not _check(first.codex_pages == 3 and first.cards.map(func(card: Dictionary) -> String: return card.id) == ["clockwork_sword", "clockwork_bow"], "대장간 첫 페이지 기존 태엽 설계도 보존"): return false
 		_tap(first.pager.next.get_center())
 		var second: Dictionary = controls.village_snapshot()
 		if not _check(second.codex_page == 1 and second.cards.map(func(card: Dictionary) -> String: return card.id) == PrototypeWeaponRewards.GUARDIAN_DESIGNS and second.cards.all(func(card: Dictionary) -> bool: return card.open == (choice == "destroy") and (card.lines[0].contains("희귀") if choice == "destroy" else card.lines[0].contains("수호기사 파괴"))), "대장간 둘째 페이지 실제 입력·수호 설계도 잠금/해금 표시"): return false
@@ -214,7 +214,8 @@ func _check_forge(choice: String) -> bool:
 		for rect in second.layout.cards + [second.pager.previous, second.pager.next]:
 			if not _check(safe.encloses(rect), "두 화면비 대장간 카드/페이지 안전 영역"): return false
 		_tap(second.pager.next.get_center())
-		if not _check(controls.village_snapshot().codex_page == 1, "설계도 페이지 상한"): return false
+		if not _check(controls.village_snapshot().codex_page == 2, "세라 설계도 셋째 페이지"): return false
+		_tap(second.pager.previous.get_center())
 		_tap(second.pager.previous.get_center())
 		if not _check(controls.village_snapshot().codex_page == 0, "설계도 페이지 이전 입력"): return false
 	controls.size = Vector2(1280, 720)

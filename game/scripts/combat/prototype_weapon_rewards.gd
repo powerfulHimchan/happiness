@@ -10,6 +10,8 @@ const BACKUP_RATIO := 0.50
 const CODEX_PAGE_SIZE := 3
 const BLUEPRINTS := {"clockwork_sword": {"weapon": "sword", "name": "태엽 검"}, "clockwork_bow": {"weapon": "bow", "name": "태엽 활"}}
 const GUARDIAN_DESIGNS := ["guardian_sword", "guardian_bow"]
+const SERA_DESIGNS := ["sera_sword", "sera_bow"]
+const PERMANENT_DESIGNS := ["clockwork_sword", "clockwork_bow"] + GUARDIAN_DESIGNS + SERA_DESIGNS
 const CLOCKWORK_DAMAGE := [0.0, 0.10, 0.20]
 const CLOCKWORK_UNIQUE := [0.0, 0.25, 0.35]
 ## GP-217–226: 영구 해금과 독립적인 정예 장비. 일반 등급은 없으며 두 무기의 순서를 보존한다.
@@ -26,13 +28,15 @@ const DESIGNS := {
 	"balanced_bow": {"weapon": "bow", "name": "균형 활", "kind": "skill", "damage": [0.0, 0.25, 0.45], "unique": [0.0, 0.0, 0.05]},
 	"guardian_sword": {"weapon": "sword", "name": "수호 검", "kind": "skill", "damage": [0.0, 0.15, 0.25], "unique": [0.0, 0.20, 0.30]},
 	"guardian_bow": {"weapon": "bow", "name": "수호 활", "kind": "basic", "damage": [0.0, 0.15, 0.25], "unique": [0.0, 0.20, 0.30]},
+	"sera_sword": {"weapon": "sword", "name": "약속의 검", "kind": "basic", "damage": [0.0, 0.20, 0.30], "unique": [0.0, 0.15, 0.25]},
+	"sera_bow": {"weapon": "bow", "name": "왕관의 활", "kind": "skill", "damage": [0.0, 0.20, 0.30], "unique": [0.0, 0.15, 0.25]},
 }
 
 static func design_profile(id: String) -> Dictionary:
 	return DESIGNS.get(id, BLUEPRINTS.get(id, {}))
 
 static func design_available(id: String, unlocked: Dictionary) -> bool:
-	return id.is_empty() or (DESIGNS.has(id) and id not in GUARDIAN_DESIGNS) or unlocked.get(id, false) == true
+	return id.is_empty() or (DESIGNS.has(id) and id not in GUARDIAN_DESIGNS and id not in SERA_DESIGNS) or unlocked.get(id, false) == true
 
 
 static func valid_blueprints(value: Variant, equipment: Dictionary) -> bool:
@@ -128,6 +132,7 @@ static func codex_cards(unlocked: Dictionary, equipment: Dictionary = {}, bluepr
 		var lines: Array[String] = []
 		for line in item.lines: lines.append(String(line))
 		var condition := "시작 무기 · 새 도전 기본 장비" if grade == 0 else "첫 정예 보상" if grade == 1 else "두 번째 정예 보상"
+		if design in SERA_DESIGNS: condition = "세라 파괴로 해금 · " + condition
 		if design in GUARDIAN_DESIGNS: condition = "수호기사 파괴로 해금 · " + condition
 		if BLUEPRINTS.has(design): condition = "보스 파괴로 해금 · " + condition
 		lines.append(condition)
