@@ -217,7 +217,7 @@ func _test_character_balance(weapon: String) -> bool:
 		_hit_player(17, "gp276-%s" % character)
 		player.damage_receiver.tick(1.0)
 		player._update_avatar_action_visual()
-		if not _check(not player.avatar_sprite.flip_h and player.damage_receiver.health == 83 and player.avatar_sprite.texture == PrototypeCharacters.texture(character), "우향·실제 피해17·피격 외형 유지"): return false
+		if not _check(not player.avatar_sprite.flip_h and player.damage_receiver.health == 83 and player.movement_animation.state == "hit" and (player.avatar_sprite.texture as AtlasTexture).atlas == HeroMovementAnimation.SHEETS[character], "우향·실제 피해17·피격 외형 유지"): return false
 		var state: Dictionary = sandbox._capture_run_build()
 		state.erase("character_id")
 		if baseline.is_empty(): baseline = state
