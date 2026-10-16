@@ -1,5 +1,13 @@
 extends "res://tests/gp318_runtime_test.gd"
 
+var heart_battle_for_tests := false
+
+func _start_journey(character: String, weapon: String) -> bool:
+	if not super._start_journey(character, weapon): return false
+	# GP-319 이전 체크포인트의 공개되지 않은 심장 전투는 소급하지 않는다.
+	if not heart_battle_for_tests: runner.heart_battle = ""
+	return true
+
 func _run() -> void:
 	auto_guardian_choice = false
 	legacy_final_boss_for_tests = false
