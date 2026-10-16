@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp319_runtime_test.gd"
   "$game_root/tests/gp318_runtime_test.gd"
   "$game_root/scripts/story/arrival_ending.gd"
   "$game_root/assets/characters/roan_movement.png"
@@ -690,6 +691,22 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for truth_character in roan lumi; do
+    for truth_weapon in sword bow; do
+      for truth_choice in rescue destroy; do
+        for truth_phase in seed resume finish; do
+          checked_godot 60s --headless --path "$game_root" \
+            --script res://tests/gp319_runtime_test.gd -- "$truth_phase" "$truth_character" "$truth_weapon" "$truth_choice"
+        done
+      done
+    done
+  done
+  for truth_choice in rescue destroy; do
+    for truth_phase in checkpoint-fault journal-fault fault-seed fault-resume first-run legacy validate layout story-off standard; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp319_runtime_test.gd -- "$truth_phase" lumi bow "$truth_choice"
+    done
+  done
   for ending_character in roan lumi; do
     for ending_weapon in sword bow; do
       for ending_choice in rescue destroy; do

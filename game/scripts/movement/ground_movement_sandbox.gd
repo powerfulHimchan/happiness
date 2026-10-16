@@ -1055,6 +1055,7 @@ func _finish_run_build_pause() -> void:
 func _active_story_status() -> Dictionary:
 	if not story_run.enabled: return {}
 	var fragments := PrototypeStory.earned(stage_runner.stage_history, stage_runner.stage_limit)
+	if _heart_truth_eligible(_story_checkpoint_context()): fragments.append("heart_machine")
 	var choice := stage_runner.boss_choice
 	return {"enabled": true, "fragments": fragments, "rewinds": story_run.rewinds, "seen": story_run.seen.duplicate(), "chronicle": PrototypeStory.chronicle_id(stage_runner.stage_history, choice) if choice in ["rescue", "destroy"] else ""}
 
@@ -1067,7 +1068,7 @@ func _open_story(return_mode: int) -> void:
 	if story_run.pending.is_empty(): return
 	_story_return_mode = return_mode
 	_begin_growth_pause()
-	controls.show_story(PrototypeStory.scene(story_run.pending, stage_runner.stage_history, player.character_id, story_run.known, story_run.rewinds, stage_runner.stage_limit))
+	controls.show_story(PrototypeStory.scene(story_run.pending, stage_runner.stage_history, player.character_id, story_run.known, story_run.rewinds, stage_runner.stage_limit, story_run.arrival_seen and stage_runner.run_mode == JourneyRoutePlan.MODE))
 
 
 func _acknowledge_story(id: String) -> bool:
@@ -1129,6 +1130,7 @@ func _story_checkpoint_context() -> Dictionary:
 
 func _record_story_completion(state: Dictionary) -> bool:
 	if state.is_empty() or String(state.stage.get("boss_choice", "")).is_empty(): return true
+	if not _record_heart_truth(state): return false
 	if state.stage.get("arrival_ending") == ArrivalEnding.PENDING: return true
 	if state.stage.get("heart_threshold") == HeartThreshold.PENDING: return true
 	if state.stage.get("arrival_ending") == ArrivalEnding.SEEN:
@@ -1147,24 +1149,45 @@ func _record_story_completion(state: Dictionary) -> bool:
 	return error == OK
 
 
+func _heart_truth_eligible(state: Dictionary) -> bool:
+	return state.get("story", {}).get("arrival_seen", false) == true and state.stage.get("run_mode") == JourneyRoutePlan.MODE and state.stage.get("heart_threshold") == HeartThreshold.SEEN
+
+
+func _record_heart_truth(state: Dictionary) -> bool:
+	if not _heart_truth_eligible(state): return true
+	if story_journal_store.record_fragments(["heart_machine"]) != OK:
+		_arrival_record_saved = false
+		_story_message = "심장의 진실 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요"
+		_update_story_status()
+		return false
+	_arrival_record_saved = true
+	_story_message = ""
+	_update_story_status()
+	return true
+
+
 func _open_heart_threshold() -> void:
 	_begin_growth_pause()
 	controls.release_all_inputs()
-	controls.show_story(HeartThreshold.scene(player.character_id, stage_runner.boss_choice, stage_runner.guardian_choice, stage_runner.arrival_ending == ArrivalEnding.LOCKED))
+	controls.show_story(HeartThreshold.scene(player.character_id, stage_runner.boss_choice, stage_runner.guardian_choice, stage_runner.arrival_ending == ArrivalEnding.LOCKED, story_run.arrival_seen))
 
 
 func _acknowledge_heart_threshold() -> bool:
-	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartThreshold.SCENE_ID or stage_runner.heart_threshold != HeartThreshold.PENDING or not growth.run_active or player.damage_receiver.dead: return false
+	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartThreshold.SCENE_ID or stage_runner.heart_threshold not in [HeartThreshold.PENDING, HeartThreshold.SEEN] or not growth.run_active or player.damage_receiver.dead: return false
 	if not _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), stage_runner.boss_choice, stage_runner.final_boss_id):
 		controls.story_message = "세라 보상 저장 실패 · 다시 확인하세요"
 		return false
+	var previous_heart := stage_runner.heart_threshold
 	stage_runner.heart_threshold = HeartThreshold.SEEN
 	var previous_ending := stage_runner.arrival_ending
 	if previous_ending == ArrivalEnding.LOCKED: stage_runner.arrival_ending = ArrivalEnding.PENDING
 	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
-		stage_runner.heart_threshold = HeartThreshold.PENDING
+		stage_runner.heart_threshold = previous_heart
 		stage_runner.arrival_ending = previous_ending
 		controls.story_message = "심장 입구 확인 저장 실패 · 다시 확인하세요"
+		return false
+	if not _record_heart_truth(_story_checkpoint_context()):
+		controls.story_message = _story_message
 		return false
 	controls.story_message = ""
 	controls.finish_story(0)
@@ -1177,7 +1200,7 @@ func _acknowledge_heart_threshold() -> bool:
 func _open_arrival_ending() -> void:
 	_begin_growth_pause()
 	controls.release_all_inputs()
-	controls.show_story(ArrivalEnding.scene(player.character_id, stage_runner.boss_choice))
+	controls.show_story(ArrivalEnding.scene(player.character_id, stage_runner.boss_choice, story_run.arrival_seen))
 
 
 func _acknowledge_arrival_ending() -> bool:

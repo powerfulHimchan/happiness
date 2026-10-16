@@ -124,7 +124,7 @@ func _prepare_reunion(character: String, weapon: String, choice: String) -> bool
 	if not _prepare_guardian_choice(character, weapon) or not _ack_scene(true) or not _select_choice(choice): return false
 	if not sandbox._claim_weapon_reward("") or not _next_without_layout(): return false
 	var cards := PrototypeRunBuildView.cards(2, sandbox._capture_run_build())
-	if not _check(cards.any(func(card: Dictionary) -> bool: return card.id == "story" and card.status == "기억 조각 7/9"), "현재 도전 정보에 새 기억 총수 반영"): return false
+	if not _check(cards.any(func(card: Dictionary) -> bool: return card.id == "story" and card.status == "기억 조각 7/10"), "현재 도전 정보에 새 기억 총수 반영"): return false
 	if not _finish_stage(): return false
 	return _check_reunion(character, choice)
 

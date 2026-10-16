@@ -1,7 +1,7 @@
 class_name PrototypeStory
 extends RefCounted
 
-## 여행의 단서와 중심부 재회. 심장 전투·정식 엔딩은 후속 콘텐츠다.
+## 여행의 단서와 중심부 재회, 첫 엔딩 이후 심장의 진실.
 const FRAGMENTS := {
 	"dawn_watch": {"name": "금이 간 새벽시계", "hint": "이야기 여행의 첫 스테이지 통과", "lines": ["가족이 남긴 시계는 새벽 직전에 멈춰 있다.", "유리의 금은 오래된 흉터처럼 손바닥을 가른다.", "돌아오라는 말인지, 앞으로 가라는 말인지 아직 알 수 없다."]},
 	"wind_ribbon": {"name": "바람 속 리본", "hint": "이야기 여행에서 바람 길 통과", "lines": ["꽃밭 위로 작은 리본 하나가 날아간다.", "누군가와 함께 달리던 발소리가 잠깐 들린다.", "기억 속 두 번째 얼굴은 바람에 지워져 있다."]},
@@ -12,6 +12,7 @@ const FRAGMENTS := {
 	"family_note": {"name": "빈 이름의 가족 편지", "hint": "한 이야기 여행에서 세 접근 지역 통과", "lines": ["흩어진 단서가 이름 없는 편지의 문장을 잇는다.", "아이를 잊으라는 명령에 따르지 않은 사람이 있었다.", "새벽시계를 쥐여 준 손은 마지막까지 놓기를 망설였다."]},
 	"childhood_promise": {"name": "시계탑의 약속", "hint": "한 이야기 여행에서 네 접근 지역 통과", "lines": ["시계탑 위에서 두 아이가 진짜 행복을 함께 찾자고 약속했다.", "한 아이는 이름을 잃었고 다른 아이는 약속만 기억했다.", "행복의 나라에서 그 친구가 아직 기다리고 있을까."]},
 	"queen_pendant": {"name": "여왕의 시계 장식", "hint": "이야기를 켠 전체 여정의 중심부에서 세라와 첫 만남", "lines": ["미소의 여왕 세라가 간직한 장식에는 새벽시계와 같은 문양이 있다.", "세라는 시계탑의 약속을 기억하지만 함께 약속한 친구의 얼굴은 떠올리지 못한다.", "두 사람의 시계가 나란히 놓이자 멈춘 초침이 한 번 움직였다."]},
+	"heart_machine": {"name": "미소를 만드는 심장", "hint": "도착 엔딩 발견 후 새 이야기 전체 여정에서 심장 입구 확인", "lines": ["행복의 심장은 주민들의 슬픔을 다른 누군가에게 옮기는 고대 마법 기계다.", "지워진 이름과 새벽시계의 금은 의식이 남긴 흔적이었다.", "문 너머의 기계가 깨어났다. 행복을 지키려면 이 의식을 마주해야 한다."]},
 }
 const ROUTE_FRAGMENT := {"wind": "wind_ribbon", "forest": "forest_song", "ruins": "ruins_shadow", "festival": "festival_smile"}
 const CHRONICLES := {
@@ -55,11 +56,14 @@ static func chronicle_id(history: Array, choice: String) -> String:
 	if not history.is_empty() and history[-1].get("final_boss") == SeraEncounter.ID: return "sera_" + choice
 	return ("regions_" if regions(history).size() == 4 else "") + choice
 
-static func scene(id: String, history: Array, character: String, known: Array, rewinds: int, boss_stage: int = 0) -> Dictionary:
+static func scene(id: String, history: Array, character: String, known: Array, rewinds: int, boss_stage: int = 0, arrival_seen: bool = false) -> Dictionary:
 	var title := "시계가 가리키는 길"
 	var lines: Array[String] = []
 	if id == "prologue":
 		lines.assign(["{hero}에게 남은 시간은 길지 않다.", "가족의 새벽시계를 들고, 어린 시절 들었던 행복의 나라를 찾아 떠난다.", "이 길에서 배우는 싸움과 선택이 자신의 직업이 될 것이다."])
+		if arrival_seen:
+			title = "도착 너머의 진실"
+			lines.assign(["{hero}는 자신을 기억하지 못하는 나라를 보았다. 행복의 나라에 도착하는 것만으로는 시계의 금도, 몸의 이상도 멈추지 않았다.", "이번에는 미소 뒤에 숨겨진 이유를 찾으려 한다. 새벽시계와 같은 박자로 울리던 궁전 아래의 맥박이 떠오른다.", "다시 네 지역을 지나 세라를 만나자. 그날 멈춰 섰던 심장의 문 너머에 지워진 이름의 답이 남아 있다."])
 		if rewinds >= 3: lines.append("시계가 돌 때마다 지워졌던 목소리가 조금 더 선명해진다.")
 		if rewinds > 0: lines.append("새벽으로 돌아온 횟수는 %d번. 잃어버린 시간을 다시 살펴본다." % rewinds)
 	else:
