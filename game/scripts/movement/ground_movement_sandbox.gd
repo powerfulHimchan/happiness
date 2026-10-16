@@ -52,6 +52,7 @@ var _last_legacy_grant_path: String = ""
 var guardian_companion: Dictionary = {}
 var sera_companion: Dictionary = {}
 var _sera_reward_saved: bool = true
+var _arrival_record_saved: bool = true
 var _guardian_reward_saved: bool = true
 var _restoring_checkpoint: bool = false
 var _available_checkpoint: Dictionary = {}
@@ -340,6 +341,8 @@ func _reset_test() -> void:
 		stage_runner.stage_limit = controls.requested_stage_limit
 	stage_runner.set_run_mode(controls.requested_run_mode)
 	stage_runner.reset_run()
+	if stage_runner.run_mode == JourneyRoutePlan.MODE:
+		stage_runner.arrival_ending = ArrivalEnding.LOCKED
 	if story_run.enabled and stage_runner.run_mode == JourneyRoutePlan.MODE:
 		stage_runner.heart_threshold = HeartThreshold.UNREACHED
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
@@ -403,6 +406,10 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		return
 	if growth.run_active and not player.damage_receiver.dead:
 		_record_route_history(stage_runner.stage_history)
+	if stage_runner.arrival_ending == ArrivalEnding.PENDING and growth.run_active and not player.damage_receiver.dead:
+		if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != ArrivalEnding.SCENE_ID:
+			_open_arrival_ending()
+		return
 	if stage_runner.heart_threshold == HeartThreshold.PENDING and growth.run_active and not player.damage_receiver.dead:
 		_grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), stage_runner.boss_choice, stage_runner.final_boss_id)
 		if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartThreshold.SCENE_ID:
@@ -416,7 +423,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		guardian_companion = {}
 		sera_companion = {}
 		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")), stage_runner.final_boss_id)
-		if story_run.enabled: reward_saved = _record_story_completion(_story_checkpoint_context()) and reward_saved
+		reward_saved = _record_story_completion(_story_checkpoint_context()) and reward_saved
 		test_recorder.record_stage_metrics(metrics)
 		if reward_saved and test_recorder.has_completed_run(String(test_recorder.checkpoint_snapshot().id)):
 			_discard_checkpoint()
@@ -538,6 +545,9 @@ func _resolve_boss_choice(choice: String) -> bool:
 	stage_runner.boss_choice = choice
 	stage_runner.stage_history[-1]["boss_choice"] = choice
 	var previous_heart := stage_runner.heart_threshold
+	var previous_ending := stage_runner.arrival_ending
+	if previous_ending == ArrivalEnding.LOCKED and stage_runner.uses_sera() and not story_run.enabled:
+		stage_runner.arrival_ending = ArrivalEnding.SEEN
 	if previous_heart == HeartThreshold.UNREACHED and stage_runner.uses_sera() and story_run.enabled:
 		stage_runner.heart_threshold = HeartThreshold.PENDING
 	# 완료 기록보다 선택을 먼저 저장하여 실패 시 다시 선택할 수 있다.
@@ -545,6 +555,7 @@ func _resolve_boss_choice(choice: String) -> bool:
 		stage_runner.boss_choice = ""
 		stage_runner.stage_history[-1]["boss_choice"] = ""
 		stage_runner.heart_threshold = previous_heart
+		stage_runner.arrival_ending = previous_ending
 		return false
 	if stage_runner.heart_threshold != HeartThreshold.PENDING: _finish_growth_selection()
 	stage_runner.force_emit_metrics()
@@ -585,6 +596,7 @@ func _record_stage_metrics(metrics: Dictionary) -> void:
 
 func _refresh_checkpoint() -> void:
 	_sera_reward_saved = true
+	_arrival_record_saved = true
 	_available_checkpoint = checkpoint_store.load_checkpoint()
 	var job_error: Error = OK
 	var ability_error: Error = _record_abilities(_available_checkpoint.growth.ranks.keys() if not _available_checkpoint.is_empty() else [])
@@ -595,7 +607,7 @@ func _refresh_checkpoint() -> void:
 	var story_saved := _record_story_completion(_available_checkpoint)
 	if job_error == OK and ability_error == OK and story_saved and guardian_saved:
 		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
-			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice), SeraEncounter.boss_id(_available_checkpoint.stage)) and _available_checkpoint.stage.get("heart_threshold") != HeartThreshold.PENDING and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice), SeraEncounter.boss_id(_available_checkpoint.stage)) and _available_checkpoint.stage.get("heart_threshold") != HeartThreshold.PENDING and _available_checkpoint.stage.get("arrival_ending") != ArrivalEnding.PENDING and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 				_discard_checkpoint()
 		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
@@ -611,7 +623,7 @@ func _discard_checkpoint() -> void:
 
 func continue_saved_run() -> bool:
 	_refresh_checkpoint()
-	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2 or not _guardian_reward_saved or not _sera_reward_saved:
+	if _available_checkpoint.is_empty() or controls.current_screen_mode() != 2 or not _guardian_reward_saved or not _sera_reward_saved or not _arrival_record_saved:
 		return false
 	var state := _available_checkpoint.duplicate(true)
 	if _record_abilities(state.growth.ranks.keys()) != OK:
@@ -668,7 +680,9 @@ func continue_saved_run() -> bool:
 	_stage_recovered_health = 0
 	if stage_runner.uses_boss():
 		controls.show_boss_choice(SeraEncounter.PROFILE if stage_runner.uses_sera() else {})
-		if stage_runner.heart_threshold == HeartThreshold.PENDING:
+		if stage_runner.arrival_ending == ArrivalEnding.PENDING:
+			_open_arrival_ending()
+		elif stage_runner.heart_threshold == HeartThreshold.PENDING:
 			_open_heart_threshold()
 		elif not stage_runner.boss_choice.is_empty():
 			_finish_growth_selection()
@@ -1057,6 +1071,7 @@ func _open_story(return_mode: int) -> void:
 
 
 func _acknowledge_story(id: String) -> bool:
+	if id == ArrivalEnding.SCENE_ID: return _acknowledge_arrival_ending()
 	if id == HeartThreshold.SCENE_ID: return _acknowledge_heart_threshold()
 	if id == "sera_intro":
 		if controls.current_screen_mode() != 18 or not _sera_intro_active or controls.story_scene.get("id") != "sera_intro" or stage_runner.stage_complete: return false
@@ -1107,12 +1122,25 @@ func _story_progress() -> Dictionary:
 
 
 func _story_checkpoint_context() -> Dictionary:
-	return {"story": story_run.snapshot(), "stage": stage_runner.checkpoint_snapshot(), "recorder": test_recorder.checkpoint_snapshot(), "player": {"character_id": player.character_id}} if story_run.enabled else {}
+	var state := {"stage": stage_runner.checkpoint_snapshot(), "recorder": test_recorder.checkpoint_snapshot(), "player": {"character_id": player.character_id}}
+	if story_run.enabled: state.story = story_run.snapshot()
+	return state
 
 
 func _record_story_completion(state: Dictionary) -> bool:
-	if state.is_empty() or not state.has("story") or String(state.stage.get("boss_choice", "")).is_empty(): return true
+	if state.is_empty() or String(state.stage.get("boss_choice", "")).is_empty(): return true
+	if state.stage.get("arrival_ending") == ArrivalEnding.PENDING: return true
 	if state.stage.get("heart_threshold") == HeartThreshold.PENDING: return true
+	if state.stage.get("arrival_ending") == ArrivalEnding.SEEN:
+		var ending_error := story_journal_store.record_ending(String(state.recorder.id), ArrivalEnding.ID, String(state.player.get("character_id", "roan")), String(state.stage.boss_choice))
+		_arrival_record_saved = ending_error == OK
+		if ending_error != OK:
+			_story_message = "엔딩 기록 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요"
+			_update_story_status()
+			return false
+	if not state.has("story"):
+		_story_message = ""
+		return true
 	var error := story_journal_store.record_chronicle(String(state.recorder.id), PrototypeStory.chronicle_id(state.stage.history, String(state.stage.boss_choice)), String(state.player.get("character_id", "roan")), PrototypeStory.earned(state.stage.history, int(state.stage.limit)))
 	_story_message = "여행 기록 저장 실패 · 이어하기 또는 수첩에서 재시도하세요" if error != OK else ""
 	_update_story_status()
@@ -1122,7 +1150,7 @@ func _record_story_completion(state: Dictionary) -> bool:
 func _open_heart_threshold() -> void:
 	_begin_growth_pause()
 	controls.release_all_inputs()
-	controls.show_story(HeartThreshold.scene(player.character_id, stage_runner.boss_choice, stage_runner.guardian_choice))
+	controls.show_story(HeartThreshold.scene(player.character_id, stage_runner.boss_choice, stage_runner.guardian_choice, stage_runner.arrival_ending == ArrivalEnding.LOCKED))
 
 
 func _acknowledge_heart_threshold() -> bool:
@@ -1131,9 +1159,37 @@ func _acknowledge_heart_threshold() -> bool:
 		controls.story_message = "세라 보상 저장 실패 · 다시 확인하세요"
 		return false
 	stage_runner.heart_threshold = HeartThreshold.SEEN
+	var previous_ending := stage_runner.arrival_ending
+	if previous_ending == ArrivalEnding.LOCKED: stage_runner.arrival_ending = ArrivalEnding.PENDING
 	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
 		stage_runner.heart_threshold = HeartThreshold.PENDING
+		stage_runner.arrival_ending = previous_ending
 		controls.story_message = "심장 입구 확인 저장 실패 · 다시 확인하세요"
+		return false
+	controls.story_message = ""
+	controls.finish_story(0)
+	if stage_runner.arrival_ending == ArrivalEnding.PENDING: _open_arrival_ending()
+	else: _finish_growth_selection()
+	stage_runner.force_emit_metrics()
+	return true
+
+
+func _open_arrival_ending() -> void:
+	_begin_growth_pause()
+	controls.release_all_inputs()
+	controls.show_story(ArrivalEnding.scene(player.character_id, stage_runner.boss_choice))
+
+
+func _acknowledge_arrival_ending() -> bool:
+	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != ArrivalEnding.SCENE_ID or stage_runner.arrival_ending not in [ArrivalEnding.PENDING, ArrivalEnding.SEEN] or not growth.run_active or player.damage_receiver.dead: return false
+	var previous := stage_runner.arrival_ending
+	stage_runner.arrival_ending = ArrivalEnding.SEEN
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		stage_runner.arrival_ending = previous
+		controls.story_message = "엔딩 확인 저장 실패 · 다시 확인하세요"
+		return false
+	if not _record_story_completion(_story_checkpoint_context()):
+		controls.story_message = _story_message
 		return false
 	controls.story_message = ""
 	controls.finish_story(0)
