@@ -59,6 +59,7 @@ var reward_claimed: bool = false
 var boss_choice: String = ""
 var final_boss_id: String = SeraEncounter.LEGACY
 var heart_threshold: String = ""
+var arrival_ending: String = ""
 var guardian_choice: String = ""
 var completed_elapsed_s: float = 0.0
 var stage_history: Array[Dictionary] = []
@@ -165,6 +166,7 @@ func reset_stage() -> void:
 func reset_run() -> void:
 	final_boss_id = SeraEncounter.ID if run_mode == JourneyRoutePlan.MODE else SeraEncounter.LEGACY
 	heart_threshold = ""
+	arrival_ending = ""
 	guardian_choice = ""
 	stage_number = 1
 	route_id = "meadow"
@@ -295,6 +297,7 @@ func checkpoint_snapshot() -> Dictionary:
 		state.region_order = region_order.duplicate()
 	if run_mode == JourneyRoutePlan.MODE: state.final_boss = final_boss_id
 	if not heart_threshold.is_empty() and final_boss_id == SeraEncounter.ID: state.heart_threshold = heart_threshold
+	if not arrival_ending.is_empty() and final_boss_id == SeraEncounter.ID: state.arrival_ending = arrival_ending
 	if run_mode == JourneyRoutePlan.MODE and stage_number >= 9:
 		state.guardian_choice = guardian_choice
 	return state
@@ -303,6 +306,7 @@ func checkpoint_snapshot() -> Dictionary:
 func restore_checkpoint(state: Dictionary) -> void:
 	final_boss_id = SeraEncounter.boss_id(state)
 	heart_threshold = String(state.get("heart_threshold", ""))
+	arrival_ending = String(state.get("arrival_ending", ""))
 	run_mode = String(state.get("run_mode", "standard"))
 	region_order.assign(state.get("region_order", []))
 	stage_number = int(state.number)
@@ -431,7 +435,8 @@ func current_metrics() -> Dictionary:
 		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
 		"run_region_section": region_section(),
 		"run_route_terrain": String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else CityGateLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.GATE else CityCoreLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
-		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice() and heart_threshold != HeartThreshold.PENDING,
+		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice() and heart_threshold != HeartThreshold.PENDING and arrival_ending != ArrivalEnding.PENDING,
+		"arrival_ending": arrival_ending,
 		"heart_threshold": heart_threshold,
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,

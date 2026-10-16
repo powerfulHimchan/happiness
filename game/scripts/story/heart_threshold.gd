@@ -17,7 +17,7 @@ static func valid_checkpoint(state: Dictionary) -> bool:
 	if choice.is_empty(): return stage.heart_threshold == UNREACHED
 	return int(stage.number) == 10 and stage.heart_threshold in [PENDING, SEEN] and state.story.get("pending") == ""
 
-static func scene(character: String, choice: String, guardian: String) -> Dictionary:
+static func scene(character: String, choice: String, guardian: String, arrival: bool = false) -> Dictionary:
 	var hero := PrototypeCharacters.display_name(character)
 	var guardian_line := "성문에 남은 힘은 사라졌다. %s는 돌아갈 길을 확인하고 계단 너머의 낮은 울림에 귀를 기울인다." % hero
 	if guardian == "rescue":
@@ -30,4 +30,5 @@ static func scene(character: String, choice: String, guardian: String) -> Dictio
 		"문 너머에는 슬픔까지 지워 버리는 행복이 기다리고 있을까. %s는 시계탑의 약속을 붙잡는다." % hero,
 		"지금까지의 여정을 기록하고 새벽의 광장에서 다음 걸음을 준비한다. 행복의 심장에 닿기 위한 길은 이제 시작이다.",
 	]
-	return {"id": SCENE_ID, "name": "행복의 심장 앞에서", "portrait": "heart", "speaker": "행복의 심장 입구", "lines": lines, "footer": "세라의 선택을 간직한 채 다음 여정을 준비합니다", "confirm": "여정 기록", "skip": "건너뛰고 기록"}
+	if arrival: lines[-1] = "문 앞에서 발걸음을 멈춘 주인공은 행복의 나라를 돌아본다. 긴 여행 끝에 도착한 나라에는 어떤 답이 기다리고 있을까."
+	return {"id": SCENE_ID, "name": "행복의 심장 앞에서", "portrait": "heart", "speaker": "행복의 심장 입구", "lines": lines, "footer": "세라의 선택을 간직한 채 다음 여정을 준비합니다", "confirm": "도착 이야기" if arrival else "여정 기록", "skip": "건너뛰고 계속" if arrival else "건너뛰고 기록"}

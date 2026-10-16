@@ -22,6 +22,13 @@ func record_chronicle(run_id: String, id: String, character: String, ids: Array)
 	if prior.has(run_id): return OK if prior[run_id] == {"id": id, "character": character} else ERR_INVALID_DATA
 	return _append({"event": "chronicle", "run_id": run_id, "id": id, "character": character, "ids": ids})
 
+func record_ending(run_id: String, id: String, character: String, choice: String) -> Error:
+	if not ArrivalEnding.valid_record(id, run_id, character, choice): return ERR_INVALID_DATA
+	var record := {"id": id, "character": character, "choice": choice}
+	var prior: Dictionary = snapshot().ending_completions
+	if prior.has(run_id): return OK if prior[run_id] == record else ERR_INVALID_DATA
+	return _append({"event": "ending", "run_id": run_id, "id": id, "character": character, "choice": choice})
+
 func _append(event: Dictionary) -> Error:
 	var file := FileAccess.open(save_path, FileAccess.READ_WRITE if FileAccess.file_exists(save_path) else FileAccess.WRITE_READ)
 	if file == null: return FileAccess.get_open_error()
@@ -39,7 +46,7 @@ func _append(event: Dictionary) -> Error:
 	return error
 
 func snapshot() -> Dictionary:
-	var data := {"fragments": {}, "chronicles": {}, "rewinds": {}, "completions": {}, "rewind_count": 0}
+	var data := {"fragments": {}, "chronicles": {}, "rewinds": {}, "completions": {}, "rewind_count": 0, "endings": {}, "ending_completions": {}}
 	if not FileAccess.file_exists(save_path): return data
 	var file := FileAccess.open(save_path, FileAccess.READ)
 	if file == null: return data
@@ -56,6 +63,10 @@ func snapshot() -> Dictionary:
 		var run_id: String = event.get("run_id", "") if event.get("run_id") is String else ""
 		if run_id.length() > 256: continue
 		match event.event:
+			"ending":
+				if not ArrivalEnding.valid_record(event.get("id"), run_id, event.get("character"), event.get("choice")) or data.ending_completions.has(run_id): continue
+				data.ending_completions[run_id] = {"id": event.id, "character": event.character, "choice": event.choice}
+				if not data.endings.has(event.id): data.endings[event.id] = {"character": event.character, "choice": event.choice, "run_id": run_id}
 			"fragments":
 				if PrototypeStory.valid_ids(event.get("ids")):
 					for id in event.ids: data.fragments[id] = true

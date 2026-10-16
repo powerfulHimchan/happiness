@@ -88,12 +88,13 @@ func _run() -> void:
 				if not _check(not sandbox._resolve_boss_choice(choice) and runner.boss_choice.is_empty() and controls.current_screen_mode() == 12, "선택 저장 실패 시 세라 선택 되돌림"): return
 				store.save_path = checkpoint_path
 				if not _check(store.load_checkpoint() == saved, "실패 전 정상 선택 대기 저장 보존"): return
-			if phase == "fault-record": journal.save_path = "user://gp315_missing/story.jsonl"
-			if not _choose_sera(choice): return
 			if phase == "fault-record":
-				if not _check(not store.load_checkpoint().is_empty() and store.load_checkpoint().stage.boss_choice == choice, "여행 기록 실패는 확정 선택 저장 유지"): return
+				journal.save_path = "user://gp315_missing/story.jsonl"
+				if not sandbox._resolve_boss_choice(choice) or not sandbox._acknowledge_story(HeartThreshold.SCENE_ID): return
+				if not _check(not sandbox._acknowledge_story(ArrivalEnding.SCENE_ID) and controls.current_screen_mode() == 18 and recorder.summary_snapshot().completed_run_count == 0 and not store.load_checkpoint().is_empty() and store.load_checkpoint().stage.boss_choice == choice, "여행·엔딩 기록 실패는 미완료·확정 선택 저장 유지"): return
 				journal.save_path = story_path
-				sandbox._refresh_checkpoint()
+				if not sandbox._acknowledge_story(ArrivalEnding.SCENE_ID): return
+			elif not _choose_sera(choice): return
 			if not _check(store.load_checkpoint().is_empty() and recorder.summary_snapshot().completed_run_count == 1 and journal.snapshot().chronicles.has("sera_" + choice) and legacy.pending_reward().is_empty(), "실패 재시도는 세라 기록 한 번·기존 기사 보상 미지급"): return
 		"legacy-gate", "legacy-final", "legacy-standard":
 			legacy_final_boss_for_tests = true
@@ -175,6 +176,8 @@ func _choose_sera(choice: String) -> bool:
 	_tap(controls.boss_choice_confirm_rect.get_center())
 	if controls.current_screen_mode() == 18 and controls.story_scene.get("id") == HeartThreshold.SCENE_ID:
 		if not sandbox._acknowledge_story(HeartThreshold.SCENE_ID): return false
+	if controls.current_screen_mode() == 18 and controls.story_scene.get("id") == ArrivalEnding.SCENE_ID:
+		if not sandbox._acknowledge_story(ArrivalEnding.SCENE_ID): return false
 	return _check(runner.boss_choice == choice and controls.current_screen_mode() == 1, "실제 세라 확정 입력·도전 결과")
 
 func _sera_basic_clear(weapon: String) -> bool:

@@ -5,6 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp318_runtime_test.gd"
+  "$game_root/scripts/story/arrival_ending.gd"
   "$game_root/assets/characters/roan_movement.png"
   "$game_root/assets/characters/lumi_movement.png"
   "$game_root/scripts/player/hero_movement_animation.gd"
@@ -688,6 +690,22 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for ending_character in roan lumi; do
+    for ending_weapon in sword bow; do
+      for ending_choice in rescue destroy; do
+        for ending_phase in seed resume finish; do
+          checked_godot 60s --headless --path "$game_root" \
+            --script res://tests/gp318_runtime_test.gd -- "$ending_phase" "$ending_character" "$ending_weapon" "$ending_choice"
+        done
+      done
+    done
+  done
+  for ending_choice in rescue destroy; do
+    for ending_phase in checkpoint-fault journal-fault fault-seed fault-resume validate legacy story-off journal layout; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp318_runtime_test.gd -- "$ending_phase" lumi bow "$ending_choice"
+    done
+  done
   for heart_character in roan lumi; do
     for heart_weapon in sword bow; do
       for heart_choice in rescue destroy; do

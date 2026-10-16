@@ -98,14 +98,14 @@ static func _sera_reunion(id: String, history: Array, character: String, known: 
 
 static func journal_cards(tab: int, progress: Dictionary, character: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var profiles: Dictionary = FRAGMENTS if tab == 0 else CHRONICLES
-	var collected: Dictionary = progress.get("fragments", {}) if tab == 0 else progress.get("chronicles", {})
+	var profiles: Dictionary = FRAGMENTS if tab == 0 else CHRONICLES if tab == 1 else ArrivalEnding.PROFILES
+	var collected: Dictionary = progress.get("fragments", {}) if tab == 0 else progress.get("chronicles", {}) if tab == 1 else progress.get("endings", {})
 	for id in profiles:
 		var open: bool = collected.get(id, false) if tab == 0 else collected.has(id)
 		var profile: Dictionary = profiles[id]
 		var lines: Array[String] = []
 		if open:
-			for line in profile.lines: lines.append(String(line).replace("{hero}", PrototypeCharacters.display_name(String(collected[id].character) if tab == 1 else character)))
+			for line in profile.lines: lines.append(String(line).replace("{hero}", PrototypeCharacters.display_name(String(collected[id].character) if tab != 0 else character)))
 		else: lines.assign([String(profile.hint), "아직 발견하지 않은 내용입니다"])
-		result.append({"id": id, "name": profile.name if open else "기억 조각 %d" % (result.size() + 1) if tab == 0 else "여행 기록 %d" % (result.size() + 1), "open": open, "status": "발견함" if open else "미발견", "lines": lines})
+		result.append({"id": id, "name": profile.name if open else ("기억 조각 %d" if tab == 0 else "여행 기록 %d" if tab == 1 else "엔딩 %d") % (result.size() + 1), "open": open, "status": "발견함" if open else "미발견", "lines": lines})
 	return result

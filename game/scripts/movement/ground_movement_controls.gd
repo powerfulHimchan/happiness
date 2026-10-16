@@ -1455,6 +1455,7 @@ func _show_result_screen() -> void:
 		"boss_name": String(movement_metrics.get("boss_name", "")),
 		"final_boss": String(movement_metrics.get("final_boss", SeraEncounter.LEGACY)),
 		"heart_threshold": String(movement_metrics.get("heart_threshold", "")),
+		"arrival_ending": String(movement_metrics.get("arrival_ending", "")),
 		"memory_id": active_memory_id,
 		"weapon_blueprints": movement_metrics.get("weapon_blueprints", {"sword": "", "bow": ""}).duplicate(),
 		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
@@ -2130,7 +2131,7 @@ func _draw_result_screen() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.88), true)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
 	_draw_text_centered(
-		"전체 여정 완료 · 10스테이지" if result_snapshot.get("run_mode") == JourneyRoutePlan.MODE else "네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
+		"도착 엔딩 · 전체 여정 완료" if result_snapshot.get("arrival_ending") == ArrivalEnding.SEEN else "전체 여정 완료 · 10스테이지" if result_snapshot.get("run_mode") == JourneyRoutePlan.MODE else "네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 24.0), Vector2(result_panel_rect.size.x, 58.0)),
 		36,
 		PASS_COLOR
@@ -3408,7 +3409,7 @@ func story_journal_snapshot() -> Dictionary:
 func _handle_story_journal_touch(position: Vector2) -> void:
 	var snapshot := story_journal_snapshot()
 	var layout: Dictionary = snapshot.layout
-	for i in 2:
+	for i in layout.tabs.size():
 		if layout.tabs[i].has_point(position):
 			story_journal_tab = i
 			story_journal_page = 0
@@ -3427,8 +3428,8 @@ func _draw_story_journal() -> void:
 	var layout: Dictionary = snapshot.layout
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
 	_draw_village_text("기억 수첩", Rect2(safe.position + safe.size * Vector2(0.05, 0.025), safe.size * Vector2(0.90, 0.07)), 32, ACTIVE_COLOR)
-	_draw_village_text("기억 %d/%d · 여행 기록 %d/%d · 되감기 %d번" % [story_journal_state.get("fragments", {}).size(), PrototypeStory.FRAGMENTS.size(), story_journal_state.get("chronicles", {}).size(), PrototypeStory.CHRONICLES.size(), int(story_journal_state.get("rewind_count", 0))], Rect2(safe.position + safe.size * Vector2(0.05, 0.105), safe.size * Vector2(0.90, 0.045)), 19, TEXT_COLOR)
-	for i in 2: _draw_button(layout.tabs[i], "기억 조각" if i == 0 else "여행 기록", story_journal_tab == i)
+	_draw_village_text("기억 %d/%d · 여행 기록 %d/%d · 엔딩 %d/%d · 되감기 %d번" % [story_journal_state.get("fragments", {}).size(), PrototypeStory.FRAGMENTS.size(), story_journal_state.get("chronicles", {}).size(), PrototypeStory.CHRONICLES.size(), story_journal_state.get("endings", {}).size(), ArrivalEnding.PROFILES.size(), int(story_journal_state.get("rewind_count", 0))], Rect2(safe.position + safe.size * Vector2(0.05, 0.105), safe.size * Vector2(0.90, 0.045)), 19, TEXT_COLOR)
+	for i in layout.tabs.size(): _draw_button(layout.tabs[i], ["기억 조각", "여행 기록", "엔딩"][i], story_journal_tab == i)
 	for i in snapshot.cards.size():
 		var card: Dictionary = snapshot.cards[i]
 		var rect: Rect2 = layout.cards[i]

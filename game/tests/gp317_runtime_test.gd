@@ -99,6 +99,7 @@ func _run() -> void:
 			if not _pending_heart(character, weapon, choice): return
 			var old := store.load_checkpoint()
 			old.stage.erase("heart_threshold")
+			old.stage.erase("arrival_ending")
 			if not _check(store.save_checkpoint(old) == OK, "GP316 이전 확정 선택 저장 구성"): return
 			controls.show_main_screen()
 			if not _check(sandbox.continue_saved_run() and controls.current_screen_mode() == 1 and store.load_checkpoint().is_empty() and recorder.summary_snapshot().completed_run_count == 1, "이전 저장에는 심장 장면 소급 없음·기존 완료 보존"): return
@@ -148,7 +149,7 @@ func _restore_heart(character: String, choice: String) -> bool:
 
 func _finish_heart(skip: bool) -> bool:
 	var layout := PrototypeStoryView.scene_layout(controls._safe_area_in_viewport())
-	for ignored in 3:
+	for ignored in 6:
 		if controls.current_screen_mode() != 18: break
 		_tap((layout.skip if skip else layout.next).get_center())
 	return _check(controls.current_screen_mode() == 1 and not paused and not growth.run_active, "실제 읽기/건너뛰기 입력으로 결과 복귀·정지 해제")
