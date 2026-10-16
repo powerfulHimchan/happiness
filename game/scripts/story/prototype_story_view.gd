@@ -2,6 +2,7 @@ class_name PrototypeStoryView
 extends RefCounted
 
 const SERA_PORTRAIT := preload("res://assets/prototype_sera.svg")
+const HEART_PORTRAIT := preload("res://assets/heart_threshold.svg")
 
 static func wrap(value: String, font: Font, font_size: int, width: float) -> Array[String]:
 	var lines: Array[String] = []
