@@ -1170,7 +1170,8 @@ func _draw_character_selection() -> void:
 		var selected := selected_character_id == id
 		draw_style_box(_panel_style(Color("254f51") if selected else PANEL_COLOR), rect)
 		if selected: draw_rect(rect.grow(-3.0), ACTIVE_COLOR, false, 3.0)
-		var portrait_size := Vector2(160, 180) * minf(rect.size.y * 0.48 / 180.0, rect.size.x * 0.5 / 160.0)
+		var texture_size := PrototypeCharacters.texture(id).get_size()
+		var portrait_size := texture_size * minf(rect.size.y * 0.48 / texture_size.y, rect.size.x * 0.5 / texture_size.x)
 		draw_texture_rect(PrototypeCharacters.texture(id), Rect2(rect.position + Vector2((rect.size.x - portrait_size.x) * 0.5, rect.size.y * 0.06), portrait_size), false)
 		_draw_text_centered(PrototypeCharacters.display_name(id) + (" · 선택됨" if selected else ""), Rect2(rect.position + Vector2(0, rect.size.y * 0.59), Vector2(rect.size.x, 38)), 28, ACTIVE_COLOR)
 		_draw_village_text(PrototypeCharacters.appearance(id), Rect2(rect.position + Vector2(16, rect.size.y * 0.75), Vector2(rect.size.x - 32, 30)), 18, TEXT_COLOR)
@@ -3339,7 +3340,8 @@ func _draw_story() -> void:
 	var character := String(movement_metrics.get("character_id", "roan"))
 	var texture := PrototypeStoryView.SERA_PORTRAIT if story_scene.get("portrait") == "sera" else PrototypeCharacters.texture(character)
 	var bounds: Rect2 = layout.portrait
-	var portrait := Vector2(160, 180) * minf(1.5, minf(bounds.size.x / 160, bounds.size.y / 180))
+	var texture_size := texture.get_size()
+	var portrait := texture_size * minf(270.0 / texture_size.y, minf(bounds.size.x / texture_size.x, bounds.size.y / texture_size.y))
 	draw_texture_rect(texture, Rect2(bounds.position + (bounds.size - portrait) * 0.5, portrait), false)
 	_draw_village_text(String(story_scene.get("speaker", PrototypeCharacters.display_name(character))), layout.speaker, 20, ACTIVE_COLOR)
 	for i in 2:

@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/stage/recovery_orb_controller.gd" id="36_recovery_orbs"]
 [ext_resource type="Script" path="res://scripts/player/prototype_player.gd" id="2_player"]
-[ext_resource type="Texture2D" path="res://assets/prototype_player.svg" id="3_avatar"]
+[ext_resource type="Texture2D" path="res://assets/characters/roan_idle.tres" id="3_avatar"]
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_controls.gd" id="4_controls"]
 [ext_resource type="Script" path="res://scripts/combat/auto_target_selector.gd" id="5_selector"]
 [ext_resource type="Script" path="res://scripts/combat/prototype_target.gd" id="6_target"]
@@ -139,8 +139,9 @@ shape = SubResource("PlayerShape")
 z_index = 20
 
 [node name="Sprite2D" type="Sprite2D" parent="Player/Avatar"]
-position = Vector2(0, -30)
-scale = Vector2(0.78, 0.78)
+texture_filter = 2
+position = Vector2(0, -16.64)
+scale = Vector2(0.16, 0.16)
 texture = ExtResource("3_avatar")
 
 [node name="VisibilityMarker" type="Polygon2D" parent="Player/Avatar"]
