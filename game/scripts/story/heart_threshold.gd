@@ -17,7 +17,7 @@ static func valid_checkpoint(state: Dictionary) -> bool:
 	if choice.is_empty(): return stage.heart_threshold == UNREACHED
 	return int(stage.number) == 10 and stage.heart_threshold in [PENDING, SEEN] and state.story.get("pending") == ""
 
-static func scene(character: String, choice: String, guardian: String, arrival: bool = false) -> Dictionary:
+static func scene(character: String, choice: String, guardian: String, arrival: bool = false, arrival_seen: bool = false) -> Dictionary:
 	var hero := PrototypeCharacters.display_name(character)
 	var guardian_line := "성문에 남은 힘은 사라졌다. %s는 돌아갈 길을 확인하고 계단 너머의 낮은 울림에 귀를 기울인다." % hero
 	if guardian == "rescue":
@@ -31,4 +31,9 @@ static func scene(character: String, choice: String, guardian: String, arrival: 
 		"지금까지의 여정을 기록하고 새벽의 광장에서 다음 걸음을 준비한다. 행복의 심장에 닿기 위한 길은 이제 시작이다.",
 	]
 	if arrival: lines[-1] = "문 앞에서 발걸음을 멈춘 주인공은 행복의 나라를 돌아본다. 긴 여행 끝에 도착한 나라에는 어떤 답이 기다리고 있을까."
-	return {"id": SCENE_ID, "name": "행복의 심장 앞에서", "portrait": "heart", "speaker": "행복의 심장 입구", "lines": lines, "footer": "세라의 선택을 간직한 채 다음 여정을 준비합니다", "confirm": "도착 이야기" if arrival else "여정 기록", "skip": "건너뛰고 계속" if arrival else "건너뛰고 기록"}
+	if arrival_seen:
+		lines[0] = "지난 여정에서는 문 앞에서 돌아섰다. 이번에는 %s가 새벽시계를 문양에 맞춘다. 잠겨 있던 문 안쪽에서 거대한 기계가 모습을 드러낸다." % hero
+		lines[3] = "행복의 심장은 고대 마법 기계였다. 주민들에게서 거둔 슬픔을 이름이 지워진 누군가에게 옮겨, 나라의 미소를 유지하고 있었다."
+		lines[4] = "세라: '당신의 이름이 지워진 이유가 여기 있었어요. 이제 혼자 짊어지게 두지 않을게요.' 친구는 기계에 새겨진 의식의 문장을 함께 읽는다." if choice == "rescue" else "부서진 왕관의 빛이 의식의 문장을 드러낸다. %s는 지워진 이름과 몸의 이상이 이 기계에 이어져 있음을 깨닫는다." % hero
+		lines[5] = "새벽시계가 울리자 기계가 눈을 뜬다. 되찾은 진실을 기록하고 돌아가, 모두의 슬픔을 떠넘기는 의식에 맞설 다음 여정을 준비한다."
+	return {"id": SCENE_ID, "name": "행복의 심장 · 미소의 대가" if arrival_seen else "행복의 심장 앞에서", "portrait": "heart", "speaker": "행복의 심장 입구", "lines": lines, "footer": "새 기억은 수첩에 남습니다 · 심장 전투를 준비합니다" if arrival_seen else "세라의 선택을 간직한 채 다음 여정을 준비합니다", "confirm": "도착 이야기" if arrival else "여정 기록", "skip": "건너뛰고 계속" if arrival else "건너뛰고 기록"}

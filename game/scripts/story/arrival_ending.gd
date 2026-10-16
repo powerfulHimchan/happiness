@@ -25,8 +25,17 @@ static func valid_checkpoint(state: Dictionary) -> bool:
 	if stage.get("heart_threshold") == HeartThreshold.PENDING: return phase == LOCKED
 	return stage.get("heart_threshold") == HeartThreshold.SEEN and phase in [PENDING, SEEN]
 
-static func scene(character: String, choice: String) -> Dictionary:
+static func scene(character: String, choice: String, arrival_seen: bool = false) -> Dictionary:
 	var hero := PrototypeCharacters.display_name(character)
+	if arrival_seen:
+		return {"id": SCENE_ID, "name": "도착 너머의 약속", "portrait": "heart", "speaker": "도착 엔딩 · 재여정", "confirm": "엔딩 기록", "skip": "건너뛰고 기록", "footer": "발견한 진실과 이번 선택을 기록합니다", "lines": [
+			"%s는 다시 행복의 나라에 도착했다. 지난번과 같은 미소였지만 이제 그 미소를 움직이는 기계의 정체를 알고 있다." % hero,
+			"이름을 잃은 누군가가 주민들의 슬픔을 대신 짊어지고 있었다. 지워진 이름을 찾는 일은 그 의식을 마주하는 일이기도 했다.",
+			"세라와 주인공은 더는 한 사람에게 모든 슬픔을 맡기지 않겠다고 약속한다. 시계탑에서 나누었던 말이 이번에는 분명한 목표가 된다." if choice == "rescue" else "왕관과 함께 사라진 세라의 이름을 되뇌었다. %s는 잃어버린 친구의 선택까지 기억하며 의식을 멈출 방법을 찾기로 했다." % hero,
+			"새벽시계의 금은 아직 남아 있다. 하지만 기계에 닿은 초침은 처음으로 앞으로 움직였다.",
+			"지금은 새벽의 광장으로 돌아가 발견한 진실을 정리한다. 다음에는 문 너머에서 깨어난 행복의 심장과 마주해야 한다.",
+			"도착을 넘어, 누구도 혼자 아프지 않은 행복을 찾기 위한 여정이 시작된다.",
+		]}
 	return {"id": SCENE_ID, "name": "도착 · 이름 없는 행복", "portrait": "heart", "speaker": "도착 엔딩", "confirm": "엔딩 기록", "skip": "건너뛰고 기록", "footer": "한 번 발견한 엔딩은 기억 수첩에 남습니다", "lines": [
 		"긴 여행 끝에 %s는 행복의 나라에 도착했다. 성벽 너머의 햇살과 주민들의 미소는 어릴 적 들었던 이야기와 같았다." % hero,
 		"하지만 어느 주민도 %s를 기억하지 못했다. 오래된 명부에도, 시계탑에 남은 이름들 사이에도 자신의 이름은 없었다." % hero,
