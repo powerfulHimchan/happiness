@@ -1454,6 +1454,7 @@ func _show_result_screen() -> void:
 		"guardian_choice": String(movement_metrics.get("guardian_choice", "")),
 		"boss_name": String(movement_metrics.get("boss_name", "")),
 		"final_boss": String(movement_metrics.get("final_boss", SeraEncounter.LEGACY)),
+		"heart_threshold": String(movement_metrics.get("heart_threshold", "")),
 		"memory_id": active_memory_id,
 		"weapon_blueprints": movement_metrics.get("weapon_blueprints", {"sword": "", "bow": ""}).duplicate(),
 		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
@@ -2152,6 +2153,7 @@ func _draw_result_screen() -> void:
 	if choice in ["rescue", "destroy"]:
 		var caption := "태엽 기사 %s · %s 영구 해금" % [("구출" if choice == "rescue" else "파괴"), PrototypeMemoryAbilities.profile(PrototypeMemoryAbilities.CHOICE_IDS[choice]).name + (" / 태엽 검·활 설계도" if choice == "destroy" else "")]
 		if result_snapshot.get("final_boss") == SeraEncounter.ID: caption = "세라 %s · 이번 여정 선택 기록" % GuardianDecision.label(choice)
+		if result_snapshot.get("heart_threshold") == HeartThreshold.SEEN: caption += " · 행복의 심장 입구 도착"
 		if guardian in ["rescue", "destroy"]: caption += " · 성문 수호기사 " + GuardianDecision.label(guardian)
 		_draw_text_centered(caption, Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
 	var content_x := result_panel_rect.position.x + 54.0
@@ -3338,7 +3340,7 @@ func _draw_story() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
 	_draw_village_text(String(story_scene.name), Rect2(safe.position + safe.size * Vector2(0.05, 0.06), safe.size * Vector2(0.90, 0.09)), 32, ACTIVE_COLOR)
 	var character := String(movement_metrics.get("character_id", "roan"))
-	var texture := PrototypeStoryView.SERA_PORTRAIT if story_scene.get("portrait") == "sera" else PrototypeCharacters.texture(character)
+	var texture := PrototypeStoryView.HEART_PORTRAIT if story_scene.get("portrait") == "heart" else PrototypeStoryView.SERA_PORTRAIT if story_scene.get("portrait") == "sera" else PrototypeCharacters.texture(character)
 	var bounds: Rect2 = layout.portrait
 	var texture_size := texture.get_size()
 	var portrait := texture_size * minf(270.0 / texture_size.y, minf(bounds.size.x / texture_size.x, bounds.size.y / texture_size.y))
@@ -3352,9 +3354,9 @@ func _draw_story() -> void:
 		for j in lines.size():
 			_draw_text(lines[j], rect.position + Vector2(0, 28 * (j + 1)), 22, TEXT_COLOR)
 	_draw_village_text("%d / %d" % [story_page + 1, ceili(float(story_scene.lines.size()) / 2)], Rect2(safe.position + safe.size * Vector2(0.30, 0.72), safe.size * Vector2(0.64, 0.04)), 18, MUTED_TEXT_COLOR)
-	_draw_village_text(story_message if not story_message.is_empty() else "이 여행에서 발견한 기억을 수첩에 남깁니다", Rect2(safe.position + safe.size * Vector2(0.05, 0.78), safe.size * Vector2(0.90, 0.04)), 18, WAIT_COLOR if not story_message.is_empty() else MUTED_TEXT_COLOR)
-	_draw_button(layout.skip, "장면 건너뛰기", false)
-	_draw_button(layout.next, "다음" if story_page < ceili(float(story_scene.lines.size()) / 2) - 1 else "확인", true)
+	_draw_village_text(story_message if not story_message.is_empty() else String(story_scene.get("footer", "이 여행에서 발견한 기억을 수첩에 남깁니다")), Rect2(safe.position + safe.size * Vector2(0.05, 0.78), safe.size * Vector2(0.90, 0.04)), 18, WAIT_COLOR if not story_message.is_empty() else MUTED_TEXT_COLOR)
+	_draw_button(layout.skip, String(story_scene.get("skip", "장면 건너뛰기")), false)
+	_draw_button(layout.next, "다음" if story_page < ceili(float(story_scene.lines.size()) / 2) - 1 else String(story_scene.get("confirm", "확인")), true)
 
 
 func _refresh_story_entry_layout() -> void:
