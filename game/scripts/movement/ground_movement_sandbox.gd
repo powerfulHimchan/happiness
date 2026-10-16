@@ -340,6 +340,8 @@ func _reset_test() -> void:
 		stage_runner.stage_limit = controls.requested_stage_limit
 	stage_runner.set_run_mode(controls.requested_run_mode)
 	stage_runner.reset_run()
+	if story_run.enabled and stage_runner.run_mode == JourneyRoutePlan.MODE:
+		stage_runner.heart_threshold = HeartThreshold.UNREACHED
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
 		projectile.queue_free()
 	_enemy_metrics_elapsed_s = 0.0
@@ -401,6 +403,11 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		return
 	if growth.run_active and not player.damage_receiver.dead:
 		_record_route_history(stage_runner.stage_history)
+	if stage_runner.heart_threshold == HeartThreshold.PENDING and growth.run_active and not player.damage_receiver.dead:
+		_grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), stage_runner.boss_choice, stage_runner.final_boss_id)
+		if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartThreshold.SCENE_ID:
+			_open_heart_threshold()
+		return
 	if bool(metrics.get("run_complete", true)):
 		_active_rewind_run_id = ""
 		_finish_growth_selection()
@@ -491,6 +498,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"relic": player.relic_state.duplicate(),
 	}
 	if story_run.enabled: state.story = story_run.snapshot()
+	else: state.stage.erase("heart_threshold")
 	var error := checkpoint_store.save_checkpoint(state)
 	if error == OK:
 		_available_checkpoint = state.duplicate(true)
@@ -529,12 +537,16 @@ func _resolve_boss_choice(choice: String) -> bool:
 		return false
 	stage_runner.boss_choice = choice
 	stage_runner.stage_history[-1]["boss_choice"] = choice
+	var previous_heart := stage_runner.heart_threshold
+	if previous_heart == HeartThreshold.UNREACHED and stage_runner.uses_sera() and story_run.enabled:
+		stage_runner.heart_threshold = HeartThreshold.PENDING
 	# 완료 기록보다 선택을 먼저 저장하여 실패 시 다시 선택할 수 있다.
 	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
 		stage_runner.boss_choice = ""
 		stage_runner.stage_history[-1]["boss_choice"] = ""
+		stage_runner.heart_threshold = previous_heart
 		return false
-	_finish_growth_selection()
+	if stage_runner.heart_threshold != HeartThreshold.PENDING: _finish_growth_selection()
 	stage_runner.force_emit_metrics()
 	return true
 
@@ -583,7 +595,7 @@ func _refresh_checkpoint() -> void:
 	var story_saved := _record_story_completion(_available_checkpoint)
 	if job_error == OK and ability_error == OK and story_saved and guardian_saved:
 		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
-			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice), SeraEncounter.boss_id(_available_checkpoint.stage)) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice), SeraEncounter.boss_id(_available_checkpoint.stage)) and _available_checkpoint.stage.get("heart_threshold") != HeartThreshold.PENDING and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 				_discard_checkpoint()
 		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
@@ -656,7 +668,9 @@ func continue_saved_run() -> bool:
 	_stage_recovered_health = 0
 	if stage_runner.uses_boss():
 		controls.show_boss_choice(SeraEncounter.PROFILE if stage_runner.uses_sera() else {})
-		if not stage_runner.boss_choice.is_empty():
+		if stage_runner.heart_threshold == HeartThreshold.PENDING:
+			_open_heart_threshold()
+		elif not stage_runner.boss_choice.is_empty():
 			_finish_growth_selection()
 			stage_runner.force_emit_metrics()
 	elif stage_runner.awaiting_guardian_choice():
@@ -1043,6 +1057,7 @@ func _open_story(return_mode: int) -> void:
 
 
 func _acknowledge_story(id: String) -> bool:
+	if id == HeartThreshold.SCENE_ID: return _acknowledge_heart_threshold()
 	if id == "sera_intro":
 		if controls.current_screen_mode() != 18 or not _sera_intro_active or controls.story_scene.get("id") != "sera_intro" or stage_runner.stage_complete: return false
 		_sera_intro_active = false
@@ -1097,10 +1112,34 @@ func _story_checkpoint_context() -> Dictionary:
 
 func _record_story_completion(state: Dictionary) -> bool:
 	if state.is_empty() or not state.has("story") or String(state.stage.get("boss_choice", "")).is_empty(): return true
+	if state.stage.get("heart_threshold") == HeartThreshold.PENDING: return true
 	var error := story_journal_store.record_chronicle(String(state.recorder.id), PrototypeStory.chronicle_id(state.stage.history, String(state.stage.boss_choice)), String(state.player.get("character_id", "roan")), PrototypeStory.earned(state.stage.history, int(state.stage.limit)))
 	_story_message = "여행 기록 저장 실패 · 이어하기 또는 수첩에서 재시도하세요" if error != OK else ""
 	_update_story_status()
 	return error == OK
+
+
+func _open_heart_threshold() -> void:
+	_begin_growth_pause()
+	controls.release_all_inputs()
+	controls.show_story(HeartThreshold.scene(player.character_id, stage_runner.boss_choice, stage_runner.guardian_choice))
+
+
+func _acknowledge_heart_threshold() -> bool:
+	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartThreshold.SCENE_ID or stage_runner.heart_threshold != HeartThreshold.PENDING or not growth.run_active or player.damage_receiver.dead: return false
+	if not _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), stage_runner.boss_choice, stage_runner.final_boss_id):
+		controls.story_message = "세라 보상 저장 실패 · 다시 확인하세요"
+		return false
+	stage_runner.heart_threshold = HeartThreshold.SEEN
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		stage_runner.heart_threshold = HeartThreshold.PENDING
+		controls.story_message = "심장 입구 확인 저장 실패 · 다시 확인하세요"
+		return false
+	controls.story_message = ""
+	controls.finish_story(0)
+	_finish_growth_selection()
+	stage_runner.force_emit_metrics()
+	return true
 
 
 func _on_story_death() -> void:

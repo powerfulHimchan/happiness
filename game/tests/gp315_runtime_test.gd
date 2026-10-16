@@ -173,6 +173,8 @@ func _choose_sera(choice: String) -> bool:
 	_tap(controls.boss_choice_rects[0 if choice == "rescue" else 1].get_center())
 	if not _check(store.load_checkpoint() == saved, "세라 선택 비교는 저장 불변"): return false
 	_tap(controls.boss_choice_confirm_rect.get_center())
+	if controls.current_screen_mode() == 18 and controls.story_scene.get("id") == HeartThreshold.SCENE_ID:
+		if not sandbox._acknowledge_story(HeartThreshold.SCENE_ID): return false
 	return _check(runner.boss_choice == choice and controls.current_screen_mode() == 1, "실제 세라 확정 입력·도전 결과")
 
 func _sera_basic_clear(weapon: String) -> bool:
