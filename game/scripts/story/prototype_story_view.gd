@@ -29,4 +29,6 @@ static func journal_layout(safe: Rect2, count: int) -> Dictionary:
 	var gap := safe.size.x * 0.025
 	var width := (safe.size.x * 0.90 - gap * 2) / 3.0
 	for i in count: cards.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (width + gap), safe.size.y * 0.30), Vector2(width, safe.size.y * 0.43)))
-	return {"cards": cards, "tabs": [Rect2(safe.position + safe.size * Vector2(0.05, 0.18), safe.size * Vector2(0.43, 0.075)), Rect2(safe.position + safe.size * Vector2(0.52, 0.18), safe.size * Vector2(0.43, 0.075))], "previous": Rect2(safe.position + safe.size * Vector2(0.05, 0.77), safe.size * Vector2(0.24, 0.065)), "next": Rect2(safe.position + safe.size * Vector2(0.71, 0.77), safe.size * Vector2(0.24, 0.065)), "back": Rect2(safe.position + safe.size * Vector2(0.05, 0.87), safe.size * Vector2(0.43, 0.075)), "retry": Rect2(safe.position + safe.size * Vector2(0.52, 0.87), safe.size * Vector2(0.43, 0.075))}
+	var tabs: Array[Rect2] = []
+	for i in 3: tabs.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (width + gap), safe.size.y * 0.18), Vector2(width, safe.size.y * 0.075)))
+	return {"cards": cards, "tabs": tabs, "previous": Rect2(safe.position + safe.size * Vector2(0.05, 0.77), safe.size * Vector2(0.24, 0.065)), "next": Rect2(safe.position + safe.size * Vector2(0.71, 0.77), safe.size * Vector2(0.24, 0.065)), "back": Rect2(safe.position + safe.size * Vector2(0.05, 0.87), safe.size * Vector2(0.43, 0.075)), "retry": Rect2(safe.position + safe.size * Vector2(0.52, 0.87), safe.size * Vector2(0.43, 0.075))}
