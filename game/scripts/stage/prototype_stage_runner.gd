@@ -60,6 +60,7 @@ var boss_choice: String = ""
 var final_boss_id: String = SeraEncounter.LEGACY
 var heart_threshold: String = ""
 var arrival_ending: String = ""
+var heart_battle: String = ""
 var guardian_choice: String = ""
 var completed_elapsed_s: float = 0.0
 var stage_history: Array[Dictionary] = []
@@ -74,6 +75,7 @@ var stage_history: Array[Dictionary] = []
 @onready var boss: BossClockworkKnight = get_node("../Targets/ClockworkKnight") as BossClockworkKnight
 @onready var guardian: BossHappinessGuardian = get_node("../Targets/HappinessGuardian") as BossHappinessGuardian
 @onready var sera: BossSera = get_node("../Targets/Sera") as BossSera
+@onready var heart: BossHappinessHeart = get_node("../Targets/HappinessHeart") as BossHappinessHeart
 @onready var gates: Array[StaticBody2D] = [
 	get_node("../StageGates/GateA") as StaticBody2D,
 	get_node("../StageGates/GateB") as StaticBody2D,
@@ -111,6 +113,13 @@ func _process(delta: float) -> void:
 	stage_elapsed_s += delta
 	section_elapsed_s += delta
 	_metric_elapsed_s += delta
+
+	if heart_battle == HeartEncounter.ACTIVE:
+		if _active_enemy_count() == 0: _finish_heart_battle()
+		elif _metric_elapsed_s >= 0.10:
+			_metric_elapsed_s = 0.0
+			_emit_metrics()
+		return
 
 	match current_section:
 		Section.ADVANCE_ONE:
@@ -167,6 +176,7 @@ func reset_run() -> void:
 	final_boss_id = SeraEncounter.ID if run_mode == JourneyRoutePlan.MODE else SeraEncounter.LEGACY
 	heart_threshold = ""
 	arrival_ending = ""
+	heart_battle = ""
 	guardian_choice = ""
 	stage_number = 1
 	route_id = "meadow"
@@ -257,6 +267,7 @@ func can_select_route(id: String) -> bool:
 
 
 func _enemy_health(enemy: PrototypeTarget) -> int:
+	if enemy == heart: return BossHappinessHeart.BOSS_HEALTH
 	if enemy == sera: return BossSera.BOSS_HEALTH
 	if enemy == guardian:
 		return BossHappinessGuardian.BOSS_HEALTH
@@ -275,7 +286,11 @@ func uses_guardian() -> bool:
 
 
 func uses_sera() -> bool:
-	return uses_boss() and run_mode == JourneyRoutePlan.MODE and route_id == JourneyRoutePlan.CORE and final_boss_id == SeraEncounter.ID
+	return uses_boss() and run_mode == JourneyRoutePlan.MODE and route_id == JourneyRoutePlan.CORE and final_boss_id == SeraEncounter.ID and not uses_heart()
+
+
+func uses_heart() -> bool:
+	return heart_battle in [HeartEncounter.ACTIVE, HeartEncounter.DEFEATED, HeartEncounter.SEEN]
 
 
 func awaiting_boss_choice() -> bool:
@@ -287,7 +302,7 @@ func awaiting_guardian_choice() -> bool:
 
 
 func final_enemy() -> PrototypeTarget:
-	return sera if uses_sera() else guardian if uses_guardian() else boss if uses_boss() else armored_boar
+	return heart if uses_heart() else sera if uses_sera() else guardian if uses_guardian() else boss if uses_boss() else armored_boar
 
 
 func checkpoint_snapshot() -> Dictionary:
@@ -296,6 +311,7 @@ func checkpoint_snapshot() -> Dictionary:
 		state.run_mode = run_mode
 		state.region_order = region_order.duplicate()
 	if run_mode == JourneyRoutePlan.MODE: state.final_boss = final_boss_id
+	if not heart_battle.is_empty() and final_boss_id == SeraEncounter.ID: state.heart_battle = HeartEncounter.PENDING if heart_battle == HeartEncounter.ACTIVE else heart_battle
 	if not heart_threshold.is_empty() and final_boss_id == SeraEncounter.ID: state.heart_threshold = heart_threshold
 	if not arrival_ending.is_empty() and final_boss_id == SeraEncounter.ID: state.arrival_ending = arrival_ending
 	if run_mode == JourneyRoutePlan.MODE and stage_number >= 9:
@@ -307,6 +323,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	final_boss_id = SeraEncounter.boss_id(state)
 	heart_threshold = String(state.get("heart_threshold", ""))
 	arrival_ending = String(state.get("arrival_ending", ""))
+	heart_battle = String(state.get("heart_battle", ""))
 	run_mode = String(state.get("run_mode", "standard"))
 	region_order.assign(state.get("region_order", []))
 	stage_number = int(state.number)
@@ -330,6 +347,42 @@ func restore_checkpoint(state: Dictionary) -> void:
 	for index in gates.size():
 		_set_gate_closed(index, false)
 	_last_stage_log = "중간 저장에서 복귀 · 다음 경로를 선택하세요"
+	_emit_metrics()
+
+
+func start_heart_battle() -> bool:
+	if heart_battle != HeartEncounter.PENDING or not stage_complete or boss_choice.is_empty(): return false
+	_deactivate_all_combat_enemies()
+	for shot in get_tree().get_nodes_in_group("enemy_projectile"): shot.queue_free()
+	heart_battle = HeartEncounter.ACTIVE
+	stage_complete = false
+	current_section = Section.ELITE
+	section_elapsed_s = 0
+	_set_gate_closed(2, true)
+	_set_gate_closed(3, true)
+	route_terrain.heart_arena = true
+	route_terrain.queue_redraw()
+	player.prepare_next_stage(Vector2(4070, 780))
+	player.set_safe_spawn(Vector2(4070, 780), "심장 의식의 방")
+	_activate_enemy(heart, Vector2(4500, 780))
+	_active_enemies.assign([heart])
+	_last_stage_log = "행복의 심장 각성 · 지면 맥박/바늘/절단 경고 회피"
+	_emit_metrics()
+	return true
+
+
+func _finish_heart_battle() -> void:
+	_deactivate_all_combat_enemies()
+	for shot in get_tree().get_nodes_in_group("enemy_projectile"): shot.queue_free()
+	heart_battle = HeartEncounter.DEFEATED
+	stage_complete = true
+	current_section = Section.COMPLETE
+	section_actual_times[-1] += section_elapsed_s
+	section_elapsed_s = 0
+	stage_history[-1].elapsed_s = stage_elapsed_s
+	_set_gate_closed(2, false)
+	_set_gate_closed(3, false)
+	_last_stage_log = "행복의 심장 제압 · 승리 기록 대기"
 	_emit_metrics()
 
 
@@ -421,6 +474,10 @@ func current_metrics() -> Dictionary:
 	if uses_guardian() and current_section == Section.ELITE:
 		section_name = "보스 · " + BossHappinessGuardian.BOSS_NAME
 		objective = "방패 돌진·충격파·빛의 창 회피 · 벽 충돌/공격 뒤 빈틈 공략"
+	if uses_heart(): route_name = "행복의 심장"
+	if heart_battle == HeartEncounter.ACTIVE:
+		section_name = "진 보스 · 행복의 심장"
+		objective = "지면 맥박·부채 바늘·수평 절단 회피 · 핵 노출 공략"
 	var closed_gate_count := 0
 	for gate_index in gates.size():
 		if is_gate_closed(gate_index):
@@ -434,16 +491,17 @@ func current_metrics() -> Dictionary:
 		"run_visited_regions": visited,
 		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
 		"run_region_section": region_section(),
-		"run_route_terrain": String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else CityGateLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.GATE else CityCoreLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
-		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice() and heart_threshold != HeartThreshold.PENDING and arrival_ending != ArrivalEnding.PENDING,
+		"run_route_terrain": "의식의 방" if uses_heart() else String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else CityGateLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.GATE else CityCoreLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
+		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice() and heart_threshold != HeartThreshold.PENDING and arrival_ending != ArrivalEnding.PENDING and not HeartEncounter.blocks_completion(heart_battle),
 		"arrival_ending": arrival_ending,
+		"heart_battle": heart_battle,
 		"heart_threshold": heart_threshold,
 		"boss_choice_pending": awaiting_boss_choice(),
 		"boss_choice": boss_choice,
 		"final_boss": final_boss_id,
 		"guardian_choice": guardian_choice,
 		"guardian_choice_pending": awaiting_guardian_choice(),
-		"boss_name": BossSera.BOSS_NAME if uses_sera() else BossHappinessGuardian.BOSS_NAME if uses_guardian() else BossClockworkKnight.BOSS_NAME if uses_boss() else "",
+		"boss_name": BossHappinessHeart.BOSS_NAME if uses_heart() else BossSera.BOSS_NAME if uses_sera() else BossHappinessGuardian.BOSS_NAME if uses_guardian() else BossClockworkKnight.BOSS_NAME if uses_boss() else "",
 		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s,
 		"run_stage_history": stage_history.duplicate(true),
 		"stage_enabled": stage_enabled,
@@ -639,7 +697,7 @@ func _restore_combat_sandbox() -> void:
 	for gate_index in gates.size():
 		_set_gate_closed(gate_index, false)
 	for enemy in _all_combat_enemies():
-		if enemy in [boss, guardian, sera]:
+		if enemy in [boss, guardian, sera, heart]:
 			_deactivate_enemy(enemy)
 			continue
 		if enemy is PrototypeEnemy:
@@ -658,7 +716,7 @@ func _restore_combat_sandbox() -> void:
 
 
 func _all_combat_enemies() -> Array[PrototypeTarget]:
-	return [leaf_slime, seed_sack, wind_spirit, armored_boar, boss, guardian, sera]
+	return [leaf_slime, seed_sack, wind_spirit, armored_boar, boss, guardian, sera, heart]
 
 
 func _active_enemy_count() -> int:
