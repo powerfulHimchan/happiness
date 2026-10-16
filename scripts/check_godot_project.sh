@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp317_runtime_test.gd"
+  "$game_root/scripts/story/heart_threshold.gd"
+  "$game_root/assets/heart_threshold.svg"
   "$game_root/assets/characters/roan_lumi_idle.png"
   "$game_root/assets/characters/roan_idle.tres"
   "$game_root/assets/characters/lumi_idle.tres"
@@ -679,6 +682,22 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for heart_character in roan lumi; do
+    for heart_weapon in sword bow; do
+      for heart_choice in rescue destroy; do
+        for heart_phase in seed resume finish; do
+          checked_godot 60s --headless --path "$game_root" \
+            --script res://tests/gp317_runtime_test.gd -- "$heart_phase" "$heart_character" "$heart_weapon" "$heart_choice"
+        done
+      done
+    done
+  done
+  for heart_choice in rescue destroy; do
+    for heart_phase in checkpoint-fault reward-fault validate legacy story-off layout; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp317_runtime_test.gd -- "$heart_phase" lumi bow "$heart_choice"
+    done
+  done
   for legacy_character in roan lumi; do
     for legacy_weapon in sword bow; do
       for legacy_choice in rescue destroy; do
