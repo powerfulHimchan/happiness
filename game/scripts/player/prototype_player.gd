@@ -46,6 +46,7 @@ const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
 var character_id: String = "roan"
+var movement_animation := HeroMovementAnimation.new()
 
 var barrier_focus_unlocked: bool = false
 var crisis_power_unlocked: bool = false
@@ -178,13 +179,13 @@ func _physics_process(delta: float) -> void:
 	_hit_flash_remaining_s = maxf(0.0, _hit_flash_remaining_s - delta)
 	if damage_receiver.dead:
 		velocity = Vector2.ZERO
-		_update_avatar_action_visual()
+		_update_avatar_action_visual(delta)
 		_emit_metrics()
 		return
 
 	if _fall_recovery_active:
 		_update_fall_recovery(delta)
-		_update_avatar_action_visual()
+		_update_avatar_action_visual(delta)
 		_emit_metrics()
 		return
 
@@ -221,7 +222,7 @@ func _physics_process(delta: float) -> void:
 			_finish_mobility_action()
 	_update_jump_metrics(grounded_at_start)
 	_update_movement_tests(delta)
-	_update_avatar_action_visual()
+	_update_avatar_action_visual(delta)
 	_emit_metrics()
 
 
@@ -690,6 +691,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 	velocity = Vector2.ZERO
 	facing_direction = 1
 	avatar_sprite.flip_h = false
+	movement_animation.reset(avatar_sprite, character_id)
 	air_dash_available = true
 	air_jump_available = double_jump_unlocked
 	_coyote_remaining_s = 0.0
@@ -760,6 +762,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	move_input_vector = Vector2.ZERO
 	facing_direction = 1
 	avatar_sprite.flip_h = false
+	movement_animation.reset(avatar_sprite, character_id)
 	jump_held = false
 	jump_count = 0
 	last_jump_height_m = 0.0
@@ -957,7 +960,12 @@ func _end_invincibility() -> void:
 	]
 
 
-func _update_avatar_action_visual() -> void:
+func _update_avatar_action_visual(delta: float = 0.0) -> void:
+	movement_animation.update(
+		avatar_sprite, character_id, delta, is_on_floor(), velocity,
+		_mobility_action, _hit_flash_remaining_s > 0.0, damage_receiver.dead,
+		_combat_action_active, _fall_recovery_active
+	)
 	if damage_receiver.dead:
 		avatar_sprite.modulate = Color("647986")
 	elif _hit_flash_remaining_s > 0.0:
@@ -1134,7 +1142,7 @@ func _update_movement_tests(delta: float) -> void:
 func set_character(id: String) -> bool:
 	if not PrototypeCharacters.valid_id(id): return false
 	character_id = id
-	avatar_sprite.texture = PrototypeCharacters.texture(id)
+	movement_animation.reset(avatar_sprite, id)
 	_emit_metrics()
 	return true
 
