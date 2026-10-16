@@ -82,6 +82,7 @@ func _run() -> void:
 			legacy.fail_sera = false
 			sandbox._refresh_checkpoint()
 			if not _check(sandbox.continue_saved_run() and sandbox._acknowledge_story(HeartThreshold.SCENE_ID), "보상 재시도 후 미확인 입구 복원·확인"): return
+			if controls.story_scene.get("id") == ArrivalEnding.SCENE_ID and not sandbox._acknowledge_story(ArrivalEnding.SCENE_ID): return
 			if not _check(sandbox._sera_reward_saved and store.load_checkpoint().is_empty() and recorder.summary_snapshot().completed_run_count == 1, "재시도 한 번으로 영구 보상 확정·완주 중복 없음"): return
 			if not _sera_unlock(choice): return
 		"validate":
@@ -96,6 +97,7 @@ func _run() -> void:
 			var old := saved.duplicate(true)
 			old.erase("sera_companion")
 			old.stage.erase("heart_threshold")
+			old.stage.erase("arrival_ending")
 			if store.save_checkpoint(old) != OK: return
 			controls.show_main_screen()
 			if not _check(sandbox.continue_saved_run() and sandbox.sera_companion.is_empty(), "필드 없는 진행 중 이전 저장에 세라 소급 동행 없음"): return
@@ -132,6 +134,7 @@ func _run() -> void:
 			var old := store.load_checkpoint()
 			old.erase("sera_companion")
 			old.stage.erase("heart_threshold")
+			old.stage.erase("arrival_ending")
 			old.stage.boss_choice = choice
 			old.stage.history[-1].boss_choice = choice
 			if not _check(store.save_checkpoint(old) == OK, "이전 세라 선택 확정 체크포인트 구성"): return
