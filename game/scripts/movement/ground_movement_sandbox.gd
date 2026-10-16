@@ -1156,9 +1156,11 @@ func _heart_truth_eligible(state: Dictionary) -> bool:
 func _record_heart_truth(state: Dictionary) -> bool:
 	if not _heart_truth_eligible(state): return true
 	if story_journal_store.record_fragments(["heart_machine"]) != OK:
+		_arrival_record_saved = false
 		_story_message = "심장의 진실 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요"
 		_update_story_status()
 		return false
+	_arrival_record_saved = true
 	_story_message = ""
 	_update_story_status()
 	return true
