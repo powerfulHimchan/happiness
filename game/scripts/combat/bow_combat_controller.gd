@@ -175,6 +175,7 @@ func _update_basic_attack() -> void:
 	if close_reduced:
 		shot_damage = roundi(float(shot_damage) * CLOSE_DAMAGE_MULTIPLIER)
 		near_damage_reduced_count += 1
+	player.strike_attack_visual("bow_shot", player.facing_direction, false)
 	var projectile_id := "player:bow_basic:%d" % _action_sequence
 	_spawn_projectile(
 		projectile_id,
@@ -240,6 +241,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 	if not is_zero_approx(definition.movement_distance_m) and definition.duration_s > 0.0:
 		velocity_x = definition.movement_distance_m * PrototypePlayer.PIXELS_PER_METER / definition.duration_s * float(player.facing_direction)
 	player.begin_combat_action(velocity_x, definition.can_move, definition.can_turn)
+	player.begin_attack_visual("bow_rain" if action == Action.ARROW_RAIN else "bow_shot", player.facing_direction)
 	player.set_combat_evade_allowed(false)
 	last_combat_log = "%s 시작 · 취소 %.2fs부터" % [
 		definition.display_name,
@@ -268,6 +270,7 @@ func _update_skill_action(delta: float) -> void:
 
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
+	player.strike_attack_visual("bow_rain" if _action == Action.ARROW_RAIN else "bow_shot", player.facing_direction, true)
 	if _action == Action.HOMING_ARROW:
 		var target: PrototypeTarget = _homing_target.get_ref() as PrototypeTarget if _homing_target != null else null
 		if not is_instance_valid(target) or target.is_queued_for_deletion() or target.spawn_generation != _homing_generation or not target.is_targetable() or target.damage_receiver.dead or not target_selector.is_target_on_screen(target):
@@ -410,6 +413,7 @@ func _action_name() -> String:
 
 
 func _finish_action(reason: String) -> void:
+	player.combat_animation.clear("bow")
 	_homing_target = null
 	_homing_generation = -1
 	queue_redraw()
