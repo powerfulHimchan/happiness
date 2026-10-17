@@ -5,6 +5,10 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp320_runtime_test.gd"
+  "$game_root/scripts/story/heart_encounter.gd"
+  "$game_root/scripts/combat/boss_happiness_heart.gd"
+  "$game_root/assets/happiness_heart.svg"
   "$game_root/tests/gp319_runtime_test.gd"
   "$game_root/tests/gp318_runtime_test.gd"
   "$game_root/scripts/story/arrival_ending.gd"
@@ -691,6 +695,22 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for heart_character in roan lumi; do
+    for heart_weapon in sword bow; do
+      for heart_choice in rescue destroy; do
+        for heart_phase in seed resume defeated finish; do
+          checked_godot 60s --headless --path "$game_root" \
+            --script res://tests/gp320_runtime_test.gd -- "$heart_phase" "$heart_character" "$heart_weapon" "$heart_choice"
+        done
+      done
+    done
+  done
+  for heart_choice in rescue destroy; do
+    for heart_phase in entry-fault truth-fault victory-fault journal-fault fault-seed fault-resume legacy first validate patterns layout death story-off reward-fault; do
+      checked_godot 60s --headless --path "$game_root" \
+        --script res://tests/gp320_runtime_test.gd -- "$heart_phase" lumi bow "$heart_choice"
+    done
+  done
   for truth_character in roan lumi; do
     for truth_weapon in sword bow; do
       for truth_choice in rescue destroy; do

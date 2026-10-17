@@ -34,6 +34,7 @@ var base_platforms: Array[Rect2] = []
 var motion_elapsed_s: float = 0.0
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
+var heart_arena: bool = false
 var stage_number: int = 1
 var route_id: String = "meadow"
 var platforms: Array[Rect2] = []
@@ -43,6 +44,7 @@ var _last_landed_platform: int = -1
 func configure(stage: int, route: String, enabled: bool = true, regional_start: bool = false, section: int = 1) -> void:
 	for body in get_children():
 		body.free()
+	heart_arena = false
 	stage_number = stage
 	route_id = route
 	region_section = 2 if section == 2 and RegionStageLayout.TITLES.has(route) else 1
@@ -128,6 +130,9 @@ func layout_snapshot() -> Dictionary:
 
 
 func _draw() -> void:
+	if heart_arena:
+		HeartEncounter.draw_arena(self)
+		return
 	var base := Color("729452") if route_id == "meadow" else Color("5688a9")
 	var rim := Color("d3e996") if route_id == "meadow" else Color("c5f2ff")
 	if route_id == JourneyRoutePlan.GATE and not platforms.is_empty():

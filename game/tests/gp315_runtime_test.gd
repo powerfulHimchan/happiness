@@ -167,7 +167,7 @@ func _intro_input(skip: bool) -> bool:
 	for ignored in 4:
 		if controls.current_screen_mode() != 18: break
 		_tap((layout.skip if skip else layout.next).get_center())
-	return _check(not paused and controls.current_screen_mode() == 0 and not sandbox._sera_intro_active and store.load_checkpoint() == saved and not journal.snapshot().fragments.has("queen_pendant"), "실제 읽기/건너뛰기 뒤 전투·완료 전 기억 미지급·저장 불변")
+	return _check(not paused and controls.current_screen_mode() == 0 and not sandbox._sera_intro_active and store.load_checkpoint() == saved and not journal.snapshot().fragments.has("queen_pendant"), "실제 읽기/건너뛰기 뒤 전투·완료 전 기억 미지급·저장 불변 paused=%s mode=%s intro=%s saved=%s fragment=%s before=%s after=%s" % [str(paused), str(controls.current_screen_mode()), str(sandbox._sera_intro_active), str(store.load_checkpoint() == saved), str(journal.snapshot().fragments.has("queen_pendant")), str(saved.stage), str(store.load_checkpoint().get("stage", {}))])
 
 func _choose_sera(choice: String) -> bool:
 	var saved := store.load_checkpoint()

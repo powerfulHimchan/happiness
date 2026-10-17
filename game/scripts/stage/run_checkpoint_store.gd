@@ -153,6 +153,7 @@ static func valid_state(state: Dictionary) -> bool:
 	if not GuardianDecision.valid_checkpoint(stage): return false
 	if state.has("story") and not PrototypeStoryRun.valid_checkpoint(state.story, stage): return false
 	if not HeartThreshold.valid_checkpoint(state): return false
+	if not HeartEncounter.valid_checkpoint(state): return false
 	if not ArrivalEnding.valid_checkpoint(state): return false
 	for assisted_stage in legacy.get("assisted_stages", []):
 		if float(assisted_stage) > float(stage.number):

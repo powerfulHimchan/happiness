@@ -343,6 +343,7 @@ func _reset_test() -> void:
 	stage_runner.reset_run()
 	if stage_runner.run_mode == JourneyRoutePlan.MODE:
 		stage_runner.arrival_ending = ArrivalEnding.LOCKED
+		stage_runner.heart_battle = HeartEncounter.AVAILABLE if story_journal_store.snapshot().endings.has(ArrivalEnding.ID) else HeartEncounter.LOCKED
 	if story_run.enabled and stage_runner.run_mode == JourneyRoutePlan.MODE:
 		stage_runner.heart_threshold = HeartThreshold.UNREACHED
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
@@ -406,6 +407,12 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		return
 	if growth.run_active and not player.damage_receiver.dead:
 		_record_route_history(stage_runner.stage_history)
+	if stage_runner.heart_battle == HeartEncounter.PENDING and growth.run_active and not player.damage_receiver.dead:
+		if _arrival_record_saved: _start_heart_battle()
+		return
+	if stage_runner.heart_battle == HeartEncounter.DEFEATED and growth.run_active and not player.damage_receiver.dead:
+		if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartEncounter.VICTORY_SCENE: _open_heart_victory()
+		return
 	if stage_runner.arrival_ending == ArrivalEnding.PENDING and growth.run_active and not player.damage_receiver.dead:
 		if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != ArrivalEnding.SCENE_ID:
 			_open_arrival_ending()
@@ -546,13 +553,16 @@ func _resolve_boss_choice(choice: String) -> bool:
 	stage_runner.stage_history[-1]["boss_choice"] = choice
 	var previous_heart := stage_runner.heart_threshold
 	var previous_ending := stage_runner.arrival_ending
-	if previous_ending == ArrivalEnding.LOCKED and stage_runner.uses_sera() and not story_run.enabled:
+	var previous_battle := stage_runner.heart_battle
+	if previous_battle == HeartEncounter.AVAILABLE and not story_run.enabled: stage_runner.heart_battle = HeartEncounter.PENDING
+	if previous_ending == ArrivalEnding.LOCKED and stage_runner.heart_battle != HeartEncounter.PENDING and stage_runner.uses_sera() and not story_run.enabled:
 		stage_runner.arrival_ending = ArrivalEnding.SEEN
 	if previous_heart == HeartThreshold.UNREACHED and stage_runner.uses_sera() and story_run.enabled:
 		stage_runner.heart_threshold = HeartThreshold.PENDING
 	# 완료 기록보다 선택을 먼저 저장하여 실패 시 다시 선택할 수 있다.
 	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
 		stage_runner.boss_choice = ""
+		stage_runner.heart_battle = previous_battle
 		stage_runner.stage_history[-1]["boss_choice"] = ""
 		stage_runner.heart_threshold = previous_heart
 		stage_runner.arrival_ending = previous_ending
@@ -680,7 +690,11 @@ func continue_saved_run() -> bool:
 	_stage_recovered_health = 0
 	if stage_runner.uses_boss():
 		controls.show_boss_choice(SeraEncounter.PROFILE if stage_runner.uses_sera() else {})
-		if stage_runner.arrival_ending == ArrivalEnding.PENDING:
+		if stage_runner.heart_battle == HeartEncounter.PENDING:
+			_start_heart_battle()
+		elif stage_runner.heart_battle == HeartEncounter.DEFEATED:
+			_open_heart_victory()
+		elif stage_runner.arrival_ending == ArrivalEnding.PENDING:
 			_open_arrival_ending()
 		elif stage_runner.heart_threshold == HeartThreshold.PENDING:
 			_open_heart_threshold()
@@ -798,7 +812,7 @@ func _emit_enemy_metrics() -> void:
 	var newest_event_msec := -1
 	var elite_metrics: Dictionary = {}
 	for enemy in get_tree().get_nodes_in_group("combat_enemy"):
-		if enemy in [stage_runner.boss, stage_runner.guardian, stage_runner.armored_boar, stage_runner.sera]:
+		if enemy in [stage_runner.boss, stage_runner.guardian, stage_runner.armored_boar, stage_runner.sera, stage_runner.heart]:
 			if stage_runner.stage_enabled and enemy != stage_runner.final_enemy():
 				continue
 			if not stage_runner.stage_enabled and enemy != stage_runner.armored_boar:
@@ -1072,6 +1086,7 @@ func _open_story(return_mode: int) -> void:
 
 
 func _acknowledge_story(id: String) -> bool:
+	if id == HeartEncounter.VICTORY_SCENE: return _acknowledge_heart_victory()
 	if id == ArrivalEnding.SCENE_ID: return _acknowledge_arrival_ending()
 	if id == HeartThreshold.SCENE_ID: return _acknowledge_heart_threshold()
 	if id == "sera_intro":
@@ -1131,6 +1146,14 @@ func _story_checkpoint_context() -> Dictionary:
 func _record_story_completion(state: Dictionary) -> bool:
 	if state.is_empty() or String(state.stage.get("boss_choice", "")).is_empty(): return true
 	if not _record_heart_truth(state): return false
+	if HeartEncounter.blocks_completion(String(state.stage.get("heart_battle", ""))): return true
+	if state.stage.get("heart_battle") == HeartEncounter.SEEN:
+		var error := story_journal_store.record_chronicle(String(state.recorder.id), "heart_" + String(state.stage.boss_choice), String(state.player.get("character_id", "roan")), PrototypeStory.earned(state.stage.history, int(state.stage.limit)) if state.has("story") else [])
+		_arrival_record_saved = error == OK
+		if error != OK:
+			_story_message = "심장 승리 기록 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요"
+			_update_story_status()
+			return false
 	if state.stage.get("arrival_ending") == ArrivalEnding.PENDING: return true
 	if state.stage.get("heart_threshold") == HeartThreshold.PENDING: return true
 	if state.stage.get("arrival_ending") == ArrivalEnding.SEEN:
@@ -1169,10 +1192,13 @@ func _record_heart_truth(state: Dictionary) -> bool:
 func _open_heart_threshold() -> void:
 	_begin_growth_pause()
 	controls.release_all_inputs()
-	controls.show_story(HeartThreshold.scene(player.character_id, stage_runner.boss_choice, stage_runner.guardian_choice, stage_runner.arrival_ending == ArrivalEnding.LOCKED, story_run.arrival_seen))
+	controls.show_story(HeartThreshold.scene(player.character_id, stage_runner.boss_choice, stage_runner.guardian_choice, stage_runner.arrival_ending == ArrivalEnding.LOCKED, story_run.arrival_seen, stage_runner.heart_battle in [HeartEncounter.AVAILABLE, HeartEncounter.PENDING]))
 
 
 func _acknowledge_heart_threshold() -> bool:
+	if not story_run.enabled and stage_runner.heart_battle == HeartEncounter.PENDING and controls.current_screen_mode() == 18 and controls.story_scene.get("id") == HeartThreshold.SCENE_ID and growth.run_active and not player.damage_receiver.dead:
+		_start_heart_battle()
+		return stage_runner.heart_battle == HeartEncounter.ACTIVE
 	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartThreshold.SCENE_ID or stage_runner.heart_threshold not in [HeartThreshold.PENDING, HeartThreshold.SEEN] or not growth.run_active or player.damage_receiver.dead: return false
 	if not _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), stage_runner.boss_choice, stage_runner.final_boss_id):
 		controls.story_message = "세라 보상 저장 실패 · 다시 확인하세요"
@@ -1180,9 +1206,12 @@ func _acknowledge_heart_threshold() -> bool:
 	var previous_heart := stage_runner.heart_threshold
 	stage_runner.heart_threshold = HeartThreshold.SEEN
 	var previous_ending := stage_runner.arrival_ending
-	if previous_ending == ArrivalEnding.LOCKED: stage_runner.arrival_ending = ArrivalEnding.PENDING
+	var previous_battle := stage_runner.heart_battle
+	if previous_battle in [HeartEncounter.AVAILABLE, HeartEncounter.PENDING]: stage_runner.heart_battle = HeartEncounter.PENDING
+	elif previous_ending == ArrivalEnding.LOCKED: stage_runner.arrival_ending = ArrivalEnding.PENDING
 	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
 		stage_runner.heart_threshold = previous_heart
+		stage_runner.heart_battle = previous_battle
 		stage_runner.arrival_ending = previous_ending
 		controls.story_message = "심장 입구 확인 저장 실패 · 다시 확인하세요"
 		return false
@@ -1191,8 +1220,55 @@ func _acknowledge_heart_threshold() -> bool:
 		return false
 	controls.story_message = ""
 	controls.finish_story(0)
-	if stage_runner.arrival_ending == ArrivalEnding.PENDING: _open_arrival_ending()
+	if stage_runner.heart_battle == HeartEncounter.PENDING: _start_heart_battle()
+	elif stage_runner.arrival_ending == ArrivalEnding.PENDING: _open_arrival_ending()
 	else: _finish_growth_selection()
+	stage_runner.force_emit_metrics()
+	return true
+
+
+func _start_heart_battle() -> void:
+	if stage_runner.heart_battle != HeartEncounter.PENDING: return
+	if not _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), stage_runner.boss_choice, stage_runner.final_boss_id):
+		_open_heart_threshold()
+		controls.story_message = "세라 보상 저장 실패 · 확인 버튼으로 재시도하세요"
+		return
+	if controls.current_screen_mode() == 18: controls.finish_story(0)
+	_finish_growth_selection()
+	controls.release_all_inputs()
+	weapon_controller.prepare_next_stage()
+	stage_runner.start_heart_battle()
+	target_selector.reset_selection()
+	target_selector.force_scan()
+
+
+func _open_heart_victory() -> void:
+	_begin_growth_pause()
+	controls.release_all_inputs()
+	controls.show_story(HeartEncounter.victory(player.character_id, stage_runner.boss_choice))
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		controls.story_message = "심장 승리 저장 실패 · 확인 버튼으로 재시도하세요"
+		return
+	if not story_run.enabled: _acknowledge_heart_victory()
+
+
+func _acknowledge_heart_victory() -> bool:
+	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartEncounter.VICTORY_SCENE or stage_runner.heart_battle not in [HeartEncounter.DEFEATED, HeartEncounter.SEEN] or not growth.run_active or player.damage_receiver.dead: return false
+	var previous := [stage_runner.heart_battle, stage_runner.arrival_ending]
+	stage_runner.heart_battle = HeartEncounter.SEEN
+	stage_runner.arrival_ending = ArrivalEnding.SEEN
+	stage_runner.stage_history[-1].heart_cleared = true
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		stage_runner.heart_battle = String(previous[0])
+		stage_runner.arrival_ending = String(previous[1])
+		if previous[0] != HeartEncounter.SEEN: stage_runner.stage_history[-1].erase("heart_cleared")
+		controls.story_message = "심장 확인 저장 실패 · 다시 확인하세요"
+		return false
+	if not _record_story_completion(_story_checkpoint_context()):
+		controls.story_message = _story_message
+		return false
+	controls.finish_story(0)
+	_finish_growth_selection()
 	stage_runner.force_emit_metrics()
 	return true
 

@@ -21,6 +21,7 @@ static func valid_checkpoint(state: Dictionary) -> bool:
 	var choice := String(stage.get("boss_choice", ""))
 	if choice.is_empty(): return phase == LOCKED
 	if int(stage.number) != 10: return false
+	if stage.get("heart_battle") in [HeartEncounter.PENDING, HeartEncounter.DEFEATED]: return phase == LOCKED
 	if not state.has("story"): return phase == SEEN
 	if stage.get("heart_threshold") == HeartThreshold.PENDING: return phase == LOCKED
 	return stage.get("heart_threshold") == HeartThreshold.SEEN and phase in [PENDING, SEEN]

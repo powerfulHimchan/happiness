@@ -1456,6 +1456,7 @@ func _show_result_screen() -> void:
 		"final_boss": String(movement_metrics.get("final_boss", SeraEncounter.LEGACY)),
 		"heart_threshold": String(movement_metrics.get("heart_threshold", "")),
 		"arrival_ending": String(movement_metrics.get("arrival_ending", "")),
+		"heart_battle": String(movement_metrics.get("heart_battle", "")),
 		"memory_id": active_memory_id,
 		"weapon_blueprints": movement_metrics.get("weapon_blueprints", {"sword": "", "bow": ""}).duplicate(),
 		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
@@ -2131,7 +2132,7 @@ func _draw_result_screen() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.88), true)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
 	_draw_text_centered(
-		"도착 엔딩 · 전체 여정 완료" if result_snapshot.get("arrival_ending") == ArrivalEnding.SEEN else "전체 여정 완료 · 10스테이지" if result_snapshot.get("run_mode") == JourneyRoutePlan.MODE else "네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
+		"행복의 심장 제압 · 전체 여정 완료" if result_snapshot.get("heart_battle") == HeartEncounter.SEEN else "도착 엔딩 · 전체 여정 완료" if result_snapshot.get("arrival_ending") == ArrivalEnding.SEEN else "전체 여정 완료 · 10스테이지" if result_snapshot.get("run_mode") == JourneyRoutePlan.MODE else "네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 24.0), Vector2(result_panel_rect.size.x, 58.0)),
 		36,
 		PASS_COLOR
@@ -2154,7 +2155,8 @@ func _draw_result_screen() -> void:
 	if choice in ["rescue", "destroy"]:
 		var caption := "태엽 기사 %s · %s 영구 해금" % [("구출" if choice == "rescue" else "파괴"), PrototypeMemoryAbilities.profile(PrototypeMemoryAbilities.CHOICE_IDS[choice]).name + (" / 태엽 검·활 설계도" if choice == "destroy" else "")]
 		if result_snapshot.get("final_boss") == SeraEncounter.ID: caption = "세라 %s · 이번 여정 선택 기록" % GuardianDecision.label(choice)
-		if result_snapshot.get("heart_threshold") == HeartThreshold.SEEN: caption += " · 행복의 심장 입구 도착"
+		if result_snapshot.get("heart_battle") == HeartEncounter.SEEN: caption += " · 행복의 심장 제압"
+		elif result_snapshot.get("heart_threshold") == HeartThreshold.SEEN: caption += " · 행복의 심장 입구 도착"
 		if guardian in ["rescue", "destroy"]: caption += " · 성문 수호기사 " + GuardianDecision.label(guardian)
 		_draw_text_centered(caption, Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
 	var content_x := result_panel_rect.position.x + 54.0
@@ -2419,7 +2421,14 @@ func _draw_combat_resume_countdown() -> void:
 func _draw_result_row(label: String, value: String, x: float, width: float, y: float) -> void:
 	draw_rect(Rect2(Vector2(x, y - 26.0), Vector2(width, 52.0)), Color("102b3a"), true)
 	_draw_text(label, Vector2(x + 18.0, y + 7.0), 18, MUTED_TEXT_COLOR)
-	_draw_text(value, Vector2(x + width * 0.27, y + 7.0), 19, TEXT_COLOR)
+	var value_width := width * 0.73 - 18.0
+	var font_size := 19
+	var lines := PrototypeStoryView.wrap(value, ThemeDB.fallback_font, font_size, value_width)
+	while lines.size() > 2 and font_size > 12:
+		font_size -= 1
+		lines = PrototypeStoryView.wrap(value, ThemeDB.fallback_font, font_size, value_width)
+	for index in lines.size():
+		_draw_text(lines[index], Vector2(x + width * 0.27, y + (7.0 if lines.size() == 1 else -6.0 + index * 22.0)), font_size, TEXT_COLOR)
 
 
 func _current_record_summary() -> Dictionary:

@@ -22,6 +22,8 @@ const CHRONICLES := {
 	"regions_destroy": {"name": "네 갈래 길과 태엽핵", "hint": "한 이야기 여행에서 네 지역 통과·기사 파괴", "lines": ["네 지역의 단서가 남겨진 약속을 되살린다.", "태엽핵은 행복의 나라로 가는 위험한 길에서 힘이 될 것이다.", "{hero}는 그곳의 미소 뒤에 남은 슬픔을 확인하려 한다."]},
 	"sera_rescue": {"name": "다시 기억한 시계탑의 약속", "hint": "이야기 전체 여정에서 세라 구출", "lines": ["왕관의 명령에서 풀려난 세라는 잃어버린 친구의 이름을 부른다.", "{hero}와 세라는 어린 시절의 약속을 다시 기억한다.", "나라의 미소 뒤에 남은 질문은 아직 끝나지 않았다."]},
 	"sera_destroy": {"name": "왕관이 부서진 자리", "hint": "이야기 전체 여정에서 세라 파괴", "lines": ["세라와 왕관이 사라진 자리에서 멈췄던 시계가 움직인다.", "{hero}는 되찾은 친구의 이름과 마지막 선택을 기억한다.", "나라의 행복을 움직이는 힘에 대한 질문이 남았다."]},
+	"heart_rescue": {"name": "함께 멈춘 심장의 명령", "hint": "세라를 구출한 재여정에서 행복의 심장 제압 후 승리 확인", "lines": ["{hero}와 세라는 슬픔을 떠넘기던 기계의 고리를 멈췄다.", "주민들의 미소를 지키려면 누구도 혼자 아프지 않은 답이 필요하다.", "시계탑의 약속은 이제 의식을 바꿀 선택으로 이어진다."]},
+	"heart_destroy": {"name": "왕관 너머에서 멈춘 맥박", "hint": "세라를 파괴한 재여정에서 행복의 심장 제압 후 승리 확인", "lines": ["{hero}는 부서진 왕관의 단서를 따라 기계의 명령을 끊었다.", "잃어버린 친구의 이름과 의식의 마지막 문양을 함께 기록한다.", "모두의 행복을 어떻게 바꿀지, 다음 선택을 준비한다."]},
 }
 
 static func valid_ids(ids: Variant) -> bool:
@@ -53,6 +55,7 @@ static func earned(history: Array, boss_stage: int) -> Array[String]:
 	return result
 
 static func chronicle_id(history: Array, choice: String) -> String:
+	if not history.is_empty() and history[-1].get("heart_cleared") == true: return "heart_" + choice
 	if not history.is_empty() and history[-1].get("final_boss") == SeraEncounter.ID: return "sera_" + choice
 	return ("regions_" if regions(history).size() == 4 else "") + choice
 
