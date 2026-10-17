@@ -182,6 +182,7 @@ func _update_basic_attack(delta: float) -> void:
 		return
 
 	var hit_index := combo_index
+	player.strike_attack_visual("sword_thrust" if hit_index == 2 else "sword_slash", player.facing_direction, false)
 	_action_sequence += 1
 	var damage: int = int(weapon.damage[hit_index])
 	var stagger_s := 0.18 if hit_index == 2 else 0.04
@@ -259,6 +260,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 			* float(player.facing_direction)
 		)
 	player.begin_combat_action(velocity_x, definition.can_move, definition.can_turn)
+	player.begin_attack_visual(_animation_clip(definition), player.facing_direction)
 	player.set_combat_evade_allowed(false)
 	last_combat_log = "%s 시작 · 취소 %.2fs부터" % [
 		definition.display_name,
@@ -288,8 +290,13 @@ func _update_skill_action(delta: float) -> void:
 		_finish_action("%s 완료" % definition.display_name)
 
 
+func _animation_clip(definition: SkillDefinition) -> String:
+	return "sword_thrust" if definition.skill_id in [&"sword_thrust", &"sword_charge"] else "sword_slash"
+
+
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	if _action == Action.WAVE_SLASH:
+		player.strike_attack_visual(_animation_clip(definition), _wave_direction, true)
 		_spawn_wave(definition, hit_index)
 		_show_slash(SKILL_FLASH_S, hit_index)
 		return
@@ -299,6 +306,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		hit_direction = _line_direction * definition.hit_directions[hit_index]
 	if _action == Action.LINE_SLASH:
 		_line_visual_direction = hit_direction
+	player.strike_attack_visual(_animation_clip(definition), hit_direction if _action == Action.LINE_SLASH else player.facing_direction, true)
 	var targets: Array[PrototypeTarget] = []
 	if _action == Action.DASH_SLASH:
 		if is_instance_valid(_captured_target) and _captured_target.is_targetable():
@@ -415,6 +423,7 @@ func _action_name() -> String:
 
 
 func _finish_action(reason: String) -> void:
+	player.combat_animation.clear("sword")
 	if _action != Action.NONE and not reason.is_empty():
 		last_combat_log = reason
 	_action = Action.NONE

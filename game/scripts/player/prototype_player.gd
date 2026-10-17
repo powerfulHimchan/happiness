@@ -47,6 +47,7 @@ const STOP_EPSILON_MPS := 0.02
 
 var character_id: String = "roan"
 var movement_animation := HeroMovementAnimation.new()
+var combat_animation := HeroCombatAnimation.new()
 
 var barrier_focus_unlocked: bool = false
 var crisis_power_unlocked: bool = false
@@ -692,6 +693,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 	facing_direction = 1
 	avatar_sprite.flip_h = false
 	movement_animation.reset(avatar_sprite, character_id)
+	combat_animation.clear()
 	air_dash_available = true
 	air_jump_available = double_jump_unlocked
 	_coyote_remaining_s = 0.0
@@ -763,6 +765,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	facing_direction = 1
 	avatar_sprite.flip_h = false
 	movement_animation.reset(avatar_sprite, character_id)
+	combat_animation.clear()
 	jump_held = false
 	jump_count = 0
 	last_jump_height_m = 0.0
@@ -960,12 +963,25 @@ func _end_invincibility() -> void:
 	]
 
 
+func begin_attack_visual(clip: String, direction: int) -> void:
+	combat_animation.begin(clip, direction)
+	_update_avatar_action_visual()
+
+
+func strike_attack_visual(clip: String, direction: int, is_skill: bool) -> void:
+	combat_animation.strike(clip, direction, is_skill)
+	_update_avatar_action_visual()
+
+
 func _update_avatar_action_visual(delta: float = 0.0) -> void:
+	combat_animation.advance(delta, damage_receiver.dead or _hit_flash_remaining_s > 0.0 or _fall_recovery_active or _input_lock_remaining_s > 0.0 or _mobility_action != MobilityAction.NONE)
 	movement_animation.update(
 		avatar_sprite, character_id, delta, is_on_floor(), velocity,
 		_mobility_action, _hit_flash_remaining_s > 0.0, damage_receiver.dead,
-		_combat_action_active, _fall_recovery_active
+		_combat_action_active or not combat_animation.clip.is_empty(), _fall_recovery_active
 	)
+	avatar_sprite.flip_h = facing_direction < 0
+	combat_animation.apply(avatar_sprite, character_id)
 	if damage_receiver.dead:
 		avatar_sprite.modulate = Color("647986")
 	elif _hit_flash_remaining_s > 0.0:
@@ -1143,6 +1159,7 @@ func set_character(id: String) -> bool:
 	if not PrototypeCharacters.valid_id(id): return false
 	character_id = id
 	movement_animation.reset(avatar_sprite, id)
+	combat_animation.clear()
 	_emit_metrics()
 	return true
 
