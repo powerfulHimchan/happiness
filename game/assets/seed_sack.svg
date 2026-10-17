@@ -1,8 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="108" height="118" viewBox="0 0 108 118">
-  <path d="M32 33 Q54 16 77 33 L87 86 Q69 104 54 105 Q37 104 20 86Z" fill="#c99f62" stroke="#5b4936" stroke-width="6"/>
-  <path d="M29 34 Q54 43 80 33" fill="none" stroke="#5b4936" stroke-width="7"/>
-  <path d="M47 28 C42 12 54 5 68 9 C65 22 58 28 47 28Z" fill="#7fc96b" stroke="#315b4c" stroke-width="5"/>
-  <circle cx="42" cy="65" r="5" fill="#3d3026"/>
-  <circle cx="67" cy="65" r="5" fill="#3d3026"/>
-  <circle cx="54" cy="82" r="7" fill="#6f563b"/>
+ <g stroke="#594331" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M33 99L26 108Q28 115 42 110L48 101M64 100L65 110Q78 115 84 109L77 99" fill="#866645"/>
+  <path d="M34 35C23 51 20 76 22 90C24 106 79 111 87 93C93 78 82 48 73 35Z" fill="#dbb878"/>
+  <path d="M73 36C77 56 80 79 73 91C65 102 38 100 24 93C31 110 79 110 87 93C94 78 82 48 73 36Z" fill="#b68b54" stroke="none"/>
+  <path d="M32 50Q26 72 30 82" fill="none" stroke="#f5d79c" stroke-width="5"/>
+  <path d="M42 34L34 20L45 23L49 12L57 22L70 18L66 35" fill="#d2ad70"/>
+  <path d="M53 23C51 12 65 5 80 9C75 21 65 26 53 23Z" fill="#90be66" stroke="#405c3e"/>
+  <path d="M57 21L70 13" stroke="#587b46" stroke-width="2"/>
+  <path d="M34 35Q53 42 75 35M36 40Q54 46 73 40" fill="none" stroke="#7b6040" stroke-width="4"/>
+  <path d="M67 40L76 53L67 56" fill="none" stroke-width="2.5"/>
+  <ellipse cx="44" cy="66" rx="5" ry="7" fill="#3d332a" stroke="none"/>
+  <ellipse cx="69" cy="64" rx="5" ry="7" fill="#3d332a" stroke="none"/>
+  <path d="M44 63V64M69 61V62" stroke="#fff4cf" stroke-width="2.5"/>
+  <path d="M58 81Q65 87 72 80" fill="none" stroke-width="2.5"/>
+  <path d="M59 29L70 27L77 32L69 37L60 35Z" fill="#9b754c" stroke-width="2"/>
+  <ellipse cx="70" cy="32" rx="4" ry="3" fill="#463b2d" stroke="none"/>
+  <path d="M31 85L43 88L40 99L29 96Z" fill="#c09a62" stroke-width="1.8"/>
+  <path d="M33 85L32 89M38 87L37 91M31 94L35 95M38 95L41 96" fill="none" stroke="#f1d398" stroke-width="1.5"/>
+ </g>
 </svg>

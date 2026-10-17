@@ -66,6 +66,7 @@ var _attack_distance_px: float = 0.0
 var _attack_hit_consumed: bool = false
 var _patrol_direction: float = -1.0
 var _projectile_sequence: int = 0
+var visual_animation := EnemyVisualAnimation.new()
 
 @onready var player: PrototypePlayer = get_node(player_path) as PrototypePlayer
 @onready var warning_ring: Sprite2D = $WarningRing
@@ -76,6 +77,7 @@ func _ready() -> void:
 	super._ready()
 	_original_body_color = body_color
 	_original_body_texture = body_sprite.texture
+	visual_animation.bind(body_sprite)
 	_spawn_position = position
 	add_to_group("prototype_enemy")
 	add_to_group("combat_enemy")
@@ -91,10 +93,12 @@ func _process(delta: float) -> void:
 	if not is_targetable():
 		if state != State.DEAD:
 			_set_state(State.DEAD, "%s 처치" % enemy_name())
+		_update_body_animation(delta * enemy_time_scale())
 		return
 	var scaled_delta := delta * enemy_time_scale()
 	_attack_cooldown_s = maxf(0.0, _attack_cooldown_s - scaled_delta)
 	_state_elapsed_s += scaled_delta
+	_update_body_animation(scaled_delta)
 	if festival_variant and enemy_type == EnemyType.LEAF_SLIME:
 		_update_festival_soldier(scaled_delta)
 	elif festival_variant and enemy_type == EnemyType.SEED_SACK:
@@ -102,6 +106,7 @@ func _process(delta: float) -> void:
 	else:
 		_update_original_enemy(scaled_delta)
 	_update_warning_visual()
+	_update_body_animation(0.0)
 
 
 func _update_original_enemy(delta: float) -> void:
@@ -132,6 +137,7 @@ func receive_damage(event: DamageEvent) -> int:
 	elif festival_variant and enemy_type == EnemyType.LEAF_SLIME and event.tags.has("sword"):
 		_attack_cooldown_s = SOLDIER_RECOVERY_S
 		_set_state(State.RECOVERY, "장난감 병정 피격 · 행진 중단")
+	_update_body_animation(0.0)
 	return result
 
 
@@ -146,6 +152,8 @@ func configure_route(route: String) -> void:
 	_combo_remaining = 0
 	queue_redraw()
 	body_color = Color("b8e38b") if forest_variant else Color.WHITE if ruins_variant or festival_variant else _original_body_color
+	visual_animation.reset(body_sprite)
+	_update_body_animation(0.0)
 
 
 func reset_target() -> void:
@@ -170,6 +178,10 @@ func reset_target() -> void:
 		warning_ring.visible = false
 	if warning_line != null:
 		warning_line.visible = false
+	if body_sprite != null:
+		visual_animation.reset(body_sprite)
+		_update_visual()
+		_update_body_animation(0.0)
 
 
 func set_stage_spawn(spawn_position: Vector2) -> void:
@@ -406,10 +418,12 @@ func _set_state(new_state: int, message: String) -> void:
 	if warning_line != null:
 		warning_line.visible = new_state == State.WARNING
 		warning_line.default_color = DANGER_LINE_COLOR
+	_update_body_animation(0.0)
 
 
 func _fire_seed_volley() -> void:
 	attack_count += 1
+	visual_animation.shot()
 	var origin := global_position + Vector2(0.0, -54.0)
 	var base_direction := _clock_aim if ruins_variant or festival_variant else (player.global_position + Vector2(0.0, -42.0) - origin).normalized()
 	var angles := TURRET_ANGLES if festival_variant else [-24.0, -12.0, 0.0, 12.0, 24.0] if forest_variant else [-12.0, 0.0, 12.0]
@@ -435,6 +449,24 @@ func _fire_seed_volley() -> void:
 			projectile_parent = get_tree().root
 		projectile_parent.add_child(projectile)
 		projectile.global_position = origin
+	_update_body_animation(0.0)
+
+
+func _update_body_animation(delta: float) -> void:
+	if body_sprite == null: return
+	var enabled := not ((ruins_variant and enemy_type == EnemyType.SEED_SACK) or (festival_variant and enemy_type != EnemyType.WIND_SPIRIT))
+	var facing := 1
+	var moving := false
+	if is_instance_valid(player):
+		facing = -1 if player.global_position.x < global_position.x else 1
+		moving = state == State.IDLE and (enemy_type == EnemyType.LEAF_SLIME or absf(player.global_position.x - global_position.x) < 400.0 or absf(player.global_position.x - global_position.x) > 700.0)
+	if enemy_type == EnemyType.LEAF_SLIME and state == State.IDLE:
+		facing = -1 if _patrol_direction < 0 else 1
+	elif state == State.ATTACK or (enemy_type == EnemyType.WIND_SPIRIT and state == State.WARNING):
+		facing = -1 if _attack_direction.x < 0 else 1
+	var warning_s := SLIME_WARNING_S if enemy_type == EnemyType.LEAF_SLIME else SEED_WARNING_S if enemy_type == EnemyType.SEED_SACK else WIND_WARNING_S
+	visual_animation.animate(body_sprite, enemy_type, state, delta, facing, moving,
+		_hit_flash_remaining_s > 0.0, enabled, _state_elapsed_s / warning_s)
 
 
 func _try_contact_damage(amount: int, attack_id: StringName) -> void:
