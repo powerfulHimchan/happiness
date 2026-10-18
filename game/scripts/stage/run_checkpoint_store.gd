@@ -155,6 +155,8 @@ static func valid_state(state: Dictionary) -> bool:
 	if not HeartThreshold.valid_checkpoint(state): return false
 	if not HeartEncounter.valid_checkpoint(state): return false
 	if not ArrivalEnding.valid_checkpoint(state): return false
+	if not FinalRitual.valid_checkpoint(stage): return false
+	if stage.has("final_ritual") and state.has("story") and stage.final_ritual.rewinds != state.story.rewinds: return false
 	for assisted_stage in legacy.get("assisted_stages", []):
 		if float(assisted_stage) > float(stage.number):
 			return false
