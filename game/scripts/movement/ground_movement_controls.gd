@@ -13,6 +13,7 @@ signal ultimate_pressed
 signal recovery_potion_pressed
 signal weapon_swap_pressed
 signal retry_requested
+signal final_action_requested(action: String)
 signal layout_test_started
 signal layout_test_finished
 signal combat_configuration_started
@@ -314,6 +315,7 @@ var story_toggle_rect := Rect2()
 var story_journal_open_rect := Rect2()
 var story_scene: Dictionary = {}
 var story_page: int = 0
+var final_selected: String = ""
 var story_message: String = ""
 var active_story_state: Dictionary = {}
 var story_progress_reader: Callable
@@ -401,7 +403,8 @@ func _notification(what: int) -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if screen_mode == ScreenMode.STORY:
-			story_acknowledged.emit(String(story_scene.id))
+			if story_scene.get("id") == FinalRitual.ENDING_SCENE and not story_scene.get("final_locked", false): final_action_requested.emit("back")
+			elif story_scene.get("id") != FinalRitual.CHOICE_SCENE: _acknowledge_story_input()
 			get_viewport().set_input_as_handled()
 			return
 		if screen_mode == ScreenMode.STORY_JOURNAL:
@@ -1457,6 +1460,7 @@ func _show_result_screen() -> void:
 		"heart_threshold": String(movement_metrics.get("heart_threshold", "")),
 		"arrival_ending": String(movement_metrics.get("arrival_ending", "")),
 		"heart_battle": String(movement_metrics.get("heart_battle", "")),
+		"ending_id": String(movement_metrics.get("ending_id", "")),
 		"memory_id": active_memory_id,
 		"weapon_blueprints": movement_metrics.get("weapon_blueprints", {"sword": "", "bow": ""}).duplicate(),
 		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
@@ -1541,11 +1545,24 @@ func _handle_screen_touch(position: Vector2) -> void:
 			weapon_reward_selected.emit(String(weapon_reward_cards[selected_weapon_reward].id))
 		return
 	if screen_mode == ScreenMode.STORY:
+		if story_scene.get("id") == FinalRitual.CHOICE_SCENE:
+			var final_layout := FinalRitual.layout(_safe_area_in_viewport())
+			var ritual: Dictionary = story_scene.ritual
+			for i in FinalRitual.IDS.size():
+				if final_layout.cards[i].has_point(position) and FinalRitual.can_choose(ritual, FinalRitual.IDS[i]):
+					final_selected = FinalRitual.IDS[i]
+					story_message = ""
+			if final_layout.secret.has_point(position) and FinalRitual.can_visit_secret(ritual): final_action_requested.emit("secret")
+			elif final_layout.confirm.has_point(position) and not final_selected.is_empty(): final_action_requested.emit(final_selected)
+			queue_redraw()
+			return
 		var layout := PrototypeStoryView.scene_layout(_safe_area_in_viewport())
-		if layout.skip.has_point(position): story_acknowledged.emit(String(story_scene.id))
+		if layout.skip.has_point(position):
+			if story_scene.get("id") == FinalRitual.ENDING_SCENE and not story_scene.get("final_locked", false): final_action_requested.emit("back")
+			else: _acknowledge_story_input()
 		elif layout.next.has_point(position):
 			if story_page < ceili(float(story_scene.lines.size()) / 2.0) - 1: story_page += 1
-			else: story_acknowledged.emit(String(story_scene.id))
+			else: _acknowledge_story_input()
 		return
 	if screen_mode == ScreenMode.STORY_JOURNAL:
 		_handle_story_journal_touch(position)
@@ -2132,7 +2149,7 @@ func _draw_result_screen() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.88), true)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
 	_draw_text_centered(
-		"행복의 심장 제압 · 전체 여정 완료" if result_snapshot.get("heart_battle") == HeartEncounter.SEEN else "도착 엔딩 · 전체 여정 완료" if result_snapshot.get("arrival_ending") == ArrivalEnding.SEEN else "전체 여정 완료 · 10스테이지" if result_snapshot.get("run_mode") == JourneyRoutePlan.MODE else "네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
+		String(ArrivalEnding.PROFILES[String(result_snapshot.ending_id)].name) + " 엔딩 · 전체 여정 완료" if result_snapshot.get("ending_id", "") in FinalRitual.IDS else "행복의 심장 제압 · 전체 여정 완료" if result_snapshot.get("heart_battle") == HeartEncounter.SEEN else "도착 엔딩 · 전체 여정 완료" if result_snapshot.get("arrival_ending") == ArrivalEnding.SEEN else "전체 여정 완료 · 10스테이지" if result_snapshot.get("run_mode") == JourneyRoutePlan.MODE else "네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
 		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 24.0), Vector2(result_panel_rect.size.x, 58.0)),
 		36,
 		PASS_COLOR
@@ -3330,10 +3347,16 @@ func update_story_status(state: Dictionary) -> void:
 func show_story(scene: Dictionary) -> void:
 	release_all_inputs()
 	story_scene = scene.duplicate(true)
+	final_selected = ""
 	story_page = 0
 	story_message = ""
 	screen_mode = ScreenMode.STORY
 	queue_redraw()
+
+
+func _acknowledge_story_input() -> void:
+	if story_scene.get("journal_replay", false): finish_story(ScreenMode.STORY_JOURNAL)
+	else: story_acknowledged.emit(String(story_scene.id))
 
 
 func finish_story(return_mode: int) -> void:
@@ -3346,6 +3369,9 @@ func finish_story(return_mode: int) -> void:
 
 func _draw_story() -> void:
 	var safe := _safe_area_in_viewport()
+	if story_scene.get("id") == FinalRitual.CHOICE_SCENE:
+		FinalRitual.draw(self, safe, story_scene.ritual, final_selected, story_message)
+		return
 	var layout := PrototypeStoryView.scene_layout(safe)
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
 	_draw_village_text(String(story_scene.name), Rect2(safe.position + safe.size * Vector2(0.05, 0.06), safe.size * Vector2(0.90, 0.09)), 32, ACTIVE_COLOR)
@@ -3423,6 +3449,19 @@ func _handle_story_journal_touch(position: Vector2) -> void:
 			story_journal_tab = i
 			story_journal_page = 0
 			return
+	if story_journal_tab == 2:
+		for i in layout.cards.size():
+			var card: Dictionary = snapshot.cards[i]
+			if layout.cards[i].has_point(position) and card.open:
+				var record: Dictionary = story_journal_state.endings[card.id]
+				var scene := ArrivalEnding.scene(String(record.character), String(record.choice)) if card.id == ArrivalEnding.ID else FinalRitual.ending_scene({"choice": card.id, "phase": FinalRitual.SEEN}, String(record.character), String(record.choice), false)
+				scene.id = "ending_replay"
+				scene.journal_replay = true
+				scene.confirm = "수첩으로"
+				scene.skip = "수첩으로"
+				scene.footer = "엔딩 다시 읽기 · 기록과 현재 도전은 바뀌지 않습니다"
+				show_story(scene)
+				return
 	if layout.previous.has_point(position): story_journal_page = maxi(0, story_journal_page - 1)
 	elif layout.next.has_point(position): story_journal_page = mini(int(snapshot.pages) - 1, story_journal_page + 1)
 	elif layout.back.has_point(position): close_story_journal()

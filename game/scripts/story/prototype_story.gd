@@ -113,6 +113,8 @@ static func journal_cards(tab: int, progress: Dictionary, character: String) -> 
 		var lines: Array[String] = []
 		if open:
 			for line in profile.lines: lines.append(String(line).replace("{hero}", PrototypeCharacters.display_name(String(collected[id].character) if tab != 0 else character)))
+			if tab == 2:
+				lines.assign(["이 결말은 기억 수첩에 보존됩니다", "주인공 · " + PrototypeCharacters.display_name(String(collected[id].character)), "카드를 눌러 엔딩 전체 다시 읽기"])
 		else: lines.assign([String(profile.hint), "아직 발견하지 않은 내용입니다"])
 		result.append({"id": id, "name": profile.name if open else ("기억 조각 %d" if tab == 0 else "여행 기록 %d" if tab == 1 else "엔딩 %d") % (result.size() + 1), "open": open, "status": "발견함" if open else "미발견", "lines": lines})
 	return result

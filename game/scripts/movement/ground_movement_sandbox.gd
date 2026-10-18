@@ -104,6 +104,7 @@ func _ready() -> void:
 	controls.combat_configuration_started.connect(_suspend_combat_environment)
 	controls.combat_configuration_finished.connect(_restore_combat_environment)
 	controls.story_acknowledged.connect(_acknowledge_story)
+	controls.final_action_requested.connect(_on_final_action)
 	stage_runner.stage_reset.connect(_reset_sera_intro)
 	controls.story_progress_reader = _story_progress
 	controls.story_journal_started.connect(_begin_run_build_pause)
@@ -344,6 +345,7 @@ func _reset_test() -> void:
 	if stage_runner.run_mode == JourneyRoutePlan.MODE:
 		stage_runner.arrival_ending = ArrivalEnding.LOCKED
 		stage_runner.heart_battle = HeartEncounter.AVAILABLE if story_journal_store.snapshot().endings.has(ArrivalEnding.ID) else HeartEncounter.LOCKED
+		stage_runner.final_ritual = FinalRitual.initial(int(story_journal_store.snapshot().rewind_count))
 	if story_run.enabled and stage_runner.run_mode == JourneyRoutePlan.MODE:
 		stage_runner.heart_threshold = HeartThreshold.UNREACHED
 	for projectile in get_tree().get_nodes_in_group("enemy_projectile"):
@@ -407,6 +409,10 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		return
 	if growth.run_active and not player.damage_receiver.dead:
 		_record_route_history(stage_runner.stage_history)
+	if FinalRitual.blocks_completion(stage_runner.final_ritual) and growth.run_active and not player.damage_receiver.dead:
+		if controls.current_screen_mode() != 18 or controls.story_scene.get("id") not in [FinalRitual.CHOICE_SCENE, FinalRitual.SECRET_SCENE, FinalRitual.ENDING_SCENE, HeartEncounter.VICTORY_SCENE]: _open_final_ritual()
+		return
+	if stage_runner.final_ritual.get("phase") == FinalRitual.SEEN and not stage_runner.final_record_ready: return
 	if stage_runner.heart_battle == HeartEncounter.PENDING and growth.run_active and not player.damage_receiver.dead:
 		if _arrival_record_saved: _start_heart_battle()
 		return
@@ -617,7 +623,7 @@ func _refresh_checkpoint() -> void:
 	var story_saved := _record_story_completion(_available_checkpoint)
 	if job_error == OK and ability_error == OK and story_saved and guardian_saved:
 		if not _available_checkpoint.is_empty() and not String(_available_checkpoint.stage.get("boss_choice", "")).is_empty():
-			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice), SeraEncounter.boss_id(_available_checkpoint.stage)) and _available_checkpoint.stage.get("heart_threshold") != HeartThreshold.PENDING and _available_checkpoint.stage.get("arrival_ending") != ArrivalEnding.PENDING and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
+			if _grant_boss_legacy(String(_available_checkpoint.recorder.id), String(_available_checkpoint.stage.boss_choice), SeraEncounter.boss_id(_available_checkpoint.stage)) and _available_checkpoint.stage.get("heart_threshold") != HeartThreshold.PENDING and _available_checkpoint.stage.get("arrival_ending") != ArrivalEnding.PENDING and not FinalRitual.blocks_completion(_available_checkpoint.stage.get("final_ritual", {})) and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 				_discard_checkpoint()
 		elif not _available_checkpoint.is_empty() and test_recorder.has_completed_run(String(_available_checkpoint.recorder.id)):
 			_discard_checkpoint()
@@ -680,6 +686,7 @@ func continue_saved_run() -> bool:
 		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
 	_intermission_stage = int(state.stage.number)
 	stage_runner.restore_checkpoint(state.stage)
+	stage_runner.final_record_ready = stage_runner.final_ritual.get("phase") == FinalRitual.SEEN and _arrival_record_saved
 	player.guardian_choice = stage_runner.guardian_choice
 	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode, player.character_id, story_run.enabled)
 	_active_rewind_run_id = String(state.recorder.id)
@@ -690,7 +697,12 @@ func continue_saved_run() -> bool:
 	_stage_recovered_health = 0
 	if stage_runner.uses_boss():
 		controls.show_boss_choice(SeraEncounter.PROFILE if stage_runner.uses_sera() else {})
-		if stage_runner.heart_battle == HeartEncounter.PENDING:
+		if FinalRitual.blocks_completion(stage_runner.final_ritual) or stage_runner.final_ritual.get("phase") == FinalRitual.SEEN:
+			if stage_runner.final_ritual.get("phase") == FinalRitual.SEEN:
+				_finish_growth_selection()
+				stage_runner.force_emit_metrics()
+			else: _open_final_ritual()
+		elif stage_runner.heart_battle == HeartEncounter.PENDING:
 			_start_heart_battle()
 		elif stage_runner.heart_battle == HeartEncounter.DEFEATED:
 			_open_heart_victory()
@@ -1086,6 +1098,8 @@ func _open_story(return_mode: int) -> void:
 
 
 func _acknowledge_story(id: String) -> bool:
+	if id == FinalRitual.SECRET_SCENE: return _acknowledge_final_secret()
+	if id == FinalRitual.ENDING_SCENE: return _acknowledge_final_ending()
 	if id == HeartEncounter.VICTORY_SCENE: return _acknowledge_heart_victory()
 	if id == ArrivalEnding.SCENE_ID: return _acknowledge_arrival_ending()
 	if id == HeartThreshold.SCENE_ID: return _acknowledge_heart_threshold()
@@ -1148,12 +1162,28 @@ func _record_story_completion(state: Dictionary) -> bool:
 	if not _record_heart_truth(state): return false
 	if HeartEncounter.blocks_completion(String(state.stage.get("heart_battle", ""))): return true
 	if state.stage.get("heart_battle") == HeartEncounter.SEEN:
+		var ritual: Dictionary = state.stage.get("final_ritual", {})
+		if not ritual.is_empty():
+			var core_error := story_journal_store.record_fragments(FinalRitual.CORE_MEMORIES)
+			if core_error == OK and ritual.get("secret") == true: core_error = story_journal_store.record_secret(FinalRitual.SECRET_SCENE)
+			if core_error != OK:
+				_arrival_record_saved = false
+				_story_message = "의식의 기억 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요"
+				return false
 		var error := story_journal_store.record_chronicle(String(state.recorder.id), "heart_" + String(state.stage.boss_choice), String(state.player.get("character_id", "roan")), PrototypeStory.earned(state.stage.history, int(state.stage.limit)) if state.has("story") else [])
 		_arrival_record_saved = error == OK
 		if error != OK:
 			_story_message = "심장 승리 기록 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요"
 			_update_story_status()
 			return false
+		if not ritual.is_empty():
+			if ritual.phase != FinalRitual.SEEN:
+				_story_message = ""
+				return true
+			var ending_error := story_journal_store.record_ending(String(state.recorder.id), String(ritual.choice), String(state.player.get("character_id", "roan")), String(state.stage.boss_choice))
+			_arrival_record_saved = ending_error == OK
+			_story_message = "엔딩 기록 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요" if ending_error != OK else ""
+			return ending_error == OK
 	if state.stage.get("arrival_ending") == ArrivalEnding.PENDING: return true
 	if state.stage.get("heart_threshold") == HeartThreshold.PENDING: return true
 	if state.stage.get("arrival_ending") == ArrivalEnding.SEEN:
@@ -1255,10 +1285,13 @@ func _open_heart_victory() -> void:
 func _acknowledge_heart_victory() -> bool:
 	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != HeartEncounter.VICTORY_SCENE or stage_runner.heart_battle not in [HeartEncounter.DEFEATED, HeartEncounter.SEEN] or not growth.run_active or player.damage_receiver.dead: return false
 	var previous := [stage_runner.heart_battle, stage_runner.arrival_ending]
+	var previous_ritual := stage_runner.final_ritual.duplicate(true)
 	stage_runner.heart_battle = HeartEncounter.SEEN
 	stage_runner.arrival_ending = ArrivalEnding.SEEN
 	stage_runner.stage_history[-1].heart_cleared = true
+	if not previous_ritual.is_empty(): stage_runner.final_ritual = FinalRitual.prepare(previous_ritual, story_journal_store.snapshot())
 	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		stage_runner.final_ritual = previous_ritual
 		stage_runner.heart_battle = String(previous[0])
 		stage_runner.arrival_ending = String(previous[1])
 		if previous[0] != HeartEncounter.SEEN: stage_runner.stage_history[-1].erase("heart_cleared")
@@ -1267,6 +1300,84 @@ func _acknowledge_heart_victory() -> bool:
 	if not _record_story_completion(_story_checkpoint_context()):
 		controls.story_message = _story_message
 		return false
+	if not stage_runner.final_ritual.is_empty():
+		_open_final_ritual()
+		return true
+	controls.finish_story(0)
+	_finish_growth_selection()
+	stage_runner.force_emit_metrics()
+	return true
+
+
+func _open_final_ritual() -> void:
+	_begin_growth_pause()
+	controls.release_all_inputs()
+	var ritual := stage_runner.final_ritual
+	controls.show_story(FinalRitual.ending_scene(ritual, player.character_id, stage_runner.boss_choice, not story_run.enabled) if ritual.get("phase") in [FinalRitual.ENDING, FinalRitual.SEEN] else FinalRitual.choice_scene(ritual))
+
+
+func _on_final_action(action: String) -> bool:
+	if controls.current_screen_mode() != 18 or not growth.run_active or player.damage_receiver.dead: return false
+	var ritual := stage_runner.final_ritual
+	var scene_id := String(controls.story_scene.get("id", ""))
+	if action == "back":
+		if scene_id != FinalRitual.ENDING_SCENE or ritual.get("phase") != FinalRitual.ENDING: return false
+	elif scene_id != FinalRitual.CHOICE_SCENE or ritual.get("phase") != FinalRitual.CHOOSING: return false
+	if not _record_story_completion(_story_checkpoint_context()):
+		controls.story_message = _story_message
+		return false
+	if action == "secret":
+		if not FinalRitual.can_visit_secret(ritual): return false
+		controls.show_story(FinalRitual.secret_scene(player.character_id, stage_runner.boss_choice))
+		return true
+	var previous := ritual.duplicate(true)
+	if action == "back":
+		ritual.phase = FinalRitual.CHOOSING
+		ritual.choice = ""
+	elif FinalRitual.can_choose(ritual, action):
+		ritual.phase = FinalRitual.ENDING
+		ritual.choice = action
+	else: return false
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		stage_runner.final_ritual = previous
+		controls.story_message = "선택 저장 실패 · 다시 확인하세요"
+		return false
+	_open_final_ritual()
+	return true
+
+
+func _acknowledge_final_secret() -> bool:
+	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != FinalRitual.SECRET_SCENE or not growth.run_active or player.damage_receiver.dead or not FinalRitual.can_visit_secret(stage_runner.final_ritual): return false
+	var before := bool(stage_runner.final_ritual.secret)
+	stage_runner.final_ritual.secret = true
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		stage_runner.final_ritual.secret = before
+		controls.story_message = "비밀 기록 확인 저장 실패 · 다시 확인하세요"
+		return false
+	if not _record_story_completion(_story_checkpoint_context()):
+		controls.story_message = _story_message
+		return false
+	_open_final_ritual()
+	return true
+
+
+func _acknowledge_final_ending() -> bool:
+	var ritual := stage_runner.final_ritual
+	if controls.current_screen_mode() != 18 or controls.story_scene.get("id") != FinalRitual.ENDING_SCENE or ritual.get("phase") not in [FinalRitual.ENDING, FinalRitual.SEEN] or not growth.run_active or player.damage_receiver.dead: return false
+	var previous := String(ritual.phase)
+	ritual.phase = FinalRitual.SEEN
+	stage_runner.stage_history[-1].ending_id = ritual.choice
+	if _save_checkpoint(stage_runner.current_metrics(), false) != OK:
+		ritual.phase = previous
+		if previous != FinalRitual.SEEN: stage_runner.stage_history[-1].erase("ending_id")
+		controls.story_message = "엔딩 확인 저장 실패 · 다시 확인하세요"
+		return false
+	controls.story_scene.final_locked = true
+	controls.story_scene.skip = "기록 저장 재시도"
+	if not _record_story_completion(_story_checkpoint_context()):
+		controls.story_message = _story_message
+		return false
+	stage_runner.final_record_ready = true
 	controls.finish_story(0)
 	_finish_growth_selection()
 	stage_runner.force_emit_metrics()

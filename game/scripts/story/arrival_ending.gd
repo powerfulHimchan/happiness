@@ -8,10 +8,13 @@ const PENDING := "pending"
 const SEEN := "seen"
 const PROFILES := {
 	ID: {"name": "도착", "hint": "전체 여정에서 세라의 운명을 선택하고 도착 엔딩 확인", "lines": ["{hero}는 행복의 나라에 도착했다.", "주민들의 기록에는 주인공의 이름이 남아 있지 않았다.", "시계탑의 약속을 품고 새로운 진실을 찾기로 했다."]},
+	"return": {"name": "귀환", "hint": "심장 제압 후 되감기 3회 이상일 때 귀환 선택", "lines": ["{hero}는 바깥의 기억을 놓고 행복의 나라의 국민으로 돌아가기로 했다.", "새벽시계가 반복해서 되돌린 날들이 하나씩 멀어진다. 몸에 쌓였던 고통은 의식으로 돌아가고, 주민들은 잃어버렸던 이름을 다시 부른다.", "함께 여행한 길과 가족의 목소리는 희미해진다. 평온을 얻은 만큼 돌려주어야 하는 시간이 있었다.", "{hero}는 시계탑을 올려다보았다. 이유를 설명할 수 없는 그리움이 남지만, 이제 이 나라에서 새로운 하루를 살아간다."]},
+	"liberation": {"name": "해방", "hint": "심장 제압 후 시계·가족·심장의 핵심 기억을 확인하고 의식 파괴 선택", "lines": ["{hero}는 누구도 대신 아프게 하지 않도록 슬픔 전가 의식을 부쉈다.", "기계의 고리가 끊어지자 주민들에게 잊었던 슬픔과 두려움이 돌아왔다. 모두가 웃는 나라는 끝났지만, 눈물을 흘리는 사람 곁에 다른 사람이 앉았다.", "새벽시계는 더는 한 아이를 나라 밖으로 되돌려 보내지 않는다. {hero}는 자신의 이름과 여행의 기억을 지킨다.", "아픔이 한순간에 사라지지는 않았다. 하지만 사람들은 누군가를 추방하는 대신, 함께 회복할 길을 찾기 시작했다."]},
+	"dawn": {"name": "새벽", "hint": "기억 10종과 시계탑 비밀 기록을 발견한 뒤 고통을 함께 나누는 선택", "lines": ["{hero}는 가족의 마지막 설계로 의식을 바꾸고, 동의한 사람들과 고통을 나누기로 했다.", "나라에 진실을 알리고 한 사람씩 뜻을 물었다. 누구도 의무로 묶이지 않으며, 원하지 않는 사람의 기억이나 마음은 가져가지 않는다.", "새벽시계의 연결이 한 아이에게서 여러 사람으로 이어졌다. 누군가는 손을 잡고, 누군가는 곁에서 쉬어 갈 자리를 만들었다.", "주민들의 표정이 서로 달라졌다. 웃음과 눈물이 함께 있는 광장에서 {hero}는 처음으로 가벼워진 몸으로 숨을 내쉰다.", "초침은 다시 뒤로 돌지 않았다. 완벽하지 않은 하루를 함께 살아갈 새로운 새벽이 밝았다."]},
 }
 
 static func valid_record(id: Variant, run_id: Variant, character: Variant, choice: Variant) -> bool:
-	return id is String and id == ID and run_id is String and not run_id.is_empty() and run_id.length() <= 256 and PrototypeCharacters.valid_id(character) and choice is String and choice in ["rescue", "destroy"]
+	return id is String and id in PROFILES and run_id is String and not run_id.is_empty() and run_id.length() <= 256 and PrototypeCharacters.valid_id(character) and choice is String and choice in ["rescue", "destroy"]
 
 static func valid_checkpoint(state: Dictionary) -> bool:
 	var stage: Dictionary = state.stage
