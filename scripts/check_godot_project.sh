@@ -5,6 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/scripts/story/final_ritual.gd"
+  "$game_root/tests/gp321_runtime_test.gd"
   "$game_root/scripts/combat/enemy_visual_animation.gd"
   "$game_root/tests/enemy_art_runtime_test.gd"
   "$game_root/scripts/player/hero_combat_animation.gd"
@@ -705,6 +707,22 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for ritual_character in roan lumi; do
+    for ritual_weapon in sword bow; do
+      ritual_choice=destroy
+      if [[ "$ritual_character/$ritual_weapon" == roan/sword || "$ritual_character/$ritual_weapon" == lumi/bow ]]; then ritual_choice=rescue; fi
+      for ritual_ending in return liberation dawn; do
+        for ritual_phase in seed resume finish; do
+          checked_godot 80s --headless --path "$game_root" \
+            --script res://tests/gp321_runtime_test.gd -- "$ritual_phase" "$ritual_character" "$ritual_weapon" "$ritual_choice" "$ritual_ending"
+        done
+      done
+    done
+  done
+  for ritual_phase in selection-fault ending-fault journal-fault secret-fault validate layout legacy first story-off fault-seed fault-resume; do
+    checked_godot 80s --headless --path "$game_root" \
+      --script res://tests/gp321_runtime_test.gd -- "$ritual_phase" lumi bow destroy liberation
+  done
   for heart_character in roan lumi; do
     for heart_weapon in sword bow; do
       for heart_choice in rescue destroy; do
