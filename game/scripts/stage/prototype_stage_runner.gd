@@ -49,6 +49,7 @@ const FESTIVAL_ROUTE := {"id": "festival", "name": "태엽 축제장", "lines": 
 const CITY_GATE_ROUTE := {"id": "city_gate", "name": "행복의 나라 성문", "lines": ["9스테이지 · 하얀 성벽과 미소 짓는 주민", "성문 계단 · 혼합 전투와 행복의 수호기사", "통과 후 중심부로 이동"]}
 const CITY_CORE_ROUTE := {"id": "city_core", "name": "행복의 나라 중심부", "lines": ["10스테이지 · 시계탑 회랑과 궁전 앞 광장", "혼합 웨이브 뒤 웃는 태엽 기사 전투", "승리 후 구출/파괴 선택"]}
 const REGION_IDS := ["wind", "forest", "ruins", "festival"]
+var expedition: int = 0
 var run_mode: String = "standard"
 var region_order: Array[String] = []
 var region_rng := RandomNumberGenerator.new()
@@ -175,6 +176,7 @@ func reset_stage() -> void:
 
 
 func reset_run() -> void:
+	if run_mode != JourneyRoutePlan.MODE: expedition = 0
 	final_boss_id = SeraEncounter.ID if run_mode == JourneyRoutePlan.MODE else SeraEncounter.LEGACY
 	heart_threshold = ""
 	arrival_ending = ""
@@ -311,6 +313,7 @@ func final_enemy() -> PrototypeTarget:
 
 func checkpoint_snapshot() -> Dictionary:
 	var state := {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed, "skills_claimed": skills_claimed, "boss_choice": boss_choice}
+	if expedition == 1: state.expedition = expedition
 	if run_mode in ["regions", JourneyRoutePlan.MODE]:
 		state.run_mode = run_mode
 		state.region_order = region_order.duplicate()
@@ -325,6 +328,7 @@ func checkpoint_snapshot() -> Dictionary:
 
 
 func restore_checkpoint(state: Dictionary) -> void:
+	expedition = int(state.get("expedition", 0))
 	final_boss_id = SeraEncounter.boss_id(state)
 	heart_threshold = String(state.get("heart_threshold", ""))
 	arrival_ending = String(state.get("arrival_ending", ""))
@@ -482,9 +486,12 @@ func current_metrics() -> Dictionary:
 		section_name = "보스 · " + BossHappinessGuardian.BOSS_NAME
 		objective = "방패 돌진·충격파·빛의 창 회피 · 벽 충돌/공격 뒤 빈틈 공략"
 	if uses_heart(): route_name = "행복의 심장"
+	if expedition == 1: route_name += " · 원정 1"
 	if heart_battle == HeartEncounter.ACTIVE:
 		section_name = "진 보스 · 행복의 심장"
 		objective = "지면 맥박·부채 바늘·수평 절단 회피 · 핵 노출 공략"
+	if expedition == 1 and not stage_complete and current_section == Section.WAVE_TWO:
+		objective += " · 추가 정예 갑옷 멧돼지 처치"
 	var closed_gate_count := 0
 	for gate_index in gates.size():
 		if is_gate_closed(gate_index):
@@ -495,6 +502,7 @@ func current_metrics() -> Dictionary:
 		"run_route_id": route_id,
 		"run_route_name": route_name,
 		"run_mode": run_mode,
+		"expedition": expedition,
 		"run_visited_regions": visited,
 		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
 		"run_region_section": region_section(),
@@ -550,6 +558,9 @@ func _finish_current_section() -> void:
 		Section.ADVANCE_TWO:
 			_set_gate_closed(2, false)
 			_activate_wave_two()
+			if expedition == 1 and run_mode == JourneyRoutePlan.MODE:
+				_activate_enemy(armored_boar, Vector2(4450.0, 780.0))
+				_active_enemies.append(armored_boar)
 		Section.WAVE_TWO:
 			_deactivate_all_combat_enemies()
 			_activate_elite()

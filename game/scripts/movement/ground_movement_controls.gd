@@ -304,6 +304,11 @@ var selected_stage_limit: int = 3
 var requested_stage_limit: int = 0
 var previous_stage_limit: int = 3
 var start_length_rects: Array[Rect2] = []
+var expedition_available: bool = false
+var selected_expedition: int = 0
+var requested_expedition: int = 0
+var previous_expedition: int = 0
+var expedition_rect := Rect2()
 var selected_run_mode: String = "standard"
 var requested_run_mode: String = "standard"
 var previous_run_mode: String = "standard"
@@ -934,7 +939,8 @@ func update_test_record_summary(summary: Dictionary) -> void:
 	queue_redraw()
 
 
-func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false) -> bool:
+func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> bool:
+	if expedition not in [0, 1] or (expedition == 1 and (mode != JourneyRoutePlan.MODE or not expedition_unlocked())): return false
 	if not PrototypeCharacters.valid_id(character): return false
 	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5, 10] or (stage_count == 0 and mode != "standard") or (stage_count != 0 and not PrototypeStageRunner.valid_mode_length(mode, stage_count)):
 		return false
@@ -947,6 +953,8 @@ func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: 
 	selected_character_id = character
 	requested_character_id = character
 	requested_stage_limit = 3 if stage_count == 0 and (selected_stage_limit == 10 or int(movement_metrics.get("run_stage_count", 3)) == 10) else stage_count
+	requested_expedition = expedition
+	selected_expedition = expedition
 	requested_run_mode = mode
 	selected_run_mode = mode
 	if requested_stage_limit > 0:
@@ -1048,10 +1056,12 @@ func begin_stage_from_main(starting_weapon: String = "sword") -> bool:
 func show_start_weapon_selection() -> void:
 	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]:
 		return
+	expedition_unlocked()
 	start_weapon_return_mode = screen_mode
 	start_weapon_previous_selection = selected_starting_weapon
 	previous_stage_limit = selected_stage_limit
 	previous_run_mode = selected_run_mode
+	previous_expedition = selected_expedition
 	previous_character_id = selected_character_id
 	previous_story_enabled = selected_story_enabled
 	start_memory_previous_selection = selected_memory_id
@@ -1067,6 +1077,7 @@ func _refresh_start_weapon_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	var gap := minf(32.0, safe.size.x * 0.03)
 	var card_width := (safe.size.x * 0.90 - gap) * 0.5
+	expedition_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.105), Vector2(safe.size.x * 0.62, safe.size.y * 0.065))
 	character_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.70, safe.size.y * 0.105), Vector2(safe.size.x * 0.25, safe.size.y * 0.065))
 	start_length_rects.clear()
 	var length_width := (safe.size.x * 0.90 - gap * 3) / 4.0
@@ -1092,14 +1103,25 @@ func start_legacy_description() -> String:
 	return BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "선택한 무기를 주 무기로 장착하고 새 도전을 시작합니다"
 
 
+func expedition_unlocked() -> bool:
+	expedition_available = story_progress_reader.is_valid() and not story_progress_reader.call().get("endings", {}).is_empty()
+	return expedition_available
+
+
+func expedition_label() -> String:
+	if selected_run_mode != JourneyRoutePlan.MODE: return "난이도 · 기본 / 원정은 전체 여정 전용"
+	if not expedition_available: return "난이도 · 기본 / 전체 여정 완료 후 원정 해금"
+	return "원정 1 · 웨이브 2에 정예 추가" if selected_expedition == 1 else "난이도 · 기본 / 눌러 원정 1 선택"
+
+
 func _draw_start_weapon_selection() -> void:
 	_refresh_start_weapon_layout()
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
 	_draw_text_centered("네 지역 각 두 구간 · 성문과 중심부 · 약 30분" if selected_run_mode == JourneyRoutePlan.MODE else "연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
-	_draw_village_text(start_legacy_description(), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.10), Vector2(safe.size.x * 0.62, safe.size.y * 0.04)), 19, TEXT_COLOR)
+	_draw_button(expedition_rect, expedition_label(), selected_expedition == 1)
 	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
-	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe) + (" · 수호기사 지원30" if guardian_companion_unlocked else "") + (" · 세라 지원40" if sera_companion_unlocked else ""), Rect2(safe.position + Vector2(0, safe.size.y * 0.145), Vector2(safe.size.x * 0.68, safe.size.y * 0.03)), 17, PASS_COLOR)
+	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe) + (" · 수호기사 지원30" if guardian_companion_unlocked else "") + (" · 세라 지원40" if sera_companion_unlocked else ""), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.815), Vector2(safe.size.x * 0.90, safe.size.y * 0.03)), 17, PASS_COLOR)
 	for index in 4:
 		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계", "전체 여정 · 10단계"][index]
 		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
@@ -1120,7 +1142,9 @@ func _draw_start_weapon_selection() -> void:
 			_draw_text_centered(labels[line_index], Rect2(rect.position + Vector2(0, rect.size.y * offsets[line_index]), Vector2(rect.size.x, 38)), 28 if line_index == 0 else 18, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
 	_draw_memory_cards()
 	if not pending_boss_legacy.is_empty():
-		_draw_button(boss_legacy_toggle_rect, "다음 도전 1회 · 보상 적용 " + ("켜짐" if use_boss_legacy else "꺼짐 · 이번 기회 건너뛰기"), use_boss_legacy)
+		draw_style_box(_panel_style(PANEL_COLOR), boss_legacy_toggle_rect)
+		_draw_text_centered("다음 도전 1회 · 보상 " + ("켜짐" if use_boss_legacy else "꺼짐 · 이번 기회 건너뛰기"), Rect2(boss_legacy_toggle_rect.position, Vector2(boss_legacy_toggle_rect.size.x, 23)), 18, ACTIVE_COLOR if use_boss_legacy else MUTED_TEXT_COLOR)
+		_draw_text_centered(start_legacy_description(), Rect2(boss_legacy_toggle_rect.position + Vector2(0, 23), Vector2(boss_legacy_toggle_rect.size.x, 20)), 16, TEXT_COLOR)
 	else:
 		_draw_text_centered("영구 기억은 도전마다 하나만 장착합니다", boss_legacy_toggle_rect, 18, MUTED_TEXT_COLOR)
 	_draw_button(start_weapon_cancel_rect, "돌아가기", false)
@@ -1448,6 +1472,7 @@ func _show_result_screen() -> void:
 	var bow_hits := int(movement_metrics.get("bow_total_hits", 0))
 	var total_hits := sword_hits + bow_hits
 	result_snapshot = {
+		"expedition": int(movement_metrics.get("expedition", 0)),
 		"character_id": String(movement_metrics.get("character_id", "roan")),
 		"completion_s": float(movement_metrics.get("run_elapsed_s", movement_metrics.get("stage_elapsed_s", 0.0))),
 		"target_s": float(movement_metrics.get("stage_target_s", 180.0)) * int(movement_metrics.get("run_stage_count", 1)),
@@ -1589,6 +1614,9 @@ func _handle_screen_touch(position: Vector2) -> void:
 		return
 	if screen_mode == ScreenMode.START_WEAPON:
 		_refresh_start_weapon_layout()
+		if expedition_rect.has_point(position):
+			if selected_run_mode == JourneyRoutePlan.MODE and expedition_unlocked(): selected_expedition = 1 - selected_expedition
+			return
 		if character_open_rect.has_point(position):
 			show_character_selection()
 			return
@@ -1596,6 +1624,7 @@ func _handle_screen_touch(position: Vector2) -> void:
 			if start_length_rects[index].has_point(position):
 				selected_stage_limit = 10 if index == 3 else 3 if index == 0 else 5
 				selected_run_mode = JourneyRoutePlan.MODE if index == 3 else "regions" if index == 2 else "standard"
+				if index != 3: selected_expedition = 0
 				return
 		for index in start_weapon_card_rects.size():
 			if start_weapon_card_rects[index].has_point(position):
@@ -1614,12 +1643,13 @@ func _handle_screen_touch(position: Vector2) -> void:
 			selected_starting_weapon = start_weapon_previous_selection
 			selected_stage_limit = previous_stage_limit
 			selected_run_mode = previous_run_mode
+			selected_expedition = previous_expedition
 			selected_character_id = previous_character_id
 			selected_story_enabled = previous_story_enabled
 			selected_memory_id = start_memory_previous_selection
 			screen_mode = start_weapon_return_mode
 		elif start_weapon_confirm_rect.has_point(position):
-			begin_retry(selected_starting_weapon, selected_stage_limit, selected_run_mode, selected_character_id, selected_story_enabled)
+			begin_retry(selected_starting_weapon, selected_stage_limit, selected_run_mode, selected_character_id, selected_story_enabled, selected_expedition)
 		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
 		if relic_offer_available and relic_reward_open_rect.has_point(position):
@@ -2158,7 +2188,7 @@ func _draw_result_screen() -> void:
 	var target_s := float(result_snapshot.get("target_s", 180.0))
 	_draw_village_text(
 		"%s · 완료 %s  ·  목표 %s  ·  %s" % [
-			PrototypeCharacters.display_name(String(result_snapshot.get("character_id", "roan"))),
+			PrototypeCharacters.display_name(String(result_snapshot.get("character_id", "roan"))) + (" · 원정 1" if result_snapshot.get("expedition", 0) == 1 else ""),
 			_format_clock(completion_s),
 			_format_clock(target_s),
 			"목표 이내" if completion_s <= target_s else "+%s" % _format_clock(completion_s - target_s),
