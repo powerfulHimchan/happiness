@@ -16,6 +16,7 @@ var _summary: Dictionary = {}
 var _active_run_id: String = ""
 var _active_character_id: String = "roan"
 var _active_story_enabled: bool = false
+var _active_expedition: int = 0
 var _recorded_section_count: int = 0
 var _active_run_completed: bool = false
 var _run_sequence: int = 0
@@ -28,7 +29,8 @@ func _ready() -> void:
 	_append_event("app_started", {})
 
 
-func start_run(run_id: String = "", mode: String = "standard", character: String = "roan", stories: bool = false) -> void:
+func start_run(run_id: String = "", mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> void:
+	_active_expedition = 1 if expedition == 1 and mode == JourneyRoutePlan.MODE else 0
 	_active_story_enabled = stories
 	_active_character_id = character if PrototypeCharacters.valid_id(character) else "roan"
 	_run_sequence += 1
@@ -46,6 +48,7 @@ func start_run(run_id: String = "", mode: String = "standard", character: String
 	var fields := {"run_id": _active_run_id, "character_id": _active_character_id}
 	if mode in ["regions", JourneyRoutePlan.MODE]: fields.run_mode = mode
 	if stories: fields.story_enabled = true
+	fields.expedition = _active_expedition
 	_append_event("run_started", fields)
 	_append_section_started(0)
 
@@ -54,7 +57,8 @@ func checkpoint_snapshot() -> Dictionary:
 	return {"id": _active_run_id}
 
 
-func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "standard", character: String = "roan", stories: bool = false) -> void:
+func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> void:
+	_active_expedition = 1 if expedition == 1 and mode == JourneyRoutePlan.MODE else 0
 	_active_story_enabled = stories
 	_active_character_id = character if PrototypeCharacters.valid_id(character) else "roan"
 	_active_run_id = String(state.id)
@@ -65,6 +69,7 @@ func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "st
 	var fields := {"run_id": _active_run_id, "stage_number": stage_number, "character_id": _active_character_id}
 	if mode in ["regions", JourneyRoutePlan.MODE]: fields.run_mode = mode
 	if stories: fields.story_enabled = true
+	fields.expedition = _active_expedition
 	_append_event("run_resumed", fields)
 
 
@@ -118,6 +123,7 @@ func record_stage_metrics(metrics: Dictionary) -> void:
 			"final_boss": String(metrics.get("final_boss", SeraEncounter.LEGACY)),
 			"heart_battle": String(metrics.get("heart_battle", "")),
 			"ending_id": String(metrics.get("ending_id", "")),
+			"expedition": int(metrics.get("expedition", 0)),
 		}
 		if metrics.get("run_mode") in ["regions", JourneyRoutePlan.MODE]: fields.run_mode = metrics.run_mode
 		if metrics.get("run_mode") == JourneyRoutePlan.MODE: fields.guardian_choice = String(metrics.get("guardian_choice", ""))
@@ -311,6 +317,7 @@ func _recent_runs(events: Array[Dictionary]) -> Array[Dictionary]:
 		if run.completed:
 			continue
 		if event.get("run_mode") is String and event.run_mode in ["regions", JourneyRoutePlan.MODE]: run.run_mode = event.run_mode
+		if (event.get("expedition") is int or event.get("expedition") is float) and float(event.expedition) in [0.0, 1.0]: run.expedition = int(event.expedition)
 		if event.get("story_enabled") is bool and event.story_enabled: run.story_enabled = true
 		if name == "run_completed" and event.get("chronicle") is String and PrototypeStory.CHRONICLES.has(event.chronicle): run.chronicle = event.chronicle
 		var stage := maxi(1, int(event.get("stage_number", 1)))

@@ -289,6 +289,9 @@ func _draw_track_markers() -> void:
 
 
 func _reset_test() -> void:
+	if controls.requested_expedition == 1 and (controls.requested_run_mode != JourneyRoutePlan.MODE or story_journal_store.snapshot().endings.is_empty()):
+		controls.show_main_screen()
+		return
 	# 확정 저장을 먼저 회수하고 보상 소비 저장 실패 시 새 도전을 시작하지 않는다.
 	_refresh_checkpoint()
 	if not _available_checkpoint.is_empty() and (not _job_codex_message.is_empty() or not _ability_codex_message.is_empty()):
@@ -335,11 +338,12 @@ func _reset_test() -> void:
 			target.reset_target()
 	target_selector.reset_selection()
 	ultimate_controller.reset_ultimate()
-	test_recorder.start_run(run_id, controls.requested_run_mode, player.character_id, story_run.enabled)
+	test_recorder.start_run(run_id, controls.requested_run_mode, player.character_id, story_run.enabled, controls.requested_expedition)
 	_active_rewind_run_id = run_id
 	player.relic_run_id = run_id
 	if controls.requested_stage_limit > 0:
 		stage_runner.stage_limit = controls.requested_stage_limit
+	stage_runner.expedition = controls.requested_expedition
 	stage_runner.set_run_mode(controls.requested_run_mode)
 	stage_runner.reset_run()
 	if stage_runner.run_mode == JourneyRoutePlan.MODE:
@@ -688,7 +692,7 @@ func continue_saved_run() -> bool:
 	stage_runner.restore_checkpoint(state.stage)
 	stage_runner.final_record_ready = stage_runner.final_ritual.get("phase") == FinalRitual.SEEN and _arrival_record_saved
 	player.guardian_choice = stage_runner.guardian_choice
-	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode, player.character_id, story_run.enabled)
+	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode, player.character_id, story_run.enabled, stage_runner.expedition)
 	_active_rewind_run_id = String(state.recorder.id)
 	_restoring_checkpoint = false
 	player.apply_growth_health(0, 0)

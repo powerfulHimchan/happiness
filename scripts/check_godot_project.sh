@@ -6,6 +6,7 @@ game_root="$project_root/game"
 
 required_files=(
   "$game_root/scripts/story/final_ritual.gd"
+  "$game_root/tests/gp322_runtime_test.gd"
   "$game_root/tests/gp321_runtime_test.gd"
   "$game_root/scripts/combat/enemy_visual_animation.gd"
   "$game_root/tests/enemy_art_runtime_test.gd"
@@ -707,6 +708,14 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for expedition_character in roan lumi; do
+    for expedition_weapon in sword bow; do
+      for expedition_phase in preview seed resume validate legacy layout story-off finish; do
+        checked_godot 80s --headless --path "$game_root" \
+          --script res://tests/gp322_runtime_test.gd -- "$expedition_phase" "$expedition_character" "$expedition_weapon"
+      done
+    done
+  done
   for ritual_character in roan lumi; do
     for ritual_weapon in sword bow; do
       ritual_choice=destroy
