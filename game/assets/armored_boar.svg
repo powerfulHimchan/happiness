@@ -1,9 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="190" height="126" viewBox="0 0 190 126">
-  <path d="M26 80 C20 48 43 25 88 23 C133 20 165 42 166 77 C157 105 124 114 75 108 C47 106 31 96 26 80Z" fill="#8b623e" stroke="#3d3026" stroke-width="7"/>
-  <path d="M55 37 C82 13 135 19 154 45 L143 67 C117 50 83 49 59 63Z" fill="#71818b" stroke="#314956" stroke-width="7"/>
-  <path d="M145 56 Q181 54 174 82 Q166 99 143 91Z" fill="#c99f62" stroke="#3d3026" stroke-width="6"/>
-  <path d="M168 78 L187 68 L177 91Z" fill="#fff3d1" stroke="#8b7858" stroke-width="4"/>
-  <circle cx="145" cy="65" r="5" fill="#f26b5e"/>
-  <path d="M52 100 L46 119 M120 105 L124 122" stroke="#3d3026" stroke-width="10" stroke-linecap="round"/>
-  <path d="M44 42 L31 21 L58 31Z" fill="#8b623e" stroke="#3d3026" stroke-width="6"/>
+ <g stroke="#3a3840" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Far legs and curled tail. -->
+  <path d="M64 87L72 112H82L84 89M126 86L133 112H143L142 84" fill="#684b46"/>
+  <path d="M28 69C7 75 7 53 18 55C28 57 20 66 16 62" fill="none"/>
+  <path d="M23 73C19 47 44 27 86 27C124 25 156 40 159 73C159 101 130 108 81 105C46 107 25 97 23 73Z" fill="#a77150"/>
+  <path d="M27 77C41 96 78 96 110 91C137 88 148 75 154 62C168 99 131 108 81 105C48 106 29 97 27 77Z" fill="#7c5144" stroke="none"/>
+  <path d="M33 62C36 52 43 47 53 46" fill="none" stroke="#d99b68" stroke-width="5"/>
+  <!-- The near hooves define the ground pivot at y=122. -->
+  <path d="M43 92L41 112L43 120H60L64 98M106 96L108 115L111 120H128L129 96" fill="#a77150"/>
+  <path d="M42 111L60 112L60 120H43ZM109 112L128 112L128 120H111Z" fill="#424552"/>
+  <path d="M51 115V120M119 116V120" stroke="#9b9291" stroke-width="2"/>
+  <!-- Overlapping blue steel plates, brass rim and timepiece crest. -->
+  <path d="M42 40C61 18 114 16 144 37L139 65C114 54 80 56 53 69Z" fill="#506b80"/>
+  <path d="M45 39C68 21 113 20 140 37L133 52C108 42 77 45 53 57Z" fill="#a7ccd1"/>
+  <path d="M46 41L53 64C80 51 113 50 138 62" fill="none" stroke="#d5ae65" stroke-width="4"/>
+  <path d="M72 26L77 49M102 24L102 47M126 30L122 50" fill="none" stroke="#506b80" stroke-width="3"/>
+  <path d="M56 36L66 32M83 29L92 28M109 29L116 31" stroke="#e4f3e8" stroke-width="3"/>
+  <circle cx="54" cy="50" r="2.5" fill="#f4d694" stroke="none"/>
+  <circle cx="132" cy="49" r="2.5" fill="#f4d694" stroke="none"/>
+  <path d="M85 48L98 42L111 48L107 65L98 71L89 65Z" fill="#d9b469" stroke-width="2.5"/>
+  <circle cx="98" cy="55" r="7" fill="#466b74" stroke-width="2"/>
+  <path d="M98 50V55L102 58" fill="none" stroke="#fff1c3" stroke-width="2"/>
+  <!-- Brow, cheek and muzzle face right. -->
+  <path d="M128 44L123 13Q139 14 147 36" fill="#a77150"/>
+  <path d="M131 24L133 38L140 34Z" fill="#dfaa7b" stroke="none"/>
+  <path d="M128 47C146 35 163 44 169 63L170 83C159 99 137 100 128 86" fill="#bb8057"/>
+  <path d="M137 78C146 88 160 87 166 81C160 100 141 98 131 87Z" fill="#915947" stroke="none"/>
+  <path d="M132 48L151 50L148 57L130 54Z" fill="#738e9e"/>
+  <path d="M144 59Q152 56 155 61" fill="none" stroke-width="3"/>
+  <ellipse cx="150" cy="64" rx="4" ry="5" fill="#302f3b" stroke="none"/>
+  <circle cx="151" cy="62" r="1.3" fill="#fff1ce" stroke="none"/>
+  <path d="M161 67C172 62 183 65 184 76C185 87 178 91 167 88L158 81Z" fill="#d6a57b"/>
+  <path d="M170 72L171 77M178 71L179 76" stroke="#714b43" stroke-width="3"/>
+  <path d="M156 84C162 86 168 84 170 79" fill="none" stroke-width="2.5"/>
+  <path d="M153 80C162 82 166 73 165 66C176 80 167 94 155 90Z" fill="#fff0ce" stroke-width="2.5"/>
+  <path d="M138 74L141 76M133 79L136 81" stroke="#dcaa77" stroke-width="2.5"/>
+ </g>
 </svg>
