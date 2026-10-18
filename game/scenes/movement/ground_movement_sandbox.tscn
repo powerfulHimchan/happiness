@@ -26,7 +26,7 @@
 [ext_resource type="Texture2D" path="res://assets/leaf_slime.svg" id="25_leaf_slime"]
 [ext_resource type="Texture2D" path="res://assets/seed_sack.svg" id="26_seed_sack"]
 [ext_resource type="Texture2D" path="res://assets/wind_spirit.svg" id="27_wind_spirit"]
-[ext_resource type="Script" path="res://scripts/combat/elite_armored_boar.gd" id="28_elite_boar"]
+[ext_resource type="Script" path="res://scripts/combat/armored_boar_presentation.gd" id="28_elite_boar"]
 [ext_resource type="Texture2D" path="res://assets/armored_boar.svg" id="29_armored_boar"]
 [ext_resource type="Script" path="res://scripts/stage/prototype_stage_runner.gd" id="30_stage_runner"]
 [ext_resource type="Script" path="res://scripts/combat/combat_feedback_controller.gd" id="31_feedback"]
@@ -629,7 +629,8 @@ default_color = Color(1, 0.42, 0.32, 0.88)
 points = PackedVector2Array(0, -42, -1100, -42)
 
 [node name="ArmorMarker" type="Polygon2D" parent="Targets/ArmoredBoar"]
-position = Vector2(0, -126)
+position = Vector2(-112, -145)
+scale = Vector2(0.7, 0.7)
 z_index = 4
 polygon = PackedVector2Array(-18, 0, -10, -13, 0, -19, 10, -13, 18, 0, 0, 18)
 color = Color(0.568627, 0.717647, 0.780392, 1)
