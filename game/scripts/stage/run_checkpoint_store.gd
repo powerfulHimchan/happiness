@@ -97,7 +97,7 @@ static func valid_state(state: Dictionary) -> bool:
 	var stage: Dictionary = state.stage
 	if stage.has("run_mode") and not stage.run_mode is String: return false
 	var mode: String = stage.get("run_mode", "standard")
-	if stage.has("expedition") and (not _number(stage.expedition, 0, 1, true) or (stage.expedition == 1 and mode != JourneyRoutePlan.MODE)): return false
+	if stage.has("expedition") and (not _number(stage.expedition, 0, 2, true) or (stage.expedition > 0 and mode != JourneyRoutePlan.MODE)): return false
 	if not _number(stage.get("limit"), 3, 10, true) or int(stage.limit) not in [3, 5, 10]:
 		return false
 	if not PrototypeRelic.valid_state(state.get("relic", {})):

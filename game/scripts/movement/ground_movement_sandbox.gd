@@ -289,7 +289,7 @@ func _draw_track_markers() -> void:
 
 
 func _reset_test() -> void:
-	if controls.requested_expedition == 1 and (controls.requested_run_mode != JourneyRoutePlan.MODE or story_journal_store.snapshot().endings.is_empty()):
+	if controls.requested_expedition > 0 and (controls.requested_run_mode != JourneyRoutePlan.MODE or not controls.expedition_unlocked() or controls.requested_expedition > controls.expedition_cap):
 		controls.show_main_screen()
 		return
 	# 확정 저장을 먼저 회수하고 보상 소비 저장 실패 시 새 도전을 시작하지 않는다.
@@ -344,6 +344,7 @@ func _reset_test() -> void:
 	if controls.requested_stage_limit > 0:
 		stage_runner.stage_limit = controls.requested_stage_limit
 	stage_runner.expedition = controls.requested_expedition
+	player.expedition = stage_runner.expedition
 	stage_runner.set_run_mode(controls.requested_run_mode)
 	stage_runner.reset_run()
 	if stage_runner.run_mode == JourneyRoutePlan.MODE:
@@ -614,7 +615,20 @@ func _record_stage_metrics(metrics: Dictionary) -> void:
 		test_recorder.record_stage_metrics(metrics)
 
 
+func _migrate_expedition_clears() -> void:
+	var progress := story_journal_store.snapshot()
+	var completed: Dictionary = test_recorder.summary_snapshot().get("completed_expeditions", {})
+	for run_id in completed:
+		if progress.expedition_clears.has(run_id): continue
+		var record: Dictionary = completed[run_id].duplicate()
+		var level := int(record.level)
+		record.erase("level")
+		if progress.ending_completions.get(run_id, {}) == record:
+			story_journal_store.record_expedition_clear(run_id, level)
+
+
 func _refresh_checkpoint() -> void:
+	_migrate_expedition_clears()
 	_sera_reward_saved = true
 	_arrival_record_saved = true
 	_available_checkpoint = checkpoint_store.load_checkpoint()
@@ -690,6 +704,7 @@ func continue_saved_run() -> bool:
 		ultimate_controller.select_job_ultimate(String(state.growth.job), String(state.ultimate.profile))
 	_intermission_stage = int(state.stage.number)
 	stage_runner.restore_checkpoint(state.stage)
+	player.expedition = stage_runner.expedition
 	stage_runner.final_record_ready = stage_runner.final_ritual.get("phase") == FinalRitual.SEEN and _arrival_record_saved
 	player.guardian_choice = stage_runner.guardian_choice
 	test_recorder.restore_checkpoint(state.recorder, stage_runner.stage_number, stage_runner.run_mode, player.character_id, story_run.enabled, stage_runner.expedition)
@@ -1050,12 +1065,12 @@ func _capture_run_build() -> Dictionary:
 			"potion_percent": roundi(player.potion_heal_ratio() * 100),
 			"lifesteal_percent": player.lifesteal_rate_percent(),
 			"air_jump": player.double_jump_unlocked,
-			"victory_recovery": growth.victory_recovery_amount(),
+			"victory_recovery": player.scaled_health_recovery(growth.victory_recovery_amount()),
 			"evasive_barrier": growth.evasive_barrier_amount(),
 			"potion_barrier": player.potion_barrier_recovery(),
 			"orb_radius_m": player.recovery_orb_pickup_radius() / PrototypePlayer.PIXELS_PER_METER,
 			"orb_percent": player.recovery_orb_heal_percent(),
-			"orb_heal": player.recovery_orb_heal_amount(),
+			"orb_heal": player.scaled_health_recovery(player.recovery_orb_heal_amount()),
 			"evade_cooldown": player.ground_evade_cooldown_s(), "incoming_multiplier": player.incoming_damage_multiplier(),
 		},
 		"recipe": player.potion_recipe,
@@ -1185,6 +1200,7 @@ func _record_story_completion(state: Dictionary) -> bool:
 				_story_message = ""
 				return true
 			var ending_error := story_journal_store.record_ending(String(state.recorder.id), String(ritual.choice), String(state.player.get("character_id", "roan")), String(state.stage.boss_choice))
+			if ending_error == OK and int(state.stage.get("expedition", 0)) > 0: ending_error = story_journal_store.record_expedition_clear(String(state.recorder.id), int(state.stage.expedition))
 			_arrival_record_saved = ending_error == OK
 			_story_message = "엔딩 기록 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요" if ending_error != OK else ""
 			return ending_error == OK
@@ -1192,6 +1208,7 @@ func _record_story_completion(state: Dictionary) -> bool:
 	if state.stage.get("heart_threshold") == HeartThreshold.PENDING: return true
 	if state.stage.get("arrival_ending") == ArrivalEnding.SEEN:
 		var ending_error := story_journal_store.record_ending(String(state.recorder.id), ArrivalEnding.ID, String(state.player.get("character_id", "roan")), String(state.stage.boss_choice))
+		if ending_error == OK and int(state.stage.get("expedition", 0)) > 0: ending_error = story_journal_store.record_expedition_clear(String(state.recorder.id), int(state.stage.expedition))
 		_arrival_record_saved = ending_error == OK
 		if ending_error != OK:
 			_story_message = "엔딩 기록 저장 실패 · 다시 확인하거나 이어하기로 재시도하세요"
