@@ -313,7 +313,7 @@ func final_enemy() -> PrototypeTarget:
 
 func checkpoint_snapshot() -> Dictionary:
 	var state := {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed, "skills_claimed": skills_claimed, "boss_choice": boss_choice}
-	if expedition == 1: state.expedition = expedition
+	if expedition > 0: state.expedition = expedition
 	if run_mode in ["regions", JourneyRoutePlan.MODE]:
 		state.run_mode = run_mode
 		state.region_order = region_order.duplicate()
@@ -486,11 +486,11 @@ func current_metrics() -> Dictionary:
 		section_name = "보스 · " + BossHappinessGuardian.BOSS_NAME
 		objective = "방패 돌진·충격파·빛의 창 회피 · 벽 충돌/공격 뒤 빈틈 공략"
 	if uses_heart(): route_name = "행복의 심장"
-	if expedition == 1: route_name += " · 원정 1"
+	if expedition > 0: route_name += " · 원정 %d" % expedition
 	if heart_battle == HeartEncounter.ACTIVE:
 		section_name = "진 보스 · 행복의 심장"
 		objective = "지면 맥박·부채 바늘·수평 절단 회피 · 핵 노출 공략"
-	if expedition == 1 and not stage_complete and current_section == Section.WAVE_TWO:
+	if expedition > 0 and not stage_complete and current_section == Section.WAVE_TWO:
 		objective += " · 추가 정예 갑옷 멧돼지 처치"
 	var closed_gate_count := 0
 	for gate_index in gates.size():
@@ -558,7 +558,7 @@ func _finish_current_section() -> void:
 		Section.ADVANCE_TWO:
 			_set_gate_closed(2, false)
 			_activate_wave_two()
-			if expedition == 1 and run_mode == JourneyRoutePlan.MODE:
+			if expedition > 0 and run_mode == JourneyRoutePlan.MODE:
 				_activate_enemy(armored_boar, Vector2(4450.0, 780.0))
 				_active_enemies.append(armored_boar)
 		Section.WAVE_TWO:

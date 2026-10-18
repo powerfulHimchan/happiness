@@ -87,7 +87,7 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				if run.get("story_enabled", false) == true:
 					lines.append("이야기 여행" + (" · " + PrototypeStory.CHRONICLES[String(run.chronicle)].name if PrototypeStory.CHRONICLES.has(String(run.get("chronicle", ""))) else ""))
 				lines.append("주인공 · " + PrototypeCharacters.display_name(String(run.get("character_id", "roan"))))
-				if run.get("run_mode") == JourneyRoutePlan.MODE: lines.append("전체 여정 · 10스테이지" + (" · 원정 1" if run.get("expedition", 0) == 1 else ""))
+				if run.get("run_mode") == JourneyRoutePlan.MODE: lines.append("전체 여정 · 10스테이지" + (" · 원정 %d" % int(run.expedition) if run.get("expedition", 0) > 0 else ""))
 				if complete and run.get("guardian_choice") in ["rescue", "destroy"]: lines[2] += " · 성문 수호기사 " + GuardianDecision.label(String(run.guardian_choice))
 				if complete and run.get("final_boss") == SeraEncounter.ID: lines[2] = "세라 " + GuardianDecision.label(choice) + (" · 성문 수호기사 " + GuardianDecision.label(String(run.guardian_choice)) if run.get("guardian_choice") in ["rescue", "destroy"] else "")
 				if run.get("run_mode") == "regions": lines.append("네 지역 순회 · 5스테이지")

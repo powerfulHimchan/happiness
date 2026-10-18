@@ -305,6 +305,7 @@ var requested_stage_limit: int = 0
 var previous_stage_limit: int = 3
 var start_length_rects: Array[Rect2] = []
 var expedition_available: bool = false
+var expedition_cap: int = 0
 var selected_expedition: int = 0
 var requested_expedition: int = 0
 var previous_expedition: int = 0
@@ -940,7 +941,7 @@ func update_test_record_summary(summary: Dictionary) -> void:
 
 
 func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> bool:
-	if expedition not in [0, 1] or (expedition == 1 and (mode != JourneyRoutePlan.MODE or not expedition_unlocked())): return false
+	if expedition not in [0, 1, 2] or (expedition > 0 and (mode != JourneyRoutePlan.MODE or not expedition_unlocked() or expedition > expedition_cap)): return false
 	if not PrototypeCharacters.valid_id(character): return false
 	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5, 10] or (stage_count == 0 and mode != "standard") or (stage_count != 0 and not PrototypeStageRunner.valid_mode_length(mode, stage_count)):
 		return false
@@ -1104,14 +1105,18 @@ func start_legacy_description() -> String:
 
 
 func expedition_unlocked() -> bool:
-	expedition_available = story_progress_reader.is_valid() and not story_progress_reader.call().get("endings", {}).is_empty()
+	var progress: Dictionary = story_progress_reader.call() if story_progress_reader.is_valid() else {}
+	expedition_available = not progress.get("endings", {}).is_empty()
+	expedition_cap = 2 if not progress.get("expedition_clears", {}).is_empty() else 1 if expedition_available else 0
 	return expedition_available
 
 
 func expedition_label() -> String:
 	if selected_run_mode != JourneyRoutePlan.MODE: return "난이도 · 기본 / 원정은 전체 여정 전용"
 	if not expedition_available: return "난이도 · 기본 / 전체 여정 완료 후 원정 해금"
-	return "원정 1 · 웨이브 2에 정예 추가" if selected_expedition == 1 else "난이도 · 기본 / 눌러 원정 1 선택"
+	if selected_expedition == 2: return "원정 2 · 추가 정예 · 체력 회복75%"
+	if selected_expedition == 1: return "원정 1 · 정예 추가 / " + ("눌러 원정 2 선택" if expedition_cap == 2 else "완주 후 원정 2 해금")
+	return "난이도 · 기본 / 눌러 원정 1 선택"
 
 
 func _draw_start_weapon_selection() -> void:
@@ -1119,7 +1124,7 @@ func _draw_start_weapon_selection() -> void:
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
 	_draw_text_centered("네 지역 각 두 구간 · 성문과 중심부 · 약 30분" if selected_run_mode == JourneyRoutePlan.MODE else "연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
-	_draw_button(expedition_rect, expedition_label(), selected_expedition == 1)
+	_draw_button(expedition_rect, expedition_label(), selected_expedition > 0)
 	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
 	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe) + (" · 수호기사 지원30" if guardian_companion_unlocked else "") + (" · 세라 지원40" if sera_companion_unlocked else ""), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.815), Vector2(safe.size.x * 0.90, safe.size.y * 0.03)), 17, PASS_COLOR)
 	for index in 4:
@@ -1615,7 +1620,7 @@ func _handle_screen_touch(position: Vector2) -> void:
 	if screen_mode == ScreenMode.START_WEAPON:
 		_refresh_start_weapon_layout()
 		if expedition_rect.has_point(position):
-			if selected_run_mode == JourneyRoutePlan.MODE and expedition_unlocked(): selected_expedition = 1 - selected_expedition
+			if selected_run_mode == JourneyRoutePlan.MODE and expedition_unlocked(): selected_expedition = (selected_expedition + 1) % (expedition_cap + 1)
 			return
 		if character_open_rect.has_point(position):
 			show_character_selection()
@@ -2188,7 +2193,7 @@ func _draw_result_screen() -> void:
 	var target_s := float(result_snapshot.get("target_s", 180.0))
 	_draw_village_text(
 		"%s · 완료 %s  ·  목표 %s  ·  %s" % [
-			PrototypeCharacters.display_name(String(result_snapshot.get("character_id", "roan"))) + (" · 원정 1" if result_snapshot.get("expedition", 0) == 1 else ""),
+			PrototypeCharacters.display_name(String(result_snapshot.get("character_id", "roan"))) + (" · 원정 %d" % int(result_snapshot.expedition) if result_snapshot.get("expedition", 0) > 0 else ""),
 			_format_clock(completion_s),
 			_format_clock(target_s),
 			"목표 이내" if completion_s <= target_s else "+%s" % _format_clock(completion_s - target_s),

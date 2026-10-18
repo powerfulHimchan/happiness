@@ -60,6 +60,7 @@ var calm_focus_unlocked: bool = false
 var healing_flow_unlocked: bool = false
 var memory_id: String = ""
 var potions_remaining: int = POTIONS_PER_RUN
+var expedition: int = 0
 var potion_log: String = "회복약 · 최대 체력 25% 회복"
 var potion_recipe: String = PrototypePotionRecipes.BASIC
 var potion_pouch_boost_unlocked: bool = false
@@ -569,11 +570,15 @@ func calm_damage_multiplier(kind: String) -> float:
 	return 1.15 if kind == "skill" and calm_focus_unlocked and is_calm_health() else 1.0
 
 
+func scaled_health_recovery(amount: int) -> int:
+	return ceili(amount * 0.75) if expedition == 2 and amount > 0 else amount
+
+
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
 	if damage_receiver.dead:
 		return
 	damage_receiver.max_health += maximum_bonus
-	damage_receiver.health = mini(damage_receiver.max_health, damage_receiver.health + healing)
+	damage_receiver.health = mini(damage_receiver.max_health, damage_receiver.health + scaled_health_recovery(healing))
 	_emit_metrics()
 
 
@@ -713,6 +718,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	expedition = 0
 	barrier_focus_unlocked = false
 	crisis_power_unlocked = false
 	nimble_mastery_unlocked = false
@@ -1225,13 +1231,13 @@ func _emit_metrics() -> void:
 		"orb_magnet_unlocked": orb_magnet_unlocked,
 		"orb_vitality_unlocked": orb_vitality_unlocked,
 		"recovery_orb_heal_percent": recovery_orb_heal_percent(),
-		"recovery_orb_heal_amount": recovery_orb_heal_amount(),
+		"recovery_orb_heal_amount": scaled_health_recovery(recovery_orb_heal_amount()),
 		"recovery_orb_pickup_radius_m": recovery_orb_pickup_radius() / PIXELS_PER_METER,
 		"potions_remaining": potions_remaining,
 		"potions_capacity": potions_capacity(),
 		"potion_heal_percent": roundi(potion_heal_ratio() * 100),
 		"potion_recipe": potion_recipe,
-		"potion_log": potion_log,
+		"potion_log": potion_log + (" · 체력 회복75%" if expedition == 2 else ""),
 		"skill_recharge_multiplier": skill_recharge_multiplier(),
 		"relic_damage_multiplier": relic_damage_multiplier(),
 		"incoming_damage_multiplier": incoming_damage_multiplier(),
