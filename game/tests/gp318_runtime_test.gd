@@ -165,7 +165,7 @@ func _notebook() -> bool:
 		var snapshot: Dictionary = controls.story_journal_snapshot()
 		_tap(snapshot.layout.tabs[2].get_center())
 		snapshot = controls.story_journal_snapshot()
-		if not _check(controls.story_journal_tab == 2 and snapshot.cards.size() == 1 and snapshot.cards[0].open and snapshot.cards[0].name == "도착", "실제 엔딩 탭 터치·도착 기록 표시"): return false
+		if not _check(controls.story_journal_tab == 2 and snapshot.cards.size() == 3 and snapshot.cards[0].open and snapshot.cards[0].name == "도착", "실제 엔딩 탭 터치·도착 기록 표시"): return false
 		for rect in snapshot.layout.tabs + snapshot.layout.cards:
 			if not _check(controls._safe_area_in_viewport().encloses(rect), "엔딩 탭·카드 두 비율 안전 영역"): return false
 	controls.close_story_journal()
@@ -189,7 +189,7 @@ func _journal_integrity() -> bool:
 	file.close()
 	if not _check(journal.snapshot() == progress and journal.record_ending("third", "arrival", "lumi", "rescue") == OK and journal.snapshot().ending_completions.size() == 3, "위변조·손상 꼬리 무시·다음 정상 기록 복구"): return false
 	var cards := PrototypeStory.journal_cards(2, {}, "lumi")
-	return _check(cards.size() == 1 and not cards[0].open and cards[0].name == "엔딩 1", "미발견 엔딩 제목·본문 잠금")
+	return _check(cards.size() == ArrivalEnding.PROFILES.size() and not cards[0].open and cards[0].name == "엔딩 1", "미발견 엔딩 제목·본문 잠금")
 
 func _check(condition: bool, label: String) -> bool:
 	if condition: return true
