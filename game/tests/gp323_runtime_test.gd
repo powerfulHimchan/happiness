@@ -104,7 +104,7 @@ func _run() -> void:
 				var saved := store.load_checkpoint()
 				if not _check(saved.stage.expedition == 2 and player.expedition == 2 and RunCheckpointStore.valid_state(saved), "원정2 완료 저장·회복 효율 유지"): return
 				if phase == "validate":
-					for value in [true, null, -1, 3, 2.5, "2", [], {}]:
+					for value in [true, null, -1, 4, 2.5, "2", [], {}]:
 						var bad := saved.duplicate(true)
 						bad.stage.expedition = value
 						if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and saved == store.load_checkpoint(), "잘못된 난이도 거부·정상 저장 보존"): return
@@ -149,9 +149,9 @@ func _run() -> void:
 				if not _gp323_confirm_final(): return
 			var run_id: String = recorder.checkpoint_snapshot().id
 			if not _check(journal.snapshot().expedition_clears[run_id] == expected_level and recorder.summary_snapshot().completed_run_count == 1 and controls.current_result_snapshot().expedition == expected_level and recorder.summary_snapshot().recent_runs[0].expedition == expected_level, "실제 심장 처치·엔딩·원정 영구 기록·결과·한 번 완주"): return
-			if not _check(extra_encounters == 10 and controls.expedition_unlocked() and controls.expedition_cap == 2, "추가 정예10개·최종 해금"): return
+			if not _check(extra_encounters == 10 and controls.expedition_unlocked() and controls.expedition_cap == mini(3, expected_level + 1), "추가 정예10개·최종 해금"): return
 			recorder.clear_records()
-			if not _check(controls.expedition_unlocked() and controls.expedition_cap == 2 and journal.record_expedition_clear(run_id, expected_level) == OK and journal.record_expedition_clear(run_id, 3) == ERR_INVALID_DATA, "기록 삭제·중복 확인·잘못된 원정 거부"): return
+			if not _check(controls.expedition_unlocked() and controls.expedition_cap == mini(3, expected_level + 1) and journal.record_expedition_clear(run_id, expected_level) == OK and journal.record_expedition_clear(run_id, 4) == ERR_INVALID_DATA, "기록 삭제·중복 확인·잘못된 원정 거부"): return
 		_:
 			_check(false, "알 수 없는 원정2 검사")
 			return
@@ -249,5 +249,5 @@ func _healing_rules(weapon: String) -> bool:
 	var saved := store.load_checkpoint()
 	if not _check(not saved.is_empty(), "회복 검증 후 실제 유효 저장"): return false
 	controls.show_main_screen()
-	if not sandbox.continue_saved_run() or not _check(player.damage_receiver.health == saved.player.health and player.expedition == 2, "체력 복원은 다시 감소하지 않음"): return false
+	if not sandbox.continue_saved_run() or not _check(player.damage_receiver.health == saved.player.health and player.expedition == expected_level, "체력 복원은 다시 감소하지 않음"): return false
 	return true
