@@ -1,5 +1,5 @@
 class_name BossHappinessHeart
-extends EliteArmoredBoar
+extends ExpeditionBoss
 
 const BOSS_NAME := "행복의 심장"
 const BOSS_HEALTH := 1200
@@ -48,6 +48,9 @@ func _begin_next_pattern() -> void:
 	last_pattern = current_pattern
 	pattern_history.append(current_pattern)
 	if pattern_history.size() > 8: pattern_history.pop_front()
+	_begin_pattern_warning()
+
+func _begin_pattern_warning() -> void:
 	warning_count += 1
 	_beam_y = player.global_position.y - 42.0
 	_aim = (player.global_position + Vector2(0, -42) - (global_position + Vector2(0, -56))).normalized()

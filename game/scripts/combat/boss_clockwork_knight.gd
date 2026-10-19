@@ -1,5 +1,5 @@
 class_name BossClockworkKnight
-extends EliteArmoredBoar
+extends ExpeditionBoss
 
 ## GP-109: 웃는 태엽 기사. 좁은 평지에서 돌진·충격파·탄막을 순환한다.
 const BOSS_NAME := "웃는 태엽 기사"
@@ -54,6 +54,9 @@ func _begin_next_pattern() -> void:
 	pattern_history.append(current_pattern)
 	if pattern_history.size() > 8:
 		pattern_history.pop_front()
+	_begin_pattern_warning()
+
+func _begin_pattern_warning() -> void:
 	warning_count += 1
 	_charge_direction = signf(player.global_position.x - global_position.x)
 	if is_zero_approx(_charge_direction):
@@ -63,6 +66,7 @@ func _begin_next_pattern() -> void:
 		_set_state(State.WARNING, "태엽 탄막 경고 · 부채꼴 방향 확인")
 	else:
 		_set_state(State.WARNING, "%s 경고" % pattern_name(current_pattern))
+	_update_warning()
 
 func _update_warning() -> void:
 	if current_pattern != VOLLEY_PATTERN:

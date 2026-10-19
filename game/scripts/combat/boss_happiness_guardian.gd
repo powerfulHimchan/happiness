@@ -1,5 +1,5 @@
 class_name BossHappinessGuardian
-extends EliteArmoredBoar
+extends ExpeditionBoss
 
 ## GP-311: 성문을 지키는 기사. 경고 방향을 고정하고 공격 뒤 방패를 내린다.
 const BOSS_NAME := "행복의 수호기사"
@@ -59,6 +59,9 @@ func _begin_next_pattern() -> void:
 	last_pattern = current_pattern
 	pattern_history.append(current_pattern)
 	if pattern_history.size() > 8: pattern_history.pop_front()
+	_begin_pattern_warning()
+
+func _begin_pattern_warning() -> void:
 	warning_count += 1
 	_charge_direction = signf(player.global_position.x - global_position.x)
 	if is_zero_approx(_charge_direction): _charge_direction = -1.0
