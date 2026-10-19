@@ -156,6 +156,7 @@ func reset_stage() -> void:
 		projectile.queue_free()
 	for enemy in _all_combat_enemies():
 		if enemy is PrototypeEnemy:
+			(enemy as PrototypeEnemy).expedition_patterns = expedition >= 3 and run_mode == JourneyRoutePlan.MODE
 			(enemy as PrototypeEnemy).configure_route(route_id)
 		enemy.damage_receiver.max_health = _enemy_health(enemy)
 		enemy.reset_target()
@@ -490,6 +491,8 @@ func current_metrics() -> Dictionary:
 	if heart_battle == HeartEncounter.ACTIVE:
 		section_name = "진 보스 · 행복의 심장"
 		objective = "지면 맥박·부채 바늘·수평 절단 회피 · 핵 노출 공략"
+	if expedition >= 3 and not stage_complete and current_section in [Section.WAVE_ONE, Section.WAVE_TWO]:
+		objective += " · 일반 적 연속 공격 재경고 확인"
 	if expedition > 0 and not stage_complete and current_section == Section.WAVE_TWO:
 		objective += " · 추가 정예 갑옷 멧돼지 처치"
 	var closed_gate_count := 0
