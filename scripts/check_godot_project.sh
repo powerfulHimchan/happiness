@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/scripts/combat/expedition_boss.gd"
+  "$game_root/tests/gp325_boss_runtime_test.gd"
+  "$game_root/tests/gp325_runtime_test.gd"
   "$game_root/scripts/story/final_ritual.gd"
   "$game_root/tests/gp324_runtime_test.gd"
   "$game_root/tests/gp324_enemy_runtime_test.gd"
@@ -733,6 +736,16 @@ if [[ -n "$godot_command" ]]; then
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
   checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/gp325_boss_runtime_test.gd
+  for expedition_character in roan lumi; do
+    for expedition_weapon in sword bow; do
+      for expedition_phase in preview seed resume legacy validate healing story-off layout clear-seed clear-resume finish; do
+        checked_godot 60s --headless --path "$game_root" \
+          --script res://tests/gp325_runtime_test.gd -- "$expedition_phase" "$expedition_character" "$expedition_weapon"
+      done
+    done
+  done
+  checked_godot 60s --headless --path "$game_root" \
     --script res://tests/gp324_enemy_runtime_test.gd
   for expedition_character in roan lumi; do
     for expedition_weapon in sword bow; do
