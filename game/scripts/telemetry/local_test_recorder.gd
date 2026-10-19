@@ -30,7 +30,7 @@ func _ready() -> void:
 
 
 func start_run(run_id: String = "", mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> void:
-	_active_expedition = expedition if expedition in [1, 2, 3, 4] and mode == JourneyRoutePlan.MODE else 0
+	_active_expedition = expedition if expedition in [1, 2, 3, 4, 5] and mode == JourneyRoutePlan.MODE else 0
 	_active_story_enabled = stories
 	_active_character_id = character if PrototypeCharacters.valid_id(character) else "roan"
 	_run_sequence += 1
@@ -58,7 +58,7 @@ func checkpoint_snapshot() -> Dictionary:
 
 
 func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> void:
-	_active_expedition = expedition if expedition in [1, 2, 3, 4] and mode == JourneyRoutePlan.MODE else 0
+	_active_expedition = expedition if expedition in [1, 2, 3, 4, 5] and mode == JourneyRoutePlan.MODE else 0
 	_active_story_enabled = stories
 	_active_character_id = character if PrototypeCharacters.valid_id(character) else "roan"
 	_active_run_id = String(state.id)
@@ -220,7 +220,7 @@ func _reload_summary() -> void:
 			if completed_run_ids.has(run_id):
 				continue
 			completed_run_ids[run_id] = true
-			if event.get("run_mode") == JourneyRoutePlan.MODE and event.get("stage_count") == 10 and (event.get("expedition") is int or event.get("expedition") is float) and float(event.expedition) in [1.0, 2.0, 3.0, 4.0] and PrototypeCharacters.valid_id(event.get("character_id")) and event.get("boss_choice") in ["rescue", "destroy"]:
+			if event.get("run_mode") == JourneyRoutePlan.MODE and event.get("stage_count") == 10 and (event.get("expedition") is int or event.get("expedition") is float) and float(event.expedition) in [1.0, 2.0, 3.0, 4.0, 5.0] and PrototypeCharacters.valid_id(event.get("character_id")) and event.get("boss_choice") in ["rescue", "destroy"]:
 				completed_expeditions[run_id] = {"level": int(event.expedition), "id": String(event.ending_id) if event.get("ending_id", "") in FinalRitual.IDS else ArrivalEnding.ID, "character": event.character_id, "choice": event.boss_choice}
 			if event.get("boss_choice") == "rescue":
 				boss_rescue_count += 1
@@ -322,7 +322,7 @@ func _recent_runs(events: Array[Dictionary]) -> Array[Dictionary]:
 		if run.completed:
 			continue
 		if event.get("run_mode") is String and event.run_mode in ["regions", JourneyRoutePlan.MODE]: run.run_mode = event.run_mode
-		if (event.get("expedition") is int or event.get("expedition") is float) and float(event.expedition) in [0.0, 1.0, 2.0, 3.0, 4.0]: run.expedition = int(event.expedition)
+		if (event.get("expedition") is int or event.get("expedition") is float) and float(event.expedition) in [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]: run.expedition = int(event.expedition)
 		if event.get("story_enabled") is bool and event.story_enabled: run.story_enabled = true
 		if name == "run_completed" and event.get("chronicle") is String and PrototypeStory.CHRONICLES.has(event.chronicle): run.chronicle = event.chronicle
 		var stage := maxi(1, int(event.get("stage_number", 1)))

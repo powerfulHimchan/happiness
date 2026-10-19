@@ -76,7 +76,7 @@ func _run() -> void:
 		"clear-resume":
 			controls.show_main_screen()
 			if not sandbox.continue_saved_run(): return
-			if not _check(recorder.summary_snapshot().completed_run_count == 1 and controls.current_result_snapshot().expedition == 4 and controls.expedition_unlocked() and controls.expedition_cap == 4 and store.load_checkpoint().is_empty(), "원정4 부분 기록 실패·별도 프로세스 복구·원정5 미해금"): return
+			if not _check(recorder.summary_snapshot().completed_run_count == 1 and controls.current_result_snapshot().expedition == 4 and controls.expedition_unlocked() and controls.expedition_cap == 5 and store.load_checkpoint().is_empty(), "원정4 부분 기록 실패·별도 프로세스 복구·원정5 해금"): return
 		"finish", "clear-seed":
 			if not _unlock_four(character) or not await _gp321_enter_choices(character, weapon, "rescue") or not _gp321_select_final("liberation"): return
 			if phase == "clear-seed":
@@ -103,7 +103,7 @@ func _run() -> void:
 				var saved := store.load_checkpoint()
 				if not _check(saved.stage.expedition == 4 and RunCheckpointStore.valid_state(saved), "유효 원정4 저장"): return
 				if phase == "validate":
-					for value in [true, null, -1, 5, 3.5, "3", [], {}]:
+					for value in [true, null, -1, 6, 3.5, "3", [], {}]:
 						var bad := saved.duplicate(true)
 						bad.stage.expedition = value
 						if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and store.load_checkpoint() == saved, "변조 저장 차단·정상 원정4 보존"): return

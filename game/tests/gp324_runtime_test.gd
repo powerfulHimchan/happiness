@@ -103,7 +103,7 @@ func _run() -> void:
 				var saved := store.load_checkpoint()
 				if not _check(saved.stage.expedition == 3 and RunCheckpointStore.valid_state(saved), "유효 원정3 저장"): return
 				if phase == "validate":
-					for value in [true, null, -1, 5, 3.5, "3", [], {}]:
+					for value in [true, null, -1, 6, 3.5, "3", [], {}]:
 						var bad := saved.duplicate(true)
 						bad.stage.expedition = value
 						if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and store.load_checkpoint() == saved, "변조 저장 차단·정상 원정3 보존"): return

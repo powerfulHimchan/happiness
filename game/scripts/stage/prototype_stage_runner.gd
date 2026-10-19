@@ -435,6 +435,18 @@ func is_gate_closed(gate_index: int) -> bool:
 	return not shape.disabled
 
 
+func stage_constraint() -> String:
+	return ExpeditionStageConstraint.for_stage(run_mode, expedition, stage_number)
+
+
+func active_constraint() -> String:
+	return stage_constraint() if stage_enabled and not stage_complete and not failed and current_section == Section.WAVE_TWO else ""
+
+
+func constraint_hint() -> String:
+	return ExpeditionStageConstraint.hint(stage_constraint(), not active_constraint().is_empty(), stage_complete or current_section > Section.WAVE_TWO)
+
+
 func current_metrics() -> Dictionary:
 	var display_index := mini(current_section, Section.ELITE)
 	var section_name := "완료" if stage_complete else SECTION_NAMES[display_index]
@@ -510,6 +522,9 @@ func current_metrics() -> Dictionary:
 		"run_route_name": route_name,
 		"run_mode": run_mode,
 		"expedition": expedition,
+		"stage_constraint_id": stage_constraint(),
+		"stage_constraint_active": not active_constraint().is_empty(),
+		"stage_constraint_hint": constraint_hint(),
 		"run_visited_regions": visited,
 		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
 		"run_region_section": region_section(),

@@ -61,6 +61,10 @@ func request_ultimate() -> void:
 		last_ultimate_log = "%s 사용 중 · %.1f초 남음" % [_ultimate_name(), _remaining_s]
 		_emit_metrics()
 		return
+	if not player.stage_action_allowed(ExpeditionStageConstraint.ULTIMATE):
+		last_ultimate_log = "새 필살기 봉인 · 웨이브2 통과 후 해제 · 게이지 유지"
+		_emit_metrics()
+		return
 	if gauge < MAX_GAUGE:
 		last_ultimate_log = "게이지 부족 · %d%%" % gauge
 		_emit_metrics()

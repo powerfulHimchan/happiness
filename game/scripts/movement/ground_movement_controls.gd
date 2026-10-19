@@ -941,7 +941,7 @@ func update_test_record_summary(summary: Dictionary) -> void:
 
 
 func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> bool:
-	if expedition not in [0, 1, 2, 3, 4] or (expedition > 0 and (mode != JourneyRoutePlan.MODE or not expedition_unlocked() or expedition > expedition_cap)): return false
+	if expedition not in [0, 1, 2, 3, 4, 5] or (expedition > 0 and (mode != JourneyRoutePlan.MODE or not expedition_unlocked() or expedition > expedition_cap)): return false
 	if not PrototypeCharacters.valid_id(character): return false
 	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5, 10] or (stage_count == 0 and mode != "standard") or (stage_count != 0 and not PrototypeStageRunner.valid_mode_length(mode, stage_count)):
 		return false
@@ -1109,14 +1109,15 @@ func expedition_unlocked() -> bool:
 	expedition_available = not progress.get("endings", {}).is_empty()
 	expedition_cap = 1 if expedition_available else 0
 	for level in progress.get("expedition_clears", {}).values():
-		expedition_cap = maxi(expedition_cap, mini(4, int(level) + 1))
+		expedition_cap = maxi(expedition_cap, mini(5, int(level) + 1))
 	return expedition_available
 
 
 func expedition_label() -> String:
 	if selected_run_mode != JourneyRoutePlan.MODE: return "난이도 · 기본 / 원정은 전체 여정 전용"
 	if not expedition_available: return "난이도 · 기본 / 전체 여정 완료 후 원정 해금"
-	if selected_expedition == 4: return "원정 4 · 보스 재공격 · 회복75%"
+	if selected_expedition == 5: return "원정 5 · 웨이브2 봉인: 2·6 회복약 / 4·8 새 필살기 · 회복75%"
+	if selected_expedition == 4: return "원정 4 · 보스 재공격 / " + ("눌러 원정 5 선택" if expedition_cap >= 5 else "완주 후 원정 5 해금")
 	if selected_expedition == 3: return "원정 3 · 적 연속 공격 / " + ("눌러 원정 4 선택" if expedition_cap >= 4 else "완주 후 원정 4 해금")
 	if selected_expedition == 2: return "원정 2 · 회복75% / " + ("눌러 원정 3 선택" if expedition_cap >= 3 else "완주 후 원정 3 해금")
 	if selected_expedition == 1: return "원정 1 · 정예 추가 / " + ("눌러 원정 2 선택" if expedition_cap >= 2 else "완주 후 원정 2 해금")
@@ -2140,6 +2141,8 @@ func _draw_header() -> void:
 	_draw_text(stage_objective, Vector2(center_x, top_y + 62.0), 16, MUTED_TEXT_COLOR)
 	_draw_text("%s · %s" % [String(movement_metrics.get("run_route_name", "풀숲 길")), String(movement_metrics.get("run_route_terrain", "연습 지형"))], Vector2(center_x, top_y + 86.0), 15, ACTIVE_COLOR)
 
+	_draw_village_text(String(movement_metrics.get("stage_constraint_hint", "")), Rect2(Vector2(center_x, top_y + 100.0), Vector2(hud_rect.size.x * 0.27, 38)), 14, PASS_COLOR)
+
 	var weapon_name: String = String(movement_metrics.get("weapon_name", "연습용 검"))
 	var skill_1_name: String = String(movement_metrics.get("skill_1_name", "스킬 1"))
 	var skill_2_name: String = String(movement_metrics.get("skill_2_name", "스킬 2"))
@@ -2527,6 +2530,10 @@ func _draw_move_control() -> void:
 	draw_arc(knob, knob_radius, 0.0, TAU, 40, Color(outline, control_opacity), 5.0, true)
 
 
+func _action_stage_blocked(action_id: StringName) -> bool:
+	return bool(movement_metrics.get("stage_constraint_active", false)) and ExpeditionStageConstraint.blocks(String(movement_metrics.get("stage_constraint_id", "")), String(action_id))
+
+
 func _draw_action_controls() -> void:
 	for action_id in ACTION_ORDER:
 		var rect: Rect2 = action_rects[action_id]
@@ -2538,6 +2545,7 @@ func _draw_action_controls() -> void:
 		var color := ACTIVE_COLOR if pressed or ultimate_ready or ultimate_active else ACTION_COLOR
 		if action_id == &"recovery_potion":
 			color = PASS_COLOR if int(movement_metrics.get("potions_remaining", 2)) > 0 and int(movement_metrics.get("health", 100)) < int(movement_metrics.get("max_health", 100)) else MUTED_TEXT_COLOR
+		if _action_stage_blocked(action_id) and not ultimate_active: color = MUTED_TEXT_COLOR
 		draw_circle(rect.get_center(), rect.size.x * 0.5, Color(color, (0.30 if pressed else 0.20) * control_opacity))
 		draw_arc(rect.get_center(), rect.size.x * 0.5, 0.0, TAU, 44, Color(color, control_opacity), 5.0, true)
 		if action_id == &"ultimate":
@@ -2553,10 +2561,12 @@ func _draw_action_controls() -> void:
 			)
 		_draw_text_centered(_action_label(action_id), rect, 18, Color(TEXT_COLOR, control_opacity))
 		if action_id == &"recovery_potion":
-			_draw_text_centered("체력 +%d%%" % int(movement_metrics.get("potion_heal_percent", 25)), Rect2(rect.position + Vector2(0, rect.size.y * 0.65), Vector2(rect.size.x, 24)), 13, Color(color, control_opacity))
+			_draw_text_centered("웨이브2 봉인" if _action_stage_blocked(action_id) else "체력 +%d%%" % int(movement_metrics.get("potion_heal_percent", 25)), Rect2(rect.position + Vector2(0, rect.size.y * 0.65), Vector2(rect.size.x, 24)), 13, Color(color, control_opacity))
 
 
 func _action_label(action_id: StringName) -> String:
+	if _action_stage_blocked(action_id) and not (action_id == &"ultimate" and bool(movement_metrics.get("ultimate_active", false))):
+		return "회복 봉인" if action_id == &"recovery_potion" else "새벽 봉인"
 	if action_id == &"evade" and bool(movement_metrics.get("nimble_evade_unlocked", false)) and movement_metrics.get("jump_state", "지상") == "지상":
 		var remaining := float(movement_metrics.get("evade_cooldown_remaining_s", 0.0))
 		return "회피 %.2f" % (maxf(0.01, ceilf(remaining * 100.0 - 0.000001) / 100.0)) if remaining > 0.0 else "민첩 회피"

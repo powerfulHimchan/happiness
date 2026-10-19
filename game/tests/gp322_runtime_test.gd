@@ -86,7 +86,7 @@ func _run() -> void:
 			var saved := store.load_checkpoint()
 			if not _check(saved.stage.expedition == 1 and RunCheckpointStore.valid_state(saved) and recorder.summary_snapshot().recent_runs[0].expedition == 1, "완료 저장과 진행 이력의 원정 유지"): return
 			if phase == "validate":
-				for value in [true, null, -1, 5, 1.5, "1", [], {}]:
+				for value in [true, null, -1, 6, 1.5, "1", [], {}]:
 					var bad := saved.duplicate(true)
 					bad.stage.expedition = value
 					if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and store.load_checkpoint() == saved, "잘못된 난이도 저장 거부·정상 파일 보존"): return

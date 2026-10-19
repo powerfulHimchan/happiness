@@ -40,6 +40,8 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 					result[-1].lines.append("일반 적 연속 공격 +1 · 매번 재경고")
 				if stage.get("expedition", 0) >= 4:
 					result[-1].lines.append("보스 탄막·절단 +1 · 빈틈 뒤 재경고")
+			if stage.get("expedition", 0) >= 5:
+				result.append({"id": "stage_constraints", "name": "원정 5 · 웨이브2 제약", "status": String(stage.get("stage_constraint_hint", "")) if not String(stage.get("stage_constraint_hint", "")).is_empty() else "현재 스테이지 제약 없음", "lines": ["2·6스테이지 · 웨이브2 회복약 봉인", "4·8스테이지 · 웨이브2 새 필살기 봉인", "해당 웨이브 통과 즉시 해제", "잔량·게이지 보존 · 사용 중 필살기 유지"], "open": true})
 			var story: Dictionary = state.get("story", {})
 			if not story.is_empty():
 				result.append({"id": "story", "name": "이번 여행의 기억", "status": "기억 조각 %d/%d" % [story.fragments.size(), PrototypeStory.FRAGMENTS.size()], "lines": ["이야기 장면 확인 %d개" % story.seen.size(), "시작 때까지 되감기 %d번" % story.rewinds, "이름과 외형은 실제 주인공 선택", "조각은 전투 능력을 바꾸지 않습니다"], "open": true})
