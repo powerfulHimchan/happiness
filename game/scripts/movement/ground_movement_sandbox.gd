@@ -110,6 +110,7 @@ func _ready() -> void:
 	controls.story_journal_started.connect(_begin_run_build_pause)
 	controls.story_journal_finished.connect(_finish_run_build_pause)
 	controls.story_journal_retry_requested.connect(_retry_story_journal)
+	player.stage_constraint_reader = stage_runner.active_constraint
 	controls.run_build_reader = _capture_run_build
 	controls.run_build_started.connect(_begin_run_build_pause)
 	controls.run_build_finished.connect(_finish_run_build_pause)
