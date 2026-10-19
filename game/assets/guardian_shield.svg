@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="70" height="88" viewBox="0 0 70 88">
+  <defs>
+    <linearGradient id="rim" x2=".5" y2="1"><stop stop-color="#fff1b5"/><stop offset=".6" stop-color="#e7c679"/><stop offset="1" stop-color="#b58349"/></linearGradient>
+    <linearGradient id="enamel" x2=".8" y2="1"><stop stop-color="#b7f4df"/><stop offset=".5" stop-color="#69b9b6"/><stop offset="1" stop-color="#397b8c"/></linearGradient>
+  </defs>
+  <g stroke="#2f465c" stroke-linejoin="round" stroke-linecap="round">
+    <path fill="url(#rim)" stroke-width="3.5" d="M35 4L6 18l3 39 9 13 17 14 17-14 9-13 3-39z"/>
+    <path fill="url(#enamel)" stroke-width="2.5" d="M35 12L13 23l3 32 7 11 12 11 13-11 7-11 3-32z"/>
+    <path fill="#d4f8e5" stroke="none" d="M35 16L18 25l2 27 5 7-3-30z"/>
+    <path fill="url(#rim)" stroke-width="2" d="M35 25l7 13 15 3-11 10 2 16-13-7-14 7 3-16-11-10 15-3z"/>
+    <path fill="#fff5c8" stroke="none" d="M35 30l4 12 11 1-12 4-3 10-3-10-10-4 10-1z"/>
+    <g fill="#fae6a9" stroke-width="1.5"><circle cx="12" cy="22" r="2"/><circle cx="58" cy="22" r="2"/><circle cx="16" cy="57" r="2"/><circle cx="54" cy="57" r="2"/><circle cx="35" cy="76" r="2"/></g>
+  </g>
+</svg>
