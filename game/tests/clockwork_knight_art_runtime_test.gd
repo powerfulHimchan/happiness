@@ -107,7 +107,7 @@ func _run() -> void:
 		_check(knight.body_sprite.self_modulate.a <= 0.26, "defeat fade")
 		knight.reset_target()
 		_check(knight.body_sprite.self_modulate == Color.WHITE and knight.body_sprite.modulate == Color.WHITE and knight.body_sprite.scale == Vector2(1.2, 1.2) and knight._volley_elapsed_s == -1.0, "respawn clears all visual state")
-	for pair in [["HappinessGuardian", "boss_happiness_guardian"], ["Sera", "boss_sera"], ["HappinessHeart", "boss_happiness_heart"], ["ArmoredBoar", "armored_boar_presentation"]]:
+	for pair in [["HappinessGuardian", "happiness_guardian_presentation"], ["Sera", "sera_presentation"], ["HappinessHeart", "happiness_heart_presentation"], ["ArmoredBoar", "armored_boar_presentation"]]:
 		_check(stage.get_node("Targets/" + pair[0]).get_script().resource_path == "res://scripts/combat/%s.gd" % pair[1], "other actor script: " + pair[0])
 	print("Clockwork knight art runtime: %s (both directions, poses, actual charge/volley, slow/pause, hit/death/reset)" % ("OK" if failures == 0 else "FAILED"))
 	stage.free()
