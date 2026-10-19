@@ -13,6 +13,17 @@ required_files=(
   "$game_root/tests/gp321_runtime_test.gd"
   "$game_root/scripts/combat/enemy_visual_animation.gd"
   "$game_root/tests/enemy_art_runtime_test.gd"
+  "$game_root/tests/heart_art_runtime_test.gd"
+  "$game_root/scripts/combat/happiness_heart_presentation.gd"
+  "$game_root/assets/happiness_heart_core.svg"
+  "$game_root/tests/sera_art_runtime_test.gd"
+  "$game_root/scripts/combat/sera_presentation.gd"
+  "$game_root/assets/prototype_sera.svg"
+  "$game_root/assets/prototype_sera_awakened.svg"
+  "$game_root/assets/sera_spark.svg"
+  "$game_root/tests/guardian_art_runtime_test.gd"
+  "$game_root/scripts/combat/happiness_guardian_presentation.gd"
+  "$game_root/assets/guardian_shield.svg"
   "$game_root/tests/clockwork_knight_art_runtime_test.gd"
   "$game_root/scripts/combat/clockwork_knight_presentation.gd"
   "$game_root/scripts/player/hero_combat_animation.gd"
@@ -707,6 +718,12 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/enemy_art_runtime_test.gd
   checked_godot 45s --headless --path "$game_root" \
     --script res://tests/clockwork_knight_art_runtime_test.gd
+  checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/guardian_art_runtime_test.gd
+  checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/sera_art_runtime_test.gd
+  checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/heart_art_runtime_test.gd
   # Scene conversion may report an error with exit code zero. Check the actual
   # Android resource pack and boot its converted scenes, without building an APK.
   checked_godot 120s --headless --path "$game_root" \

@@ -40,13 +40,13 @@
 
 [ext_resource type="Script" path="res://scripts/stage/clock_trap_controller.gd" id="37_clock_traps"]
 
-[ext_resource type="Script" path="res://scripts/combat/boss_happiness_guardian.gd" id="38_guardian"]
+[ext_resource type="Script" path="res://scripts/combat/happiness_guardian_presentation.gd" id="38_guardian"]
 [ext_resource type="Texture2D" path="res://assets/happiness_guardian.svg" id="39_guardian_texture"]
 
-[ext_resource type="Script" path="res://scripts/combat/boss_sera.gd" id="39_sera"]
+[ext_resource type="Script" path="res://scripts/combat/sera_presentation.gd" id="39_sera"]
 [ext_resource type="Texture2D" path="res://assets/prototype_sera.svg" id="40_sera_texture"]
 
-[ext_resource type="Script" path="res://scripts/combat/boss_happiness_heart.gd" id="41_heart"]
+[ext_resource type="Script" path="res://scripts/combat/happiness_heart_presentation.gd" id="41_heart"]
 [ext_resource type="Texture2D" path="res://assets/happiness_heart.svg" id="42_heart_texture"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]

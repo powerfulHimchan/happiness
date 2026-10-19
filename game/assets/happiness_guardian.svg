@@ -1,15 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="180" height="152" viewBox="0 0 180 152">
- <g stroke="#30465f" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
-  <path fill="#55799a" d="M60 106l-7 37h27l4-36m19 0 5 36h27l-9-37"/>
-  <path fill="#e5eeee" d="M65 51h53l15 46-18 21H70L51 98z"/>
-  <path fill="#d8b468" d="M72 52l21 27 20-27m-37 41h34"/>
-  <path fill="#698daa" d="M66 22l13-14h32l16 15v34H66z"/>
-  <path fill="#f5d67b" d="M75 9l17 8 17-9 7 13H71z"/>
-  <path d="M80 37h5m19 0h5m-23 9q8 8 15 0" fill="none"/>
-  <path fill="#e5eeee" d="M133 65l20 10-4 20-18-1"/>
-  <path d="M156 28v108" fill="none" stroke="#d8b468"/>
-  <path fill="#9ee7df" d="M156 7l-12 23 12 9 12-9z"/>
-  <path fill="#6cbeb8" d="M19 62l27-13 25 13-4 41-22 20-22-20z"/>
-  <path fill="#f5d67b" d="M45 69l5 11 12 2-9 9 2 12-10-5-11 5 2-12-8-9 12-2z"/>
- </g>
+  <defs>
+    <linearGradient id="ivory" x2=".7" y2="1"><stop stop-color="#fffef0"/><stop offset=".5" stop-color="#e2eee6"/><stop offset="1" stop-color="#9fbac2"/></linearGradient>
+    <linearGradient id="steel" x2=".8" y2="1"><stop stop-color="#a3bfce"/><stop offset=".5" stop-color="#61869e"/><stop offset="1" stop-color="#3e5a76"/></linearGradient>
+    <linearGradient id="gold" x2=".3" y2="1"><stop stop-color="#fff0b1"/><stop offset=".5" stop-color="#e8c778"/><stop offset="1" stop-color="#af7e48"/></linearGradient>
+    <linearGradient id="light" x2="1" y2="1"><stop stop-color="#effff3"/><stop offset=".5" stop-color="#91e9d7"/><stop offset="1" stop-color="#40a5a3"/></linearGradient>
+  </defs>
+  <g stroke="#2f465c" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- A gate-white cloak behind the segmented armour. -->
+    <path fill="#4c888e" d="M113 48l22 17 8 57-21-6-8 11-20-60z"/>
+    <path fill="#87b4ad" d="M122 65l10 43-10-4-8 9-12-46z" stroke="none"/>
+    <path d="M130 110l7 2" stroke="#e6cd85" stroke-width="3"/>
+    <!-- Boots share the gameplay floor, with a bottom edge at y=145. -->
+    <path fill="#344d67" d="M69 109l-9 24h23l8-25m16-1 3 27h24l-10-29z"/>
+    <path fill="url(#ivory)" d="M65 112l19 1-5 21H57zm43 1 18-4 10 25h-25z"/>
+    <path d="M64 119l11 2m39 0 12-2" fill="none" stroke="#819fae" stroke-width="2"/>
+    <path fill="url(#gold)" d="M57 131h24l3 8v4H54v-7zm54 0h22l5 7v5h-29v-7z"/>
+    <path d="M55 144h29m25 0h29" stroke="#263c52" stroke-width="2"/>
+    <!-- Left arm supports the separate, animated front shield. -->
+    <path fill="url(#steel)" d="M69 57l-20 13-9 29 18 7 20-26z"/>
+    <path fill="url(#ivory)" d="M58 54l17 4 1 18-24 5-12-12z"/>
+    <path fill="url(#gold)" d="M39 87l18-4 7 15-14 12-15-10z"/>
+    <!-- Chest: ivory enamel, brass edging and the gate's star seal. -->
+    <path fill="url(#ivory)" d="M77 51h34l18 23-3 29-18 16H77l-17-16 2-30z"/>
+    <path fill="#fcfff4" d="M76 57h33l9 11-24 8-23-9z" stroke="none"/>
+    <path fill="url(#gold)" d="M76 54l17 21 18-21-2 14-16 19-18-21z" stroke-width="2"/>
+    <path fill="#70949f" d="M65 97l15 10h27l17-12-2 13-15 12H78l-16-14z"/>
+    <path fill="url(#gold)" d="M76 107h34v9H76z" stroke-width="2"/>
+    <path fill="#f8e4a6" d="M88 106h11v12H88z" stroke-width="2"/>
+    <path fill="url(#light)" d="M93 77l6 8 10 3-10 5-6 10-5-10-11-5 11-3z" stroke-width="2"/>
+    <path d="M93 81v16m-10-9h20" stroke="#e9fff2" stroke-width="1.5"/>
+    <!-- Rear gauntlet and a long, slim crystal lance. -->
+    <path fill="url(#steel)" d="M120 67l21 8 12 22-17 10-17-22z"/>
+    <path fill="url(#ivory)" d="M119 54l18 6 11 16-22 7-12-13z"/>
+    <path d="M125 61l9 4 5 8" fill="none" stroke="#fff8d9" stroke-width="2.5"/>
+    <path d="M154 31v104" fill="none" stroke="#273f55" stroke-width="7"/>
+    <path d="M154 31v104" fill="none" stroke="#e4c27a" stroke-width="3"/>
+    <path fill="url(#gold)" d="M145 33h18v6h-18z" stroke-width="2"/>
+    <path fill="url(#light)" d="M154 4l-11 21 11 10 12-10z" stroke-width="2.5"/>
+    <path d="M154 8v22l7-7" fill="none" stroke="#f4fff0" stroke-width="2"/>
+    <path fill="url(#gold)" d="M139 87l15-3 6 8-4 13-16 1-6-10z"/>
+    <path d="M143 93h10m-9 6h8" fill="none" stroke="#a37647" stroke-width="2"/>
+    <!-- A calm face looking left, under a gate-shaped crest. -->
+    <path fill="#3e5e75" d="M77 44h32v15H77z"/>
+    <path fill="url(#steel)" d="M73 17l15-9h22l14 15v22l-12 12H79L66 43V25z"/>
+    <path fill="url(#gold)" d="M71 20l7-11 16 6 14-7 12 14-25-3-25 8z"/>
+    <path fill="url(#ivory)" d="M73 29l22-5 22 7-3 14-10 9H82L71 44z" stroke-width="2"/>
+    <path d="M78 36l7-1m13 1 7 1" fill="none" stroke-width="3"/>
+    <path d="M82 44q9 8 17 0" fill="none" stroke="#536a7a" stroke-width="2.5"/>
+    <path d="M75 40h4m26 2h4" stroke="#c79b77" stroke-width="2"/>
+    <path fill="url(#light)" d="M94 6l-4 7 4 5 5-5z" stroke-width="2"/>
+    <circle cx="119" cy="35" r="3.5" fill="#f1d894" stroke-width="2"/>
+    <g fill="#f2d895" stroke-width="1.5"><circle cx="53" cy="68" r="2.5"/><circle cx="134" cy="73" r="2.5"/><circle cx="72" cy="100" r="2"/><circle cx="116" cy="101" r="2"/></g>
+  </g>
 </svg>
