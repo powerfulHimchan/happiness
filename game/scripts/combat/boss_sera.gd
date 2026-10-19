@@ -1,5 +1,5 @@
 class_name BossSera
-extends EliteArmoredBoar
+extends ExpeditionBoss
 
 const BOSS_NAME := "미소의 여왕 세라"
 const BOSS_HEALTH := 960
@@ -73,12 +73,15 @@ func _begin_next_pattern() -> void:
 	last_pattern = current_pattern
 	pattern_history.append(current_pattern)
 	if pattern_history.size() > 8: pattern_history.pop_front()
+	_begin_pattern_warning()
+
+func _begin_pattern_warning() -> void:
 	warning_count += 1
 	_charge_direction = signf(player.global_position.x - global_position.x)
 	if is_zero_approx(_charge_direction): _charge_direction = -1.0
 	body_sprite.flip_h = _charge_direction > 0
-	_set_state(State.WARNING, "%s 경고 · 공격 뒤 왕관 빈틈" % pattern_name(current_pattern))
-	if current_pattern == RING_PATTERN and phase == 2: last_enemy_log = "빛살 두 번 경고 · 두 번째 틈 회전"
+	var message := "빛살 두 번 경고 · 두 번째 틈 회전" if current_pattern == RING_PATTERN and phase == 2 else "%s 경고 · 공격 뒤 왕관 빈틈" % pattern_name(current_pattern)
+	_set_state(State.WARNING, message)
 	_update_warning()
 
 func _update_warning() -> void:

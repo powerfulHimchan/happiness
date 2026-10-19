@@ -158,6 +158,8 @@ func reset_stage() -> void:
 		if enemy is PrototypeEnemy:
 			(enemy as PrototypeEnemy).expedition_patterns = expedition >= 3 and run_mode == JourneyRoutePlan.MODE
 			(enemy as PrototypeEnemy).configure_route(route_id)
+		if enemy is ExpeditionBoss:
+			(enemy as ExpeditionBoss).expedition_patterns = expedition >= 4 and run_mode == JourneyRoutePlan.MODE
 		enemy.damage_receiver.max_health = _enemy_health(enemy)
 		enemy.reset_target()
 		_deactivate_enemy(enemy)
@@ -491,6 +493,8 @@ func current_metrics() -> Dictionary:
 	if heart_battle == HeartEncounter.ACTIVE:
 		section_name = "진 보스 · 행복의 심장"
 		objective = "지면 맥박·부채 바늘·수평 절단 회피 · 핵 노출 공략"
+	if expedition >= 4 and not stage_complete and (heart_battle == HeartEncounter.ACTIVE or current_section == Section.ELITE and final_enemy() is ExpeditionBoss):
+		objective += " · 보스 빈틈 뒤 재공격 경고 확인"
 	if expedition >= 3 and not stage_complete and current_section in [Section.WAVE_ONE, Section.WAVE_TWO]:
 		objective += " · 일반 적 연속 공격 재경고 확인"
 	if expedition > 0 and not stage_complete and current_section == Section.WAVE_TWO:

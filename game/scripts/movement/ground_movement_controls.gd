@@ -941,7 +941,7 @@ func update_test_record_summary(summary: Dictionary) -> void:
 
 
 func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> bool:
-	if expedition not in [0, 1, 2, 3] or (expedition > 0 and (mode != JourneyRoutePlan.MODE or not expedition_unlocked() or expedition > expedition_cap)): return false
+	if expedition not in [0, 1, 2, 3, 4] or (expedition > 0 and (mode != JourneyRoutePlan.MODE or not expedition_unlocked() or expedition > expedition_cap)): return false
 	if not PrototypeCharacters.valid_id(character): return false
 	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5, 10] or (stage_count == 0 and mode != "standard") or (stage_count != 0 and not PrototypeStageRunner.valid_mode_length(mode, stage_count)):
 		return false
@@ -1109,14 +1109,15 @@ func expedition_unlocked() -> bool:
 	expedition_available = not progress.get("endings", {}).is_empty()
 	expedition_cap = 1 if expedition_available else 0
 	for level in progress.get("expedition_clears", {}).values():
-		expedition_cap = maxi(expedition_cap, mini(3, int(level) + 1))
+		expedition_cap = maxi(expedition_cap, mini(4, int(level) + 1))
 	return expedition_available
 
 
 func expedition_label() -> String:
 	if selected_run_mode != JourneyRoutePlan.MODE: return "난이도 · 기본 / 원정은 전체 여정 전용"
 	if not expedition_available: return "난이도 · 기본 / 전체 여정 완료 후 원정 해금"
-	if selected_expedition == 3: return "원정 3 · 적 연속 공격 · 회복75%"
+	if selected_expedition == 4: return "원정 4 · 보스 재공격 · 회복75%"
+	if selected_expedition == 3: return "원정 3 · 적 연속 공격 / " + ("눌러 원정 4 선택" if expedition_cap >= 4 else "완주 후 원정 4 해금")
 	if selected_expedition == 2: return "원정 2 · 회복75% / " + ("눌러 원정 3 선택" if expedition_cap >= 3 else "완주 후 원정 3 해금")
 	if selected_expedition == 1: return "원정 1 · 정예 추가 / " + ("눌러 원정 2 선택" if expedition_cap >= 2 else "완주 후 원정 2 해금")
 	return "난이도 · 기본 / 눌러 원정 1 선택"
