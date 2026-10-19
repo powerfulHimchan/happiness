@@ -6,11 +6,15 @@ game_root="$project_root/game"
 
 required_files=(
   "$game_root/scripts/story/final_ritual.gd"
+  "$game_root/tests/gp324_runtime_test.gd"
+  "$game_root/tests/gp324_enemy_runtime_test.gd"
   "$game_root/tests/gp323_runtime_test.gd"
   "$game_root/tests/gp322_runtime_test.gd"
   "$game_root/tests/gp321_runtime_test.gd"
   "$game_root/scripts/combat/enemy_visual_animation.gd"
   "$game_root/tests/enemy_art_runtime_test.gd"
+  "$game_root/tests/clockwork_knight_art_runtime_test.gd"
+  "$game_root/scripts/combat/clockwork_knight_presentation.gd"
   "$game_root/scripts/player/hero_combat_animation.gd"
   "$game_root/tests/hero_combat_animation_runtime_test.gd"
   "$game_root/assets/characters/roan_combat.png"
@@ -701,6 +705,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/hero_combat_animation_runtime_test.gd
   checked_godot 45s --headless --path "$game_root" \
     --script res://tests/enemy_art_runtime_test.gd
+  checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/clockwork_knight_art_runtime_test.gd
   # Scene conversion may report an error with exit code zero. Check the actual
   # Android resource pack and boot its converted scenes, without building an APK.
   checked_godot 120s --headless --path "$game_root" \
@@ -709,6 +715,16 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/gp324_enemy_runtime_test.gd
+  for expedition_character in roan lumi; do
+    for expedition_weapon in sword bow; do
+      for expedition_phase in preview seed resume legacy validate healing story-off layout clear-seed clear-resume finish; do
+        checked_godot 80s --headless --path "$game_root" \
+          --script res://tests/gp324_runtime_test.gd -- "$expedition_phase" "$expedition_character" "$expedition_weapon"
+      done
+    done
+  done
   for expedition_character in roan lumi; do
     for expedition_weapon in sword bow; do
       for expedition_phase in preview migration seed resume validate legacy healing layout story-off clear-fault clear-seed clear-resume finish; do
