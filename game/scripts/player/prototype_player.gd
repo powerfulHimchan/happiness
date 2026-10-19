@@ -61,6 +61,7 @@ var healing_flow_unlocked: bool = false
 var memory_id: String = ""
 var potions_remaining: int = POTIONS_PER_RUN
 var expedition: int = 0
+var stage_constraint_reader: Callable
 var potion_log: String = "회복약 · 최대 체력 25% 회복"
 var potion_recipe: String = PrototypePotionRecipes.BASIC
 var potion_pouch_boost_unlocked: bool = false
@@ -587,7 +588,16 @@ func potion_heal_ratio() -> float:
 	return float(PrototypePotionRecipes.profile(potion_recipe).ratio) + bonus + (0.05 if potion_mastery_unlocked else 0.0) + (0.05 if potion_efficiency_unlocked and potion_mastery_unlocked else 0.0) + (PrototypeRelic.CUP_POTION_BONUS if has_active_relic(PrototypeRelic.CUP_ID) else 0.0)
 
 
+func stage_action_allowed(action: String) -> bool:
+	var constraint := String(stage_constraint_reader.call()) if stage_constraint_reader.is_valid() else ""
+	return not ExpeditionStageConstraint.blocks(constraint, action)
+
+
 func use_recovery_potion() -> bool:
+	if not stage_action_allowed(ExpeditionStageConstraint.POTION):
+		potion_log = "회복약 봉인 · 웨이브2 통과 후 해제 · 잔량 유지"
+		_emit_metrics()
+		return false
 	if _is_input_locked() or potions_remaining <= 0 or damage_receiver.health >= damage_receiver.max_health:
 		return false
 	var before := damage_receiver.health
