@@ -35,7 +35,7 @@
 
 [ext_resource type="Script" path="res://scripts/stage/prototype_route_terrain.gd" id="34_route_terrain"]
 
-[ext_resource type="Script" path="res://scripts/combat/boss_clockwork_knight.gd" id="35_boss"]
+[ext_resource type="Script" path="res://scripts/combat/clockwork_knight_presentation.gd" id="35_boss"]
 [ext_resource type="Texture2D" path="res://assets/clockwork_knight.svg" id="36_boss_texture"]
 
 [ext_resource type="Script" path="res://scripts/stage/clock_trap_controller.gd" id="37_clock_traps"]

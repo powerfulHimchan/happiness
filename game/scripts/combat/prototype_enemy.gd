@@ -43,6 +43,7 @@ const DANGER_LINE_COLOR := Color("ff7043")
 @export_enum("풀잎 슬라임", "씨앗 포대", "바람 정령") var enemy_type: int = EnemyType.LEAF_SLIME
 @export var player_path: NodePath
 
+var expedition_patterns: bool = false
 var forest_variant: bool = false
 var ruins_variant: bool = false
 var festival_variant: bool = false
@@ -135,6 +136,7 @@ func receive_damage(event: DamageEvent) -> int:
 		_attack_cooldown_s = maxf(_attack_cooldown_s, SEED_RECOVERY_S)
 		_set_state(State.RECOVERY, "%s 근접 피격 · 사격 중단" % enemy_name())
 	elif festival_variant and enemy_type == EnemyType.LEAF_SLIME and event.tags.has("sword"):
+		_combo_remaining = 0
 		_attack_cooldown_s = SOLDIER_RECOVERY_S
 		_set_state(State.RECOVERY, "장난감 병정 피격 · 행진 중단")
 	_update_body_animation(0.0)
@@ -194,6 +196,7 @@ func current_metrics() -> Dictionary:
 		"enemy_key": target_key,
 		"enemy_name": enemy_name(),
 		"enemy_type": enemy_type,
+		"enemy_expedition_patterns": expedition_patterns,
 		"enemy_forest_variant": forest_variant,
 		"enemy_ruins_variant": ruins_variant,
 		"enemy_festival_variant": festival_variant,
@@ -254,7 +257,8 @@ func _update_festival_soldier(delta: float) -> void:
 			if _attack_cooldown_s <= 0.0 and _distance_to_player_m() <= 3.8:
 				var side := signf(player.global_position.x - global_position.x)
 				_attack_direction = Vector2(side if not is_zero_approx(side) else -1.0, 0)
-				_begin_warning("병정 행진 돌진 · 0.65초 경고")
+				_combo_remaining = 1 if expedition_patterns else 0
+				_begin_warning("원정 병정 연속 행진 · 각0.65초 경고" if expedition_patterns else "병정 행진 돌진 · 0.65초 경고")
 				warning_line.points = PackedVector2Array([Vector2(0, -38), Vector2(0, -38) + _attack_direction * SOLDIER_DASH_PX])
 		State.WARNING:
 			if _state_elapsed_s >= SOLDIER_WARNING_S: _begin_attack("병정 행진 돌진")
@@ -265,7 +269,13 @@ func _update_festival_soldier(delta: float) -> void:
 			_try_contact_damage(9, &"soldier_march")
 			if _attack_distance_px >= SOLDIER_DASH_PX: _begin_recovery("병정 태엽 재감기 · 1.1초 빈틈")
 		State.RECOVERY:
-			if _state_elapsed_s >= SOLDIER_RECOVERY_S:
+			if _combo_remaining > 0 and _state_elapsed_s >= 0.35:
+				_combo_remaining -= 1
+				var side := signf(player.global_position.x - global_position.x)
+				_attack_direction = Vector2(side if not is_zero_approx(side) else -1.0, 0)
+				_begin_warning("원정 병정 재돌진 · 0.65초 경고")
+				warning_line.points = PackedVector2Array([Vector2(0, -38), Vector2(0, -38) + _attack_direction * SOLDIER_DASH_PX])
+			elif _state_elapsed_s >= SOLDIER_RECOVERY_S:
 				_attack_cooldown_s = 0.45
 				_set_state(State.IDLE, "병정 순찰 재개")
 
@@ -275,7 +285,8 @@ func _update_festival_turret() -> void:
 		State.IDLE:
 			if _attack_cooldown_s <= 0.0 and _distance_to_player_m() <= 8.5:
 				_clock_aim = (player.global_position + Vector2(0, -42) - (global_position + Vector2(0, -54))).normalized()
-				_begin_warning("포탑 부채탄 · 1.1초 고정 조준")
+				_combo_remaining = 1 if expedition_patterns else 0
+				_begin_warning("원정 포탑 연속 부채탄 · 각1.1초 고정 조준" if expedition_patterns else "포탑 부채탄 · 1.1초 고정 조준")
 				warning_line.points = PackedVector2Array([Vector2(0, -54), Vector2(0, -54) + _clock_aim * 600.0])
 		State.WARNING:
 			warning_line.points = PackedVector2Array([Vector2(0, -54), Vector2(0, -54) + _clock_aim * 600.0])
@@ -283,7 +294,12 @@ func _update_festival_turret() -> void:
 				_fire_seed_volley()
 				_begin_recovery("포탑 다섯 발 · 1.4초 재장전")
 		State.RECOVERY:
-			if _state_elapsed_s >= TURRET_RECOVERY_S:
+			if _combo_remaining > 0 and _state_elapsed_s >= 0.35:
+				_combo_remaining -= 1
+				_clock_aim = (player.global_position + Vector2(0, -42) - (global_position + Vector2(0, -54))).normalized()
+				_begin_warning("원정 포탑 재조준 · 1.1초 경고")
+				warning_line.points = PackedVector2Array([Vector2(0, -54), Vector2(0, -54) + _clock_aim * 600.0])
+			elif _state_elapsed_s >= TURRET_RECOVERY_S:
 				_attack_cooldown_s = 0.6
 				_set_state(State.IDLE, "포탑 조준 대기")
 
@@ -295,8 +311,8 @@ func _update_leaf_slime(delta: float) -> void:
 			if absf(position.x - _spawn_position.x) >= 70.0:
 				_patrol_direction *= -1.0
 			if _attack_cooldown_s <= 0.0 and _distance_to_player_m() <= 3.0:
-				_combo_remaining = 1 if forest_variant else 0
-				_begin_warning("숲 슬라임 연속 도약 · 각0.35초 경고" if forest_variant else "풀잎 슬라임 점프 경고 · 0.35초")
+				_combo_remaining = (1 if forest_variant else 0) + (1 if expedition_patterns else 0)
+				_begin_warning("원정 슬라임 연속 도약 · 각0.35초 경고" if expedition_patterns else "숲 슬라임 연속 도약 · 각0.35초 경고" if forest_variant else "풀잎 슬라임 점프 경고 · 0.35초")
 		State.WARNING:
 			if _state_elapsed_s >= SLIME_WARNING_S:
 				var direction_sign := signf(player.global_position.x - global_position.x)
@@ -306,6 +322,7 @@ func _update_leaf_slime(delta: float) -> void:
 		State.ATTACK:
 			_velocity.y += 1900.0 * delta
 			position += _velocity * delta
+			if expedition_patterns: position.x = clampf(position.x, 100.0, 4900.0)
 			_try_contact_damage(SLIME_DAMAGE, &"slime_jump")
 			if position.y >= _spawn_position.y:
 				position.y = _spawn_position.y
@@ -314,7 +331,7 @@ func _update_leaf_slime(delta: float) -> void:
 		State.RECOVERY:
 			if _combo_remaining > 0 and _state_elapsed_s >= 0.30:
 				_combo_remaining -= 1
-				_begin_warning("숲 슬라임 두 번째 도약 · 0.35초 경고")
+				_begin_warning("원정 슬라임 재도약 · 0.35초 경고" if expedition_patterns else "숲 슬라임 두 번째 도약 · 0.35초 경고")
 			elif _state_elapsed_s >= SLIME_RECOVERY_S:
 				_attack_cooldown_s = 0.35
 				_set_state(State.IDLE, "풀잎 슬라임 이동 재개")
@@ -330,11 +347,11 @@ func _update_seed_sack(delta: float) -> void:
 			elif horizontal_distance_m > 7.0:
 				position.x += signf(player.global_position.x - global_position.x) * 120.0 * delta
 			elif _attack_cooldown_s <= 0.0:
+				_combo_remaining = (1 if ruins_variant else 0) + (1 if expedition_patterns else 0)
 				if ruins_variant:
-					_combo_remaining = 1
 					_clock_second_warning = false
 					_clock_aim = (player.global_position + Vector2(0, -42) - (global_position + Vector2(0, -54))).normalized()
-				_begin_warning("별시계 인형 사격 · 1.0초 경고" if ruins_variant else "숲 씨앗 다섯 갈래 · 1.0초 경고" if forest_variant else "씨앗 포대 조준 경고 · 1.0초")
+				_begin_warning("원정 연속 사격 · 각 발사 전 경고" if expedition_patterns else "별시계 인형 사격 · 1.0초 경고" if ruins_variant else "숲 씨앗 다섯 갈래 · 1.0초 경고" if forest_variant else "씨앗 포대 조준 경고 · 1.0초")
 		State.WARNING:
 			if ruins_variant:
 				warning_line.points = PackedVector2Array([Vector2(0, -54), Vector2(0, -54) + _clock_aim * 520.0])
@@ -344,10 +361,10 @@ func _update_seed_sack(delta: float) -> void:
 				_fire_seed_volley()
 				_begin_recovery("씨앗탄 %d발 발사 · 반격 1.0초" % (5 if forest_variant else 3))
 		State.RECOVERY:
-			if ruins_variant and _combo_remaining > 0 and _state_elapsed_s >= 0.35:
+			if _combo_remaining > 0 and _state_elapsed_s >= 0.35:
 				_combo_remaining -= 1
 				_clock_second_warning = true
-				_begin_warning("기억된 방향 재사격 · 0.7초 경고")
+				_begin_warning("기억된 방향 재사격 · 0.7초 경고" if ruins_variant else "원정 재사격 · 1.0초 경고")
 			elif _state_elapsed_s >= SEED_RECOVERY_S:
 				_attack_cooldown_s = 1.25
 				_set_state(State.IDLE, "씨앗 포대 거리 유지 재개")
@@ -364,8 +381,8 @@ func _update_wind_spirit(delta: float) -> void:
 				_attack_direction = (
 					player.global_position + Vector2(0.0, -42.0) - global_position
 				).normalized()
-				_combo_remaining = 1 if forest_variant else 0
-				_begin_warning("숲 정령 재돌진 · 각0.6초 경고" if forest_variant else "바람 정령 직선 경고 · 0.6초")
+				_combo_remaining = (1 if forest_variant else 0) + (1 if expedition_patterns else 0)
+				_begin_warning("원정 정령 연속 돌진 · 각0.6초 경고" if expedition_patterns else "숲 정령 재돌진 · 각0.6초 경고" if forest_variant else "바람 정령 직선 경고 · 0.6초")
 		State.WARNING:
 			_update_fixed_warning_line(_attack_direction * 850.0, DANGER_LINE_COLOR)
 			if _state_elapsed_s >= WIND_WARNING_S:
@@ -376,14 +393,14 @@ func _update_wind_spirit(delta: float) -> void:
 			_attack_distance_px += displacement.length()
 			_try_contact_damage(WIND_DAMAGE, &"wind_dash")
 			if _attack_distance_px >= 850.0 or position.x <= 100.0 or position.x >= 4900.0:
-				if forest_variant:
+				if forest_variant or expedition_patterns:
 					position.x = clampf(position.x, 100.0, 4900.0)
 				_begin_recovery("바람 정령 빗나감 · 1.2초 빈틈")
 		State.RECOVERY:
 			if _combo_remaining > 0 and _state_elapsed_s >= 0.30:
 				_combo_remaining -= 1
 				_attack_direction = (player.global_position + Vector2(0.0, -42.0) - global_position).normalized()
-				_begin_warning("숲 정령 두 번째 돌진 · 0.6초 경고")
+				_begin_warning("원정 정령 재돌진 · 0.6초 경고" if expedition_patterns else "숲 정령 두 번째 돌진 · 0.6초 경고")
 			elif _state_elapsed_s >= WIND_RECOVERY_S:
 				_attack_cooldown_s = 0.55
 				_set_state(State.IDLE, "바람 정령 부유 재개")
@@ -418,6 +435,8 @@ func _set_state(new_state: int, message: String) -> void:
 	if warning_line != null:
 		warning_line.visible = new_state == State.WARNING
 		warning_line.default_color = DANGER_LINE_COLOR
+		if new_state == State.WARNING and enemy_type == EnemyType.WIND_SPIRIT:
+			_update_fixed_warning_line(_attack_direction * 850.0, DANGER_LINE_COLOR)
 	_update_body_animation(0.0)
 
 

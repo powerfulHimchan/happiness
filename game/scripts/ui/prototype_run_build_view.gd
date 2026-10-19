@@ -34,8 +34,10 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 		2:
 			var stage: Dictionary = state.stage
 			result.append({"id": "progress", "name": "이번 도전", "status": "%d / %d 스테이지" % [int(stage.run_stage_number), int(stage.run_stage_count)], "lines": ["주인공 · " + PrototypeCharacters.display_name(String(state.get("character_id", "roan"))) + (" · 원정 %d" % int(stage.expedition) if stage.get("expedition", 0) > 0 else ""), String(stage.stage_section_name), String(stage.run_route_name), "현재 스테이지 %.1f초" % float(stage.stage_elapsed_s), "레벨 %d · 경험치 %d/%d" % [int(state.growth.growth_level), int(state.growth.growth_xp), int(state.growth.growth_next_xp)], "조회 중 전투와 대기시간 정지"], "open": true})
-			if stage.get("expedition", 0) == 2:
-				result.append({"id": "expedition", "name": "원정 2 규칙", "status": "체력 회복75%", "lines": ["웨이브 2마다 추가 정예", "체력 회복량 75% · 정수 올림", "회복약·구슬·흡수·성장·스킬에 적용", "방벽·부활 체력은 기존 효과"], "open": true})
+			if stage.get("expedition", 0) >= 2:
+				result.append({"id": "expedition", "name": "원정 %d 규칙" % int(stage.expedition), "status": "체력 회복75%", "lines": ["웨이브 2마다 추가 정예", "체력 회복량 75% · 정수 올림", "회복약·구슬·흡수·성장·스킬에 적용", "방벽·부활 체력은 기존 효과"], "open": true})
+				if stage.get("expedition", 0) >= 3:
+					result[-1].lines.append("일반 적 연속 공격 +1 · 매번 재경고")
 			var story: Dictionary = state.get("story", {})
 			if not story.is_empty():
 				result.append({"id": "story", "name": "이번 여행의 기억", "status": "기억 조각 %d/%d" % [story.fragments.size(), PrototypeStory.FRAGMENTS.size()], "lines": ["이야기 장면 확인 %d개" % story.seen.size(), "시작 때까지 되감기 %d번" % story.rewinds, "이름과 외형은 실제 주인공 선택", "조각은 전투 능력을 바꾸지 않습니다"], "open": true})

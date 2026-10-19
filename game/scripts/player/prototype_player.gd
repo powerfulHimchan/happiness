@@ -571,7 +571,7 @@ func calm_damage_multiplier(kind: String) -> float:
 
 
 func scaled_health_recovery(amount: int) -> int:
-	return ceili(amount * 0.75) if expedition == 2 and amount > 0 else amount
+	return ceili(amount * 0.75) if expedition >= 2 and amount > 0 else amount
 
 
 func apply_growth_health(maximum_bonus: int, healing: int) -> void:
@@ -1237,7 +1237,7 @@ func _emit_metrics() -> void:
 		"potions_capacity": potions_capacity(),
 		"potion_heal_percent": roundi(potion_heal_ratio() * 100),
 		"potion_recipe": potion_recipe,
-		"potion_log": potion_log + (" · 체력 회복75%" if expedition == 2 else ""),
+		"potion_log": potion_log + (" · 체력 회복75%" if expedition >= 2 else ""),
 		"skill_recharge_multiplier": skill_recharge_multiplier(),
 		"relic_damage_multiplier": relic_damage_multiplier(),
 		"incoming_damage_multiplier": incoming_damage_multiplier(),
