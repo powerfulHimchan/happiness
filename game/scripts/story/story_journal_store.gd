@@ -31,7 +31,7 @@ func record_ending(run_id: String, id: String, character: String, choice: String
 
 func record_expedition_clear(run_id: String, level: int) -> Error:
 	var progress := snapshot()
-	if level not in [1, 2, 3, 4] or not progress.ending_completions.has(run_id): return ERR_INVALID_DATA
+	if level not in [1, 2, 3, 4, 5] or not progress.ending_completions.has(run_id): return ERR_INVALID_DATA
 	if progress.expedition_clears.has(run_id): return OK if progress.expedition_clears[run_id] == level else ERR_INVALID_DATA
 	return _append({"event": "expedition_clear", "run_id": run_id, "level": level})
 
@@ -74,7 +74,7 @@ func snapshot() -> Dictionary:
 		if run_id.length() > 256: continue
 		match event.event:
 			"expedition_clear":
-				if data.ending_completions.has(run_id) and not data.expedition_clears.has(run_id) and (event.get("level") is int or event.get("level") is float) and float(event.level) in [1.0, 2.0, 3.0, 4.0]: data.expedition_clears[run_id] = int(event.level)
+				if data.ending_completions.has(run_id) and not data.expedition_clears.has(run_id) and (event.get("level") is int or event.get("level") is float) and float(event.level) in [1.0, 2.0, 3.0, 4.0, 5.0]: data.expedition_clears[run_id] = int(event.level)
 			"secret":
 				if event.get("id") == "clocktower_archive": data.secrets.clocktower_archive = true
 			"ending":
