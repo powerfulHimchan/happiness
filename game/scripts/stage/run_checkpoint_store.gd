@@ -162,7 +162,9 @@ static func valid_state(state: Dictionary) -> bool:
 		if float(assisted_stage) > float(stage.number):
 			return false
 	var growth: Dictionary = state.growth
-	if not _number(growth.get("level"), 1, 100, true) or not _number(growth.get("xp"), 0, 20 + (int(growth.level) - 1) * 5 - 1, true) or not _number(growth.get("total_xp"), 0, 100000, true) or not _number(growth.get("rerolls"), 0, 1, true) or not growth.get("ranks") is Dictionary or not growth.get("contributions") is Dictionary or not growth.get("recent") is Dictionary or growth.get("job") not in ["", "vanguard", "tracker", PrototypeJobProgress.DRAGON_ID, PrototypeJobProgress.BREAKER_ID, PrototypeJobProgress.STORM_ID]:
+	if not _number(growth.get("level"), 1, 100, true) or not _number(growth.get("xp"), 0, 20 + (int(growth.level) - 1) * 5 - 1, true) or not _number(growth.get("total_xp"), 0, 100000, true) or not _number(growth.get("rerolls"), 0, 1, true) or not growth.get("ranks") is Dictionary or not growth.get("contributions") is Dictionary or not growth.get("recent") is Dictionary or not growth.get("job") is String:
+		return false
+	if growth.job != "" and PrototypeJobProgress.profile(growth.job).is_empty():
 		return false
 	var spent := 0
 	for level_index in range(1, int(growth.level)):
@@ -239,6 +241,13 @@ static func valid_state(state: Dictionary) -> bool:
 	expected_max += int(ranks.get("dragon_heart", 0)) * 30 + int(ranks.get("breaker_vigor", 0)) * 20 + int(ranks.get("storm_breath", 0)) * 20
 	sword_bonus += int(ranks.get("dragon_flame", 0)) * 0.20 + int(ranks.get("breaker_edge", 0)) * 0.30
 	bow_bonus += int(ranks.get("storm_arrow", 0)) * 0.25
+	for card in valid_cards:
+		var effect: Dictionary = card.get("job_effect", {})
+		var rank := int(ranks.get(card.id, 0))
+		expected_max += int(effect.get("health", 0)) * rank
+		if not effect.is_empty():
+			if job.weapon == "sword": sword_bonus += float(effect.get("damage", 0.0)) * rank
+			else: bow_bonus += float(effect.get("damage", 0.0)) * rank
 	if int(player.max_health) != expected_max or not is_equal_approx(float(player.common), int(ranks.get("power", 0)) * 0.10) or not is_equal_approx(float(player.sword), sword_bonus) or not is_equal_approx(float(player.bow), bow_bonus):
 		return false
 	if state.weapons.get("active") not in ["sword", "bow"]:

@@ -10,10 +10,10 @@ func _run() -> void:
 	var phase := args[0]
 	var character := args[1]
 	advanced_id = args[2]
-	starting_weapon = "sword" if advanced_id == PrototypeJobProgress.BREAKER_ID else "bow"
+	starting_weapon = String(PrototypeJobProgress.profile(advanced_id).weapon)
 	automatic_growth_card_id = starting_weapon + "_power"
 	parent_id = PrototypeJobProgress.base_job(advanced_id)
-	advanced_cards.assign(["breaker_edge", "breaker_vigor"] if starting_weapon == "sword" else ["storm_arrow", "storm_breath"])
+	advanced_cards.assign({"dragon_knight": ["dragon_flame", "dragon_heart"], "breaker": ["breaker_edge", "breaker_vigor"], "storm_archer": ["storm_arrow", "storm_breath"], "forest_warden": ["warden_arrow", "warden_roots"]}[advanced_id])
 	var prefix := "user://gp329_%s_%s_%s" % [advanced_id, character, "flow" if phase in ["seed", "resume"] else phase]
 	store.save_path = prefix + "_checkpoint.json"
 	legacy.save_path = prefix + "_meta.jsonl"
@@ -52,8 +52,10 @@ func _run() -> void:
 			if not _check(controls.begin_retry(starting_weapon, 3 if phase == "legacy" else 10, "standard" if phase == "legacy" else "journey", character, false), "진화 도전 시작"): return
 			for ignored in 5:
 				if not _earn_card(starting_weapon + "_power"): return
-			if starting_weapon == "sword":
+			if advanced_id == PrototypeJobProgress.BREAKER_ID:
 				if not _earn_card("vanguard_edge") or not _earn_card("vanguard_dawn_edge"): return
+			elif advanced_id == PrototypeJobProgress.WARDEN_ID:
+				if not _earn_card("tracker_focus") or not _earn_card("tracker_forest_aim"): return
 			if phase != "late" and not _real_weapon_hits(): return
 			if not _check(growth.jobs.job_id == parent_id and not growth.try_evolve_job(), "초반 진화 차단"): return
 			for id in advanced_cards:
@@ -88,14 +90,14 @@ func _run() -> void:
 				if not await _layout_check(): return
 				var gauge := festival_ultimate.gauge
 				var saved_before := store.load_checkpoint()
-				var choice := 0 if character == "roan" else 1
+				var choice := _ultimate_choice(character)
 				legacy.fail_writes = true
 				_tap(controls.job_ultimate_rects[choice].get_center())
 				_tap(controls.job_confirm_rect.get_center())
 				if not _check(paused and growth.awaiting_job_confirmation and store.load_checkpoint() == saved_before and not growth.acknowledge_job(), "영구 기록 실패 확인 보류·기존 필살기로 확정 차단"): return
 				legacy.fail_writes = false
 				_tap(controls.job_confirm_rect.get_center())
-				if not _check(not paused and festival_ultimate.gauge == gauge and festival_ultimate.selected_profile.job == advanced_id and not growth.try_evolve_job() and not growth.choose_job_ultimate(1 - choice), "재시도·게이지 유지·재진화/재선택 차단"): return
+				if not _check(not paused and festival_ultimate.gauge == gauge and festival_ultimate.selected_profile.job == advanced_id and not growth.try_evolve_job() and not growth.choose_job_ultimate((choice + 1) % 4), "재시도·게이지 유지·재진화/재선택 차단"): return
 				if phase == "late":
 					if not _check(festival_ultimate._active_profile == active and festival_ultimate._remaining_s == remaining, "사용 중 기본 필살기 스냅샷 보존"): return
 					festival_ultimate._physics_process(remaining + 0.1)
@@ -103,14 +105,20 @@ func _run() -> void:
 					player.damage_receiver.health = 20
 					var max_before := player.damage_receiver.max_health
 					if not _earn_card(advanced_cards[1]): return
-					if not _check(player.damage_receiver.health == 50 and player.damage_receiver.max_health == max_before + 20, "회복75%와 최대체력 증가 분리"): return
+					var health_gain := 30 if advanced_id in [PrototypeJobProgress.DRAGON_ID, PrototypeJobProgress.WARDEN_ID] else 20
+					var healing := 23 if advanced_id == PrototypeJobProgress.DRAGON_ID else 34 if advanced_id == PrototypeJobProgress.WARDEN_ID else 30
+					if not _check(player.damage_receiver.health == 20 + healing and player.damage_receiver.max_health == max_before + health_gain, "회복75%와 최대체력 증가 분리"): return
 				else:
 					for id in advanced_cards + ["vanguard_vigor" if starting_weapon == "sword" else "tracker_focus"]:
 						if not _earn_card(id): return
 					for id in advanced_cards:
 						if not _check(not growth._card_available(PrototypeAbilityCodex.profile(id)), "전용 능력 도전당 1회"): return
 					var foreign := "storm_arrow" if starting_weapon == "sword" else "breaker_edge"
-					if not _check(not growth._card_available(PrototypeAbilityCodex.profile(foreign)) and not growth._card_available(PrototypeAbilityCodex.profile("dragon_flame")), "다른 진화 가지 카드 차단"): return
+					if not _check(not growth._card_available(PrototypeAbilityCodex.profile(foreign)) and not growth._card_available(PrototypeAbilityCodex.profile("dragon_flame" if advanced_id != PrototypeJobProgress.DRAGON_ID else "breaker_edge")), "다른 진화 가지 카드 차단"): return
+					if not _test_additional_cards(): return
+					if advanced_id == PrototypeJobProgress.STORM_ID:
+						if not _earn_card("tracker_forest_aim"): return
+						if not _check(growth.jobs.job_id == PrototypeJobProgress.STORM_ID and not growth.try_evolve_job(), "폭풍사수 진화 후 숲의 명중 선택은 기존 진화 유지"): return
 					if not _advanced_ultimate_test(): return
 					if not _finish_stage() or not sandbox._claim_weapon_reward(""): return
 					var saved := store.load_checkpoint()
@@ -121,7 +129,7 @@ func _run() -> void:
 							"score": bad.growth.contributions.weapon.clear()
 							"health": bad.player.max_health += 10
 							"bonus": bad.player[starting_weapon] += 0.20
-							"ultimate": bad.ultimate.profile = "dragon_burst"
+							"ultimate": bad.ultimate.profile = "vanguard_strike" if starting_weapon == "sword" else "tracker_volley"
 							"rank": bad.growth.ranks[advanced_cards[0]] = 2
 							"branch":
 								if starting_weapon == "sword":
@@ -131,6 +139,7 @@ func _run() -> void:
 								else: bad.growth.job = PrototypeJobProgress.BREAKER_ID
 							"stage": bad.stage.run_mode = "standard"
 						if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and store.load_checkpoint() == saved, "변조 저장 거부·이전 저장 유지: " + mutation): return
+					if not _validate_additional_save(saved): return
 					var path := store.save_path
 					store.save_path = "user://gp329_missing/checkpoint.json"
 					if not _check(sandbox._save_checkpoint(runner.current_metrics(), false) != OK, "저장 쓰기 실패 검출"): return
@@ -140,13 +149,17 @@ func _run() -> void:
 			var saved := store.load_checkpoint()
 			if not _restore_journey(7): return
 			if not _check(growth.jobs.job_id == advanced_id and player.job_emblem_id == advanced_id and is_equal_approx(_weapon_bonus(), float(saved.player[starting_weapon])) and festival_ultimate.selected_profile.id == saved.ultimate.profile and not growth.awaiting_job_confirmation, "별도 프로세스 복원·패시브 중복 없음"): return
+			if not _test_restored_additions(saved): return
 			controls.show_main_screen()
 			controls.show_village()
 			controls.village_page = "jobs"
 			_tap(controls.village_snapshot().tabs.advanced_jobs.get_center())
 			var cards: Array = controls.village_snapshot().cards
+			if advanced_id in [PrototypeJobProgress.STORM_ID, PrototypeJobProgress.WARDEN_ID]:
+				_tap(controls.village_snapshot().pager.next.get_center())
+				cards = controls.village_snapshot().cards
 			var current: Array = cards.filter(func(card: Dictionary) -> bool: return card.id == advanced_id)
-			if not _check(cards.size() == 3 and current.size() == 1 and current[0].status == "진화 · 현재 도전" and current[0].open, "세 상위 직업 도감·영구 발견·현재 진화"): return
+			if not _check(cards.size() == 2 and controls.village_snapshot().advanced_pages == 2 and current.size() == 1 and current[0].status == "진화 · 현재 도전" and current[0].open, "네 상위 직업 두 페이지·영구 발견·현재 진화"): return
 			var meta := FileAccess.get_file_as_string(legacy.save_path)
 			if not await _layout_check(): return
 			if not _check(FileAccess.get_file_as_string(legacy.save_path) == meta and store.load_checkpoint() == saved, "도감 조회는 저장 불변"): return
@@ -164,6 +177,18 @@ func _run() -> void:
 
 func _weapon_bonus() -> float:
 	return player.growth_sword_bonus if starting_weapon == "sword" else player.growth_bow_bonus
+
+func _ultimate_choice(character: String) -> int:
+	return 0 if character == "roan" else 1
+
+func _test_additional_cards() -> bool:
+	return true
+
+func _validate_additional_save(_saved: Dictionary) -> bool:
+	return true
+
+func _test_restored_additions(_saved: Dictionary) -> bool:
+	return true
 
 func _real_weapon_hits() -> bool:
 	if starting_weapon == "sword": return _real_sword_hits()
@@ -195,10 +220,16 @@ func _advanced_ultimate_test() -> bool:
 	target.damage_receiver.max_health = 2000
 	var profile: Dictionary = festival_ultimate.selected_profile
 	var expected: Array = {
+		"dragon_burst": [120, 0, 3.0, 0.15], "dragon_guard": [40, 50, 5.0, 0.25],
 		"breaker_crush": [160, 0, 2.0, 0.20], "breaker_roar": [80, 30, 4.0, 0.30],
 		"storm_volley": [120, 0, 3.0, 0.15], "storm_eye": [50, 45, 5.0, 0.20],
+		"warden_rain": [90, 0, 4.0, 0.20], "warden_sanctuary": [30, 60, 5.0, 0.30],
+		"dragon_lance": [150, 0, 2.0, 0.20, 600.0, 100.0], "dragon_rekindle": [0, 70, 4.0, 0.35, 0.0, -1.0],
+		"breaker_rift": [180, 0, 2.0, 0.25, 500.0, 120.0], "breaker_surge": [100, 20, 3.0, 0.20, 250.0, -1.0],
+		"storm_snipe": [180, 0, 2.0, 0.20, 1000.0, 80.0], "storm_restoration": [0, 65, 5.0, 0.25, 0.0, -1.0],
+		"warden_thorn_wave": [130, 0, 3.0, 0.20, 700.0, 140.0], "warden_renewal": [0, 85, 4.0, 0.35, 0.0, -1.0],
 	}[String(profile.id)]
-	var offsets: Array[Vector2] = [Vector2(100, 0), Vector2(-100, 0), Vector2(0, 350), Vector2(1100, 0)]
+	var offsets: Array[Vector2] = [Vector2(100, 0), Vector2(-100, 0), Vector2(0, 350), Vector2(1100, 0), Vector2(100, -81), Vector2(100, -101), Vector2(100, -121), Vector2(100, -141), Vector2(100, -221), Vector2(200, 0), Vector2(201, 0), Vector2(250, 0), Vector2(251, 0), Vector2(300, 0), Vector2(301, 0)]
 	for offset in offsets:
 		target.damage_receiver.reset()
 		target.global_position = player.global_position + offset
@@ -206,8 +237,10 @@ func _advanced_ultimate_test() -> bool:
 		player.damage_receiver.health = 20
 		festival_ultimate.gauge = 100
 		festival_ultimate.request_ultimate()
-		var hit := offset.length() <= float(profile.range)
-		if bool(profile.forward): hit = offset.x >= 0.0 and offset.x <= float(profile.range) and absf(offset.y) <= 220.0
+		var hit := offset.length() <= float(profile.get("range", 0.0))
+		if bool(profile.get("forward", false)): hit = offset.x >= 0.0 and offset.x <= float(profile.range) and absf(offset.y) <= float(profile.get("half_height", 220.0))
+		if expected.size() > 4:
+			hit = offset.length() <= float(expected[4]) if float(expected[5]) < 0.0 else offset.x >= 0.0 and offset.x <= float(expected[4]) and absf(offset.y) <= float(expected[5])
 		if not _check(festival_ultimate._active and festival_ultimate.gauge == 0 and target.damage_receiver.health == 2000 - (player.growth_damage(int(expected[0]), starting_weapon, "ultimate") if hit else 0) and player.damage_receiver.health == 20 + int(expected[1]) and is_equal_approx(festival_ultimate._remaining_s, float(expected[2])) and is_equal_approx(target.enemy_time_scale(), float(expected[3])), "상위 필살기 실제 범위·피해·회복·시간·감속"): return false
 		festival_ultimate.finish_stage_effect()
 		if not _check(is_equal_approx(target.enemy_time_scale(), 1.0), "상위 필살기 종료 감속 해제"): return false

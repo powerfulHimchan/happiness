@@ -58,7 +58,7 @@ func _run() -> void:
 			if not _check(runner.stage_number == 7 and paused and controls.current_screen_mode() == 8 and growth.awaiting_job_confirmation and growth.jobs.job_id == PrototypeJobProgress.DRAGON_ID and player.damage_receiver.max_health == before_max + 20 and is_equal_approx(player.growth_sword_bonus, before_sword + 0.15) and player.job_emblem_id == PrototypeJobProgress.DRAGON_ID, "7단계 진입 자동 진화·1회 패시브·전용 표식·일시정지"): return
 			var expected_gauge: int = festival_ultimate.gauge
 			if not await _layout_check(): return
-			if not _check(not growth.acknowledge_job() and not growth.choose_job_ultimate(-1) and not growth.choose_job_ultimate(2), "기본 필살기는 진화 확정 요건 아님·잘못된 선택 차단"): return
+			if not _check(not growth.acknowledge_job() and not growth.choose_job_ultimate(-1) and not growth.choose_job_ultimate(4), "기본 필살기는 진화 확정 요건 아님·잘못된 선택 차단"): return
 			var choice := 0 if character == "roan" else 1
 			_tap(controls.job_ultimate_rects[choice].get_center())
 			_tap(controls.job_confirm_rect.get_center())
@@ -219,7 +219,11 @@ func _layout_check() -> bool:
 		controls._refresh_job_layout()
 		var safe: Rect2 = controls.layout_snapshot().safe
 		if controls.current_screen_mode() == 8:
-			if not _check(safe.encloses(controls.job_panel_rect) and controls.job_panel_rect.encloses(controls.job_confirm_rect) and controls.job_ultimate_rects.size() == 2 and not controls.job_ultimate_rects[0].intersects(controls.job_ultimate_rects[1]), "진화 확인 두 화면비 안전 영역"): return false
+			if not _check(safe.encloses(controls.job_panel_rect) and controls.job_panel_rect.encloses(controls.job_confirm_rect) and controls.job_ultimate_rects.size() == 4, "진화 확인 두 화면비 안전 영역"): return false
+			for i in controls.job_ultimate_rects.size():
+				if not _check(controls.job_panel_rect.encloses(controls.job_ultimate_rects[i]) and not controls.job_confirm_rect.intersects(controls.job_ultimate_rects[i]), "필살기 네 후보 패널 안 배치"): return false
+				for j in range(i + 1, controls.job_ultimate_rects.size()):
+					if not _check(not controls.job_ultimate_rects[i].intersects(controls.job_ultimate_rects[j]), "필살기 후보 비중첩"): return false
 		else:
 			var view: Dictionary = controls.village_snapshot()
 			for rect in view.layout.cards + view.tabs.values():

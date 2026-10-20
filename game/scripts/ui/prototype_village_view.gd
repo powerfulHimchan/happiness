@@ -4,6 +4,7 @@ extends RefCounted
 ## GP-114: 기존 영구 해금과 로컬 기록을 읽는 마을. 방문으로 저장을 변경하지 않는다.
 const FACILITIES := ["forge", "memories", "records", "jobs", "apothecary", "atlas"]
 const HISTORY_PAGE_SIZE := 3
+const ADVANCED_PAGE_SIZE := 2
 const RECORD_TABS := ["records", "record_lengths", "history"]
 const TAB_LABELS := {"advanced_jobs": "상위 직업", "bonds": "세라의 인연", "record_lengths": "길이별 통계", "records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
 const TITLES := {"advanced_jobs": "상위 직업 도감", "bonds": "기억의 쉼터 · 세라의 인연", "record_lengths": "광장 · 도전 길이별 통계", "history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
@@ -25,25 +26,30 @@ static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictiona
 		buttons.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (button_width + gap), safe.size.y * 0.85), Vector2(button_width, safe.size.y * 0.09)))
 	return {"cards": cards, "back": buttons[0], "start": buttons[1], "continue": buttons[2] if can_continue else Rect2()}
 
-static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary, discovered_jobs: Dictionary = {}, current_job: String = "", potion_recipe: String = PrototypePotionRecipes.BASIC, surveyed_routes: Dictionary = {}, current_relic: Dictionary = {}, sera_choices: Dictionary = {}) -> Array[Dictionary]:
+static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary, discovered_jobs: Dictionary = {}, current_job: String = "", potion_recipe: String = PrototypePotionRecipes.BASIC, surveyed_routes: Dictionary = {}, current_relic: Dictionary = {}, sera_choices: Dictionary = {}, run_state: Dictionary = {}) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	match page:
 		"advanced_jobs":
 			for job in PrototypeJobProgress.ADVANCED_JOBS:
 				var found := bool(discovered_jobs.get(job.id, false))
-				var parent := PrototypeJobProgress.profile(String(job.parent))
+				var progress := PrototypeJobProgress.evolution_progress(String(job.id), run_state)
 				var passive := " · ".join(String(job.passive).split(" · ").slice(1))
-				var lines: Array[String] = ["전체 여정 7단계+ · " + String(parent.name), "%s 8 · %s 5" % [PrototypeJobProgress.TAG_NAMES[job.primary], PrototypeJobProgress.TAG_NAMES[job.secondary]], String(job.condition), passive]
+				var lines: Array[String] = [progress.stage, progress.scores, progress.branch, progress.hint, passive]
 				var abilities: Array[String] = []
+				var masteries: Array[String] = []
 				for card in PrototypeJobRewards.cards_for(String(job.id)):
-					if card.job == job.id: abilities.append(String(card.title))
+					if card.job != job.id: continue
+					if card.has("excludes"): masteries.append(String(card.title))
+					else: abilities.append(String(card.title))
 				lines.append("능력: " + " · ".join(abilities))
+				lines.append("강화: " + " / ".join(masteries))
 				var ultimates: Array[String] = []
 				for ultimate in PrototypeJobRewards.ultimates_for(String(job.id)):
 					ultimates.append(String(ultimate.name))
-				lines.append("필살기: " + " / ".join(ultimates))
-				lines.append("기본 능력 계승 · 필살기 하나 교체")
-				result.append({"id": job.id, "name": job.name, "open": found, "status": "진화 · 현재 도전" if current_job == job.id else "영구 발견" if found else "미발견 · 성향을 채워 진화", "lines": lines})
+				for offset in range(0, ultimates.size(), 2):
+					lines.append("필살기: " + " / ".join(ultimates.slice(offset, offset + 2)))
+				lines.append("기본 능력 계승 · 강화 택1 · 필살기 택1")
+				result.append({"id": job.id, "name": job.name, "open": found, "status": "진화 · 현재 도전" if current_job == job.id else "영구 발견" if found else "미발견 · 성향을 채워 진화", "progress": progress, "lines": lines})
 		"bonds":
 			for choice in ["rescue", "destroy"]:
 				var unlocked: bool = sera_choices.get(choice, false) == true

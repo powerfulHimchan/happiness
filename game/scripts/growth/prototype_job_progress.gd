@@ -14,13 +14,15 @@ const SECONDARY_THRESHOLD := 3.0
 const DRAGON_ID := "dragon_knight"
 const BREAKER_ID := "breaker"
 const STORM_ID := "storm_archer"
+const WARDEN_ID := "forest_warden"
 const EVOLUTION_PRIMARY := 8.0
 const EVOLUTION_SECONDARY := 5.0
 const EVOLUTION_STAGE := 7
 const ADVANCED_JOBS: Array[Dictionary] = [
 	{"id": DRAGON_ID, "parent": "vanguard", "name": "용염기사", "primary": "strength", "secondary": "determination", "weapon": "sword", "passive": "선봉대 계승 · 검 피해 추가 +15% · 최대 체력 +20", "damage_bonus": 0.15, "health_bonus": 20, "condition": "여명의 칼날 미보유 시 진화", "color": Color("ff9559")},
 	{"id": BREAKER_ID, "parent": "vanguard", "name": "파쇄자", "primary": "strength", "secondary": "determination", "weapon": "sword", "passive": "선봉대 계승 · 검 피해 추가 +25%", "damage_bonus": 0.25, "health_bonus": 0, "requires": ["vanguard_dawn_edge"], "condition": "여명의 칼날 보유 시 우선 진화", "color": Color("ef839f")},
-	{"id": STORM_ID, "parent": "tracker", "name": "폭풍사수", "primary": "shooting", "secondary": "nature", "weapon": "bow", "passive": "추적자 계승 · 활 피해 추가 +20% · 최대 체력 +10", "damage_bonus": 0.20, "health_bonus": 10, "condition": "추적자의 첫 상위 직업", "color": Color("83cfff")},
+	{"id": STORM_ID, "parent": "tracker", "name": "폭풍사수", "primary": "shooting", "secondary": "nature", "weapon": "bow", "passive": "추적자 계승 · 활 피해 추가 +20% · 최대 체력 +10", "damage_bonus": 0.20, "health_bonus": 10, "condition": "숲의 명중 미보유 시 진화", "color": Color("83cfff")},
+	{"id": WARDEN_ID, "parent": "tracker", "name": "숲의 파수꾼", "primary": "shooting", "secondary": "nature", "weapon": "bow", "passive": "추적자 계승 · 활 피해 추가 +10% · 최대 체력 +40", "damage_bonus": 0.10, "health_bonus": 40, "requires": ["tracker_forest_aim"], "condition": "숲의 명중 보유 시 우선 진화", "color": Color("b5e585")},
 ]
 
 var job_id: String = ""
@@ -116,8 +118,40 @@ func can_evolve() -> bool:
 
 func evolution_profile(ranks: Dictionary) -> Dictionary:
 	if not can_evolve(): return {}
-	if job_id == "tracker": return profile(STORM_ID)
+	if job_id == "tracker": return profile(WARDEN_ID if int(ranks.get("tracker_forest_aim", 0)) > 0 else STORM_ID)
 	return profile(BREAKER_ID if int(ranks.get("vanguard_dawn_edge", 0)) > 0 else DRAGON_ID)
+
+
+static func evolution_progress(id: String, run: Dictionary) -> Dictionary:
+	var job := profile(id)
+	if not job.has("parent"): return {}
+	var model := PrototypeJobProgress.new()
+	model.contributions = run.get("growth_job_contributions", {})
+	var active := bool(run.get("growth_run_active", false))
+	var current := String(run.get("growth_job_id", "")) if active else ""
+	var ranks: Dictionary = run.get("growth_ranks", {}) if active else {}
+	var required := "vanguard_dawn_edge" if job.parent == "vanguard" else "tracker_forest_aim"
+	var has_required := int(ranks.get(required, 0)) > 0
+	var branch_ok := has_required if job.has("requires") else not has_required
+	var hint := "새 전체 여정에서 조건을 채우세요"
+	if active:
+		if profile(current).has("parent"):
+			hint = "이번 도전에서 진화 완료" if current == id else "이번 도전은 다른 진화로 확정"
+		elif run.get("run_mode", "standard") != JourneyRoutePlan.MODE:
+			hint = "전체 여정에서만 진화합니다"
+		elif current.is_empty():
+			hint = "먼저 %s를 발현하세요" % String(profile(String(job.parent)).name)
+		elif current != job.parent:
+			hint = "현재 기본 직업이 다릅니다"
+		elif not branch_ok:
+			hint = "선행 강화를 선택하세요" if job.has("requires") else "선행 강화 보유로 다른 분기 예정"
+		elif model.score(String(job.primary)) + 0.00001 < EVOLUTION_PRIMARY or model.score(String(job.secondary)) + 0.00001 < EVOLUTION_SECONDARY:
+			hint = "성향 점수를 더 모으세요"
+		elif int(run.get("run_stage_number", 1)) < EVOLUTION_STAGE:
+			hint = "성향 충족 · 7단계 진입 대기"
+		else:
+			hint = "조건 충족 · 다음 전투에서 진화 판정"
+	return {"stage": "전체 여정 7단계+ · " + String(profile(String(job.parent)).name) + (" · 현재%d단계" % int(run.get("run_stage_number", 1)) if active else ""), "scores": "%s %.2f/8 · %s %.2f/5" % [TAG_NAMES[job.primary], model.score(String(job.primary)) if active else 0.0, TAG_NAMES[job.secondary], model.score(String(job.secondary)) if active else 0.0], "branch": String(job.condition) + (" · 현재 보유" if has_required else " · 현재 미보유"), "hint": hint, "ready": active and current == job.parent and run.get("run_mode") == JourneyRoutePlan.MODE and branch_ok and model.score(String(job.primary)) + 0.00001 >= EVOLUTION_PRIMARY and model.score(String(job.secondary)) + 0.00001 >= EVOLUTION_SECONDARY and int(run.get("run_stage_number", 1)) >= EVOLUTION_STAGE}
 
 
 func closest_job() -> Dictionary:

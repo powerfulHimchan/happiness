@@ -554,6 +554,14 @@ func _draw() -> void:
 		draw_arc(center, 23.0, -PI * 0.75, PI * 0.65, 28, job_emblem_color, 4.0, true)
 		var bolt := PackedVector2Array([center + Vector2(6, -26), center + Vector2(-13, 2), center + Vector2(0, 2), center + Vector2(-6, 26), center + Vector2(16, -6), center + Vector2(3, -6)])
 		draw_colored_polygon(bolt, job_emblem_color)
+	elif job_emblem_id == PrototypeJobProgress.WARDEN_ID:
+		var leaf := PackedVector2Array([center + Vector2(0, -27), center + Vector2(18, -11), center + Vector2(21, 5), center + Vector2(0, 24), center + Vector2(-21, 5), center + Vector2(-18, -11)])
+		draw_colored_polygon(leaf, Color(job_emblem_color, 0.35))
+		leaf.append(leaf[0])
+		draw_polyline(leaf, job_emblem_color, 4.0, true)
+		draw_line(center + Vector2(0, -16), center + Vector2(0, 21), job_emblem_color, 3.0, true)
+		draw_line(center + Vector2(-12, -5), center + Vector2(0, 5), job_emblem_color, 3.0, true)
+		draw_line(center + Vector2(12, -5), center + Vector2(0, 5), job_emblem_color, 3.0, true)
 	elif job_emblem_id == "vanguard":
 		var points := PackedVector2Array([center + Vector2(0, -18), center + Vector2(16, 0), center + Vector2(0, 18), center + Vector2(-16, 0), center + Vector2(0, -18)])
 		draw_polyline(points, job_emblem_color, 4.0, true)

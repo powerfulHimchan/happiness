@@ -316,6 +316,12 @@ func choose_card(index: int) -> bool:
 		"breaker_edge": player.growth_sword_bonus += 0.30
 		"breaker_vigor", "storm_breath": player.apply_growth_health(20, 40)
 		"storm_arrow": player.growth_bow_bonus += 0.25
+	var effect: Dictionary = offered_cards[index].get("job_effect", {})
+	if not effect.is_empty():
+		var job := PrototypeJobProgress.profile(String(offered_cards[index].job))
+		if job.weapon == "sword": player.growth_sword_bonus += float(effect.get("damage", 0.0))
+		else: player.growth_bow_bonus += float(effect.get("damage", 0.0))
+		player.apply_growth_health(int(effect.get("health", 0)), int(effect.get("heal", 0)))
 	choosing = false
 	offered_cards.clear()
 	if jobs_enabled:
