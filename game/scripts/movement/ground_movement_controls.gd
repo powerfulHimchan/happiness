@@ -3171,10 +3171,14 @@ func _refresh_relic_reward_layout() -> void:
 	relic_reward_card_rects.clear()
 	relic_reward_page = clampi(relic_reward_page, 0, relic_reward_pages() - 1)
 	var count := mini(PrototypeRelic.REWARD_PAGE_SIZE, PrototypeRelic.OFFERS.size() - relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE)
-	var gap := safe.size.x * 0.03
-	var card_width := (safe.size.x * 0.90 - gap * (count - 1)) / count
+	# Five reward cards must remain readable on narrow phone layouts. Keep the
+	# gutters compact so the descriptions have enough width before shrinking
+	# their font size.
+	var margin := safe.size.x * 0.01
+	var gap := safe.size.x * 0.008
+	var card_width := (safe.size.x - margin * 2.0 - gap * (count - 1)) / count
 	for i in count:
-		relic_reward_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + i * (card_width + gap), safe.size.y * 0.21), Vector2(card_width, safe.size.y * 0.47)))
+		relic_reward_card_rects.append(Rect2(safe.position + Vector2(margin + i * (card_width + gap), safe.size.y * 0.21), Vector2(card_width, safe.size.y * 0.47)))
 	relic_reward_card_rect = relic_reward_card_rects[0]
 	relic_reward_previous_rect = Rect2(safe.position + Vector2(safe.size.x * 0.07, safe.size.y * 0.71), Vector2(safe.size.x * 0.20, safe.size.y * 0.06))
 	relic_reward_next_rect = Rect2(safe.position + Vector2(safe.size.x * 0.73, safe.size.y * 0.71), relic_reward_previous_rect.size)
@@ -3193,7 +3197,7 @@ func _draw_relic_rewards() -> void:
 		var offer: Dictionary = PrototypeRelic.OFFERS[offer_index]
 		var rect: Rect2 = relic_reward_card_rects[i]
 		draw_style_box(_panel_style(Color("365d68") if selected_relic_offer == offer_index else PANEL_COLOR), rect)
-		_draw_village_text("희귀 · " + String(offer.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.07), Vector2(rect.size.x - 24, 42)), 28, Color("ffca78"))
+		_draw_village_text("희귀 · " + String(offer.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.07), Vector2(rect.size.x - 24, 42)), mini(28, maxi(16, int(rect.size.x * 0.095))), Color("ffca78"))
 		var center := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.37)
 		if offer.id == PrototypeRelic.PHOENIX_ID:
 			var feather := PackedVector2Array([center + Vector2(0, -28), center + Vector2(18, -8), center + Vector2(14, 14), center + Vector2(0, 30), center + Vector2(-14, 14), center + Vector2(-18, -8)])
@@ -3223,7 +3227,11 @@ func _draw_relic_rewards() -> void:
 			draw_line(center + Vector2(0, 12), center + Vector2(10, 40), Color("82dcec"), 3, true)
 			draw_circle(center + Vector2(10, 40), 7, Color("ffd166"))
 		for j in offer.lines.size():
-			_draw_village_text(String(offer.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.57 + j * 0.12)), Vector2(rect.size.x - 24, 30)), 19, TEXT_COLOR)
+			var line_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.57 + j * 0.12)), Vector2(rect.size.x - 24, 30))
+			var line_font_size := 19
+			while line_font_size > 10 and ThemeDB.fallback_font.get_string_size(String(offer.lines[j]), HORIZONTAL_ALIGNMENT_LEFT, -1, line_font_size).x > line_rect.size.x:
+				line_font_size -= 1
+			_draw_village_text(String(offer.lines[j]), line_rect, line_font_size, TEXT_COLOR)
 	_draw_button(relic_reward_previous_rect, "이전", relic_reward_page > 0)
 	_draw_button(relic_reward_next_rect, "다음", relic_reward_page < relic_reward_pages() - 1)
 	_draw_village_text("%d / %d" % [relic_reward_page + 1, relic_reward_pages()], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.71), Vector2(safe.size.x * 0.40, safe.size.y * 0.06)), 19, TEXT_COLOR)
