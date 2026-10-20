@@ -313,6 +313,9 @@ func choose_card(index: int) -> bool:
 		"tracker_forest_aim": player.growth_bow_bonus += 0.30
 		"dragon_flame": player.growth_sword_bonus += 0.20
 		"dragon_heart": player.apply_growth_health(30, 30)
+		"breaker_edge": player.growth_sword_bonus += 0.30
+		"breaker_vigor", "storm_breath": player.apply_growth_health(20, 40)
+		"storm_arrow": player.growth_bow_bonus += 0.25
 	choosing = false
 	offered_cards.clear()
 	if jobs_enabled:
@@ -375,12 +378,15 @@ func _try_manifest_job() -> bool:
 func try_evolve_job() -> bool:
 	if not jobs_enabled or not run_active or player.damage_receiver.dead or awaiting_job_confirmation or choosing or not jobs.can_evolve() or not evolution_allowed.is_valid() or not evolution_allowed.call():
 		return false
-	jobs.job_id = PrototypeJobProgress.DRAGON_ID
-	player.growth_sword_bonus += 0.15
+	var job := jobs.evolution_profile(ranks)
+	jobs.job_id = String(job.id)
+	if job.weapon == "sword":
+		player.growth_sword_bonus += float(job.damage_bonus)
+	else:
+		player.growth_bow_bonus += float(job.damage_bonus)
 	# 최대 체력 증가는 회복75% 규칙과 분리하고 실제 회복만 기존 경로로 처리한다.
-	player.apply_growth_health(20, 20)
+	player.apply_growth_health(int(job.health_bonus), int(job.health_bonus))
 	awaiting_job_confirmation = true
-	var job := jobs.current_job()
 	player.set_job_emblem(jobs.job_id, job.color)
 	job_manifested.emit(job)
 	_emit_metrics()

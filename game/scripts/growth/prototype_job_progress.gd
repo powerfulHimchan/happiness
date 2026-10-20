@@ -12,11 +12,15 @@ const JOBS: Array[Dictionary] = [
 const PRIMARY_THRESHOLD := 5.0
 const SECONDARY_THRESHOLD := 3.0
 const DRAGON_ID := "dragon_knight"
+const BREAKER_ID := "breaker"
+const STORM_ID := "storm_archer"
 const EVOLUTION_PRIMARY := 8.0
 const EVOLUTION_SECONDARY := 5.0
 const EVOLUTION_STAGE := 7
 const ADVANCED_JOBS: Array[Dictionary] = [
-	{"id": DRAGON_ID, "parent": "vanguard", "name": "용염기사", "primary": "strength", "secondary": "determination", "weapon": "sword", "passive": "선봉대 계승 · 검 피해 추가 +15% · 최대 체력 +20", "color": Color("ff9559")},
+	{"id": DRAGON_ID, "parent": "vanguard", "name": "용염기사", "primary": "strength", "secondary": "determination", "weapon": "sword", "passive": "선봉대 계승 · 검 피해 추가 +15% · 최대 체력 +20", "damage_bonus": 0.15, "health_bonus": 20, "condition": "여명의 칼날 미보유 시 진화", "color": Color("ff9559")},
+	{"id": BREAKER_ID, "parent": "vanguard", "name": "파쇄자", "primary": "strength", "secondary": "determination", "weapon": "sword", "passive": "선봉대 계승 · 검 피해 추가 +25%", "damage_bonus": 0.25, "health_bonus": 0, "requires": ["vanguard_dawn_edge"], "condition": "여명의 칼날 보유 시 우선 진화", "color": Color("ef839f")},
+	{"id": STORM_ID, "parent": "tracker", "name": "폭풍사수", "primary": "shooting", "secondary": "nature", "weapon": "bow", "passive": "추적자 계승 · 활 피해 추가 +20% · 최대 체력 +10", "damage_bonus": 0.20, "health_bonus": 10, "condition": "추적자의 첫 상위 직업", "color": Color("83cfff")},
 ]
 
 var job_id: String = ""
@@ -106,7 +110,14 @@ static func base_job(id: String) -> String:
 
 
 func can_evolve() -> bool:
-	return job_id == "vanguard" and score("strength") + 0.00001 >= EVOLUTION_PRIMARY and score("determination") + 0.00001 >= EVOLUTION_SECONDARY
+	var job := current_job()
+	return job_id in ["vanguard", "tracker"] and score(String(job.primary)) + 0.00001 >= EVOLUTION_PRIMARY and score(String(job.secondary)) + 0.00001 >= EVOLUTION_SECONDARY
+
+
+func evolution_profile(ranks: Dictionary) -> Dictionary:
+	if not can_evolve(): return {}
+	if job_id == "tracker": return profile(STORM_ID)
+	return profile(BREAKER_ID if int(ranks.get("vanguard_dawn_edge", 0)) > 0 else DRAGON_ID)
 
 
 func closest_job() -> Dictionary:
@@ -129,7 +140,9 @@ func hud_text() -> String:
 	var job := closest_job()
 	if not job_id.is_empty():
 		if job_id == "vanguard":
-			return "선봉대 · 용염기사: 7단계+ / 근력 %.1f·투지 %.1f 남음" % [_remaining(EVOLUTION_PRIMARY, score("strength")), _remaining(EVOLUTION_SECONDARY, score("determination"))]
+			return "선봉대 · 진화7+ · 근력%.1f/투지%.1f 남음" % [_remaining(EVOLUTION_PRIMARY, score("strength")), _remaining(EVOLUTION_SECONDARY, score("determination"))]
+		if job_id == "tracker":
+			return "추적자 · 진화7+ · 사격%.1f/자연%.1f 남음" % [_remaining(EVOLUTION_PRIMARY, score("shooting")), _remaining(EVOLUTION_SECONDARY, score("nature"))]
 		return "%s · %s" % [job["name"], "진화" if job.has("parent") else "발현"]
 	return "%s · %s %.1f / %s %.1f 남음" % [job["name"], TAG_NAMES[job["primary"]], _remaining(PRIMARY_THRESHOLD, score(job["primary"])), TAG_NAMES[job["secondary"]], _remaining(SECONDARY_THRESHOLD, score(job["secondary"]))]
 

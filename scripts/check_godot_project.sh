@@ -5,6 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp329_runtime_test.gd"
   "$game_root/tests/gp327_runtime_test.gd"
   "$game_root/scripts/stage/expedition_stage_constraint.gd"
   "$game_root/tests/gp326_constraint_runtime_test.gd"
@@ -739,6 +740,14 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for advanced_job in breaker storm_archer; do
+    for evolution_character in roan lumi; do
+      for evolution_phase in seed resume legacy late; do
+        checked_godot 90s --headless --path "$game_root" \
+          --script res://tests/gp329_runtime_test.gd -- "$evolution_phase" "$evolution_character" "$advanced_job"
+      done
+    done
+  done
   for evolution_character in roan lumi; do
     for evolution_phase in seed resume legacy late; do
       checked_godot 90s --headless --path "$game_root" \

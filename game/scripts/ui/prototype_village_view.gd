@@ -31,7 +31,19 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 		"advanced_jobs":
 			for job in PrototypeJobProgress.ADVANCED_JOBS:
 				var found := bool(discovered_jobs.get(job.id, false))
-				result.append({"id": job.id, "name": job.name, "open": found, "status": "진화 · 현재 도전" if current_job == job.id else "영구 발견" if found else "미발견 · 조건을 채워 자동 진화", "lines": ["전체 여정 7스테이지 이후 · 선봉대", "근력 8 · 투지 5 (70/20/10 성향)", job.passive, "능력: 용염의 칼날 · 용의 심장", "필살기: 용염 폭발 / 불꽃의 수호", "선봉대 능력 계승 · 필살기는 하나 교체", "새 도전에서는 다시 조건을 채웁니다"]})
+				var parent := PrototypeJobProgress.profile(String(job.parent))
+				var passive := " · ".join(String(job.passive).split(" · ").slice(1))
+				var lines: Array[String] = ["전체 여정 7단계+ · " + String(parent.name), "%s 8 · %s 5" % [PrototypeJobProgress.TAG_NAMES[job.primary], PrototypeJobProgress.TAG_NAMES[job.secondary]], String(job.condition), passive]
+				var abilities: Array[String] = []
+				for card in PrototypeJobRewards.cards_for(String(job.id)):
+					if card.job == job.id: abilities.append(String(card.title))
+				lines.append("능력: " + " · ".join(abilities))
+				var ultimates: Array[String] = []
+				for ultimate in PrototypeJobRewards.ultimates_for(String(job.id)):
+					ultimates.append(String(ultimate.name))
+				lines.append("필살기: " + " / ".join(ultimates))
+				lines.append("기본 능력 계승 · 필살기 하나 교체")
+				result.append({"id": job.id, "name": job.name, "open": found, "status": "진화 · 현재 도전" if current_job == job.id else "영구 발견" if found else "미발견 · 성향을 채워 진화", "lines": lines})
 		"bonds":
 			for choice in ["rescue", "destroy"]:
 				var unlocked: bool = sera_choices.get(choice, false) == true

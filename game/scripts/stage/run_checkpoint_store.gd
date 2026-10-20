@@ -162,7 +162,7 @@ static func valid_state(state: Dictionary) -> bool:
 		if float(assisted_stage) > float(stage.number):
 			return false
 	var growth: Dictionary = state.growth
-	if not _number(growth.get("level"), 1, 100, true) or not _number(growth.get("xp"), 0, 20 + (int(growth.level) - 1) * 5 - 1, true) or not _number(growth.get("total_xp"), 0, 100000, true) or not _number(growth.get("rerolls"), 0, 1, true) or not growth.get("ranks") is Dictionary or not growth.get("contributions") is Dictionary or not growth.get("recent") is Dictionary or growth.get("job") not in ["", "vanguard", "tracker", PrototypeJobProgress.DRAGON_ID]:
+	if not _number(growth.get("level"), 1, 100, true) or not _number(growth.get("xp"), 0, 20 + (int(growth.level) - 1) * 5 - 1, true) or not _number(growth.get("total_xp"), 0, 100000, true) or not _number(growth.get("rerolls"), 0, 1, true) or not growth.get("ranks") is Dictionary or not growth.get("contributions") is Dictionary or not growth.get("recent") is Dictionary or growth.get("job") not in ["", "vanguard", "tracker", PrototypeJobProgress.DRAGON_ID, PrototypeJobProgress.BREAKER_ID, PrototypeJobProgress.STORM_ID]:
 		return false
 	var spent := 0
 	for level_index in range(1, int(growth.level)):
@@ -200,11 +200,14 @@ static func valid_state(state: Dictionary) -> bool:
 	for tag in growth.recent:
 		if tag not in PrototypeJobProgress.TAG_NAMES or not _number(growth.recent[tag], 0, 100):
 			return false
-	if growth.job == PrototypeJobProgress.DRAGON_ID:
+	var job := PrototypeJobProgress.profile(String(growth.job))
+	if job.has("parent"):
 		var progress := PrototypeJobProgress.new()
-		progress.job_id = "vanguard"
+		progress.job_id = String(job.parent)
 		progress.contributions = growth.contributions
 		if stage.get("run_mode", "standard") != JourneyRoutePlan.MODE or int(stage.number) < PrototypeJobProgress.EVOLUTION_STAGE or not progress.can_evolve(): return false
+		for required in job.get("requires", []):
+			if not growth.ranks.has(required): return false
 	var player: Dictionary = state.player
 	if not PrototypeCharacters.valid_id(player.get("character_id", "roan")): return false
 	if not PrototypePotionRecipes.valid_id(player.get("potion_recipe", PrototypePotionRecipes.BASIC)) or (player.has("potion_recipe") and not player.has("potions_remaining")):
@@ -226,11 +229,16 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	var ranks: Dictionary = growth.ranks
 	var expected_max := 100 + PrototypeMemoryAbilities.health_bonus(String(state.get("memory_id", ""))) + (10 if legacy.get("choice") == "rescue" else 0) + int(ranks.get("vitality", 0)) * 20 + int(ranks.get("recovery", 0)) * 10 + int(ranks.get("vanguard_vigor", 0)) * 30 + int(ranks.get("tracker_breath", 0)) * 20
-	var sword_bonus := int(ranks.get("sword_power", 0)) * 0.15 + int(ranks.get("vanguard_edge", 0)) * 0.20 + int(ranks.get("vanguard_dawn_edge", 0)) * 0.30 + (0.10 if growth.job == "vanguard" else 0.0)
-	if growth.job == PrototypeJobProgress.DRAGON_ID:
-		expected_max += 20 + int(ranks.get("dragon_heart", 0)) * 30
-		sword_bonus += 0.25 + int(ranks.get("dragon_flame", 0)) * 0.20
-	var bow_bonus := int(ranks.get("bow_power", 0)) * 0.15 + int(ranks.get("tracker_focus", 0)) * 0.20 + int(ranks.get("tracker_forest_aim", 0)) * 0.30 + (0.10 if growth.job == "tracker" else 0.0)
+	var parent := PrototypeJobProgress.base_job(String(growth.job))
+	var sword_bonus := int(ranks.get("sword_power", 0)) * 0.15 + int(ranks.get("vanguard_edge", 0)) * 0.20 + int(ranks.get("vanguard_dawn_edge", 0)) * 0.30 + (0.10 if parent == "vanguard" else 0.0)
+	var bow_bonus := int(ranks.get("bow_power", 0)) * 0.15 + int(ranks.get("tracker_focus", 0)) * 0.20 + int(ranks.get("tracker_forest_aim", 0)) * 0.30 + (0.10 if parent == "tracker" else 0.0)
+	if job.has("parent"):
+		expected_max += int(job.health_bonus)
+		if job.weapon == "sword": sword_bonus += float(job.damage_bonus)
+		else: bow_bonus += float(job.damage_bonus)
+	expected_max += int(ranks.get("dragon_heart", 0)) * 30 + int(ranks.get("breaker_vigor", 0)) * 20 + int(ranks.get("storm_breath", 0)) * 20
+	sword_bonus += int(ranks.get("dragon_flame", 0)) * 0.20 + int(ranks.get("breaker_edge", 0)) * 0.30
+	bow_bonus += int(ranks.get("storm_arrow", 0)) * 0.25
 	if int(player.max_health) != expected_max or not is_equal_approx(float(player.common), int(ranks.get("power", 0)) * 0.10) or not is_equal_approx(float(player.sword), sword_bonus) or not is_equal_approx(float(player.bow), bow_bonus):
 		return false
 	if state.weapons.get("active") not in ["sword", "bow"]:

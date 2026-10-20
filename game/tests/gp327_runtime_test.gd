@@ -1,5 +1,7 @@
 extends "res://tests/gp307_runtime_test.gd"
 
+var automatic_growth_card_id := "sword_power"
+
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var phase := args[0]
@@ -64,8 +66,9 @@ func _run() -> void:
 			legacy.fail_writes = false
 			_tap(controls.job_confirm_rect.get_center())
 			if not _check(not paused and not growth.awaiting_job_confirmation and festival_ultimate.gauge == expected_gauge and festival_ultimate.selected_profile.job == PrototypeJobProgress.DRAGON_ID and not growth.try_evolve_job() and not growth.choose_job_ultimate(1 - choice), "재시도 확정·게이지 보존·중복 진화/재선택 차단"): return
-			for id in ["dragon_flame", "dragon_heart", "vanguard_edge"]:
+			for id in ["dragon_flame", "dragon_heart", "vanguard_edge", "vanguard_dawn_edge"]:
 				if not _earn_card(id) or not _resolve_growth(): return
+			if not _check(growth.jobs.job_id == PrototypeJobProgress.DRAGON_ID and not growth.try_evolve_job(), "진화 후 여명의 칼날 선택은 가지를 다시 변경하지 않음"): return
 			if not _check(not growth._card_available(PrototypeAbilityCodex.profile("dragon_flame")) and not growth._card_available(PrototypeAbilityCodex.profile("dragon_heart")), "상위 능력 1회 제한·기본 능력 계승"): return
 			if not _test_ultimate(choice): return
 			if not _finish_stage() or not sandbox._claim_weapon_reward(""): return
@@ -160,6 +163,19 @@ func _earn_card(id: String) -> bool:
 	sandbox._on_growth_choices_requested(growth.offered_cards, growth.level, growth.rerolls_remaining)
 	if not _check(growth.choose_card(0), "실제 카드 선택: " + id): return false
 	return _resolve_growth()
+
+func _resolve_growth() -> bool:
+	# 스테이지 처치 보상은 고정 카드로 해소한다. 진화 분기는 명시한 카드로만 결정한다.
+	for ignored in 12:
+		if growth.awaiting_job_confirmation:
+			_tap(controls.job_ultimate_rects[0].get_center())
+			_tap(controls.job_confirm_rect.get_center())
+		elif growth.choosing:
+			growth.offered_cards.assign([PrototypeAbilityCodex.profile(automatic_growth_card_id)])
+			sandbox._on_growth_choices_requested(growth.offered_cards, growth.level, growth.rerolls_remaining)
+			_tap(controls.growth_card_rects[0].get_center())
+		else: return true
+	return _check(false, "고정 성장/발현 대기 해소")
 
 func _real_sword_hits() -> bool:
 	var target := sandbox.get_node("Targets/LeafSlime") as PrototypeTarget

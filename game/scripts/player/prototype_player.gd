@@ -536,7 +536,7 @@ func _draw() -> void:
 		draw_line(center + Vector2(20, 8), center + Vector2(8, 16), Color("9be8f2"), 3.0, true)
 	if job_emblem_id.is_empty():
 		return
-	# 색뿐 아니라 선봉대의 마름모와 추적자의 원형 표식으로 구분한다.
+	# 색과 실루엣을 함께 사용해 기본/상위 직업을 구분한다.
 	var center := Vector2(0.0, -160.0)
 	if job_emblem_id == PrototypeJobProgress.DRAGON_ID:
 		var flame := PackedVector2Array([center + Vector2(0, -30), center + Vector2(8, -9), center + Vector2(20, -17), center + Vector2(15, 11), center + Vector2(0, 23), center + Vector2(-15, 11), center + Vector2(-20, -17), center + Vector2(-8, -9)])
@@ -544,6 +544,16 @@ func _draw() -> void:
 		flame.append(flame[0])
 		draw_polyline(flame, job_emblem_color, 4.0, true)
 		draw_line(center + Vector2(0, -13), center + Vector2(0, 13), Color("fff0b3"), 4.0, true)
+	elif job_emblem_id == PrototypeJobProgress.BREAKER_ID:
+		var shard := PackedVector2Array([center + Vector2(0, -26), center + Vector2(20, -8), center + Vector2(7, -2), center + Vector2(17, 19), center + Vector2(-3, 9), center + Vector2(-15, 23), center + Vector2(-20, -8)])
+		draw_colored_polygon(shard, Color(job_emblem_color, 0.35))
+		shard.append(shard[0])
+		draw_polyline(shard, job_emblem_color, 4.0, true)
+		draw_line(center + Vector2(-5, -14), center + Vector2(4, 9), Color("fff0e0"), 3.0, true)
+	elif job_emblem_id == PrototypeJobProgress.STORM_ID:
+		draw_arc(center, 23.0, -PI * 0.75, PI * 0.65, 28, job_emblem_color, 4.0, true)
+		var bolt := PackedVector2Array([center + Vector2(6, -26), center + Vector2(-13, 2), center + Vector2(0, 2), center + Vector2(-6, 26), center + Vector2(16, -6), center + Vector2(3, -6)])
+		draw_colored_polygon(bolt, job_emblem_color)
 	elif job_emblem_id == "vanguard":
 		var points := PackedVector2Array([center + Vector2(0, -18), center + Vector2(16, 0), center + Vector2(0, 18), center + Vector2(-16, 0), center + Vector2(0, -18)])
 		draw_polyline(points, job_emblem_color, 4.0, true)

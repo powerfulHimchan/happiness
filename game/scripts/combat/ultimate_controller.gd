@@ -90,7 +90,8 @@ func request_ultimate() -> void:
 
 func select_job_ultimate(job_id: String, ultimate_id: String) -> bool:
 	# 상위 직업 확정에서 기본 직업 필살기만 한 번 교체한다. 진행 중 효과는 별도 스냅샷을 유지한다.
-	var evolving: bool = job_id == PrototypeJobProgress.DRAGON_ID and selected_profile.get("job", "") == "vanguard"
+	var job := PrototypeJobProgress.profile(job_id)
+	var evolving: bool = job.has("parent") and selected_profile.get("job", "") == job.parent
 	if not selected_profile.is_empty() and not evolving:
 		return false
 	for candidate in PrototypeJobRewards.ultimates_for(job_id):
