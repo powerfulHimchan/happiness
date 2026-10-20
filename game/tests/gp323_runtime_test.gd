@@ -168,6 +168,7 @@ func _start_journey(character: String, weapon: String) -> bool:
 	controls.show_start_weapon_selection()
 	controls.selected_character_id = character
 	controls.selected_starting_weapon = weapon
+	controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 	controls.selected_story_enabled = expedition_story
 	controls.selected_expedition = 0
 	_tap(controls.start_length_rects[3].get_center())
