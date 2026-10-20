@@ -64,6 +64,7 @@ var ranks: Dictionary = {}
 var record_ability: Callable
 var defeat_recovery_allowed: Callable
 var precise_evade_reward_allowed: Callable
+var evolution_allowed: Callable
 var selection_message: String = ""
 var rng := RandomNumberGenerator.new()
 var _rewarded_lives: Dictionary = {}
@@ -310,6 +311,8 @@ func choose_card(index: int) -> bool:
 		"tracker_breath": player.apply_growth_health(20, 35)
 		"vanguard_dawn_edge": player.growth_sword_bonus += 0.30
 		"tracker_forest_aim": player.growth_bow_bonus += 0.30
+		"dragon_flame": player.growth_sword_bonus += 0.20
+		"dragon_heart": player.apply_growth_health(30, 30)
 	choosing = false
 	offered_cards.clear()
 	if jobs_enabled:
@@ -351,8 +354,10 @@ func _on_precise_evade() -> void:
 
 
 func _try_manifest_job() -> bool:
-	if not jobs_enabled or not run_active or _job_passive_applied:
+	if not jobs_enabled or not run_active or awaiting_job_confirmation:
 		return false
+	if _job_passive_applied:
+		return try_evolve_job()
 	var job := jobs.evaluate()
 	if job.is_empty():
 		return false
@@ -367,8 +372,23 @@ func _try_manifest_job() -> bool:
 	return true
 
 
+func try_evolve_job() -> bool:
+	if not jobs_enabled or not run_active or player.damage_receiver.dead or awaiting_job_confirmation or choosing or not jobs.can_evolve() or not evolution_allowed.is_valid() or not evolution_allowed.call():
+		return false
+	jobs.job_id = PrototypeJobProgress.DRAGON_ID
+	player.growth_sword_bonus += 0.15
+	# 최대 체력 증가는 회복75% 규칙과 분리하고 실제 회복만 기존 경로로 처리한다.
+	player.apply_growth_health(20, 20)
+	awaiting_job_confirmation = true
+	var job := jobs.current_job()
+	player.set_job_emblem(jobs.job_id, job.color)
+	job_manifested.emit(job)
+	_emit_metrics()
+	return true
+
+
 func acknowledge_job() -> bool:
-	if not awaiting_job_confirmation or not run_active or ultimate.selected_profile.is_empty():
+	if not awaiting_job_confirmation or not run_active or ultimate.selected_profile.get("job", "") != jobs.job_id:
 		return false
 	awaiting_job_confirmation = false
 	if choosing:
@@ -436,7 +456,7 @@ func _emit_metrics() -> void:
 
 
 func _card_available(card: Dictionary) -> bool:
-	if card.has("job") and card.job != jobs.job_id: return false
+	if card.has("job") and card.job != jobs.job_id and card.job != PrototypeJobProgress.base_job(jobs.job_id): return false
 	for required in card.get("requires", []):
 		if int(ranks.get(required, 0)) <= 0: return false
 	for excluded in card.get("excludes", []):

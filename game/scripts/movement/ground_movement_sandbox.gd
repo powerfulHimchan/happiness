@@ -69,6 +69,7 @@ func _ready() -> void:
 	growth.record_ability = _record_abilities
 	growth.defeat_recovery_allowed = _can_collect_recovery_orb
 	growth.precise_evade_reward_allowed = _can_collect_recovery_orb
+	growth.evolution_allowed = _can_evolve_job
 	_record_abilities([])
 	_update_boss_legacy_status()
 	growth.metrics_changed.connect(controls.update_growth_metrics)
@@ -384,6 +385,10 @@ func _on_job_manifested(job: Dictionary) -> void:
 	_begin_growth_pause()
 	controls.show_job_manifestation(job, UltimateController.TIME_ECHO_BONUS_S if ultimate_controller.time_echo_unlocked else 0.0)
 	_discover_job(String(job.id))
+
+
+func _can_evolve_job() -> bool:
+	return not _restoring_checkpoint and stage_runner.run_mode == JourneyRoutePlan.MODE and stage_runner.stage_number >= PrototypeJobProgress.EVOLUTION_STAGE and stage_runner.stage_enabled and not stage_runner.stage_complete and not stage_runner.failed and not _combat_environment_suspended and controls.current_screen_mode() in [0, 7]
 
 
 func _finish_growth_selection() -> void:
@@ -764,6 +769,7 @@ func _continue_stage(route: String) -> void:
 	growth.begin_next_stage()
 	stage_runner.next_stage(route)
 	_finish_growth_selection()
+	growth.try_evolve_job()
 	_emit_enemy_metrics()
 
 

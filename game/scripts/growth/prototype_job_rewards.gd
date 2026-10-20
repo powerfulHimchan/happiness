@@ -3,6 +3,8 @@ extends RefCounted
 
 ## GP-103: 발현한 직업의 카드 후보와 필살기 선택 데이터.
 const CARDS: Array[Dictionary] = [
+	{"id": "dragon_flame", "job": "dragon_knight", "title": "용염의 칼날", "category": "job", "lines": ["검 공격·스킬·필살기", "피해 +20% · 도전당 1회"], "tags": {"strength": 2.5, "determination": 1.5}, "max_rank": 1},
+	{"id": "dragon_heart", "job": "dragon_knight", "title": "용의 심장", "category": "job", "lines": ["최대 체력 +30 · 체력 +30", "도전당 1회"], "tags": {"strength": 2.5, "determination": 1.5}, "max_rank": 1},
 	{"id": "vanguard_edge", "job": "vanguard", "title": "선봉의 칼날", "category": "job", "lines": ["검 기본 공격·스킬", "피해 +20%"], "tags": {"strength": 2.5, "determination": 1.5}},
 	{"id": "vanguard_vigor", "job": "vanguard", "title": "선봉의 기백", "category": "job", "lines": ["최대 체력 +30", "현재 체력 +30"], "tags": {"strength": 2.5, "determination": 1.5}},
 	{"id": "tracker_focus", "job": "tracker", "title": "추적자의 집중", "category": "job", "lines": ["활 기본 공격·스킬", "피해 +20%"], "tags": {"shooting": 2.5, "nature": 1.5}},
@@ -12,6 +14,8 @@ const CARDS: Array[Dictionary] = [
 ]
 
 const ULTIMATES: Array[Dictionary] = [
+	{"id": "dragon_burst", "job": "dragon_knight", "name": "용염 폭발", "lines": ["주변3m · 검 피해120", "3초 동안 적 시간15%"], "duration": 3.0, "slow": 0.15, "damage": 120, "weapon": "sword", "range": 300.0, "forward": false, "heal": 0},
+	{"id": "dragon_guard", "job": "dragon_knight", "name": "불꽃의 수호", "lines": ["체력50 · 주변3m 검40", "5초 동안 적 시간25%"], "duration": 5.0, "slow": 0.25, "damage": 40, "weapon": "sword", "range": 300.0, "forward": false, "heal": 50},
 	{"id": "vanguard_strike", "job": "vanguard", "name": "여명의 일격", "lines": ["주변 적 · 검 피해 60", "3초 동안 적 시간 15%"], "duration": 3.0, "slow": 0.15, "damage": 60, "weapon": "sword", "range": 260.0, "forward": false, "heal": 0},
 	{"id": "vanguard_resolve", "job": "vanguard", "name": "불굴의 새벽", "lines": ["체력 40 회복", "5초 동안 적 시간 35%"], "duration": 5.0, "slow": 0.35, "damage": 0, "heal": 40},
 	{"id": "tracker_volley", "job": "tracker", "name": "새벽의 일제사격", "lines": ["전방 화면 안 적 · 활 피해 45", "3초 동안 적 시간 15%"], "duration": 3.0, "slow": 0.15, "damage": 45, "weapon": "bow", "range": 800.0, "forward": true, "heal": 0},
@@ -26,7 +30,7 @@ const ULTIMATES: Array[Dictionary] = [
 static func cards_for(job_id: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for card in CARDS:
-		if card["job"] == job_id:
+		if card["job"] == job_id or card["job"] == PrototypeJobProgress.base_job(job_id):
 			result.append(card.duplicate(true))
 	return result
 

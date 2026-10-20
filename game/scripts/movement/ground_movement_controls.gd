@@ -569,7 +569,7 @@ func _draw_job_manifestation() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	draw_style_box(_panel_style(PANEL_COLOR), job_panel_rect)
 	var color: Color = manifested_job.get("color", ACTIVE_COLOR)
-	var headings := ["직업이 발현되었습니다", String(manifested_job.get("name", "")), String(manifested_job.get("passive", "")), job_codex_message if not job_codex_message.is_empty() else "이번 도전의 필살기를 하나 선택하세요"]
+	var headings := ["상위 직업으로 진화했습니다" if manifested_job.has("parent") else "직업이 발현되었습니다", String(manifested_job.get("name", "")), String(manifested_job.get("passive", "")), job_codex_message if not job_codex_message.is_empty() else "이번 도전의 필살기를 하나 선택하세요"]
 	var sizes := [20, 34, 19, 18]
 	var offsets := [0.02, 0.12, 0.23, 0.32]
 	for index in headings.size():
@@ -2952,8 +2952,9 @@ func village_snapshot() -> Dictionary:
 	var safe := _safe_area_in_viewport()
 	var tabs := {}
 	var pager := {}
-	if village_page in ["jobs", "abilities"]:
-		tabs = {"jobs": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08)), "abilities": Rect2(safe.position + Vector2(safe.size.x * 0.53, safe.size.y * 0.24), Vector2(safe.size.x * 0.42, safe.size.y * 0.08))}
+	if village_page in ["jobs", "advanced_jobs", "abilities"]:
+		for i in 3:
+			tabs[["jobs", "advanced_jobs", "abilities"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
 	if village_page in ["memories", "relics", "bonds"]:
 		for i in 3:
 			tabs[["memories", "relics", "bonds"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
@@ -3040,6 +3041,8 @@ func _draw_village() -> void:
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
 	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "다섯 경로의 지형·보너스·선택 조건을 비교하세요" if village_page == "atlas" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
+	if village_page == "advanced_jobs":
+		subtitle = "전체 여정 후반 · 성향 조건을 채우면 자동 진화"
 	if village_page == "bonds":
 		subtitle = "전체 여정의 선택을 영구 보존 · 지원은 다음 새 도전부터"
 	if village_page == "record_lengths":

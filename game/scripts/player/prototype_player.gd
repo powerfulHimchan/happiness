@@ -538,7 +538,13 @@ func _draw() -> void:
 		return
 	# 색뿐 아니라 선봉대의 마름모와 추적자의 원형 표식으로 구분한다.
 	var center := Vector2(0.0, -160.0)
-	if job_emblem_id == "vanguard":
+	if job_emblem_id == PrototypeJobProgress.DRAGON_ID:
+		var flame := PackedVector2Array([center + Vector2(0, -30), center + Vector2(8, -9), center + Vector2(20, -17), center + Vector2(15, 11), center + Vector2(0, 23), center + Vector2(-15, 11), center + Vector2(-20, -17), center + Vector2(-8, -9)])
+		draw_colored_polygon(flame, Color(job_emblem_color, 0.35))
+		flame.append(flame[0])
+		draw_polyline(flame, job_emblem_color, 4.0, true)
+		draw_line(center + Vector2(0, -13), center + Vector2(0, 13), Color("fff0b3"), 4.0, true)
+	elif job_emblem_id == "vanguard":
 		var points := PackedVector2Array([center + Vector2(0, -18), center + Vector2(16, 0), center + Vector2(0, 18), center + Vector2(-16, 0), center + Vector2(0, -18)])
 		draw_polyline(points, job_emblem_color, 4.0, true)
 	else:

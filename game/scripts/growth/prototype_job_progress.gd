@@ -11,6 +11,13 @@ const JOBS: Array[Dictionary] = [
 ]
 const PRIMARY_THRESHOLD := 5.0
 const SECONDARY_THRESHOLD := 3.0
+const DRAGON_ID := "dragon_knight"
+const EVOLUTION_PRIMARY := 8.0
+const EVOLUTION_SECONDARY := 5.0
+const EVOLUTION_STAGE := 7
+const ADVANCED_JOBS: Array[Dictionary] = [
+	{"id": DRAGON_ID, "parent": "vanguard", "name": "용염기사", "primary": "strength", "secondary": "determination", "weapon": "sword", "passive": "선봉대 계승 · 검 피해 추가 +15% · 최대 체력 +20", "color": Color("ff9559")},
+]
 
 var job_id: String = ""
 var contributions: Dictionary = {}
@@ -88,10 +95,18 @@ func current_job() -> Dictionary:
 
 
 static func profile(id: String) -> Dictionary:
-	for job in JOBS:
+	for job in JOBS + ADVANCED_JOBS:
 		if job["id"] == id:
 			return job.duplicate()
 	return {}
+
+
+static func base_job(id: String) -> String:
+	return String(profile(id).get("parent", id))
+
+
+func can_evolve() -> bool:
+	return job_id == "vanguard" and score("strength") + 0.00001 >= EVOLUTION_PRIMARY and score("determination") + 0.00001 >= EVOLUTION_SECONDARY
 
 
 func closest_job() -> Dictionary:
@@ -113,7 +128,9 @@ func _deficit(job: Dictionary) -> float:
 func hud_text() -> String:
 	var job := closest_job()
 	if not job_id.is_empty():
-		return "%s · 발현" % job["name"]
+		if job_id == "vanguard":
+			return "선봉대 · 용염기사: 7단계+ / 근력 %.1f·투지 %.1f 남음" % [_remaining(EVOLUTION_PRIMARY, score("strength")), _remaining(EVOLUTION_SECONDARY, score("determination"))]
+		return "%s · %s" % [job["name"], "진화" if job.has("parent") else "발현"]
 	return "%s · %s %.1f / %s %.1f 남음" % [job["name"], TAG_NAMES[job["primary"]], _remaining(PRIMARY_THRESHOLD, score(job["primary"])), TAG_NAMES[job["secondary"]], _remaining(SECONDARY_THRESHOLD, score(job["secondary"]))]
 
 
