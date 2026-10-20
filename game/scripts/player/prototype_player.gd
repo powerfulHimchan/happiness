@@ -93,6 +93,7 @@ var _lifesteal_flash_remaining_s: float = 0.0
 var growth_common_bonus: float = 0.0
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
+var growth_fist_bonus: float = 0.0
 var weapon_equipment: Dictionary = {"sword": 0, "bow": 0}
 var weapon_blueprints: Dictionary = {"sword": "", "bow": ""}
 var job_emblem_id: String = ""
@@ -562,6 +563,14 @@ func _draw() -> void:
 		draw_line(center + Vector2(0, -16), center + Vector2(0, 21), job_emblem_color, 3.0, true)
 		draw_line(center + Vector2(-12, -5), center + Vector2(0, 5), job_emblem_color, 3.0, true)
 		draw_line(center + Vector2(12, -5), center + Vector2(0, 5), job_emblem_color, 3.0, true)
+	elif job_emblem_id in ["martial_artist", "thunder_fist", "phantom_dancer"]:
+		draw_arc(center, 20.0, 0.0, TAU, 24, job_emblem_color, 4.0, true)
+		if job_emblem_id == "thunder_fist":
+			draw_colored_polygon(PackedVector2Array([center+Vector2(5,-25),center+Vector2(-12,2),center+Vector2(0,2),center+Vector2(-5,25),center+Vector2(14,-5),center+Vector2(2,-5)]),job_emblem_color)
+		elif job_emblem_id == "phantom_dancer":
+			draw_arc(center+Vector2(8,0),16.0,-PI*0.7,PI*0.7,20,job_emblem_color,4.0,true)
+		else:
+			draw_circle(center, 8.0, job_emblem_color)
 	elif job_emblem_id == "vanguard":
 		var points := PackedVector2Array([center + Vector2(0, -18), center + Vector2(16, 0), center + Vector2(0, 18), center + Vector2(-16, 0), center + Vector2(0, -18)])
 		draw_polyline(points, job_emblem_color, 4.0, true)
@@ -572,7 +581,7 @@ func _draw() -> void:
 
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
-	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_bow_bonus
+	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_fist_bonus if weapon_id == "fist" else growth_bow_bonus
 	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
 	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
@@ -795,6 +804,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	growth_common_bonus = 0.0
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
+	growth_fist_bonus = 0.0
 	weapon_equipment = {"sword": 0, "bow": 0}
 	weapon_blueprints = {"sword": "", "bow": ""}
 	damage_receiver.max_health = MAX_HEALTH
@@ -1377,7 +1387,7 @@ func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
 		and lifesteal_allowed.is_valid() and lifesteal_allowed.call() \
 		and target.is_in_group("combat_enemy") and target.is_visible_in_tree() \
 		and event != null and event.attacker_id == &"player" \
-		and (event.tags.has("sword") or event.tags.has("bow")) \
+		and (event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist")) \
 		and (event.tags.has("basic") or event.tags.has("skill")) \
 		and damage_receiver.health < damage_receiver.max_health
 	# 회복으로 문턱을 넘는 타격도 공격 시점의 배율을 한 번만 사용한다.

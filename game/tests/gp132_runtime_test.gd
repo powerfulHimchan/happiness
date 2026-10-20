@@ -155,7 +155,7 @@ func _test_skill_codex(active: bool, multiplier: float) -> bool:
 				seen.append(String(card.id))
 				var weapon := PrototypeSkillRewards.weapon_for(card.id)
 				var definition: SkillDefinition = PrototypeSkillRewards.SKILLS[card.id]
-				var equipped: Array = weapons.skills[weapon] if active else PrototypeSkillRewards.defaults()[weapon]
+				var equipped: Array = weapons.skills.get(weapon, []) if active else PrototypeSkillRewards.defaults(PrototypeWeaponRewards.FAMILY_IDS)[weapon]
 				var slot := equipped.find(card.id)
 				var status := "이번 도전 · 슬롯 %d" % (slot + 1) if active and slot >= 0 else "미장착 · 효과 미리 보기" if active else "시작 스킬 · 슬롯 %d" % (slot + 1) if slot >= 0 else "보상 교체 스킬"
 				if not _check(card.name.ends_with(definition.display_name) and card.weapon == weapon and card.status == status and card.open == (slot >= 0), "실제 양 무기 원본 이름·현재 슬롯·시작/보상 표시"): return false

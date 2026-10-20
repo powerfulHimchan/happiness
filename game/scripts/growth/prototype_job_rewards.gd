@@ -25,6 +25,18 @@ const CARDS: Array[Dictionary] = [
 	{"id": "storm_shelter", "job": "storm_archer", "title": "바람의 장막", "category": "job", "lines": ["최대 체력 +40 · 체력 +50", "천둥의 시위와 하나만 선택"], "tags": {"shooting": 2.5, "nature": 1.5}, "max_rank": 1, "requires": ["storm_breath"], "excludes": ["storm_tempest"], "job_effect": {"health": 40, "heal": 50}},
 	{"id": "warden_thorns", "job": "forest_warden", "title": "가시의 맹세", "category": "job", "lines": ["활 공격·스킬·필살기 피해 +25%", "거목의 심장과 하나만 선택"], "tags": {"shooting": 2.5, "nature": 1.5}, "max_rank": 1, "requires": ["warden_arrow"], "excludes": ["warden_bloom"], "job_effect": {"damage": 0.25}},
 	{"id": "warden_bloom", "job": "forest_warden", "title": "거목의 심장", "category": "job", "lines": ["최대 체력 +50 · 체력 +60", "가시의 맹세와 하나만 선택"], "tags": {"shooting": 2.5, "nature": 1.5}, "max_rank": 1, "requires": ["warden_roots"], "excludes": ["warden_thorns"], "job_effect": {"health": 50, "heal": 60}},
+	{"id": "monk_strike", "job": "martial_artist", "title": "무도가의 일격", "category": "job", "lines": ["주먹 공격·스킬·필살기 피해 +20%", "선택할 때마다 누적"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"damage": 0.2}},
+	{"id": "monk_breath", "job": "martial_artist", "title": "무도가의 호흡", "category": "job", "lines": ["최대 체력 +20 · 체력 +30", "선택할 때마다 누적"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"health": 20, "heal": 30}},
+	{"id": "monk_chain", "job": "martial_artist", "title": "연계의 극의", "category": "job", "lines": ["주먹 공격·스킬·필살기 피해 +30%", "1회 강화 · 환영무희 진화 분기"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"damage": 0.3}, "max_rank": 1, "requires": ["monk_strike"]},
+	{"id": "thunder_strike", "job": "thunder_fist", "title": "번개의 주먹", "category": "job", "lines": ["주먹 공격·스킬·필살기 피해 +25%", "도전당 1회"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"damage": 0.25}, "max_rank": 1},
+	{"id": "thunder_heart", "job": "thunder_fist", "title": "뇌명의 심장", "category": "job", "lines": ["최대 체력 +20 · 체력 +40", "도전당 1회"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"health": 20, "heal": 40}, "max_rank": 1},
+	{"id": "thunder_mastery", "job": "thunder_fist", "title": "천뢰의 권", "category": "job", "lines": ["주먹 공격·스킬·필살기 피해 +30%", "뇌전의 가호와 하나만 선택"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"damage": 0.3}, "max_rank": 1, "requires": ["thunder_strike"], "excludes": ["thunder_guard"]},
+	{"id": "thunder_guard", "job": "thunder_fist", "title": "뇌전의 가호", "category": "job", "lines": ["최대 체력 +40 · 체력 +50", "천뢰의 권과 하나만 선택"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"health": 40, "heal": 50}, "max_rank": 1, "requires": ["thunder_heart"], "excludes": ["thunder_mastery"]},
+	{"id": "phantom_strike", "job": "phantom_dancer", "title": "환영의 연타", "category": "job", "lines": ["주먹 공격·스킬·필살기 피해 +20%", "도전당 1회"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"damage": 0.2}, "max_rank": 1},
+	{"id": "phantom_heart", "job": "phantom_dancer", "title": "환영의 숨결", "category": "job", "lines": ["최대 체력 +30 · 체력 +40", "도전당 1회"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"health": 30, "heal": 40}, "max_rank": 1},
+	{"id": "phantom_mastery", "job": "phantom_dancer", "title": "분신의 춤", "category": "job", "lines": ["주먹 공격·스킬·필살기 피해 +30%", "몽환의 장막과 하나만 선택"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"damage": 0.3}, "max_rank": 1, "requires": ["phantom_strike"], "excludes": ["phantom_guard"]},
+	{"id": "phantom_guard", "job": "phantom_dancer", "title": "몽환의 장막", "category": "job", "lines": ["최대 체력 +40 · 체력 +50", "분신의 춤과 하나만 선택"], "tags": {"technique": 2.5, "chain": 1.5}, "job_effect": {"health": 40, "heal": 50}, "max_rank": 1, "requires": ["phantom_heart"], "excludes": ["phantom_mastery"]},
+
 ]
 
 const ULTIMATES: Array[Dictionary] = [
@@ -52,6 +64,19 @@ const ULTIMATES: Array[Dictionary] = [
 	{"id": "storm_restoration", "job": "storm_archer", "name": "고요한 바람", "lines": ["체력65 회복", "5초 동안 적 시간25%"], "duration": 5.0, "slow": 0.25, "damage": 0, "heal": 65},
 	{"id": "warden_thorn_wave", "job": "forest_warden", "name": "가시 물결", "lines": ["전방7m · 활130 · 높이1.4m", "3초 동안 적 시간20%"], "duration": 3.0, "slow": 0.20, "damage": 130, "weapon": "bow", "range": 700.0, "half_height": 140.0, "forward": true, "heal": 0},
 	{"id": "warden_renewal", "job": "forest_warden", "name": "거목의 숨결", "lines": ["체력85 회복", "4초 동안 적 시간35%"], "duration": 4.0, "slow": 0.35, "damage": 0, "heal": 85},
+	{"id": "monk_burst", "job": "martial_artist", "name": "기합 일격", "lines": ["주변1.8m · 주먹 피해60", "3초 동안 적 시간15%"], "damage": 60, "weapon": "fist", "range": 180, "forward": false, "heal": 0, "duration": 3, "slow": 0.15},
+	{"id": "monk_rest", "job": "martial_artist", "name": "고요한 호흡", "lines": ["체력40 회복", "5초 동안 적 시간30%"], "damage": 0, "weapon": "fist", "range": 0, "forward": false, "heal": 40, "duration": 5, "slow": 0.3},
+	{"id": "monk_wave", "job": "martial_artist", "name": "기공 파동", "lines": ["전방4.5m · 주먹 피해75", "2초 동안 적 시간20%"], "damage": 75, "weapon": "fist", "range": 450, "forward": true, "heal": 0, "duration": 2, "slow": 0.2},
+	{"id": "monk_guard", "job": "martial_artist", "name": "권법의 수호", "lines": ["주변2.5m · 주먹 피해25 · 회복25", "4초 동안 적 시간30%"], "damage": 25, "weapon": "fist", "range": 250, "forward": false, "heal": 25, "duration": 4, "slow": 0.3},
+	{"id": "thunder_burst", "job": "thunder_fist", "name": "뇌명 폭발", "lines": ["주변2.5m · 주먹 피해130", "3초 동안 적 시간15%"], "damage": 130, "weapon": "fist", "range": 250, "forward": false, "heal": 0, "duration": 3, "slow": 0.15},
+	{"id": "thunder_guard", "job": "thunder_fist", "name": "번개의 수호", "lines": ["주변2.5m · 주먹 피해40 · 회복45", "5초 동안 적 시간25%"], "damage": 40, "weapon": "fist", "range": 250, "forward": false, "heal": 45, "duration": 5, "slow": 0.25},
+	{"id": "thunder_lance", "job": "thunder_fist", "name": "천뢰 관통", "lines": ["전방6m · 주먹 피해150", "2초 동안 적 시간20%"], "damage": 150, "weapon": "fist", "range": 600, "forward": true, "heal": 0, "duration": 2, "slow": 0.2},
+	{"id": "thunder_rest", "job": "thunder_fist", "name": "뇌전의 회복", "lines": ["체력65 회복", "4초 동안 적 시간35%"], "damage": 0, "weapon": "fist", "range": 0, "forward": false, "heal": 65, "duration": 4, "slow": 0.35},
+	{"id": "phantom_burst", "job": "phantom_dancer", "name": "환영 난무", "lines": ["주변3m · 주먹 피해100", "4초 동안 적 시간20%"], "damage": 100, "weapon": "fist", "range": 300, "forward": false, "heal": 0, "duration": 4, "slow": 0.2},
+	{"id": "phantom_guard", "job": "phantom_dancer", "name": "몽환의 수호", "lines": ["주변3m · 주먹 피해30 · 회복60", "5초 동안 적 시간30%"], "damage": 30, "weapon": "fist", "range": 300, "forward": false, "heal": 60, "duration": 5, "slow": 0.3},
+	{"id": "phantom_wave", "job": "phantom_dancer", "name": "분신 파동", "lines": ["전방6.5m · 주먹 피해130", "3초 동안 적 시간20%"], "damage": 130, "weapon": "fist", "range": 650, "forward": true, "heal": 0, "duration": 3, "slow": 0.2},
+	{"id": "phantom_rest", "job": "phantom_dancer", "name": "환영의 회복", "lines": ["체력80 회복", "4초 동안 적 시간35%"], "damage": 0, "weapon": "fist", "range": 0, "forward": false, "heal": 80, "duration": 4, "slow": 0.35},
+
 ]
 
 

@@ -206,7 +206,7 @@ func _test_book_layout() -> bool:
 		for ignored in page_count + 1: _tap(controls.village_snapshot().pager.previous.get_center())
 		if not _check(controls.ability_codex_page == 0, "이전 페이지 범위 제한"): return false
 		_tap(controls.village_snapshot().tabs.jobs.get_center())
-		if not _check(controls.village_page == "jobs" and controls.village_snapshot().cards.size() == 2, "직업 탭으로 기존 도감 유지"): return false
+		if not _check(controls.village_page == "jobs" and controls.village_snapshot().cards.size() == PrototypeJobProgress.JOBS.size(), "직업 탭으로 기존 도감 유지"): return false
 		_tap(controls.village_snapshot().tabs.abilities.get_center())
 	return true
 

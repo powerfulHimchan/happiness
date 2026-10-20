@@ -121,7 +121,7 @@ func _test_candidates() -> bool:
 			await process_frame
 			_tap(controls.skill_reward_cycle_rect.get_center())
 			if not _check(controls.selected_skill_offer == -1 and controls.selected_skill_slot == -1, "후보 전환은 오래된 선택 초기화"): return false
-		if not _check(seen.size() == PrototypeSkillRewards.SKILLS.size() - 4 and seen.has("sword_triple") and seen.has("bow_focus") and controls.skill_reward_offset == 0, "전체 미보유 기술 조회·후보 순환 후 첫 화면"): return false
+		if not _check(seen.size() == PrototypeSkillRewards.POOLS.sword.size() + PrototypeSkillRewards.POOLS.bow.size() - 4 and seen.has("sword_triple") and seen.has("bow_focus") and controls.skill_reward_offset == 0, "전체 미보유 기술 조회·후보 순환 후 첫 화면"): return false
 	return true
 
 func _test_tactical_combat() -> bool:

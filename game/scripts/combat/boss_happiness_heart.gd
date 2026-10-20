@@ -120,7 +120,7 @@ func _fire_beam() -> void:
 
 func _adjust_damage_event(event: DamageEvent) -> DamageEvent:
 	var adjusted := super._adjust_damage_event(event)
-	last_damage_multiplier = 1.5 if state == State.RECOVERY and (event.tags.has("sword") or event.tags.has("bow")) else 1.0
+	last_damage_multiplier = 1.5 if state == State.RECOVERY and (event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist")) else 1.0
 	last_adjusted_damage = maxi(1, roundi(event.damage * last_damage_multiplier))
 	adjusted.damage = last_adjusted_damage
 	return adjusted
@@ -148,7 +148,7 @@ func _update_visual() -> void:
 func current_metrics() -> Dictionary:
 	var result := super.current_metrics()
 	result.enemy_name = BOSS_NAME
-	result.elite_weakness = "핵 노출 · 검·활150%" if state == State.RECOVERY else "검·활 정상"
+	result.elite_weakness = "핵 노출 · 무기150%" if state == State.RECOVERY else "무기 정상"
 	result.heart_beam_count = beam_count
 	result.heart_needle_count = needle_count
 	return result

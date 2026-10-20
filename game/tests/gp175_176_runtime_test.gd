@@ -44,7 +44,7 @@ func _run() -> void:
 		"seed":
 			if not await _test_skill_codex(false, 1.0): return
 			if not _check(PrototypeSkillRewards.CODEX_ORDER.size() >= 20 and PrototypeSkillRewards.CODEX_ORDER.slice(18, 20) == ["sword_rising", "bow_chain"] and PrototypeSkillRewards.POOLS.sword.size() >= 9 and PrototypeSkillRewards.POOLS.bow.size() >= 9, "20종 도감·기존18종 순서 보존·검/활 각10종"): return
-			if not _check(PrototypeSkillRewards.SKILLS.size() == PrototypeSkillRewards.POOLS.sword.size() + PrototypeSkillRewards.POOLS.bow.size() and PrototypeSkillRewards.POOLS.sword.has("sword_rising") and PrototypeSkillRewards.POOLS.bow.has("bow_chain"), "전체 스킬·올려 베기/연쇄 관통 원본 등록"): return
+			if not _check(PrototypeSkillRewards.SKILLS.size() == PrototypeSkillRewards.POOLS.sword.size() + PrototypeSkillRewards.POOLS.bow.size() + PrototypeSkillRewards.FIST_POOL.size() and PrototypeSkillRewards.POOLS.sword.has("sword_rising") and PrototypeSkillRewards.POOLS.bow.has("bow_chain"), "전체 스킬·올려 베기/연쇄 관통 원본 등록"): return
 			controls.begin_retry("sword", 5)
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "첫 정예 무기 유지"): return
 			if not await _replace_mobility("sword_rising", 1, true): return

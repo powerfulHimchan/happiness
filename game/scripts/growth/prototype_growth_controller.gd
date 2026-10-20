@@ -15,11 +15,11 @@ const EVASIVE_BARRIER_RECOVERY := 5
 const CARDS: Array[Dictionary] = [
 	{"id": "sword_power", "title": "예리한 검", "category": "sword", "lines": ["검 기본 공격·스킬", "피해 +15%"], "tags": {"strength": 2.5, "determination": 1.5}},
 	{"id": "bow_power", "title": "힘찬 시위", "category": "bow", "lines": ["활 기본 공격·스킬", "피해 +15%"], "tags": {"shooting": 2.5, "nature": 1.5}},
-	{"id": "power", "title": "새벽의 힘", "category": "common", "lines": ["검·활 기본 공격·스킬", "피해 +10%"], "tags": {"strength": 1.25, "shooting": 1.25}},
+	{"id": "power", "title": "새벽의 힘", "category": "common", "lines": ["모든 무기 기본 공격·스킬", "피해 +10%"], "tags": {"strength": 1.25, "shooting": 1.25}},
 	{"id": "vitality", "title": "튼튼한 심장", "category": "common", "lines": ["최대 체력 +20", "현재 체력 +20"], "tags": {"strength": 1.25, "nature": 0.75}},
 	{"id": "recovery", "title": "다시 일어서기", "category": "common", "lines": ["최대 체력 +10", "체력 40 회복"], "tags": {"nature": 0.75, "determination": 0.75}},
 	{"id": "air_jump", "title": "공중 도약", "category": "common", "lines": ["공중에서 한 번 더 점프", "착지 시 충전 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
-	{"id": "lifesteal", "title": "생명 흡수", "category": "common", "lines": ["검·활 실제 피해의 5% 회복", "소수 회복 누적 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
+	{"id": "lifesteal", "title": "생명 흡수", "category": "common", "lines": ["모든 무기 실제 피해의 5% 회복", "소수 회복 누적 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
 	{"id": "lifesteal_depth", "title": "깊은 흡수", "category": "common", "lines": ["생명 흡수: 항상 10% 회복", "위기의 흡수와 하나만 선택"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal"], "excludes": ["lifesteal_crisis"]},
 	{"id": "lifesteal_crisis", "title": "위기의 흡수", "category": "common", "lines": ["체력 30% 이하: 15% 회복", "평소 5% · 깊은 흡수와 하나만"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal"], "excludes": ["lifesteal_depth"]},
 	{"id": "magic_barrier", "title": "마력 방벽", "category": "common", "lines": ["피해 20을 먼저 흡수", "다음 스테이지 진입 시 충전"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
@@ -42,15 +42,16 @@ const CARDS: Array[Dictionary] = [
 	{"id": "time_echo_boost", "title": "깊은 여운", "category": "common", "lines": ["필살기 감속 시간 추가 +1초", "다음 발동부터 · 감속 비율 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_echo"]},
 	{"id": "potion_mastery", "title": "회복약 숙련", "category": "common", "lines": ["회복약 최대 체력 회복 +5%p", "모든 조제 · 구슬/휴식 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["potion_pouch"]},
 	{"id": "survival_instinct", "title": "생존 본능", "category": "common", "lines": ["체력30% 이하: 전투 피해 -10%", "방벽 흡수 전 · 현재 체력 기준"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["fortified_barrier"]},
-	{"id": "calm_focus", "title": "차분한 집중", "category": "common", "lines": ["체력80% 이상: 스킬 피해1.15배", "검·활 적용 · 기본/필살기 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["power"]},
+	{"id": "calm_focus", "title": "차분한 집중", "category": "common", "lines": ["체력80% 이상: 스킬 피해1.15배", "모든 무기 적용 · 기본/필살기 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["power"]},
 	{"id": "healing_flow", "title": "치유의 흐름", "category": "common", "lines": ["깊은 흡수10% → 15% 회복", "실제 피해 기준 · 누적 소수 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["lifesteal_depth"]},
 	{"id": "victory_resilience", "title": "회복 탄력성", "category": "common", "lines": ["강화 처치 회복3% → 4%", "현재 최대 체력 기준 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["victory_recovery_boost"]},
-	{"id": "barrier_focus", "title": "방벽 집중", "category": "common", "lines": ["방벽 잔량: 스킬1.15배", "검·활 · 타격 시 잔량 기준"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
-	{"id": "crisis_power", "title": "위기의 힘", "category": "common", "lines": ["체력30% 이하: 기본1.2배", "검·활 기본만 적용"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["power"]},
+	{"id": "barrier_focus", "title": "방벽 집중", "category": "common", "lines": ["방벽 잔량: 스킬1.15배", "모든 무기 · 타격 시 잔량 기준"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["magic_barrier"]},
+	{"id": "crisis_power", "title": "위기의 힘", "category": "common", "lines": ["체력30% 이하: 기본1.2배", "모든 무기 기본만 적용"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["power"]},
 	{"id": "nimble_mastery", "title": "회피 숙련", "category": "common", "lines": ["지상 회피 대기 추가 -10%", "민첩과 곱연산 · 무적 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["nimble_evade"]},
 	{"id": "orb_bloom", "title": "구슬 개화", "category": "common", "lines": ["회복 구슬 회복20% → 25%", "최대 체력 기준 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["orb_vitality"]},
 	{"id": "potion_efficiency", "title": "회복약 정통", "category": "common", "lines": ["숙련 회복약 회복 추가 +5%p", "모든 조제 · 개수 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["potion_mastery"]},
 	{"id": "time_attunement", "title": "시간 조율", "category": "common", "lines": ["적중 게이지 기본5/스킬10", "유물과 합산 · 최대100"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_collector"]},
+	{"id": "fist_power", "title": "날쌘 주먹", "category": "fist", "lines": ["주먹 기본 공격·스킬", "피해 +15%"], "tags": {"technique": 2.5, "chain": 1.5}},
 ]
 
 var level: int = 1
@@ -85,6 +86,7 @@ func _ready() -> void:
 	jobs.reset(weapons.active_weapon_id)
 	weapons.sword_combat.hit_registered.connect(_on_weapon_hit.bind("sword"))
 	weapons.bow_combat.hit_registered.connect(_on_weapon_hit.bind("bow"))
+	weapons.fist_combat.hit_registered.connect(_on_weapon_hit.bind("fist"))
 	(get_node("../Player/UltimateController") as UltimateController).precise_evade_registered.connect(_on_precise_evade)
 	player.evade_started.connect(_on_evade_started)
 	for node in get_tree().get_nodes_in_group("combat_enemy"):
@@ -302,6 +304,7 @@ func choose_card(index: int) -> bool:
 		"air_jump": player.set_double_jump_unlocked(true)
 		"sword_power": player.growth_sword_bonus += 0.15
 		"bow_power": player.growth_bow_bonus += 0.15
+		"fist_power": player.growth_fist_bonus += 0.15
 		"power": player.growth_common_bonus += 0.10
 		"vitality": player.apply_growth_health(20, 20)
 		"recovery": player.apply_growth_health(10, 40)
@@ -320,7 +323,8 @@ func choose_card(index: int) -> bool:
 	if not effect.is_empty():
 		var job := PrototypeJobProgress.profile(String(offered_cards[index].job))
 		if job.weapon == "sword": player.growth_sword_bonus += float(effect.get("damage", 0.0))
-		else: player.growth_bow_bonus += float(effect.get("damage", 0.0))
+		elif job.weapon == "bow": player.growth_bow_bonus += float(effect.get("damage", 0.0))
+		else: player.growth_fist_bonus += float(effect.get("damage", 0.0))
 		player.apply_growth_health(int(effect.get("health", 0)), int(effect.get("heal", 0)))
 	choosing = false
 	offered_cards.clear()
@@ -374,8 +378,10 @@ func _try_manifest_job() -> bool:
 	awaiting_job_confirmation = true
 	if job["weapon"] == "sword":
 		player.growth_sword_bonus += 0.10
-	else:
+	elif job["weapon"] == "bow":
 		player.growth_bow_bonus += 0.10
+	else:
+		player.growth_fist_bonus += 0.10
 	player.set_job_emblem(String(job["id"]), job["color"])
 	job_manifested.emit(job)
 	return true
@@ -388,8 +394,10 @@ func try_evolve_job() -> bool:
 	jobs.job_id = String(job.id)
 	if job.weapon == "sword":
 		player.growth_sword_bonus += float(job.damage_bonus)
-	else:
+	elif job.weapon == "bow":
 		player.growth_bow_bonus += float(job.damage_bonus)
+	else:
+		player.growth_fist_bonus += float(job.damage_bonus)
 	# 최대 체력 증가는 회복75% 규칙과 분리하고 실제 회복만 기존 경로로 처리한다.
 	player.apply_growth_health(int(job.health_bonus), int(job.health_bonus))
 	awaiting_job_confirmation = true
@@ -468,6 +476,7 @@ func _emit_metrics() -> void:
 
 
 func _card_available(card: Dictionary) -> bool:
+	if card.get("category", "") in PrototypeWeaponRewards.FAMILY_IDS and not weapons.equipment.has(card.category): return false
 	if card.has("job") and card.job != jobs.job_id and card.job != PrototypeJobProgress.base_job(jobs.job_id): return false
 	for required in card.get("requires", []):
 		if int(ranks.get(required, 0)) <= 0: return false

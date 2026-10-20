@@ -44,6 +44,7 @@ func _ready() -> void:
 	add_to_group("ultimate_controller")
 	sword_combat.hit_registered.connect(_on_weapon_hit)
 	bow_combat.hit_registered.connect(_on_weapon_hit)
+	(get_node("../FistCombatController") as FistCombatController).hit_registered.connect(_on_weapon_hit)
 	_emit_metrics()
 
 

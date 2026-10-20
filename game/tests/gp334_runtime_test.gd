@@ -138,7 +138,7 @@ func _test_restored_additions(saved: Dictionary) -> bool:
 		_tap(controls.village_snapshot().pager.previous.get_center())
 		if not _check(controls.village_snapshot().advanced_page == 0, "도감 첫 페이지 이전 경계"): return false
 		var ids: Array[String] = []
-		for page in 2:
+		for page in controls.village_snapshot().advanced_pages:
 			var view: Dictionary = controls.village_snapshot()
 			if not _check(view.advanced_page == page and view.cards.size() == 2, "직업별 두 장 비교 페이지"): return false
 			var safe: Rect2 = controls.layout_snapshot().safe
@@ -149,7 +149,7 @@ func _test_restored_additions(saved: Dictionary) -> bool:
 				if not _check(entry.lines.size() == 10 and entry.lines[6].begins_with("강화:") and entry.lines[8].begins_with("필살기:"), "조건·특화·추가 필살기 설명"): return false
 				if entry.id == advanced_id and not _check(entry.progress.hint == "이번 도전에서 진화 완료", "실제 복원 상태의 진화 현황"): return false
 			_tap(view.pager.next.get_center())
-		if not _check(ids == ["dragon_knight", "breaker", "storm_archer", "forest_warden"] and controls.village_snapshot().advanced_page == 1, "네 직업 전체 비교·마지막 페이지 경계"): return false
+		if not _check(ids == PrototypeJobProgress.ADVANCED_JOBS.map(func(job: Dictionary) -> String: return job.id) and controls.village_snapshot().advanced_page == controls.village_snapshot().advanced_pages - 1, "네 직업 전체 비교·마지막 페이지 경계"): return false
 		_tap(controls.village_snapshot().tabs.jobs.get_center())
 		_tap(controls.village_snapshot().tabs.advanced_jobs.get_center())
 		if not _check(controls.village_snapshot().advanced_page == 0, "도감 탭 재진입 첫 페이지"): return false

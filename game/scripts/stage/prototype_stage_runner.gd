@@ -27,7 +27,7 @@ const SECTION_OBJECTIVES: Array[String] = [
 	"첫 관문까지 전진",
 	"풀잎 슬라임과 씨앗 포대 처치",
 	"발판과 낙하 구간을 지나 전진",
-	"검·활을 전환해 혼합 웨이브 처치",
+	"두 무기를 전환해 혼합 웨이브 처치",
 	"돌진을 벽으로 유도해 정예 처치",
 ]
 const SECTION_TARGET_SECONDS: Array[float] = [40.0, 35.0, 35.0, 40.0, 30.0]

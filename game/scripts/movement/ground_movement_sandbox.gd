@@ -323,7 +323,7 @@ func _reset_test() -> void:
 	player.reset_movement_test(TRACK_START)
 	player.set_character(controls.requested_character_id)
 	player.prepare_potions(String(boss_legacy_store.progress_snapshot().potion_recipe))
-	weapon_controller.reset_combat(controls.selected_starting_weapon)
+	weapon_controller.reset_combat(controls.selected_starting_weapon, controls.requested_backup_weapon)
 	growth.reset_run(weapon_controller.active_weapon_id)
 	guardian_companion = boss_legacy_store.guardian_for_run(run_id)
 	sera_companion = boss_legacy_store.sera_for_run(run_id)
@@ -528,6 +528,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"memory_id": player.memory_id,
 		"relic": player.relic_state.duplicate(),
 	}
+	if weapon_controller.equipment.has("fist") or player.growth_fist_bonus > 0.0: state.player.fist = player.growth_fist_bonus
 	if story_run.enabled: state.story = story_run.snapshot()
 	else: state.stage.erase("heart_threshold")
 	var error := checkpoint_store.save_checkpoint(state)
@@ -685,6 +686,7 @@ func continue_saved_run() -> bool:
 	player.growth_common_bonus = float(state.player.common)
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)
+	player.growth_fist_bonus = float(state.player.get("fist", 0.0))
 	guardian_companion = boss_legacy_store.restore_guardian(state.get("guardian_companion", {}))
 	sera_companion = boss_legacy_store.restore_sera(state.get("sera_companion", {}))
 	player.boss_legacy = boss_legacy_store.restore_active(state.get("boss_legacy", {}))
@@ -976,8 +978,8 @@ func _claim_skill_reward(id: String, slot: int) -> bool:
 	if _save_checkpoint(stage_runner.current_metrics()) != OK:
 		stage_runner.skills_claimed = false
 		weapon_controller.set_skill_loadout(previous.skills)
-		for weapon in ["sword", "bow"]:
-			var combat: Node = weapon_controller.sword_combat if weapon == "sword" else weapon_controller.bow_combat
+		for weapon in weapon_controller.equipment:
+			var combat: Node = weapon_controller.combat_for(weapon)
 			for field in ["_skill_1_cooldown_s", "_skill_2_cooldown_s"]:
 				combat.set(field, previous[weapon][field])
 		weapon_controller.force_emit_metrics()
@@ -1056,7 +1058,7 @@ func _capture_run_build() -> Dictionary:
 	weapon_controller._enrich_metrics(metrics)
 	var damage := {}
 	var cooldowns := {}
-	for weapon in ["sword", "bow"]:
+	for weapon in weapon_controller.equipment:
 		damage[weapon] = {"basic": player.growth_damage(100, weapon, "basic"), "skill": player.growth_damage(100, weapon, "skill")}
 		cooldowns[weapon] = [float(metrics[weapon + "_skill_1_cooldown_s"]), float(metrics[weapon + "_skill_2_cooldown_s"])]
 	return {

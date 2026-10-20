@@ -232,6 +232,7 @@ func _test_collector_combat() -> bool:
 		ultimate.reset_ultimate()
 		if not _check(ultimate.select_job_ultimate(profile.job, profile.id), "네 직업 필살기 실제 선택"): return false
 		var burst := _collector_target(String(profile.id) + ":burst")
+		burst.global_position = player.global_position + Vector2(100, 0)
 		burst.damage_receiver.health = 1
 		ultimate.gauge = 100
 		ultimate.request_ultimate()

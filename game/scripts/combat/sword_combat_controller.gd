@@ -22,6 +22,7 @@ const LINE_HALF_HEIGHT_M := 0.90
 @export var weapon: WeaponDefinition
 @export var skill_1: SkillDefinition
 @export var skill_2: SkillDefinition
+@export var weapon_family: String = "sword"
 
 var combo_index: int = 0
 var basic_attack_count: int = 0
@@ -99,6 +100,7 @@ func request_skill_2() -> void:
 func _skill_action(definition: SkillDefinition) -> int:
 	if definition != null:
 		match definition.execution_style:
+			&"dash": return Action.DASH_SLASH
 			&"wave": return Action.WAVE_SLASH
 			&"line": return Action.LINE_SLASH
 			&"spin": return Action.SPIN_SLASH
@@ -125,7 +127,7 @@ func set_active(enabled: bool) -> void:
 		return
 	active = enabled
 	if not active:
-		_finish_action("무기 전환으로 검 공격 중단")
+		_finish_action("무기 전환으로 %s 공격 중단" % PrototypeWeaponRewards.family_name(weapon_family))
 		_slash_remaining_s = 0.0
 		_line_remaining_s = 0.0
 		queue_redraw()
@@ -135,7 +137,7 @@ func set_active(enabled: bool) -> void:
 
 func prepare_next_stage() -> void:
 	_clear_waves()
-	_finish_action("스테이지 이동 · 검 행동 정리")
+	_finish_action("스테이지 이동 · %s 행동 정리" % PrototypeWeaponRewards.family_name(weapon_family))
 	combo_index = 0
 	_slash_remaining_s = 0.0
 	_line_remaining_s = 0.0
@@ -182,16 +184,16 @@ func _update_basic_attack(delta: float) -> void:
 		return
 
 	var hit_index := combo_index
-	player.strike_attack_visual("sword_thrust" if hit_index == 2 else "sword_slash", player.facing_direction, false)
+	if weapon_family == "sword": player.strike_attack_visual("sword_thrust" if hit_index == 2 else "sword_slash", player.facing_direction, false)
 	_action_sequence += 1
 	var damage: int = int(weapon.damage[hit_index])
-	var stagger_s := 0.18 if hit_index == 2 else 0.04
+	var stagger_s := 0.18 if hit_index == weapon.damage.size() - 1 else 0.04
 	var result := _damage_target(
 		target,
-		&"sword_basic",
+		StringName(weapon_family + "_basic"),
 		damage,
 		stagger_s,
-		PackedStringArray(["sword", "basic", "combo_%d" % (hit_index + 1)]),
+		PackedStringArray([weapon_family, "basic", "combo_%d" % (hit_index + 1)]),
 		hit_index
 	)
 	_basic_remaining_s = float(weapon.attack_interval_s[hit_index])
@@ -201,7 +203,7 @@ func _update_basic_attack(delta: float) -> void:
 		_show_slash(BASIC_FLASH_S, hit_index)
 	last_combat_log = "기본 %d타 · 피해 %d · %s" % [
 		hit_index + 1,
-		player.growth_damage(damage, "sword"),
+		player.growth_damage(damage, weapon_family),
 		DamageReceiver.result_name(result),
 	]
 
@@ -215,7 +217,7 @@ func _update_combo_timeout(delta: float) -> void:
 		return
 	combo_index = 0
 	_combo_idle_s = 0.0
-	last_combat_log = "대상 없음 · 3연격 초기화"
+	last_combat_log = "대상 없음 · %d연격 초기화" % weapon.damage.size()
 
 
 func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s: float, slot: int = 1) -> void:
@@ -260,7 +262,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 			* float(player.facing_direction)
 		)
 	player.begin_combat_action(velocity_x, definition.can_move, definition.can_turn)
-	player.begin_attack_visual(_animation_clip(definition), player.facing_direction)
+	if weapon_family == "sword": player.begin_attack_visual(_animation_clip(definition), player.facing_direction)
 	player.set_combat_evade_allowed(false)
 	last_combat_log = "%s 시작 · 취소 %.2fs부터" % [
 		definition.display_name,
@@ -296,7 +298,7 @@ func _animation_clip(definition: SkillDefinition) -> String:
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	if _action == Action.WAVE_SLASH:
-		player.strike_attack_visual(_animation_clip(definition), _wave_direction, true)
+		if weapon_family == "sword": player.strike_attack_visual(_animation_clip(definition), _wave_direction, true)
 		_spawn_wave(definition, hit_index)
 		_show_slash(SKILL_FLASH_S, hit_index)
 		return
@@ -306,7 +308,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		hit_direction = _line_direction * definition.hit_directions[hit_index]
 	if _action == Action.LINE_SLASH:
 		_line_visual_direction = hit_direction
-	player.strike_attack_visual(_animation_clip(definition), hit_direction if _action == Action.LINE_SLASH else player.facing_direction, true)
+	if weapon_family == "sword": player.strike_attack_visual(_animation_clip(definition), hit_direction if _action == Action.LINE_SLASH else player.facing_direction, true)
 	var targets: Array[PrototypeTarget] = []
 	if _action == Action.DASH_SLASH:
 		if is_instance_valid(_captured_target) and _captured_target.is_targetable():
@@ -338,7 +340,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			definition.skill_id,
 			int(definition.damage[hit_index]),
 			0.16 if _action == Action.DASH_SLASH else 0.10,
-			PackedStringArray(["sword", "skill", "hit_%d" % (hit_index + 1)]),
+			PackedStringArray([weapon_family, "skill", "hit_%d" % (hit_index + 1)]),
 			hit_index
 		)
 		if result == DamageReceiver.Result.APPLIED:
@@ -348,7 +350,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	last_combat_log = "%s %d타 · 피해 %d · %d개체" % [
 		definition.display_name,
 		hit_index + 1,
-		player.growth_damage(int(definition.damage[hit_index]), "sword", "skill"),
+		player.growth_damage(int(definition.damage[hit_index]), weapon_family, "skill"),
 		applied_targets,
 	]
 
@@ -361,7 +363,7 @@ func _damage_target(
 	tags: PackedStringArray,
 	hit_index: int
 ) -> int:
-	damage = player.growth_damage(damage, "sword", "basic" if attack_id == &"sword_basic" else "skill")
+	damage = player.growth_damage(damage, weapon_family, "basic" if attack_id == StringName(weapon_family + "_basic") else "skill")
 	var event := DamageEvent.new()
 	event.event_id = StringName("player:%s:%d:%d:%s" % [
 		String(attack_id),
@@ -379,7 +381,7 @@ func _damage_target(
 	var result := player.deal_weapon_damage(target, event)
 	if result == DamageReceiver.Result.APPLIED:
 		total_damage += damage
-		hit_registered.emit(attack_id != &"sword_basic", target, damage)
+		hit_registered.emit(attack_id != StringName(weapon_family + "_basic"), target, damage)
 	return result
 
 
@@ -423,7 +425,7 @@ func _action_name() -> String:
 
 
 func _finish_action(reason: String) -> void:
-	player.combat_animation.clear("sword")
+	player.combat_animation.clear(weapon_family)
 	if _action != Action.NONE and not reason.is_empty():
 		last_combat_log = reason
 	_action = Action.NONE
@@ -458,7 +460,7 @@ func _emit_metrics() -> void:
 func _build_metrics() -> Dictionary:
 	var target := target_selector.current_target
 	return {
-		"active_weapon_id": "sword",
+		"active_weapon_id": weapon_family,
 		"weapon_name": weapon.display_name if weapon != null else "없음",
 		"combat_action": _action_name(),
 		"combo_next_hit": combo_index + 1,
@@ -483,9 +485,10 @@ func _build_metrics() -> Dictionary:
 
 func _spawn_wave(definition: SkillDefinition, hit_index: int) -> void:
 	var wave := SwordWave.new()
-	wave.projectile_id = "player:sword_wave:%d:%d" % [_action_sequence, hit_index]
+	wave.projectile_id = "player:%s_wave:%d:%d" % [weapon_family, _action_sequence, hit_index]
 	wave.attack_id = definition.skill_id
-	wave.damage = player.growth_damage(int(definition.damage[hit_index]), "sword", "skill")
+	wave.weapon_family = weapon_family
+	wave.damage = player.growth_damage(int(definition.damage[hit_index]), weapon_family, "skill")
 	wave.direction = _wave_direction
 	wave.max_distance_px = definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER
 	wave.hit_radius_px = definition.hit_half_height_m * PrototypePlayer.PIXELS_PER_METER

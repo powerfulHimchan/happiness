@@ -1,4 +1,4 @@
-[gd_scene load_steps=52 format=3]
+[gd_scene load_steps=56 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/stage/recovery_orb_controller.gd" id="36_recovery_orbs"]
@@ -48,6 +48,11 @@
 
 [ext_resource type="Script" path="res://scripts/combat/happiness_heart_presentation.gd" id="41_heart"]
 [ext_resource type="Texture2D" path="res://assets/happiness_heart.svg" id="42_heart_texture"]
+
+[ext_resource type="Script" path="res://scripts/combat/fist_combat_controller.gd" id="fist_controller"]
+[ext_resource type="Resource" path="res://data/weapons/fist_basic.tres" id="fist_weapon"]
+[ext_resource type="Resource" path="res://data/skills/fist_dash.tres" id="fist_dash"]
+[ext_resource type="Resource" path="res://data/skills/fist_flurry.tres" id="fist_flurry"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -181,6 +186,17 @@ skill_2 = ExtResource("13_sword_spin")
 [node name="SwordSlash" type="Sprite2D" parent="Player/SwordCombatController"]
 visible = false
 texture = ExtResource("14_sword_slash")
+
+[node name="FistCombatController" type="Node2D" parent="Player"]
+z_index = 35
+script = ExtResource("fist_controller")
+weapon = ExtResource("fist_weapon")
+skill_1 = ExtResource("fist_dash")
+skill_2 = ExtResource("fist_flurry")
+weapon_family = "fist"
+
+[node name="SwordSlash" type="Sprite2D" parent="Player/FistCombatController"]
+visible = false
 
 [node name="BowCombatController" type="Node2D" parent="Player"]
 z_index = 35

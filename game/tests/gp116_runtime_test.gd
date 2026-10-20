@@ -75,7 +75,9 @@ func _run() -> void:
 			if not _check(growth.jobs.job_id == "tracker" and controls.discovered_jobs.size() == 2, "두 번째 실제 자동 발현 즉시 영구 기록"): return
 			_tap(controls.job_ultimate_rects[1].get_center())
 			_tap(controls.job_confirm_rect.get_center())
-			player.player_died.emit()
+			player.damage_receiver.tick(1.0)
+			_hit_player(9999, "gp116-death")
+			if not _check(player.damage_receiver.dead and store.load_checkpoint().is_empty(), "실제 사망 즉시 체크포인트 삭제"): return
 			recorder.clear_records()
 			controls.show_main_screen()
 			controls.show_village()

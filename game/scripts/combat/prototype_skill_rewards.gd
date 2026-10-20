@@ -3,6 +3,9 @@ extends RefCounted
 
 ## 무기별 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
 const SKILLS := {
+	"fist_dash": preload("res://data/skills/fist_dash.tres"),
+	"fist_flurry": preload("res://data/skills/fist_flurry.tres"),
+	"fist_wave": preload("res://data/skills/fist_wave.tres"),
 	"sword_flurry": preload("res://data/skills/sword_flurry.tres"),
 	"sword_cleave": preload("res://data/skills/sword_cleave.tres"),
 	"sword_twin_wave": preload("res://data/skills/sword_twin_wave.tres"),
@@ -40,47 +43,49 @@ const SKILLS := {
 	"sword_cross": preload("res://data/skills/sword_cross.tres"),
 }
 const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave", "sword_cross", "sword_rising", "sword_revolve", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet", "bow_chain", "bow_fan_piercing", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley"]}
-const LABELS := {"sword_flurry": "질풍", "sword_cleave": "대지", "sword_twin_wave": "쌍월", "sword_sweep": "삼중", "sword_backstep": "물러", "sword_alternating": "사방", "bow_needle": "바늘", "bow_heavy": "중압", "bow_wide_fan": "부채", "bow_storm": "폭풍", "bow_echo": "메아리", "bow_seeking_volley": "추적연", "sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
+const FIST_POOL := ["fist_dash", "fist_flurry", "fist_wave"]
+const LABELS := {"fist_dash": "쇄도", "fist_flurry": "연환", "fist_wave": "파동", "sword_flurry": "질풍", "sword_cleave": "대지", "sword_twin_wave": "쌍월", "sword_sweep": "삼중", "sword_backstep": "물러", "sword_alternating": "사방", "bow_needle": "바늘", "bow_heavy": "중압", "bow_wide_fan": "부채", "bow_storm": "폭풍", "bow_echo": "메아리", "bow_seeking_volley": "추적연", "sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
 const CODEX_PAGE_SIZE := 3
 # 새 기술을 뒤에 붙여 이전 도감의 페이지 순서를 보존한다.
-const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley"]
+const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley", "fist_dash", "fist_flurry", "fist_wave"]
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
 static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var active := valid_loadout(loadout)
-	var starting := defaults()
+	var starting := defaults(PrototypeWeaponRewards.FAMILY_IDS)
 	for id in CODEX_ORDER:
 		var weapon := weapon_for(id)
-		var slot: int = loadout[weapon].find(id) if active else starting[weapon].find(id)
+		var slot: int = loadout.get(weapon, []).find(id) if active else starting.get(weapon, []).find(id)
 		var status := "이번 도전 · 슬롯 %d" % (slot + 1) if active and slot >= 0 else "미장착 · 효과 미리 보기" if active else "시작 스킬 · 슬롯 %d" % (slot + 1) if slot >= 0 else "보상 교체 스킬"
 		var effect := lines(id, recharge_multiplier if active else 1.0)
-		effect.append("시작 장착 · 새 도전마다 초기화" if id in starting[weapon] else "정예 후 스킬 보상에서 슬롯 교체")
+		effect.append("시작 장착 · 새 도전마다 초기화" if id in starting.get(weapon, []) else "정예 후 스킬 보상에서 슬롯 교체")
 		effect.append("표기 피해는 강화 전 기본값")
 		effect.append("시계추 적용 · 재사용 -20%" if active and recharge_multiplier > 1.0 else "첫·두 번째 정예 후 교체 가능")
-		result.append({"id": id, "weapon": weapon, "name": ("검 · " if weapon == "sword" else "활 · ") + String(SKILLS[id].display_name), "open": slot >= 0, "status": status, "lines": effect})
+		result.append({"id": id, "weapon": weapon, "name": (PrototypeWeaponRewards.family_name(weapon) + " · ") + String(SKILLS[id].display_name), "open": slot >= 0, "status": status, "lines": effect})
 	return result
 
-static func defaults() -> Dictionary:
-	return {"sword": ["sword_dash", "sword_spin"], "bow": ["bow_piercing", "bow_arrow_rain"]}
+static func defaults(families: Array = ["sword", "bow"]) -> Dictionary:
+	var result := {}
+	for family in families:
+		var pool: Array = FIST_POOL if family == "fist" else POOLS.get(family, [])
+		if pool.size() >= 2: result[family] = pool.slice(0, 2)
+	return result
 
 static func valid_loadout(value: Variant) -> bool:
-	if not value is Dictionary or value.size() != 2:
-		return false
-	for weapon in POOLS:
-		if not value.get(weapon) is Array or value[weapon].size() != 2:
-			return false
-		if value[weapon][0] == value[weapon][1]:
-			return false
+	if not value is Dictionary or value.size() != 2: return false
+	for weapon in value:
+		var pool: Array = FIST_POOL if weapon == "fist" else POOLS.get(weapon, [])
+		if pool.is_empty() or not value[weapon] is Array or value[weapon].size() != 2: return false
+		if value[weapon][0] == value[weapon][1]: return false
 		for id in value[weapon]:
-			if not id is String or id not in POOLS[weapon]:
-				return false
+			if not id is String or id not in pool: return false
 	return true
 
 static func weapon_for(id: String) -> String:
+	if id in FIST_POOL: return "fist"
 	for weapon in POOLS:
-		if id in POOLS[weapon]:
-			return weapon
+		if id in POOLS[weapon]: return weapon
 	return ""
 
 static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]:
@@ -129,9 +134,10 @@ static func _total_damage(definition: SkillDefinition) -> int:
 
 static func offer_page_count(loadout: Dictionary) -> int:
 	var count := 1
-	for weapon in POOLS:
+	for weapon in PrototypeWeaponRewards.FAMILY_IDS:
+		if not loadout.has(weapon): continue
 		var candidates := 0
-		for id in POOLS[weapon]:
+		for id in (FIST_POOL if weapon == "fist" else POOLS[weapon]):
 			if id not in loadout[weapon]: candidates += 1
 		count = maxi(count, candidates)
 	return count
@@ -139,14 +145,17 @@ static func offer_page_count(loadout: Dictionary) -> int:
 static func offers(loadout: Dictionary, offset: int = 0, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var candidates := {}
-	for weapon in POOLS:
+	for weapon in PrototypeWeaponRewards.FAMILY_IDS:
+		if not loadout.has(weapon): continue
 		candidates[weapon] = []
-		for id in POOLS[weapon]:
+		for id in (FIST_POOL if weapon == "fist" else POOLS[weapon]):
 			if id not in loadout[weapon]:
 				candidates[weapon].append(id)
 	# 무기를 번갈아 제안해 기존 후보와 새 후보를 같은 화면에서 비교한다.
 	for index in 2:
-		for weapon in POOLS:
+		for weapon in PrototypeWeaponRewards.FAMILY_IDS:
+			if not loadout.has(weapon): continue
 			var id: String = candidates[weapon][posmod(offset + index, candidates[weapon].size())]
-			result.append({"id": id, "weapon": weapon, "name": SKILLS[id].display_name, "lines": lines(id, recharge_multiplier)})
+			if not result.any(func(card: Dictionary) -> bool: return card.id == id):
+				result.append({"id": id, "weapon": weapon, "name": SKILLS[id].display_name, "lines": lines(id, recharge_multiplier)})
 	return result

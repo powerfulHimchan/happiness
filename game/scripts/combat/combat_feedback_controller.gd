@@ -44,6 +44,7 @@ func _ready() -> void:
 	z_index = 90
 	sword_combat.hit_registered.connect(_on_weapon_hit.bind("sword"))
 	bow_combat.hit_registered.connect(_on_weapon_hit.bind("bow"))
+	(get_node("../Player/FistCombatController") as FistCombatController).hit_registered.connect(_on_weapon_hit.bind("fist"))
 	player.damage_received.connect(_on_player_damage_received)
 	ultimate_controller.precise_evade_registered.connect(_on_precise_evade)
 	ultimate_controller.ultimate_activated.connect(_on_ultimate_activated)

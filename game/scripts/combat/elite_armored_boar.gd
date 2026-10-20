@@ -352,7 +352,7 @@ func _try_charge_damage() -> void:
 
 func _adjust_damage_event(event: DamageEvent) -> DamageEvent:
 	var multiplier := 1.0
-	if event.tags.has("sword"):
+	if (event.tags.has("sword") or event.tags.has("fist")):
 		multiplier = SWORD_STUN_MULTIPLIER if state == State.STUNNED else SWORD_ARMOR_MULTIPLIER
 	elif event.tags.has("bow"):
 		multiplier = 1.0 if state == State.STUNNED else BOW_ARMOR_MULTIPLIER

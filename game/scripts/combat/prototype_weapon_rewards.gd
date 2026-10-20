@@ -1,11 +1,16 @@
 class_name PrototypeWeaponRewards
 extends RefCounted
 
-## GP-108: 확정 성능의 검·활 등급과 보조 고유 효과를 정의한다.
+## GP-108: 확정 성능의 무기 등급과 보조 고유 효과를 정의한다.
+const FAMILY_IDS := ["sword", "bow", "fist"]
+
+static func family_name(id: String) -> String:
+	return {"sword": "검", "bow": "활", "fist": "주먹"}.get(id, "없음")
+
 const GRADE_NAMES := ["일반", "희귀", "영웅"]
 const DAMAGE_BONUS := [0.0, 0.15, 0.30]
 const UNIQUE_BONUS := [0.0, 0.10, 0.20]
-const NAMES := {"sword": ["연습용 검", "풀잎 검", "새벽 검"], "bow": ["연습용 활", "씨앗 활", "바람 활"]}
+const NAMES := {"sword": ["연습용 검", "풀잎 검", "새벽 검"], "bow": ["연습용 활", "씨앗 활", "바람 활"], "fist": ["연습용 권갑", "철제 권갑", "새벽 권갑"]}
 const BACKUP_RATIO := 0.50
 const CODEX_PAGE_SIZE := 3
 const BLUEPRINTS := {"clockwork_sword": {"weapon": "sword", "name": "태엽 검"}, "clockwork_bow": {"weapon": "bow", "name": "태엽 활"}}
@@ -42,7 +47,7 @@ static func design_available(id: String, unlocked: Dictionary) -> bool:
 static func valid_blueprints(value: Variant, equipment: Dictionary) -> bool:
 	if not value is Dictionary or value.size() != 2:
 		return false
-	for weapon in ["sword", "bow"]:
+	for weapon in equipment:
 		var id: Variant = value.get(weapon)
 		if not id is String:
 			return false
@@ -54,7 +59,8 @@ static func valid_blueprints(value: Variant, equipment: Dictionary) -> bool:
 static func valid_equipment(value: Variant) -> bool:
 	if not value is Dictionary or value.size() != 2:
 		return false
-	for id in ["sword", "bow"]:
+	for id in value:
+		if id not in FAMILY_IDS: return false
 		var grade: Variant = value.get(id)
 		if not (grade is int or grade is float) or not is_finite(float(grade)) or float(grade) != floorf(float(grade)) or grade < 0 or grade > 2:
 			return false
@@ -77,19 +83,19 @@ static func profile(id: String, grade: int, blueprint: String = "") -> Dictionar
 
 static func offers(stage: int, equipment: Dictionary, unlocked: Dictionary = {}, blueprints: Dictionary = {}) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for id in ["sword", "bow"]:
+	for id in equipment:
 		var item := profile(id, mini(stage, 2))
 		item["previous_name"] = profile(id, int(equipment[id]), String(blueprints.get(id, ""))).name
 		result.append(item)
 	for blueprint in BLUEPRINTS:
-		if unlocked.get(blueprint, false) != true:
+		if unlocked.get(blueprint, false) != true or BLUEPRINTS[blueprint].weapon not in equipment:
 			continue
 		var weapon: String = BLUEPRINTS[blueprint].weapon
 		var item := profile(weapon, mini(stage, 2), blueprint)
 		item["previous_name"] = profile(weapon, int(equipment[weapon]), String(blueprints.get(weapon, ""))).name
 		result.append(item)
 	for design in DESIGNS:
-		if not design_available(design, unlocked): continue
+		if not design_available(design, unlocked) or DESIGNS[design].weapon not in equipment: continue
 		var weapon: String = DESIGNS[design].weapon
 		var item := profile(weapon, mini(stage, 2), design)
 		item["previous_name"] = profile(weapon, int(equipment[weapon]), String(blueprints.get(weapon, ""))).name
@@ -98,10 +104,10 @@ static func offers(stage: int, equipment: Dictionary, unlocked: Dictionary = {},
 
 
 static func damage_multiplier(equipment: Dictionary, id: String, kind: String, blueprints: Dictionary = {}) -> float:
-	if kind not in ["basic", "skill"] or id not in ["sword", "bow"]:
+	if kind not in ["basic", "skill"] or id not in equipment:
 		return 1.0
 	var own := profile(id, int(equipment[id]), String(blueprints.get(id, "")))
-	var other := "bow" if id == "sword" else "sword"
+	var other: String = equipment.keys().filter(func(family: String) -> bool: return family != id)[0]
 	var backup := profile(other, int(equipment[other]), String(blueprints.get(other, "")))
 	return 1.0 + float(own.damage) + (float(own.unique) if own.kind == kind else 0.0) + (float(backup.unique) * BACKUP_RATIO if backup.kind == kind else 0.0)
 
@@ -110,7 +116,7 @@ static func codex_cards(unlocked: Dictionary, equipment: Dictionary = {}, bluepr
 	var result: Array[Dictionary] = []
 	var active := active_weapon in NAMES and valid_equipment(equipment) and valid_blueprints(blueprints, equipment)
 	var entries: Array[Dictionary] = []
-	for weapon in NAMES:
+	for weapon in ["sword", "bow"]:
 		var designs: Array[String] = [""]
 		for id in BLUEPRINTS:
 			if BLUEPRINTS[id].weapon == weapon: designs.append(String(id))
@@ -122,12 +128,13 @@ static func codex_cards(unlocked: Dictionary, equipment: Dictionary = {}, bluepr
 	for design in DESIGNS:
 		for grade in [1, 2]:
 			entries.append(profile(DESIGNS[design].weapon, grade, design))
+	for grade in GRADE_NAMES.size(): entries.append(profile("fist", grade))
 	for item in entries:
 		var weapon: String = item.weapon_id
 		var grade: int = item.grade
 		var design: String = item.blueprint
 		var available: bool = design_available(design, unlocked)
-		var equipped: bool = active and int(equipment[weapon]) == grade and blueprints[weapon] == design
+		var equipped: bool = active and equipment.has(weapon) and int(equipment[weapon]) == grade and blueprints[weapon] == design
 		var status := "이번 도전 · 주 무기" if equipped and active_weapon == weapon else "이번 도전 · 보조 무기" if equipped else "획득 가능 · 효과 미리 보기" if available else "미해금 · 효과 미리 보기"
 		var lines: Array[String] = []
 		for line in item.lines: lines.append(String(line))

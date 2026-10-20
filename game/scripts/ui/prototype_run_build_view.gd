@@ -16,7 +16,7 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			if result.is_empty():
 				result.append({"id": "empty", "name": "보유 능력 없음", "status": "레벨업 카드로 획득", "lines": ["선택한 능력만 여기에 표시합니다", "능력 도감에서는 모든 효과를 미리 봅니다"], "open": false})
 		1:
-			for weapon in ["sword", "bow"]:
+			for weapon in state.equipment:
 				var item := PrototypeWeaponRewards.profile(weapon, int(state.equipment[weapon]), String(state.blueprints[weapon]))
 				var lines: Array[String] = []
 				for line in item.lines: lines.append(String(line))
@@ -24,13 +24,13 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 				lines.append("스킬 피해100 기준 %d" % int(state.damage[weapon].skill))
 				lines.append("성장·기억·장비·유물 반영 · 거리 보정 전")
 				result.append({"id": weapon, "name": item.name, "status": "주 무기" if state.active == weapon else "보조 무기", "lines": lines, "open": true})
-			for weapon in ["sword", "bow"]:
+			for weapon in state.equipment:
 				for slot in 2:
 					var id: String = state.skills[weapon][slot]
 					var lines := PrototypeSkillRewards.lines(id, float(state.recharge))
 					lines.append("남은 대기 %.1f초" % float(state.cooldowns[weapon][slot]))
 					lines.append("표기 피해는 강화 전 기본값")
-					result.append({"id": id, "name": PrototypeSkillRewards.SKILLS[id].display_name, "status": "%s · 슬롯 %d" % ["검" if weapon == "sword" else "활", slot + 1], "lines": lines, "open": true})
+					result.append({"id": id, "name": PrototypeSkillRewards.SKILLS[id].display_name, "status": "%s · 슬롯 %d" % [PrototypeWeaponRewards.family_name(String(weapon)), slot + 1], "lines": lines, "open": true})
 		2:
 			var stage: Dictionary = state.stage
 			result.append({"id": "progress", "name": "이번 도전", "status": "%d / %d 스테이지" % [int(stage.run_stage_number), int(stage.run_stage_count)], "lines": ["주인공 · " + PrototypeCharacters.display_name(String(state.get("character_id", "roan"))) + (" · 원정 %d" % int(stage.expedition) if stage.get("expedition", 0) > 0 else ""), String(stage.stage_section_name), String(stage.run_route_name), "현재 스테이지 %.1f초" % float(stage.stage_elapsed_s), "레벨 %d · 경험치 %d/%d" % [int(state.growth.growth_level), int(state.growth.growth_xp), int(state.growth.growth_next_xp)], "조회 중 전투와 대기시간 정지"], "open": true})

@@ -5,6 +5,12 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/scripts/combat/fist_combat_controller.gd"
+  "$game_root/data/weapons/fist_basic.tres"
+  "$game_root/data/skills/fist_dash.tres"
+  "$game_root/data/skills/fist_flurry.tres"
+  "$game_root/data/skills/fist_wave.tres"
+  "$game_root/tests/gp344_runtime_test.gd"
   "$game_root/tests/gp334_runtime_test.gd"
   "$game_root/tests/gp329_runtime_test.gd"
   "$game_root/tests/gp327_runtime_test.gd"
@@ -741,6 +747,18 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for martial_character in roan lumi; do
+    for martial_backup in sword bow; do
+      checked_godot 90s --headless --path "$game_root" \
+        --script res://tests/gp344_runtime_test.gd -- combat "$martial_character" thunder_fist "$martial_backup"
+      for martial_job in thunder_fist phantom_dancer; do
+        for martial_phase in seed resume legacy late; do
+          checked_godot 90s --headless --path "$game_root" \
+            --script res://tests/gp344_runtime_test.gd -- "$martial_phase" "$martial_character" "$martial_job" "$martial_backup"
+        done
+      done
+    done
+  done
   for advanced_job in dragon_knight breaker storm_archer forest_warden; do
     for evolution_character in roan lumi; do
       for evolution_phase in seed resume legacy late; do

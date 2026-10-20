@@ -127,7 +127,7 @@ func receive_damage(event: DamageEvent) -> int:
 	if not is_targetable():
 		_set_state(State.DEAD, "%s 처치" % enemy_name())
 		return result
-	if enemy_type == EnemyType.SEED_SACK and event.tags.has("sword"):
+	if enemy_type == EnemyType.SEED_SACK and (event.tags.has("sword") or event.tags.has("fist")):
 		var away_sign := signf(global_position.x - event.source_position.x)
 		if is_zero_approx(away_sign):
 			away_sign = 1.0
@@ -135,7 +135,7 @@ func receive_damage(event: DamageEvent) -> int:
 		_combo_remaining = 0
 		_attack_cooldown_s = maxf(_attack_cooldown_s, SEED_RECOVERY_S)
 		_set_state(State.RECOVERY, "%s 근접 피격 · 사격 중단" % enemy_name())
-	elif festival_variant and enemy_type == EnemyType.LEAF_SLIME and event.tags.has("sword"):
+	elif festival_variant and enemy_type == EnemyType.LEAF_SLIME and (event.tags.has("sword") or event.tags.has("fist")):
 		_combo_remaining = 0
 		_attack_cooldown_s = SOLDIER_RECOVERY_S
 		_set_state(State.RECOVERY, "장난감 병정 피격 · 행진 중단")

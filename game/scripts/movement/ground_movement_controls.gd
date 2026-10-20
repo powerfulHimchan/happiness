@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 43109)
-Total output lines: 3569
+Warning: truncated output (original token count: 43564)
+Total output lines: 3590
 
 extends Control
 
@@ -299,6 +299,10 @@ var active_boss_legacy: Dictionary = {}
 var use_boss_legacy: bool = false
 var boss_legacy_toggle_rect := Rect2()
 var selected_starting_weapon: String = "sword"
+var selected_backup_weapon: String = "bow"
+var previous_backup_weapon: String = "bow"
+var requested_backup_weapon: String = "bow"
+var start_backup_rects: Array[Rect2] = []
 var start_weapon_previous_selection: String = "sword"
 var start_weapon_return_mode: int = ScreenMode.MAIN
 var start_weapon_card_rects: Array[Rect2] = []
@@ -703,7 +707,7 @@ func _draw_weapon_rewards() -> void:
 	var safe := _safe_area_in_viewport()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.96), true)
 	_draw_text_centered("정예 처치 · 무기 보상", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 50)), 32, PASS_COLOR)
-	_draw_text_centered("검·활 장비 비교 · %d / %d 페이지" % [weapon_reward_page + 1, weapon_reward_pages()], Rect2(safe.position + Vector2(0, safe.size.y * 0.17), Vector2(safe.size.x, 36)), 20, MUTED_TEXT_COLOR)
+	_draw_text_centered("휴대 무기 장비 비교 · %d / %d 페이지" % [weapon_reward_page + 1, weapon_reward_pages()], Rect2(safe.position + Vector2(0, safe.size.y * 0.17), Vector2(safe.size.x, 36)), 20, MUTED_TEXT_COLOR)
 	for index in weapon_reward_cards.size():
 		var item := weapon_reward_cards[index]
 		var rect := weapon_reward_rects[index]
@@ -944,10 +948,12 @@ func update_test_record_summary(summary: Dictionary) -> void:
 	queue_redraw()
 
 
-func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0) -> bool:
+func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: String = "standard", character: String = "roan", stories: bool = false, expedition: int = 0, backup: String = "") -> bool:
+	if backup.is_empty(): backup = "bow" if starting_weapon != "bow" else "sword"
+	if backup not in PrototypeWeaponRewards.FAMILY_IDS or backup == starting_weapon: return false
 	if expedition not in [0, 1, 2, 3, 4, 5] or (expedition > 0 and (mode != JourneyRoutePlan.MODE or not expedition_unlocked() or expedition > expedition_cap)): return false
 	if not PrototypeCharacters.valid_id(character): return false
-	if starting_weapon not in ["sword", "bow"] or stage_count not in [0, 3, 5, 10] or (stage_count == 0 and mode != "standard") or (stage_count != 0 and not PrototypeStageRunner.valid_mode_length(mode, stage_count)):
+	if starting_weapon not in PrototypeWeaponRewards.FAMILY_IDS or stage_count not in [0, 3, 5, 10] or (stage_count == 0 and mode != "standard") or (stage_count != 0 and not PrototypeStageRunner.valid_mode_length(mode, stage_count)):
 		return false
 	_leave_story_journal()
 	_leave_run_build()
@@ -955,6 +961,8 @@ func begin_retry(starting_weapon: String = "sword", stage_count: int = 0, mode: 
 	selected_story_enabled = stories
 	requested_story_enabled = stories
 	selected_starting_weapon = starting_weapon
+	selected_backup_weapon = backup
+	requested_backup_weapon = backup
 	selected_character_id = character
 	requested_character_id = character
 	requested_stage_limit = 3 if stage_count == 0 and (selected_stage_limit == 10 or int(movement_metrics.get("run_stage_count", 3)) == 10) else stage_count
@@ -1064,6 +1072,7 @@ func show_start_weapon_selection() -> void:
 	expedition_unlocked()
 	start_weapon_return_mode = screen_mode
 	start_weapon_previous_selection = selected_starting_weapon
+	previous_backup_weapon = selected_backup_weapon
 	previous_stage_limit = selected_stage_limit
 	previous_run_mode = selected_run_mode
 	previous_expedition = selected_expedition
@@ -1081,7 +1090,7 @@ func show_start_weapon_selection() -> void:
 func _refresh_start_weapon_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	var gap := minf(32.0, safe.size.x * 0.03)
-	var card_width := (safe.size.x * 0.90 - gap) * 0.5
+	var card_width := (safe.size.x * 0.90 - gap * 2) / 3.0
 	expedition_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.105), Vector2(safe.size.x * 0.62, safe.size.y * 0.065))
 	character_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.70, safe.size.y * 0.105), Vector2(safe.size.x * 0.25, safe.size.y * 0.065))
 	start_length_rects.clear()
@@ -1089,8 +1098,11 @@ func _refresh_start_weapon_layout() -> void:
 	for index in 4:
 		start_length_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (length_width + gap), safe.size.y * 0.19), Vector2(length_width, safe.size.y * 0.065)))
 	start_weapon_card_rects.clear()
-	for index in 2:
+	start_backup_rects.clear()
+	for index in 3:
 		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.28), Vector2(card_width, safe.size.y * 0.29)))
+	for rect in start_weapon_card_rects:
+		start_backup_rects.append(Rect2(rect.position + Vector2(12, rect.size.y * 0.75), Vector2(rect.size.x - 24, rect.size.y * 0.20)))
 	memory_card_rects.clear()
 	var memory_gap := minf(18.0, safe.size.x * 0.02)
 	var memory_width := (safe.size.x * 0.90 - memory_gap * 2) / 3.0
@@ -1140,20 +1152,21 @@ func _draw_start_weapon_selection() -> void:
 		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계", "전체 여정 · 10단계"][index]
 		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
 		_draw_button(start_length_rects[index], label, selected)
-	var ids := ["sword", "bow"]
-	var names := ["검", "활"]
-	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m"]
-	var skills := ["돌진 베기 · 회전 베기", "관통 화살 · 화살비"]
-	for index in 2:
+	var ids := PrototypeWeaponRewards.FAMILY_IDS
+	var names := ["검", "활", "주먹"]
+	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m", "자동 4연타 · 사거리 1.1m"]
+	var skills := ["돌진 베기 · 회전 베기", "관통 화살 · 화살비", "쇄도권 · 연환권"]
+	for index in 3:
 		var rect := start_weapon_card_rects[index]
 		var selected: bool = selected_starting_weapon == ids[index]
 		draw_style_box(_panel_style(Color("254f51") if selected else PANEL_COLOR), rect)
 		if selected:
 			draw_rect(rect.grow(-3.0), ACTIVE_COLOR, false, 3.0)
-		var labels := [names[index] + (" · 선택됨" if selected else ""), descriptions[index], skills[index], "보조 무기 · " + names[1 - index]]
+		var labels := [names[index] + (" · 선택됨" if selected else ""), descriptions[index], skills[index]]
 		var offsets := [0.07, 0.32, 0.52, 0.73]
 		for line_index in labels.size():
-			_draw_text_centered(labels[line_index], Rect2(rect.position + Vector2(0, rect.size.y * offsets[line_index]), Vector2(rect.size.x, 38)), 28 if line_index == 0 else 18, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
+			_draw_text_centered(labels[line_index], Rect2(rect.position + Vector2(0, rect.size.y * offsets[line_index]), Vector2(rect.size.x, 38)), 24 if line_index == 0 else 15, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
+		_draw_button(start_backup_rects[index], "보조 · 선택됨" if selected_backup_weapon == ids[index] else "보조로 선택", selected_backup_weapon == ids[index])
 	_draw_memory_cards()
 	if not pending_boss_legacy.is_empty():
 		draw_style_box(_panel_style(PANEL_COLOR), boss_legacy_toggle_rect)
@@ -1324,7 +1337,856 @@ func _start_combat_resume_countdown() -> void:
 
 func _update_mode_timer(delta: float) -> void:
 	if screen_mode == ScreenMode.LAYOUT_TEST:
-		lay…13109 tokens truncated…ay[String] = []
+		layout_test_remaining_s = maxf(0.0, layout_test_remaining_s - delta)
+		if is_zero_approx(layout_test_remaining_s):
+			finish_layout_test()
+	elif screen_mode == ScreenMode.COMBAT_RESUME_COUNTDOWN:
+		combat_resume_remaining_s = maxf(0.0, combat_resume_remaining_s - delta)
+		if is_zero_approx(combat_resume_remaining_s):
+			var returning_from_build := run_build_resume_pending
+			screen_mode = ScreenMode.COMBAT
+			editor_return_mode = ScreenMode.MAIN
+			if returning_from_build:
+				_leave_run_build()
+			else:
+				combat_configuration_finished.emit()
+			queue_redraw()
+
+
+func reset_layout_editor() -> void:
+	var preset_to_restore := active_preset_id
+	if preset_to_restore == PRESET_CUSTOM:
+		_restore_control_layout(_default_layout_snapshot(DEFAULT_CONTROL_CENTERS))
+	else:
+		_restore_control_layout(_preset_layout(preset_to_restore))
+	selected_layout_control = MOVE_CONTROL
+	layout_store_message = "현재 프리셋 초기화"
+	_validate_control_layout()
+	queue_redraw()
+
+
+func select_control_preset(preset_id: String) -> void:
+	if preset_id not in [PRESET_DEFAULT, PRESET_LEFT, PRESET_CUSTOM]:
+		return
+	if active_preset_id == PRESET_CUSTOM:
+		saved_custom_layout = _capture_control_layout()
+	active_preset_id = preset_id
+	if preset_id == PRESET_CUSTOM:
+		_restore_control_layout(
+			saved_custom_layout
+			if not saved_custom_layout.is_empty()
+			else _default_layout_snapshot(DEFAULT_CONTROL_CENTERS)
+		)
+	else:
+		_restore_control_layout(_preset_layout(preset_id))
+	selected_layout_control = MOVE_CONTROL
+	layout_store_message = "%s 프리셋 미리보기" % _preset_label(preset_id)
+	queue_redraw()
+
+
+func select_layout_control(control_id: StringName) -> void:
+	if control_id in _layout_control_order():
+		selected_layout_control = control_id
+		queue_redraw()
+
+
+func adjust_selected_control_size(delta: float) -> void:
+	if selected_layout_control == &"":
+		return
+	var current_scale := float(control_scales.get(selected_layout_control, 1.0))
+	control_scales[selected_layout_control] = clampf(current_scale + delta, 0.70, 1.40)
+	_mark_layout_custom()
+	_refresh_layout()
+	_validate_control_layout()
+	queue_redraw()
+
+
+func set_control_opacity(value: float) -> void:
+	control_opacity = clampf(value, 0.30, 1.00)
+	_mark_layout_custom()
+	queue_redraw()
+
+
+func set_control_center_normalized(control_id: StringName, normalized_center: Vector2) -> void:
+	if control_id not in _layout_control_order():
+		return
+	control_centers[control_id] = normalized_center
+	_mark_layout_custom()
+	_refresh_layout()
+	_validate_control_layout()
+	queue_redraw()
+
+
+func current_screen_mode() -> int:
+	return screen_mode
+
+
+func layout_editor_returns_to_combat() -> bool:
+	return editor_return_mode == ScreenMode.COMBAT
+
+
+func current_result_snapshot() -> Dictionary:
+	return result_snapshot.duplicate(true)
+
+
+func layout_test_snapshot() -> Dictionary:
+	return {
+		"remaining_s": layout_test_remaining_s,
+		"input_counts": layout_test_input_counts.duplicate(true),
+		"active_controls": control_pointers.keys(),
+		"peak_controls": layout_test_peak_controls,
+		"invalid_controls": invalid_layout_controls.duplicate(),
+		"resume_remaining_s": combat_resume_remaining_s,
+	}
+
+
+func advance_mode_timer_for_test(delta: float) -> void:
+	_update_mode_timer(delta)
+
+
+func layout_snapshot() -> Dictionary:
+	return {
+		"run_build": combat_build_rect,
+		"safe": _safe_area_in_viewport(),
+		"hud": hud_rect,
+		"move": move_zone,
+		"actions": action_rects.duplicate(),
+		"result_panel": result_panel_rect,
+		"main_village": main_village_rect,
+		"growth_cards": growth_card_rects.duplicate(),
+		"growth_reroll": growth_reroll_rect,
+		"job_panel": job_panel_rect,
+		"job_confirm": job_confirm_rect,
+		"job_ultimates": job_ultimate_rects.duplicate(),
+		"stage_routes": stage_route_rects.duplicate(),
+		"character_open": character_open_rect,
+		"character_cards": character_card_rects.duplicate(),
+		"character_confirm": character_confirm_rect,
+		"character_cancel": character_cancel_rect,
+		"start_weapon_cards": start_weapon_card_rects.duplicate(),
+		"start_lengths": start_length_rects.duplicate(),
+		"start_weapon_confirm": start_weapon_confirm_rect,
+		"start_weapon_cancel": start_weapon_cancel_rect,
+		"memory_cards": memory_card_rects.duplicate(),
+		"boss_legacy_toggle": boss_legacy_toggle_rect,
+		"boss_choice_cards": boss_choice_rects.duplicate(),
+		"boss_choice_confirm": boss_choice_confirm_rect,
+		"weapon_reward_cards": weapon_reward_rects.duplicate(),
+		"weapon_reward_confirm": weapon_reward_confirm_rect,
+		"weapon_reward_skip": weapon_reward_skip_rect,
+	}
+
+
+func control_layout_snapshot() -> Dictionary:
+	return {
+		"centers": control_centers.duplicate(true),
+		"scales": control_scales.duplicate(true),
+		"opacity": control_opacity,
+		"selected": selected_layout_control,
+		"invalid_controls": invalid_layout_controls.duplicate(),
+		"valid": invalid_layout_controls.is_empty(),
+		"touch_rects": _control_touch_rects(),
+		"active_preset": active_preset_id,
+		"has_custom_layout": not saved_custom_layout.is_empty(),
+		"store_message": layout_store_message,
+	}
+
+
+func _show_result_screen() -> void:
+	_leave_run_build()
+	release_all_inputs()
+	var sword_hits := int(movement_metrics.get("sword_total_hits", 0))
+	var bow_hits := int(movement_metrics.get("bow_total_hits", 0))
+	var fist_hits := int(movement_metrics.get("fist_total_hits", 0))
+	var total_hits := sword_hits + bow_hits + fist_hits
+	result_snapshot = {
+		"expedition": int(movement_metrics.get("expedition", 0)),
+		"character_id": String(movement_metrics.get("character_id", "roan")),
+		"completion_s": float(movement_metrics.get("run_elapsed_s", movement_metrics.get("stage_elapsed_s", 0.0))),
+		"target_s": float(movement_metrics.get("stage_target_s", 180.0)) * int(movement_metrics.get("run_stage_count", 1)),
+		"stage_count": int(movement_metrics.get("run_stage_count", 1)),
+		"stage_history": movement_metrics.get("run_stage_history", []).duplicate(true),
+		"boss_choice": String(movement_metrics.get("boss_choice", "")),
+		"guardian_choice": String(movement_metrics.get("guardian_choice", "")),
+		"boss_name": String(movement_metrics.get("boss_name", "")),
+		"final_boss": String(movement_metrics.get("final_boss", SeraEncounter.LEGACY)),
+		"heart_threshold": String(movement_metrics.get("heart_threshold", "")),
+		"arrival_ending": String(movement_metrics.get("arrival_ending", "")),
+		"heart_battle": String(movement_metrics.get("heart_battle", "")),
+		"ending_id": String(movement_metrics.get("ending_id", "")),
+		"memory_id": active_memory_id,
+		"weapon_blueprints": movement_metrics.get("weapon_blueprints", {"sword": "", "bow": ""}).duplicate(),
+		"actual_times": movement_metrics.get("stage_actual_times", []).duplicate(),
+		"damage_causes": String(movement_metrics.get("damage_cause_summary", "피격 없음")),
+		"sword_hits": sword_hits,
+		"bow_hits": bow_hits,
+		"fist_hits": fist_hits,
+		"sword_damage": int(movement_metrics.get("sword_total_damage", 0)),
+		"bow_damage": int(movement_metrics.get("bow_total_damage", 0)),
+		"fist_damage": int(movement_metrics.get("fist_total_damage", 0)),
+		"fist_ratio": float(fist_hits) / float(total_hits) if total_hits > 0 else 0.0,
+		"sword_ratio": float(sword_hits) / float(total_hits) if total_hits > 0 else 0.0,
+		"bow_ratio": float(bow_hits) / float(total_hits) if total_hits > 0 else 0.0,
+		"record_summary": _current_record_summary(),
+	}
+	if movement_metrics.get("run_mode") in ["regions", JourneyRoutePlan.MODE]:
+		result_snapshot.run_mode = movement_metrics.run_mode
+		result_snapshot.visited_regions = movement_metrics.get("run_visited_regions", []).duplicate()
+	if not active_story_state.is_empty(): result_snapshot.story = active_story_state.duplicate(true)
+	screen_mode = ScreenMode.RESULT
+	_refresh_layout()
+	queue_redraw()
+
+
+func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.RUN_BUILD:
+		_handle_run_build_touch(position)
+		return
+	if screen_mode == ScreenMode.RELIC_REWARD:
+		_refresh_relic_reward_layout()
+		for i in relic_reward_card_rects.size():
+			if relic_reward_card_rects[i].has_point(position):
+				selected_relic_offer = relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE + i
+				queue_redraw()
+				return
+		if relic_reward_previous_rect.has_point(position):
+			if relic_reward_page == 0: return
+			relic_reward_page = maxi(0, relic_reward_page - 1)
+			selected_relic_offer = relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE
+			queue_redraw()
+		elif relic_reward_next_rect.has_point(position):
+			if relic_reward_page == relic_reward_pages() - 1: return
+			relic_reward_page = mini(relic_reward_pages() - 1, relic_reward_page + 1)
+			selected_relic_offer = relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE
+			queue_redraw()
+		elif relic_reward_cancel_rect.has_point(position):
+			show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, all_stage_route_options)
+		elif relic_reward_confirm_rect.has_point(position):
+			relic_reward_selected.emit(String(PrototypeRelic.OFFERS[selected_relic_offer].id))
+		return
+	if screen_mode == ScreenMode.SKILL_REWARD:
+		_handle_skill_reward_touch(position)
+		return
+	if screen_mode == ScreenMode.VILLAGE:
+		_refresh_story_entry_layout()
+		if story_journal_open_rect.has_point(position):
+			open_story_journal()
+			return
+		_handle_village_touch(position)
+		return
+	if screen_mode == ScreenMode.BOSS_CHOICE:
+		_refresh_boss_choice_layout()
+		for index in boss_choice_rects.size():
+			if boss_choice_rects[index].has_point(position):
+				selected_boss_choice = index
+				return
+		if boss_choice_confirm_rect.has_point(position) and selected_boss_choice >= 0:
+			boss_choice_confirmed.emit("rescue" if selected_boss_choice == 0 else "destroy")
+		return
+	if screen_mode == ScreenMode.WEAPON_REWARD:
+		_refresh_weapon_reward_layout()
+		for index in weapon_reward_rects.size():
+			if weapon_reward_rects[index].has_point(position):
+				selected_weapon_reward = index
+				return
+		if weapon_reward_previous_rect.has_point(position):
+			_change_weapon_reward_page(-1)
+			return
+		if weapon_reward_next_rect.has_point(position):
+			_change_weapon_reward_page(1)
+			return
+		if weapon_reward_skip_rect.has_point(position):
+			weapon_reward_selected.emit("")
+		elif weapon_reward_confirm_rect.has_point(position) and selected_weapon_reward >= 0:
+			weapon_reward_selected.emit(String(weapon_reward_cards[selected_weapon_reward].id))
+		return
+	if screen_mode == ScreenMode.STORY:
+		if story_scene.get("id") == FinalRitual.CHOICE_SCENE:
+			var final_layout := FinalRitual.layout(_safe_area_in_viewport())
+			var ritual: Dictionary = story_scene.ritual
+			for i in FinalRitual.IDS.size():
+				if final_layout.cards[i].has_point(position) and FinalRitual.can_choose(ritual, FinalRitual.IDS[i]):
+					final_selected = FinalRitual.IDS[i]
+					story_message = ""
+			if final_layout.secret.has_point(position) and FinalRitual.can_visit_secret(ritual): final_action_requested.emit("secret")
+			elif final_layout.confirm.has_point(position) and not final_selected.is_empty(): final_action_requested.emit(final_selected)
+			queue_redraw()
+			return
+		var layout := PrototypeStoryView.scene_layout(_safe_area_in_viewport())
+		if layout.skip.has_point(position):
+			if story_scene.get("id") == FinalRitual.ENDING_SCENE and not story_scene.get("final_locked", false): final_action_requested.emit("back")
+			else: _acknowledge_story_input()
+		elif layout.next.has_point(position):
+			if story_page < ceili(float(story_scene.lines.size()) / 2.0) - 1: story_page += 1
+			else: _acknowledge_story_input()
+		return
+	if screen_mode == ScreenMode.STORY_JOURNAL:
+		_handle_story_journal_touch(position)
+		return
+	if screen_mode in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]:
+		_refresh_story_entry_layout()
+		if story_journal_open_rect.has_point(position):
+			open_story_journal()
+			return
+	if screen_mode == ScreenMode.START_CHARACTER:
+		_refresh_character_layout()
+		if story_toggle_rect.has_point(position):
+			selected_story_enabled = not selected_story_enabled
+			return
+		if story_journal_open_rect.has_point(position):
+			open_story_journal()
+			return
+		for index in character_card_rects.size():
+			if character_card_rects[index].has_point(position):
+				selected_character_id = PrototypeCharacters.IDS[index]
+				return
+		if character_cancel_rect.has_point(position): _close_character_selection(false)
+		elif character_confirm_rect.has_point(position): _close_character_selection(true)
+		return
+	if screen_mode == ScreenMode.START_WEAPON:
+		_refresh_start_weapon_layout()
+		if expedition_rect.has_point(position):
+			if selected_run_mode == JourneyRoutePlan.MODE and expedition_unlocked(): selected_expedition = (selected_expedition + 1) % (expedition_cap + 1)
+			return
+		if character_open_rect.has_point(position):
+			show_character_selection()
+			return
+		for index in start_length_rects.size():
+			if start_length_rects[index].has_point(position):
+				selected_stage_limit = 10 if index == 3 else 3 if index == 0 else 5
+				selected_run_mode = JourneyRoutePlan.MODE if index == 3 else "regions" if index == 2 else "standard"
+				if index != 3: selected_expedition = 0
+				return
+		for index in start_backup_rects.size():
+			if start_backup_rects[index].has_point(position):
+				var family: String = PrototypeWeaponRewards.FAMILY_IDS[index]
+				if family == selected_starting_weapon: selected_starting_weapon = selected_backup_weapon
+				selected_backup_weapon = family
+				return
+		for index in start_weapon_card_rects.size():
+			if start_weapon_card_rects[index].has_point(position):
+				var family: String = PrototypeWeaponRewards.FAMILY_IDS[index]
+				if family == selected_backup_weapon: selected_backup_weapon = selected_starting_weapon
+				selected_starting_weapon = family
+				return
+		for index in memory_card_rects.size():
+			if memory_card_rects[index].has_point(position):
+				var id: String = PrototypeMemoryAbilities.IDS[index]
+				if PrototypeMemoryAbilities.available(id, unlocked_memories):
+					selected_memory_id = id
+				return
+		if not pending_boss_legacy.is_empty() and boss_legacy_toggle_rect.has_point(position):
+			use_boss_legacy = not use_boss_legacy
+			return
+		if start_weapon_cancel_rect.has_point(position):
+			selected_starting_weapon = start_weapon_previous_selection
+			selected_backup_weapon = previous_backup_weapon
+			selected_stage_limit = previous_stage_limit
+			selected_run_mode = previous_run_mode
+			selected_expedition = previous_expedition
+			selected_character_id = previous_character_id
+			selected_story_enabled = previous_story_enabled
+			selected_memory_id = start_memory_previous_selection
+			screen_mode = start_weapon_return_mode
+		elif start_weapon_confirm_rect.has_point(position):
+			begin_retry(selected_starting_weapon, selected_stage_limit, selected_run_mode, selected_character_id, selected_story_enabled, selected_expedition, selected_backup_weapon)
+		return
+	if screen_mode == ScreenMode.STAGE_ROUTE:
+		if relic_offer_available and relic_reward_open_rect.has_point(position):
+			release_all_inputs()
+			selected_relic_offer = 0
+			relic_reward_page = 0
+			screen_mode = ScreenMode.RELIC_REWARD
+			_refresh_relic_reward_layout()
+			queue_redraw()
+			return
+		if not skill_reward_claimed and skill_reward_open_rect.has_point(position):
+			show_skill_rewards()
+			return
+		if stage_route_pages() > 1:
+			if stage_route_previous_rect.has_point(position):
+				_change_stage_route_page(-1)
+				return
+			if stage_route_next_rect.has_point(position):
+				_change_stage_route_page(1)
+				return
+		for index in stage_route_rects.size():
+			if stage_route_rects[index].has_point(position):
+				stage_route_selected.emit(String(stage_route_options[index]["id"]))
+				return
+		return
+	if screen_mode == ScreenMode.JOB_MANIFESTATION:
+		for index in job_ultimate_rects.size():
+			if job_ultimate_rects[index].has_point(position) and index < job_ultimates.size():
+				selected_job_ultimate = index
+				queue_redraw()
+				return
+		if job_confirm_rect.has_point(position) and selected_job_ultimate >= 0:
+			job_confirmed.emit(selected_job_ultimate)
+		return
+	if screen_mode == ScreenMode.GROWTH_SELECTION:
+		if growth_reroll_rect.has_point(position):
+			if growth_choice_rerolls > 0:
+				growth_reroll_requested.emit()
+			return
+		for index in growth_card_rects.size():
+			if growth_card_rects[index].has_point(position):
+				growth_card_selected.emit(index)
+				return
+		return
+	if screen_mode == ScreenMode.RESULT:
+		if result_retry_rect.has_point(position):
+			show_start_weapon_selection()
+		elif result_main_rect.has_point(position):
+			show_main_screen()
+	elif screen_mode == ScreenMode.MAIN and main_village_rect.has_point(position):
+		show_village()
+	elif screen_mode == ScreenMode.MAIN and main_start_rect.has_point(position):
+		show_start_weapon_selection()
+	elif screen_mode == ScreenMode.MAIN and checkpoint_available and main_continue_rect.has_point(position):
+		continue_requested.emit()
+	elif screen_mode == ScreenMode.MAIN and main_layout_rect.has_point(position):
+		open_layout_editor()
+	elif screen_mode == ScreenMode.MAIN and main_feedback_rect.has_point(position):
+		show_feedback_settings()
+	elif screen_mode == ScreenMode.FEEDBACK_SETTINGS:
+		if feedback_sound_down_rect.has_point(position):
+			set_feedback_sound_volume(feedback_sound_volume - 0.10)
+		elif feedback_sound_up_rect.has_point(position):
+			set_feedback_sound_volume(feedback_sound_volume + 0.10)
+		elif feedback_vibration_rect.has_point(position):
+			set_feedback_vibration_enabled(not feedback_vibration_enabled)
+		elif feedback_shake_rect.has_point(position):
+			set_feedback_screen_shake_enabled(not feedback_screen_shake_enabled)
+		elif feedback_records_clear_rect.has_point(position):
+			test_records_clear_requested.emit()
+		elif feedback_back_rect.has_point(position):
+			show_main_screen()
+
+
+func _handle_editor_touch(touch: InputEventScreenTouch) -> void:
+	if not touch.pressed:
+		if touch.index == editor_drag_pointer_id:
+			editor_drag_pointer_id = -1
+		return
+	if editor_preset_default_rect.has_point(touch.position):
+		select_control_preset(PRESET_DEFAULT)
+		return
+	if editor_preset_left_rect.has_point(touch.position):
+		select_control_preset(PRESET_LEFT)
+		return
+	if editor_preset_custom_rect.has_point(touch.position):
+		select_control_preset(PRESET_CUSTOM)
+		return
+	if editor_size_down_rect.has_point(touch.position):
+		adjust_selected_control_size(-0.10)
+		return
+	if editor_size_up_rect.has_point(touch.position):
+		adjust_selected_control_size(0.10)
+		return
+	if editor_opacity_down_rect.has_point(touch.position):
+		set_control_opacity(control_opacity - 0.10)
+		return
+	if editor_opacity_up_rect.has_point(touch.position):
+		set_control_opacity(control_opacity + 0.10)
+		return
+	if editor_test_rect.has_point(touch.position):
+		start_layout_test()
+		return
+	if editor_reset_rect.has_point(touch.position):
+		reset_layout_editor()
+		return
+	if editor_cancel_rect.has_point(touch.position):
+		cancel_layout_editor()
+		return
+	if editor_apply_rect.has_point(touch.position):
+		apply_layout_editor()
+		return
+	var hit_control := _layout_control_at(touch.position)
+	if hit_control != &"":
+		selected_layout_control = hit_contr…3564 tokens truncated…lor("69d06f") if health > max_health * 0.3 else Color("ef6f6c"),
+		true
+	)
+	_draw_text("Lv.%d · 경험치 %d/%d" % [int(movement_metrics.get("growth_level", 1)), int(movement_metrics.get("growth_xp", 0)), int(movement_metrics.get("growth_next_xp", 20))], Vector2(left_x, top_y + 56.0), 17, ACTIVE_COLOR)
+	_draw_text(PrototypeCharacters.display_name(String(movement_metrics.get("character_id", "roan"))) + " · " + String(movement_metrics.get("growth_job_hud", "직업 미발현")), Vector2(left_x, top_y + 76.0), 15, MUTED_TEXT_COLOR)
+	_draw_text(PrototypeMemoryAbilities.profile(active_memory_id).name + _legacy_hud_label(), Vector2(left_x, top_y + 96.0), 13, ACTIVE_COLOR)
+	_draw_text(String(movement_metrics.get("potion_log", "회복약 · 최대 체력 25% 회복")), Vector2(left_x, top_y + 116.0), 12, MUTED_TEXT_COLOR)
+	_draw_text(String(movement_metrics.get("relic_hud", "유물 없음")) + (" · 흡수 %d%%" % int(movement_metrics.get("lifesteal_rate_percent", 5)) if int(movement_metrics.get("lifesteal_rate_percent", 0)) > 0 else ""), Vector2(left_x, top_y + 134.0), 12, ACTIVE_COLOR)
+
+	_draw_text(
+		"%d/%d · %s  %d/%d" % [
+			int(movement_metrics.get("run_stage_number", 1)),
+			int(movement_metrics.get("run_stage_count", 1)),
+			section_name.split(" · ")[0],
+			section_index,
+			section_count,
+		],
+		Vector2(center_x, top_y),
+		18,
+		TEXT_COLOR
+	)
+	var stage_objective: String = String(movement_metrics.get("stage_objective", "첫 관문까지 전진"))
+	_draw_text("%s / %s" % [_format_clock(stage_elapsed), _format_clock(stage_target)], Vector2(center_x, top_y + 31.0), 25, ACTIVE_COLOR)
+	_draw_text(stage_objective, Vector2(center_x, top_y + 62.0), 16, MUTED_TEXT_COLOR)
+	_draw_text("%s · %s" % [String(movement_metrics.get("run_route_name", "풀숲 길")), String(movement_metrics.get("run_route_terrain", "연습 지형"))], Vector2(center_x, top_y + 86.0), 15, ACTIVE_COLOR)
+
+	_draw_village_text(String(movement_metrics.get("stage_constraint_hint", "")), Rect2(Vector2(center_x, top_y + 100.0), Vector2(hud_rect.size.x * 0.27, 38)), 14, PASS_COLOR)
+
+	var weapon_name: String = String(movement_metrics.get("weapon_name", "연습용 검"))
+	var skill_1_name: String = String(movement_metrics.get("skill_1_name", "스킬 1"))
+	var skill_2_name: String = String(movement_metrics.get("skill_2_name", "스킬 2"))
+	var skill_1_cd: float = float(movement_metrics.get("skill_1_cooldown_s", 0.0))
+	var skill_2_cd: float = float(movement_metrics.get("skill_2_cooldown_s", 0.0))
+	_draw_text("무기  %s" % weapon_name, Vector2(right_x, top_y), 21, TEXT_COLOR)
+	_draw_text("%s %.1fs  ·  %s %.1fs" % [skill_1_name, skill_1_cd, skill_2_name, skill_2_cd], Vector2(right_x, top_y + 30.0), 16, MUTED_TEXT_COLOR)
+	var ultimate_gauge: int = int(movement_metrics.get("ultimate_gauge", 0))
+	var ultimate_active: bool = bool(movement_metrics.get("ultimate_active", false))
+	_draw_village_text(
+		_ultimate_hud_label(),
+		Rect2(Vector2(right_x, top_y + 40.0), Vector2(hud_rect.size.x * 0.36, 24)),
+		17,
+		ACTIVE_COLOR if ultimate_active or ultimate_gauge >= 100 else TEXT_COLOR
+	)
+	_draw_text(String(movement_metrics.get("weapon_backup_effect", "")), Vector2(right_x, top_y + 86.0), 15, MUTED_TEXT_COLOR)
+
+	_draw_button(fps_60_rect, "60", Engine.max_fps == 60)
+	_draw_button(fps_30_rect, "30", Engine.max_fps == 30)
+	_draw_button(reset_rect, "재설정", false)
+	_draw_button(combat_layout_rect, "배치", false)
+	if combat_build_rect.has_area():
+		_draw_button(combat_build_rect, "도전 상태", false)
+
+
+func _ultimate_hud_label() -> String:
+	var label := "%s  %s" % [String(movement_metrics.get("ultimate_name", "새벽의 틈")), "발동 중" if bool(movement_metrics.get("ultimate_active", false)) else "%d%%" % int(movement_metrics.get("ultimate_gauge", 0))]
+	if bool(movement_metrics.get("growth_run_active", false)) and int(movement_metrics.get("growth_ranks", {}).get("time_collector", 0)) == 1:
+		label += " · 처치 +%d" % int(movement_metrics.get("ultimate_defeat_gain", UltimateController.DEFEAT_GAIN))
+	elif bool(movement_metrics.get("growth_run_active", false)) and int(movement_metrics.get("ultimate_coin_gain", 0)) > 0:
+		label += " · 처치 +%d" % int(movement_metrics.ultimate_coin_gain)
+	return label
+
+
+func _draw_action_log(panel_rect: Rect2) -> void:
+	var x := panel_rect.position.x + panel_rect.size.x * 0.62
+	var y := panel_rect.position.y + 92.0
+	for line in action_log:
+		_draw_text(line, Vector2(x, y), 16, MUTED_TEXT_COLOR)
+		y += 24.0
+		if y > panel_rect.end.y - 14.0:
+			break
+
+
+func _draw_result_screen() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.88), true)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
+	_draw_text_centered(
+		String(ArrivalEnding.PROFILES[String(result_snapshot.ending_id)].name) + " 엔딩 · 전체 여정 완료" if result_snapshot.get("ending_id", "") in FinalRitual.IDS else "행복의 심장 제압 · 전체 여정 완료" if result_snapshot.get("heart_battle") == HeartEncounter.SEEN else "도착 엔딩 · 전체 여정 완료" if result_snapshot.get("arrival_ending") == ArrivalEnding.SEEN else "전체 여정 완료 · 10스테이지" if result_snapshot.get("run_mode") == JourneyRoutePlan.MODE else "네 지역 순회 완료 · 5스테이지" if result_snapshot.get("run_mode") == "regions" else "도전 완료 · %d개 스테이지" % int(result_snapshot.get("stage_count", 1)),
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 24.0), Vector2(result_panel_rect.size.x, 58.0)),
+		36,
+		PASS_COLOR
+	)
+	var completion_s := float(result_snapshot.get("completion_s", 0.0))
+	var target_s := float(result_snapshot.get("target_s", 180.0))
+	_draw_village_text(
+		"%s · 완료 %s  ·  목표 %s  ·  %s" % [
+			PrototypeCharacters.display_name(String(result_snapshot.get("character_id", "roan"))) + (" · 원정 %d" % int(result_snapshot.expedition) if result_snapshot.get("expedition", 0) > 0 else ""),
+			_format_clock(completion_s),
+			_format_clock(target_s),
+			"목표 이내" if completion_s <= target_s else "+%s" % _format_clock(completion_s - target_s),
+		] + (" · 기억 %d/%d" % [result_snapshot.story.fragments.size(), PrototypeStory.FRAGMENTS.size()] if result_snapshot.has("story") else ""),
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 84.0), Vector2(result_panel_rect.size.x, 42.0)),
+		24,
+		TEXT_COLOR
+	)
+	var choice := String(result_snapshot.get("boss_choice", ""))
+	var guardian := String(result_snapshot.get("guardian_choice", ""))
+	if choice in ["rescue", "destroy"]:
+		var caption := "태엽 기사 %s · %s 영구 해금" % [("구출" if choice == "rescue" else "파괴"), PrototypeMemoryAbilities.profile(PrototypeMemoryAbilities.CHOICE_IDS[choice]).name + (" / 태엽 검·활 설계도" if choice == "destroy" else "")]
+		if result_snapshot.get("final_boss") == SeraEncounter.ID: caption = "세라 %s · 이번 여정 선택 기록" % GuardianDecision.label(choice)
+		if result_snapshot.get("heart_battle") == HeartEncounter.SEEN: caption += " · 행복의 심장 제압"
+		elif result_snapshot.get("heart_threshold") == HeartThreshold.SEEN: caption += " · 행복의 심장 입구 도착"
+		if guardian in ["rescue", "destroy"]: caption += " · 성문 수호기사 " + GuardianDecision.label(guardian)
+		_draw_text_centered(caption, Rect2(result_panel_rect.position + Vector2(0, 128), Vector2(result_panel_rect.size.x, 26)), 18, ACTIVE_COLOR)
+	var content_x := result_panel_rect.position.x + 54.0
+	var content_width := result_panel_rect.size.x - 108.0
+	var y := result_panel_rect.position.y + (190.0 if choice in ["rescue", "destroy"] else 158.0)
+	_draw_result_row("스테이지 기록" if int(result_snapshot.get("stage_count", 1)) > 1 else "구간 기록", _section_time_summary(), content_x, content_width, y)
+	y += 66.0
+	_draw_result_row("피격 원인", String(result_snapshot.get("damage_causes", "피격 없음")), content_x, content_width, y)
+	y += 66.0
+	var usage_parts: PackedStringArray = []
+	var combat_parts: PackedStringArray = []
+	var total_hits := 0
+	var held: Dictionary = result_snapshot.get("weapon_blueprints", {"sword": "", "bow": ""})
+	for family in PrototypeWeaponRewards.FAMILY_IDS:
+		if not held.has(family): continue
+		var hits := int(result_snapshot.get(family + "_hits", 0))
+		total_hits += hits
+		usage_parts.append("%s %.0f%%" % [PrototypeWeaponRewards.family_name(family), float(result_snapshot.get(family + "_ratio", 0.0)) * 100.0])
+		combat_parts.append("%s %d회 / 피해 %d" % [PrototypeWeaponRewards.family_name(family), hits, int(result_snapshot.get(family + "_damage", 0))])
+	_draw_result_row("무기 사용 비율", "기록 없음" if total_hits == 0 else " · ".join(usage_parts), content_x, content_width, y)
+	y += 66.0
+	_draw_result_row("전투 기록", "  ·  ".join(combat_parts), content_x, content_width, y)
+	y += 58.0
+	var record_summary: Dictionary = result_snapshot.get("record_summary", {})
+	var completed_runs := int(record_summary.get("completed_run_count", 0))
+	var incomplete_runs := int(record_summary.get("incomplete_run_count", 0))
+	var best_s := float(record_summary.get("best_completion_s", 0.0))
+	var average_s := float(record_summary.get("average_completion_s", 0.0))
+	var record_text := "완주 %d · 중단 %d · 최고 %s · 평균 %s" % [
+		completed_runs,
+		incomplete_runs,
+		_format_clock(best_s) if best_s > 0.0 else "--:--",
+		_format_clock(average_s) if average_s > 0.0 else "--:--",
+	]
+	_draw_result_row("로컬 테스트", record_text, content_x, content_width, y)
+	_refresh_story_entry_layout()
+	_draw_button(story_journal_open_rect, "수첩", false)
+	_draw_button(result_retry_rect, "다시 도전", true)
+	_draw_button(result_main_rect, "메인 화면", false)
+
+
+func _draw_main_screen() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.92), true)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
+	_draw_text_centered(
+		"행복 이야기",
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 96.0), Vector2(result_panel_rect.size.x, 80.0)),
+		44,
+		ACTIVE_COLOR
+	)
+	_draw_text_centered(
+		"GP-117 · 전투 회복약",
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
+		25,
+		TEXT_COLOR
+	)
+	_draw_text_centered(
+		BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "완료 지점 저장 · 앱을 종료해도 이어하기",
+		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
+		19,
+		MUTED_TEXT_COLOR
+	)
+	if not checkpoint_available:
+		_draw_text_centered("영구 기억 %d/2 · 설계도 %d/%d%s%s" % [unlocked_memories.size(), unlocked_weapon_blueprints.size(), PrototypeWeaponRewards.PERMANENT_DESIGNS.size(), " · 수호기사 동행" if guardian_companion_unlocked else "", " · 세라 동행" if sera_companion_unlocked else ""], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
+	_refresh_story_entry_layout()
+	_draw_button(story_journal_open_rect, "기억 수첩", false)
+	_draw_button(main_feedback_rect, "설정", false)
+	_draw_button(main_village_rect, "시간의 닻 마을", true)
+	if checkpoint_available:
+		_draw_button(main_continue_rect, "이어하기", true)
+	if not checkpoint_message.is_empty():
+		_draw_text_centered(checkpoint_message, Rect2(Vector2(result_panel_rect.position.x, main_continue_rect.position.y - 30.0), Vector2(result_panel_rect.size.x, 26.0)), 15, MUTED_TEXT_COLOR)
+	_draw_button(main_start_rect, "새 도전" if checkpoint_available else "스테이지 시작", not checkpoint_available)
+	_draw_button(main_layout_rect, "조작 배치", false)
+
+
+func _draw_feedback_settings() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.92), true)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), feedback_panel_rect)
+	_draw_text_centered(
+		"설정",
+		Rect2(
+			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.position.y + 42.0),
+			Vector2(feedback_panel_rect.size.x, 58.0)
+		),
+		34,
+		ACTIVE_COLOR
+	)
+	var label_x := feedback_panel_rect.position.x + 70.0
+	_draw_text(
+		"효과음  %d%%" % int(round(feedback_sound_volume * 100.0)),
+		Vector2(label_x, feedback_sound_down_rect.position.y + 35.0),
+		22,
+		TEXT_COLOR
+	)
+	_draw_button(feedback_sound_down_rect, "소리 -", false)
+	_draw_button(feedback_sound_up_rect, "소리 +", false)
+	_draw_text(
+		"진동",
+		Vector2(label_x, feedback_vibration_rect.position.y + 36.0),
+		22,
+		TEXT_COLOR
+	)
+	_draw_button(
+		feedback_vibration_rect,
+		"켜짐" if feedback_vibration_enabled else "꺼짐",
+		feedback_vibration_enabled
+	)
+	_draw_text(
+		"화면 흔들기",
+		Vector2(label_x, feedback_shake_rect.position.y + 36.0),
+		22,
+		TEXT_COLOR
+	)
+	_draw_button(
+		feedback_shake_rect,
+		"켜짐" if feedback_screen_shake_enabled else "꺼짐",
+		feedback_screen_shake_enabled
+	)
+	var validation := android_validation_snapshot()
+	_draw_text(
+		"Android 검증 %d/10 · 연속 %s · 복귀 %d" % [
+			int(validation["completed_runs"]),
+			_format_clock(float(validation["session_elapsed_s"])),
+			int(validation["resume_count"]),
+		],
+		Vector2(label_x, feedback_records_clear_rect.position.y + 35.0),
+		18,
+		TEXT_COLOR
+	)
+	_draw_button(feedback_records_clear_rect, "기록 초기화", false)
+	_draw_text_centered(
+		"기록은 기기에만 저장되며 네트워크로 전송되지 않습니다.",
+		Rect2(
+			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.end.y - 130.0),
+			Vector2(feedback_panel_rect.size.x, 36.0)
+		),
+		17,
+		MUTED_TEXT_COLOR
+	)
+	_draw_button(feedback_back_rect, "메인으로", false)
+
+
+func _draw_layout_editor() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.78), true)
+	var safe := _safe_area_in_viewport()
+	draw_rect(safe, Color("4bd49b", 0.05), true)
+	draw_rect(safe, Color("65e6ae"), false, 4.0)
+	_draw_text("SAFE AREA", safe.position + Vector2(16.0, safe.size.y - 18.0), 16, Color("65e6ae"))
+
+	_draw_move_control()
+	_draw_action_controls()
+	var touch_rects := _control_touch_rects()
+	for control_id in _layout_control_order():
+		var rect: Rect2 = touch_rects[control_id]
+		var invalid := control_id in invalid_layout_controls
+		var selected := control_id == selected_layout_control
+		var outline := Color("f05d5e") if invalid else (ACTIVE_COLOR if selected else Color(TEXT_COLOR, 0.72))
+		draw_rect(rect, Color(outline, 0.10 if invalid else 0.035), true)
+		draw_rect(rect, outline, false, 6.0 if selected else 3.0)
+		if invalid:
+			draw_line(rect.position, rect.end, outline, 4.0)
+			draw_line(Vector2(rect.end.x, rect.position.y), Vector2(rect.position.x, rect.end.y), outline, 4.0)
+
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), editor_toolbar_rect)
+	var selected_label := _layout_control_label(selected_layout_control)
+	var selected_scale := int(round(float(control_scales.get(selected_layout_control, 1.0)) * 100.0))
+	_draw_text("프리셋", editor_toolbar_rect.position + Vector2(20.0, 32.0), 20, MUTED_TEXT_COLOR)
+	_draw_button(editor_preset_default_rect, "기본", active_preset_id == PRESET_DEFAULT)
+	_draw_button(editor_preset_left_rect, "왼손잡이", active_preset_id == PRESET_LEFT)
+	_draw_button(editor_preset_custom_rect, "사용자", active_preset_id == PRESET_CUSTOM)
+	var info_x := editor_preset_custom_rect.end.x + 30.0
+	_draw_text("선택: %s  ·  크기 %d%%  ·  전체 불투명도 %d%%" % [
+		selected_label,
+		selected_scale,
+		int(round(control_opacity * 100.0)),
+	], Vector2(info_x, editor_toolbar_rect.position.y + 38.0), 21, TEXT_COLOR)
+	var status := "적용 가능 · 조작 요소를 드래그하세요"
+	var status_color := PASS_COLOR
+	if not invalid_layout_controls.is_empty():
+		status = "적용 불가 · 터치 영역이 30% 이상 겹칩니다"
+		status_color = Color("ff8b85")
+	elif not layout_store_message.is_empty():
+		status = layout_store_message
+	_draw_text(status, Vector2(info_x, editor_toolbar_rect.position.y + 78.0), 17, status_color)
+	_draw_button(editor_size_down_rect, "크기 -", false)
+	_draw_button(editor_size_up_rect, "크기 +", false)
+	_draw_button(editor_opacity_down_rect, "투명 -", false)
+	_draw_button(editor_opacity_up_rect, "투명 +", false)
+	_draw_button(editor_test_rect, "10초 테스트", true)
+	_draw_button(editor_reset_rect, "초기화", false)
+	_draw_button(editor_cancel_rect, "취소", false)
+	_draw_button(editor_apply_rect, "적용", invalid_layout_controls.is_empty())
+
+
+func _draw_layout_test() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.24), true)
+	_draw_move_control()
+	_draw_action_controls()
+	var touch_rects := _control_touch_rects()
+	for control_id in _layout_control_order():
+		var rect: Rect2 = touch_rects[control_id]
+		var active := control_pointers.has(control_id)
+		var invalid := control_id in invalid_layout_controls
+		var outline := Color("f05d5e") if invalid else (ACTIVE_COLOR if active else Color(TEXT_COLOR, 0.68))
+		draw_rect(rect, Color(outline, 0.16 if active else 0.04), true)
+		draw_rect(rect, outline, false, 7.0 if active else 3.0)
+	var safe := _safe_area_in_viewport()
+	var countdown_rect := Rect2(
+		Vector2(safe.get_center().x - 210.0, safe.position.y + 18.0),
+		Vector2(420.0, 60.0)
+	)
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.97)), countdown_rect)
+	_draw_text_centered(
+		"배치 테스트  %.1f초" % maxf(layout_test_remaining_s, 0.0),
+		countdown_rect,
+		25,
+		ACTIVE_COLOR
+	)
+	_draw_button(layout_test_exit_rect, "테스트 종료", false)
+	var status := "동시 입력 최고 %d개" % layout_test_peak_controls
+	if not invalid_layout_controls.is_empty():
+		status += " · 겹침 %d개" % invalid_layout_controls.size()
+	_draw_text(
+		status,
+		Vector2(countdown_rect.position.x, countdown_rect.end.y + 26.0),
+		17,
+		Color("ff8b85") if not invalid_layout_controls.is_empty() else TEXT_COLOR
+	)
+	_draw_pointer_markers()
+
+
+func _draw_combat_resume_countdown() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.72), true)
+	var safe := _safe_area_in_viewport()
+	var count := maxi(1, int(ceil(combat_resume_remaining_s)))
+	_draw_text_centered(
+		"전투 복귀",
+		Rect2(Vector2(safe.position.x, safe.get_center().y - 110.0), Vector2(safe.size.x, 52.0)),
+		28,
+		TEXT_COLOR
+	)
+	_draw_text_centered(
+		str(count),
+		Rect2(Vector2(safe.position.x, safe.get_center().y - 48.0), Vector2(safe.size.x, 110.0)),
+		72,
+		ACTIVE_COLOR
+	)
+	_draw_text_centered(
+		"새 배치로 곧 시작합니다",
+		Rect2(Vector2(safe.position.x, safe.get_center().y + 72.0), Vector2(safe.size.x, 42.0)),
+		19,
+		MUTED_TEXT_COLOR
+	)
+
+
+func _draw_result_row(label: String, value: String, x: float, width: float, y: float) -> void:
+	draw_rect(Rect2(Vector2(x, y - 26.0), Vector2(width, 52.0)), Color("102b3a"), true)
+	_draw_text(label, Vector2(x + 18.0, y + 7.0), 18, MUTED_TEXT_COLOR)
+	var value_width := width * 0.73 - 18.0
+	var font_size := 19
+	var lines := PrototypeStoryView.wrap(value, ThemeDB.fallback_font, font_size, value_width)
+	while lines.size() > 2 and font_size > 12:
+		font_size -= 1
+		lines = PrototypeStoryView.wrap(value, ThemeDB.fallback_font, font_size, value_width)
+	for index in lines.size():
+		_draw_text(lines[index], Vector2(x + width * 0.27, y + (7.0 if lines.size() == 1 else -6.0 + index * 22.0)), font_size, TEXT_COLOR)
+
+
+func _current_record_summary() -> Dictionary:
+	var summary := test_record_summary.duplicate(true)
+	var stage_count := int(movement_metrics.get("run_stage_count", 1))
+	if stage_count > 1:
+		var stats: Dictionary = summary.get("completion_by_stage_count", {}).get(str(stage_count), {})
+		for key in ["completed_run_count", "best_completion_s", "average_completion_s"]:
+			summary[key] = stats.get(key, 0)
+	return summary
+
+
+func _section_time_summary() -> String:
+	if int(result_snapshot.get("stage_count", 1)) > 1:
+		var stage_parts: Array[String] = []
 		for entry in result_snapshot.get("stage_history", []):
 			stage_parts.append("%d %.1fs" % [int(entry["stage"]), float(entry["elapsed_s"])])
 		return " · ".join(stage_parts)
@@ -2121,7 +2983,7 @@ func _draw_skill_rewards() -> void:
 		var offer: Dictionary = skill_reward_offers[i]
 		var rect: Rect2 = skill_reward_offer_rects[i]
 		draw_style_box(_panel_style(Color("365d68") if i == selected_skill_offer else PANEL_COLOR), rect)
-		_draw_village_text(("검 · " if offer.weapon == "sword" else "활 · ") + String(offer.name), Rect2(rect.position + Vector2(12, 12), Vector2(rect.size.x - 24, rect.size.y * 0.20)), 25, TEXT_COLOR)
+		_draw_village_text((PrototypeWeaponRewards.family_name(String(offer.weapon)) + " · ") + String(offer.name), Rect2(rect.position + Vector2(12, 12), Vector2(rect.size.x - 24, rect.size.y * 0.20)), 25, TEXT_COLOR)
 		for j in offer.lines.size():
 			_draw_village_text(String(offer.lines[j]), Rect2(rect.position + Vector2(12, rect.size.y * (0.33 + j * 0.18)), Vector2(rect.size.x - 24, rect.size.y * 0.14)), 19, MUTED_TEXT_COLOR)
 	_draw_text_centered("기술을 고른 뒤 교체할 슬롯을 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.46), Vector2(safe.size.x * 0.62, safe.size.y * 0.06)), 19, TEXT_COLOR)

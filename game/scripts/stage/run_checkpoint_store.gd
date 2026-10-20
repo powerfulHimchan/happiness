@@ -115,6 +115,8 @@ static func valid_state(state: Dictionary) -> bool:
 	# GP-105~107 저장은 추가 필드가 없으면 일반 등급·보상 완료로 해석한다.
 	if state.weapons.has("equipment") and not PrototypeWeaponRewards.valid_equipment(state.weapons.equipment):
 		return false
+	var families: Array = state.weapons.get("equipment", {"sword": 0, "bow": 0}).keys()
+	if state.weapons.has("skills") and state.weapons.skills.keys().any(func(id: String) -> bool: return id not in families): return false
 	if state.weapons.has("blueprints") and (not state.weapons.has("equipment") or not PrototypeWeaponRewards.valid_blueprints(state.weapons.blueprints, state.weapons.equipment)):
 		return false
 	if stage.has("reward_claimed") != state.weapons.has("equipment"):
@@ -188,6 +190,7 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	for card in valid_cards:
 		if not growth.ranks.has(card.id): continue
+		if card.get("category", "") in PrototypeWeaponRewards.FAMILY_IDS and card.category not in families: return false
 		for required in card.get("requires", []):
 			if not growth.ranks.has(required): return false
 		for excluded in card.get("excludes", []):
@@ -237,22 +240,26 @@ static func valid_state(state: Dictionary) -> bool:
 	if job.has("parent"):
 		expected_max += int(job.health_bonus)
 		if job.weapon == "sword": sword_bonus += float(job.damage_bonus)
-		else: bow_bonus += float(job.damage_bonus)
+		elif job.weapon == "bow": bow_bonus += float(job.damage_bonus)
 	expected_max += int(ranks.get("dragon_heart", 0)) * 30 + int(ranks.get("breaker_vigor", 0)) * 20 + int(ranks.get("storm_breath", 0)) * 20
 	sword_bonus += int(ranks.get("dragon_flame", 0)) * 0.20 + int(ranks.get("breaker_edge", 0)) * 0.30
 	bow_bonus += int(ranks.get("storm_arrow", 0)) * 0.25
+	var fist_bonus := int(ranks.get("fist_power", 0)) * 0.15 + (0.10 if parent == "martial_artist" else 0.0)
+	if job.get("weapon", "") == "fist" and job.has("parent"): fist_bonus += float(job.damage_bonus)
 	for card in valid_cards:
 		var effect: Dictionary = card.get("job_effect", {})
 		var rank := int(ranks.get(card.id, 0))
 		expected_max += int(effect.get("health", 0)) * rank
 		if not effect.is_empty():
 			if job.weapon == "sword": sword_bonus += float(effect.get("damage", 0.0)) * rank
-			else: bow_bonus += float(effect.get("damage", 0.0)) * rank
+			elif job.weapon == "bow": bow_bonus += float(effect.get("damage", 0.0)) * rank
+			else: fist_bonus += float(effect.get("damage", 0.0)) * rank
+	if not _number(player.get("fist", 0), 0, 100) or not is_equal_approx(float(player.get("fist", 0)), fist_bonus): return false
 	if int(player.max_health) != expected_max or not is_equal_approx(float(player.common), int(ranks.get("power", 0)) * 0.10) or not is_equal_approx(float(player.sword), sword_bonus) or not is_equal_approx(float(player.bow), bow_bonus):
 		return false
-	if state.weapons.get("active") not in ["sword", "bow"]:
+	if state.weapons.get("active") not in families:
 		return false
-	for weapon in ["sword", "bow"]:
+	for weapon in families:
 		if not state.weapons.get(weapon) is Dictionary:
 			return false
 		for key in ["_basic_remaining_s", "_skill_1_cooldown_s", "_skill_2_cooldown_s", "basic_attack_count", "skill_hit_count", "total_damage"]:

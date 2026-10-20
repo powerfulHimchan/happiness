@@ -39,7 +39,7 @@ func _run() -> void:
 	match phase:
 		"seed":
 			if not await _test_skill_codex(false, 1.0): return
-			if not _check(PrototypeSkillRewards.SKILLS.size() == PrototypeSkillRewards.POOLS.sword.size() + PrototypeSkillRewards.POOLS.bow.size() and PrototypeSkillRewards.POOLS.sword.has("sword_charge") and PrototypeSkillRewards.POOLS.bow.has("bow_retreat"), "전체 스킬·검 돌파/활 후퇴 원본 보존"): return
+			if not _check(PrototypeSkillRewards.SKILLS.size() == PrototypeSkillRewards.POOLS.sword.size() + PrototypeSkillRewards.POOLS.bow.size() + PrototypeSkillRewards.FIST_POOL.size() and PrototypeSkillRewards.POOLS.sword.has("sword_charge") and PrototypeSkillRewards.POOLS.bow.has("bow_retreat"), "전체 스킬·검 돌파/활 후퇴 원본 보존"): return
 			controls.begin_retry("sword", 5)
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "첫 정예 무기 유지"): return
 			if not await _replace_mobility("sword_charge", 1, true): return

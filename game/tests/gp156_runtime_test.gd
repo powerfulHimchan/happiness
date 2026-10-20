@@ -328,6 +328,7 @@ func _test_boost_combat() -> bool:
 		ultimate.selected_profile.clear()
 		if not profile.is_empty() and not _check(ultimate.select_job_ultimate(profile.job, profile.id), "직업 필살기 원본 선택"): return false
 		var target := _boost_target("ultimate")
+		target.global_position = player.global_position + Vector2(100, 0)
 		target.damage_receiver.health = 1
 		ultimate.gauge = 100
 		ultimate.request_ultimate()

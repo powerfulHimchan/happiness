@@ -38,7 +38,7 @@ func _refresh_status() -> void:
 func current_metrics() -> Dictionary:
 	var metrics := super.current_metrics()
 	metrics.enemy_name = BOSS_NAME
-	metrics.elite_weakness = "검·활 150%" if state == State.STUNNED else "검·활 125%" if state == State.RECOVERY else "방패 정면 감소 · 뒤쪽 정상" if _shield_raised() else "검·활 정상"
+	metrics.elite_weakness = "무기 150%" if state == State.STUNNED else "무기 125%" if state == State.RECOVERY else "방패 정면 감소 · 뒤쪽 정상" if _shield_raised() else "무기 정상"
 	metrics.guardian_lance_count = lance_count
 	return metrics
 
@@ -102,18 +102,18 @@ func _update_charge(delta: float) -> void:
 	super._update_charge(delta)
 	if position.x <= ARENA_LEFT_X or position.x >= ARENA_RIGHT_X:
 		position.x = clampf(position.x, ARENA_LEFT_X, ARENA_RIGHT_X)
-		_set_state(State.STUNNED, "벽 충돌 · 검·활 약점")
+		_set_state(State.STUNNED, "벽 충돌 · 무기 약점")
 
 func _shield_raised() -> bool:
 	return state in [State.WARNING, State.CHARGING]
 
 func _adjust_damage_event(event: DamageEvent) -> DamageEvent:
 	var multiplier := 1.0
-	if event.tags.has("sword") or event.tags.has("bow"):
+	if event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist"):
 		if state == State.STUNNED: multiplier = 1.50
 		elif state == State.RECOVERY: multiplier = 1.25
 		elif _shield_raised() and (event.source_position.x - global_position.x) * _charge_direction >= 0:
-			multiplier = 0.65 if event.tags.has("sword") else 0.80
+			multiplier = 0.80 if event.tags.has("bow") else 0.65
 	last_damage_multiplier = multiplier
 	last_adjusted_damage = maxi(1, roundi(event.damage * multiplier))
 	var adjusted := DamageEvent.new()

@@ -159,7 +159,7 @@ func _run() -> void:
 				_tap(controls.village_snapshot().pager.next.get_center())
 				cards = controls.village_snapshot().cards
 			var current: Array = cards.filter(func(card: Dictionary) -> bool: return card.id == advanced_id)
-			if not _check(cards.size() == 2 and controls.village_snapshot().advanced_pages == 2 and current.size() == 1 and current[0].status == "진화 · 현재 도전" and current[0].open, "네 상위 직업 두 페이지·영구 발견·현재 진화"): return
+			if not _check(cards.size() == 2 and controls.village_snapshot().advanced_pages == ceili(float(PrototypeJobProgress.ADVANCED_JOBS.size()) / PrototypeVillageView.ADVANCED_PAGE_SIZE) and current.size() == 1 and current[0].status == "진화 · 현재 도전" and current[0].open, "네 상위 직업 두 페이지·영구 발견·현재 진화"): return
 			var meta := FileAccess.get_file_as_string(legacy.save_path)
 			if not await _layout_check(): return
 			if not _check(FileAccess.get_file_as_string(legacy.save_path) == meta and store.load_checkpoint() == saved, "도감 조회는 저장 불변"): return

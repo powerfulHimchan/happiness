@@ -54,7 +54,7 @@ func _refresh_status() -> void:
 func current_metrics() -> Dictionary:
 	var metrics := super.current_metrics()
 	metrics.enemy_name = BOSS_NAME
-	metrics.elite_weakness = "왕관 빈틈 · 검·활125%" if state == State.RECOVERY else "검·활 정상"
+	metrics.elite_weakness = "왕관 빈틈 · 무기125%" if state == State.RECOVERY else "무기 정상"
 	metrics.sera_ring_count = ring_count
 	return metrics
 
@@ -123,7 +123,7 @@ func _update_charge(delta: float) -> void:
 		_begin_recovery("시계바늘 돌진 후 왕관 빈틈")
 
 func _adjust_damage_event(event: DamageEvent) -> DamageEvent:
-	last_damage_multiplier = 1.25 if state == State.RECOVERY and (event.tags.has("sword") or event.tags.has("bow")) else 1.0
+	last_damage_multiplier = 1.25 if state == State.RECOVERY and (event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist")) else 1.0
 	last_adjusted_damage = maxi(1, roundi(event.damage * last_damage_multiplier))
 	var adjusted := DamageEvent.new()
 	adjusted.event_id = event.event_id

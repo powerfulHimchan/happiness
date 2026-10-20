@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_definition.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+weapon_id = &"fist_basic"
+display_name = "연습용 권갑"
+attack_range_m = 1.1
+attack_interval_s = PackedFloat32Array(0.18, 0.18, 0.20, 0.30)
+damage = PackedInt32Array(7, 8, 9, 14)
+projectile_speed_mps = 0.0
+skill_ids = PackedStringArray("fist_dash", "fist_flurry")
