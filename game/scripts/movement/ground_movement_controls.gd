@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 43564)
-Total output lines: 3590
-
 extends Control
 
 ## GP-103 직업 필살기·성장 선택, 모바일 전투 HUD와 Android 검증 표시.
@@ -1804,7 +1801,348 @@ func _handle_editor_touch(touch: InputEventScreenTouch) -> void:
 		return
 	var hit_control := _layout_control_at(touch.position)
 	if hit_control != &"":
-		selected_layout_control = hit_contr…3564 tokens truncated…lor("69d06f") if health > max_health * 0.3 else Color("ef6f6c"),
+		selected_layout_control = hit_control
+		editor_drag_pointer_id = touch.index
+		_move_layout_control(hit_control, touch.position)
+
+
+func _handle_layout_test_touch(touch: InputEventScreenTouch) -> void:
+	if touch.pressed and layout_test_exit_rect.has_point(touch.position):
+		finish_layout_test()
+		return
+	if touch.pressed:
+		_handle_touch_pressed(touch.index, touch.position)
+	else:
+		_handle_touch_released(touch.index)
+
+
+func _handle_editor_drag(pointer_id: int, position: Vector2) -> void:
+	if pointer_id == editor_drag_pointer_id and selected_layout_control != &"":
+		_move_layout_control(selected_layout_control, position)
+
+
+func _move_layout_control(control_id: StringName, position: Vector2) -> void:
+	var safe := _safe_area_in_viewport()
+	var half_size := _control_touch_rect(control_id).size * 0.5
+	var clamped := Vector2(
+		clampf(position.x, safe.position.x + half_size.x, safe.end.x - half_size.x),
+		clampf(position.y, safe.position.y + half_size.y, safe.end.y - half_size.y)
+	)
+	control_centers[control_id] = Vector2(
+		(clamped.x - safe.position.x) / maxf(safe.size.x, 1.0),
+		(clamped.y - safe.position.y) / maxf(safe.size.y, 1.0)
+	)
+	_mark_layout_custom()
+	_refresh_layout()
+	_validate_control_layout()
+
+
+func release_all_inputs() -> void:
+	pointer_controls.clear()
+	pointer_positions.clear()
+	control_pointers.clear()
+	command_buffer.clear()
+	move_pointer_id = -1
+	move_vector = Vector2.ZERO
+	move_origin = move_zone.get_center()
+	move_vector_changed.emit(Vector2.ZERO)
+	jump_released.emit()
+	queue_redraw()
+
+
+func _handle_touch_pressed(pointer_id: int, position: Vector2) -> void:
+	pointer_positions[pointer_id] = position
+	if screen_mode == ScreenMode.COMBAT and _handle_header_action(position):
+		if screen_mode == ScreenMode.COMBAT:
+			pointer_controls[pointer_id] = &"header"
+		return
+
+	if move_zone.has_point(position) and move_pointer_id < 0:
+		move_pointer_id = pointer_id
+		move_origin = _clamp_move_origin(position)
+		move_vector = Vector2.ZERO
+		pointer_controls[pointer_id] = MOVE_CONTROL
+		control_pointers[MOVE_CONTROL] = pointer_id
+		_record_layout_test_input(MOVE_CONTROL)
+		_update_peak_controls()
+		move_vector_changed.emit(move_vector)
+		return
+
+	var action_id := _action_at(position)
+	if action_id != &"" and not control_pointers.has(action_id):
+		pointer_controls[pointer_id] = action_id
+		control_pointers[action_id] = pointer_id
+		_record_layout_test_input(action_id)
+		_submit_action(action_id, PlayerCommand.Phase.PRESSED, pointer_id)
+		_update_peak_controls()
+		return
+
+	pointer_controls[pointer_id] = &"unassigned"
+
+
+func _handle_touch_dragged(pointer_id: int, position: Vector2) -> void:
+	pointer_positions[pointer_id] = position
+	if pointer_id == move_pointer_id:
+		var displacement := position - move_origin
+		move_vector = displacement.limit_length(move_radius) / move_radius
+		move_vector_changed.emit(move_vector)
+
+
+func _handle_touch_released(pointer_id: int) -> void:
+	var control_id: StringName = pointer_controls.get(pointer_id, &"")
+	if control_id == MOVE_CONTROL:
+		move_pointer_id = -1
+		move_vector = Vector2.ZERO
+		control_pointers.erase(MOVE_CONTROL)
+		move_vector_changed.emit(Vector2.ZERO)
+	elif control_id in ACTION_ORDER:
+		if control_id == &"jump":
+			_submit_action(control_id, PlayerCommand.Phase.RELEASED, pointer_id)
+		control_pointers.erase(control_id)
+
+	pointer_controls.erase(pointer_id)
+	pointer_positions.erase(pointer_id)
+
+
+func _submit_action(action_id: StringName, phase: int, pointer_id: int) -> void:
+	command_buffer.submit(
+		int(ACTION_TYPES[action_id]),
+		phase,
+		pointer_id,
+		Time.get_ticks_msec()
+	)
+
+
+func _dispatch_action_command(command: PlayerCommand) -> void:
+	if screen_mode == ScreenMode.RUN_BUILD or run_build_resume_pending: return
+	match command.command_type:
+		PlayerCommand.Type.JUMP:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				jump_pressed.emit()
+			elif command.phase == PlayerCommand.Phase.RELEASED:
+				jump_released.emit()
+		PlayerCommand.Type.EVADE:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				evade_pressed.emit()
+		PlayerCommand.Type.SKILL_1:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				skill_1_pressed.emit()
+		PlayerCommand.Type.SKILL_2:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				skill_2_pressed.emit()
+		PlayerCommand.Type.ULTIMATE:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				ultimate_pressed.emit()
+		PlayerCommand.Type.WEAPON_SWAP:
+			if command.phase == PlayerCommand.Phase.PRESSED:
+				weapon_swap_pressed.emit()
+		PlayerCommand.Type.RECOVERY_POTION:
+			if command.phase == PlayerCommand.Phase.PRESSED and screen_mode == ScreenMode.COMBAT:
+				recovery_potion_pressed.emit()
+
+
+func _handle_header_action(position: Vector2) -> bool:
+	if combat_build_rect.has_point(position):
+		open_run_build()
+		return true
+	if combat_layout_rect.has_point(position):
+		open_layout_editor()
+		return true
+	if fps_60_rect.has_point(position):
+		Engine.max_fps = 60
+		_append_action_log("60 FPS로 변경")
+		return true
+	if fps_30_rect.has_point(position):
+		Engine.max_fps = 30
+		_append_action_log("30 FPS로 변경")
+		return true
+	if reset_rect.has_point(position):
+		reset_requested.emit()
+		action_log.clear()
+		_append_action_log("위치와 테스트 결과 초기화")
+		return true
+	return false
+
+
+func _action_at(position: Vector2) -> StringName:
+	for action_id in ACTION_ORDER:
+		var rect: Rect2 = action_rects[action_id]
+		if rect.has_point(position):
+			return action_id
+	return &""
+
+
+func _update_peak_controls() -> void:
+	peak_simultaneous_controls = maxi(peak_simultaneous_controls, control_pointers.size())
+	if screen_mode == ScreenMode.LAYOUT_TEST:
+		layout_test_peak_controls = maxi(layout_test_peak_controls, control_pointers.size())
+
+
+func _record_layout_test_input(control_id: StringName) -> void:
+	if screen_mode != ScreenMode.LAYOUT_TEST:
+		return
+	layout_test_input_counts[control_id] = int(layout_test_input_counts.get(control_id, 0)) + 1
+
+
+func _refresh_layout() -> void:
+	var safe := _safe_area_in_viewport()
+	var button_width := clampf(safe.size.x * 0.06, 72.0, 106.0)
+	var button_height := clampf(safe.size.y * 0.045, 34.0, 42.0)
+	var gap := 8.0
+	var right := safe.end.x - 18.0
+	var top := safe.position.y + 112.0
+	reset_rect = Rect2(right - button_width, top, button_width, button_height)
+	fps_30_rect = Rect2(reset_rect.position.x - gap - button_width, top, button_width, button_height)
+	fps_60_rect = Rect2(fps_30_rect.position.x - gap - button_width, top, button_width, button_height)
+	combat_layout_rect = Rect2(fps_60_rect.position.x - gap - button_width, top, button_width, button_height)
+
+	var move_scale := float(control_scales.get(MOVE_CONTROL, 1.0))
+	var move_size := Vector2(
+		clampf(safe.size.x * 0.30, 420.0, 570.0),
+		clampf(safe.size.y * 0.34, 260.0, 340.0)
+	) * move_scale
+	var move_center := safe.position + Vector2(control_centers.get(MOVE_CONTROL, DEFAULT_CONTROL_CENTERS[MOVE_CONTROL])) * safe.size
+	move_center = _clamp_control_center(move_center, move_size * 0.5, safe)
+	control_centers[MOVE_CONTROL] = (move_center - safe.position) / safe.size
+	move_zone = Rect2(move_center - move_size * 0.5, move_size)
+	move_radius = clampf(minf(move_zone.size.x, move_zone.size.y) * 0.31, 82.0, 110.0)
+	if move_pointer_id < 0:
+		move_origin = move_zone.get_center()
+
+	var radii := {
+		&"jump": 84.0,
+		&"evade": 72.0,
+		&"skill_1": 72.0,
+		&"skill_2": 72.0,
+		&"ultimate": 72.0,
+		&"weapon_swap": 64.0,
+		&"recovery_potion": 56.0,
+	}
+	action_rects.clear()
+	for action_id in ACTION_ORDER:
+		var normalized: Vector2 = control_centers.get(action_id, DEFAULT_CONTROL_CENTERS[action_id])
+		var center := safe.position + normalized * safe.size
+		var radius: float = float(radii[action_id]) * float(control_scales.get(action_id, 1.0))
+		center = _clamp_control_center(center, Vector2.ONE * radius, safe)
+		control_centers[action_id] = (center - safe.position) / safe.size
+		action_rects[action_id] = Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
+
+	hud_rect = Rect2(
+		safe.position + Vector2(10.0, 10.0),
+		Vector2(safe.size.x - 20.0, clampf(safe.size.y * 0.20, 132.0, 158.0))
+	)
+	combat_build_rect = _run_build_entry_rect(safe, Vector2(button_width * 2 + gap, button_height))
+	var panel_size := Vector2(
+		clampf(safe.size.x * 0.72, 760.0, 1060.0),
+		clampf(safe.size.y * 0.82, 580.0, 650.0)
+	)
+	panel_size.x = minf(panel_size.x, safe.size.x - 32.0)
+	panel_size.y = minf(panel_size.y, safe.size.y - 32.0)
+	result_panel_rect = Rect2(safe.get_center() - panel_size * 0.5, panel_size)
+	var result_button_size := Vector2(clampf(panel_size.x * 0.30, 190.0, 280.0), 62.0)
+	var result_gap := 24.0
+	var buttons_width := result_button_size.x * 2.0 + result_gap
+	var buttons_x := result_panel_rect.get_center().x - buttons_width * 0.5
+	var buttons_y := result_panel_rect.end.y - 86.0
+	result_retry_rect = Rect2(Vector2(buttons_x, buttons_y), result_button_size)
+	result_main_rect = Rect2(
+		Vector2(buttons_x + result_button_size.x + result_gap, buttons_y),
+		result_button_size
+	)
+	main_start_rect = Rect2(
+		Vector2(result_panel_rect.get_center().x - 310.0, result_panel_rect.end.y - 106.0),
+		Vector2(280.0, 68.0)
+	)
+	main_layout_rect = Rect2(
+		Vector2(result_panel_rect.get_center().x + 30.0, result_panel_rect.end.y - 106.0),
+		Vector2(280.0, 68.0)
+	)
+	main_feedback_rect = Rect2(
+		Vector2(result_panel_rect.get_center().x - 310.0, result_panel_rect.end.y - 190.0),
+		Vector2(280.0, 56.0)
+	)
+	main_village_rect = Rect2(Vector2(result_panel_rect.get_center().x + 30.0, result_panel_rect.end.y - 190.0), Vector2(280.0, 56.0))
+	main_continue_rect = Rect2(
+		Vector2(result_panel_rect.get_center().x - 140.0, result_panel_rect.end.y - 274.0),
+		Vector2(280.0, 56.0)
+	)
+	feedback_panel_rect = result_panel_rect
+	var feedback_row_x := feedback_panel_rect.position.x + 310.0
+	var feedback_row_width := feedback_panel_rect.size.x - 380.0
+	var feedback_button_width := 150.0
+	feedback_sound_down_rect = Rect2(
+		Vector2(feedback_row_x, feedback_panel_rect.position.y + 174.0),
+		Vector2(feedback_button_width, 54.0)
+	)
+	feedback_sound_up_rect = Rect2(
+		Vector2(feedback_sound_down_rect.end.x + 18.0, feedback_sound_down_rect.position.y),
+		Vector2(feedback_button_width, 54.0)
+	)
+	feedback_vibration_rect = Rect2(
+		Vector2(feedback_row_x, feedback_panel_rect.position.y + 254.0),
+		Vector2(feedback_row_width, 56.0)
+	)
+	feedback_shake_rect = Rect2(
+		Vector2(feedback_row_x, feedback_panel_rect.position.y + 334.0),
+		Vector2(feedback_row_width, 56.0)
+	)
+	feedback_records_clear_rect = Rect2(
+		Vector2(feedback_row_x, feedback_panel_rect.position.y + 400.0),
+		Vector2(feedback_row_width, 54.0)
+	)
+	feedback_back_rect = Rect2(
+		Vector2(feedback_panel_rect.get_center().x - 120.0, feedback_panel_rect.end.y - 82.0),
+		Vector2(240.0, 54.0)
+	)
+
+	editor_toolbar_rect = Rect2(
+		safe.position + Vector2(10.0, 10.0),
+		Vector2(safe.size.x - 20.0, clampf(safe.size.y * 0.24, 166.0, 190.0))
+	)
+	var tool_height := 50.0
+	var tool_y := editor_toolbar_rect.position.y + editor_toolbar_rect.size.y - tool_height - 14.0
+	var tool_gap := 10.0
+	var small_width := clampf(safe.size.x * 0.055, 68.0, 92.0)
+	var action_width := clampf(safe.size.x * 0.09, 118.0, 160.0)
+	var preset_width := clampf(safe.size.x * 0.085, 104.0, 148.0)
+	var preset_y := editor_toolbar_rect.position.y + 44.0
+	editor_preset_default_rect = Rect2(Vector2(editor_toolbar_rect.position.x + 20.0, preset_y), Vector2(preset_width, 44.0))
+	editor_preset_left_rect = Rect2(Vector2(editor_preset_default_rect.end.x + tool_gap, preset_y), Vector2(preset_width, 44.0))
+	editor_preset_custom_rect = Rect2(Vector2(editor_preset_left_rect.end.x + tool_gap, preset_y), Vector2(preset_width, 44.0))
+	editor_size_down_rect = Rect2(Vector2(editor_toolbar_rect.position.x + 20.0, tool_y), Vector2(small_width, tool_height))
+	editor_size_up_rect = Rect2(Vector2(editor_size_down_rect.end.x + tool_gap, tool_y), Vector2(small_width, tool_height))
+	editor_opacity_down_rect = Rect2(Vector2(editor_size_up_rect.end.x + 42.0, tool_y), Vector2(small_width, tool_height))
+	editor_opacity_up_rect = Rect2(Vector2(editor_opacity_down_rect.end.x + tool_gap, tool_y), Vector2(small_width, tool_height))
+	editor_apply_rect = Rect2(Vector2(editor_toolbar_rect.end.x - action_width - 20.0, tool_y), Vector2(action_width, tool_height))
+	editor_cancel_rect = Rect2(Vector2(editor_apply_rect.position.x - action_width - tool_gap, tool_y), Vector2(action_width, tool_height))
+	editor_reset_rect = Rect2(Vector2(editor_cancel_rect.position.x - action_width - tool_gap, tool_y), Vector2(action_width, tool_height))
+	editor_test_rect = Rect2(Vector2(editor_reset_rect.position.x - action_width - tool_gap, tool_y), Vector2(action_width, tool_height))
+	layout_test_exit_rect = Rect2(
+		Vector2(safe.end.x - action_width - 20.0, safe.position.y + 20.0),
+		Vector2(action_width, 54.0)
+	)
+
+
+func _draw_header() -> void:
+	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), hud_rect)
+	var section_index: int = int(movement_metrics.get("stage_section_index", 1))
+	var section_count: int = int(movement_metrics.get("stage_section_count", 5))
+	var section_name: String = String(movement_metrics.get("stage_section_name", "전진 1"))
+	var stage_elapsed: float = float(movement_metrics.get("stage_elapsed_s", 0.0))
+	var stage_target: float = float(movement_metrics.get("stage_target_s", 180.0))
+	var left_x := hud_rect.position.x + 20.0
+	var center_x := hud_rect.position.x + hud_rect.size.x * 0.34
+	var right_x := hud_rect.position.x + hud_rect.size.x * 0.62
+	var top_y := hud_rect.position.y + 28.0
+
+	var health: int = int(movement_metrics.get("health", 100))
+	var max_health: int = maxi(1, int(movement_metrics.get("max_health", 100)))
+	_draw_village_text("체력  %d / %d" % [health, max_health] + (" · 방벽 %d/%d" % [int(movement_metrics.get("barrier_health", 0)), int(movement_metrics.get("barrier_capacity", 20))] if bool(movement_metrics.get("barrier_unlocked", false)) else ""), Rect2(Vector2(left_x, top_y - 24), Vector2(hud_rect.size.x * 0.29, 30)), 23, TEXT_COLOR)
+	var health_bar := Rect2(Vector2(left_x, top_y + 14.0), Vector2(hud_rect.size.x * 0.27, 18.0))
+	draw_rect(health_bar, Color("0d202b"), true)
+	draw_rect(
+		Rect2(health_bar.position, Vector2(health_bar.size.x * clampf(float(health) / float(max_health), 0.0, 1.0), health_bar.size.y)),
+		Color("69d06f") if health > max_health * 0.3 else Color("ef6f6c"),
 		true
 	)
 	_draw_text("Lv.%d · 경험치 %d/%d" % [int(movement_metrics.get("growth_level", 1)), int(movement_metrics.get("growth_xp", 0)), int(movement_metrics.get("growth_next_xp", 20))], Vector2(left_x, top_y + 56.0), 17, ACTIVE_COLOR)
