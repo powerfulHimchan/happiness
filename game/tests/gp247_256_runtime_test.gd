@@ -48,6 +48,7 @@ func _run() -> void:
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
 			controls.selected_starting_weapon = weapon
+			controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 			controls.selected_stage_limit = 5
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "실제 여섯 후보 도전 준비"): return

@@ -135,6 +135,7 @@ func _start_regions(weapon: String) -> bool:
 	controls.show_main_screen()
 	controls.show_start_weapon_selection()
 	controls.selected_starting_weapon = weapon
+	controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 	runner.region_rng.seed = 42 if weapon == "sword" else 43
 	_tap(controls.start_length_rects[2].get_center())
 	if controls.pending_boss_legacy.get("choice", "") == "destroy":

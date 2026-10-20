@@ -123,6 +123,7 @@ func _run() -> void:
 				controls.show_start_weapon_selection()
 				controls.selected_story_enabled = false
 				controls.selected_starting_weapon = weapon
+				controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 				_tap(controls.start_length_rects[mode].get_center())
 				_tap(controls.start_weapon_confirm_rect.get_center())
 				if not _check_support("rescue", 50 if mode == 0 else 30): return
