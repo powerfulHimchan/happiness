@@ -842,7 +842,10 @@ func _draw_growth_choices() -> void:
 		_draw_text_centered(String(card["title"]), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.32), Vector2(rect.size.x, 44.0)), font_size, TEXT_COLOR)
 		var line_index := 0
 		for line in card["lines"]:
-			_draw_text_centered(String(line), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.56 + line_index * 38.0), Vector2(rect.size.x, 32.0)), font_size - 3, PASS_COLOR)
+			var line_font_size := font_size - 3
+			while line_font_size > 10 and ThemeDB.fallback_font.get_string_size(String(line), HORIZONTAL_ALIGNMENT_LEFT, -1, line_font_size).x > rect.size.x - 24:
+				line_font_size -= 1
+			_draw_text_centered(String(line), Rect2(rect.position + Vector2(0.0, rect.size.y * 0.56 + line_index * 38.0), Vector2(rect.size.x, 32.0)), line_font_size, PASS_COLOR)
 			line_index += 1
 		var tag_labels: Array[String] = []
 		var tags: Dictionary = card.get("tags", {})

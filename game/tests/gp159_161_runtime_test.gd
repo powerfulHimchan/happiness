@@ -170,7 +170,10 @@ func _earn(id: String, failure: bool = false) -> bool:
 			var rect: Rect2 = controls.growth_card_rects[index]
 			if not _check(controls.layout_snapshot().safe.encloses(rect), "새 강화 카드 두 화면비 안전 영역"): return false
 			for line in growth.offered_cards[index].lines:
-				if not _check(ThemeDB.fallback_font.get_string_size(String(line), HORIZONTAL_ALIGNMENT_LEFT, -1, mini(26, int(rect.size.x / 12.0)) - 3).x <= rect.size.x - 24, "새 강화 설명 너비"): return false
+				var line_font_size := mini(26, int(rect.size.x / 12.0)) - 3
+				while line_font_size > 10 and ThemeDB.fallback_font.get_string_size(String(line), HORIZONTAL_ALIGNMENT_LEFT, -1, line_font_size).x > rect.size.x - 24:
+					line_font_size -= 1
+				if not _check(ThemeDB.fallback_font.get_string_size(String(line), HORIZONTAL_ALIGNMENT_LEFT, -1, line_font_size).x <= rect.size.x - 24, "새 강화 설명 너비"): return false
 		book.save_path = "user://gp159_161_missing/abilities.jsonl"
 		_tap(controls.growth_card_rects[index].get_center())
 		book.save_path = BATCH_BOOK
