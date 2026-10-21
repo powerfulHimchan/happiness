@@ -346,7 +346,7 @@ func _specific_combat(target: PrototypeTarget) -> bool:
 		_reset_guard()
 		weapons.request_skill_2()
 		player.invincible = kind == "invulnerable"
-		player.receive_damage(_incoming(kind != "rear",PackedStringArray(["trap"]) if kind == "trap" else PackedStringArray(["enemy"]),0 if kind == "invalid" else 40))
+		player.receive_damage(_incoming(kind != "rear",PackedStringArray(["enemy","hazard","clock","ruins"]) if kind == "trap" else PackedStringArray(["enemy"]),0 if kind == "invalid" else 40))
 		player.invincible = false
 		if not _check(not shield._counter_armed and shield.guard_count == 0 and player.damage_receiver.health == (60 if kind in ["rear","trap"] else 100),"응수 오발동 차단: " + kind): return false
 	_reset_guard()

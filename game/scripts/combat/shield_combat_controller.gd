@@ -27,7 +27,7 @@ func _is_guarding() -> bool:
 	return definition != null and (definition.skill_id == &"shield_guard" or (definition.skill_id == &"shield_counter" and _action_elapsed_s < definition.hit_times_s[0]))
 
 func _guard_multiplier(event: DamageEvent) -> float:
-	if not _is_guarding() or event.damage <= 0 or not event.tags.has("enemy"): return 1.0
+	if not _is_guarding() or event.damage <= 0 or not event.tags.has("enemy") or event.tags.has("hazard") or event.tags.has("trap"): return 1.0
 	return 0.4 if (event.source_position.x-player.global_position.x) * _line_direction >= 0 else 1.0
 
 func _on_guard_applied() -> void:
