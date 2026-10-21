@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_ember_volley"
+display_name = "불씨 연사"
+execution_style = &"line"
+effect_summary = "방향 고정 · 화염탄3발 · 각18피해 · 사거리7m"
+cooldown_s = 7
+duration_s = 0.7
+hit_times_s = PackedFloat32Array(0.15, 0.32, 0.49)
+damage = PackedInt32Array(18, 18, 18)
+hit_range_m = 7
+hit_half_height_m = 0.8
+movement_distance_m = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.23

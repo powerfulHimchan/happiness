@@ -32,8 +32,9 @@ func _draw() -> void:
 	for index in 17:
 		var angle := -PI / 2 + PI * index / 16
 		points.append(Vector2(cos(angle) * 28 * direction, sin(angle) * hit_radius_px))
-	draw_polyline(points, Color("8aeaff", 0.30), 18, true)
-	draw_polyline(points, Color("d9fbff"), 6, true)
+	var color := Color("ffcd82") if weapon_family == "fist" else Color("8aeaff")
+	draw_polyline(points, Color(color, 0.30), 18, true)
+	draw_polyline(points, color.lightened(0.55), 6, true)
 
 func _physics_process(delta: float) -> void:
 	if is_queued_for_deletion(): return

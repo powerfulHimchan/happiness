@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"fist_cross"
+display_name = "교차연권"
+execution_style = &"line"
+effect_summary = "정면/후방/정면1.5m · 3타 · 시전 방향 유지"
+cooldown_s = 8
+duration_s = 0.72
+hit_times_s = PackedFloat32Array(0.16, 0.34, 0.52)
+damage = PackedInt32Array(16, 16, 24)
+hit_range_m = 1.5
+hit_half_height_m = 0.8
+movement_distance_m = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+hit_directions = PackedInt32Array(1, -1, 1)

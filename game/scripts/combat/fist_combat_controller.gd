@@ -15,12 +15,11 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	super._execute_skill_hit(definition, hit_index)
 
 func _draw() -> void:
-	if not active or _slash_remaining_s <= 0.0: return
-	var direction := float(_line_visual_direction if _action == Action.LINE_SLASH else player.facing_direction)
-	for index in (3 if _action == Action.LINE_SLASH else 1):
-		var center := Vector2((40 + index * 25) * direction, -42 + (index % 2) * 12)
-		draw_circle(center, 17.0, Color("ffd695", 0.35))
-		draw_arc(center, 20.0, -PI * 0.8, PI * 0.8, 16, Color("ffe8be"), 4.0, true)
+	if not active or player.damage_receiver.dead: return
+	var direction := _line_visual_direction if _action == Action.LINE_SLASH else player.facing_direction
+	WeaponFamilyPresentation.draw_equipment(self, "fist", direction, _slash_remaining_s > 0, _action_elapsed_s)
+	var rising := _current_skill() != null and _current_skill().skill_id == &"fist_rising"
+	WeaponFamilyPresentation.draw_impact(self, "fist", direction, 94, false, _slash_remaining_s, rising)
 
 func _update_slash_visual() -> void:
 	slash_sprite.visible = false

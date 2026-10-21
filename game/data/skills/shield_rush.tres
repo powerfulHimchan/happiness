@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"shield_rush"
+display_name = "수호 돌진"
+execution_style = &"line"
+effect_summary = "전진1.8m · 정면1.7m · 2타 · 첫0.32초 전방 방어"
+cooldown_s = 9
+duration_s = 0.65
+hit_times_s = PackedFloat32Array(0.2, 0.48)
+damage = PackedInt32Array(20, 26)
+hit_range_m = 1.7
+hit_half_height_m = 0.8
+movement_distance_m = 1.8
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.34

@@ -76,6 +76,17 @@ func _damage(target: PrototypeTarget, source: Vector2) -> void:
 
 func _draw() -> void:
 	var color := Color("ffb36b") if element == "fire" else Color("a5eeff") if element == "ice" else Color("d9b6ff")
-	draw_line(-direction * 25,Vector2.ZERO,Color(color,0.35),12,true)
-	draw_circle(Vector2.ZERO,12,color)
-	draw_circle(Vector2.ZERO,5,Color("fff6dc"))
+	draw_set_transform(Vector2.ZERO, direction.angle())
+	draw_line(Vector2(-38,0), Vector2.ZERO, Color(color,0.15), 18, true)
+	draw_line(Vector2(-30,0), Vector2.ZERO, Color(color,0.5), 6, true)
+	if element == "ice":
+		var shape := PackedVector2Array([Vector2(23,0),Vector2(-9,-9),Vector2(-3,0),Vector2(-9,9)])
+		draw_colored_polygon(shape,color)
+		draw_line(Vector2(-4,0), Vector2(18,0), Color("f4ffff"), 2, true)
+	else:
+		draw_circle(Vector2.ZERO, 14, Color(color,0.22))
+		draw_circle(Vector2.ZERO, 9, color)
+		draw_circle(Vector2(3,-2), 4, Color("fff6dc"))
+		if element == "fire":
+			draw_colored_polygon(PackedVector2Array([Vector2(-7,-7),Vector2(-26,-4),Vector2(-13,1),Vector2(-32,5),Vector2(-6,8)]), Color(color,0.8))
+	draw_set_transform(Vector2.ZERO)

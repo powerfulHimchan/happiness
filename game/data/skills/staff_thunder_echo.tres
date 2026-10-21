@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_thunder_echo"
+display_name = "뇌광 메아리"
+execution_style = &"line"
+effect_summary = "시전 위치 고정 · 주변1.6m · 낙뢰3회 · 18/18/30피해"
+cooldown_s = 11
+duration_s = 0.95
+hit_times_s = PackedFloat32Array(0.25, 0.5, 0.75)
+damage = PackedInt32Array(18, 18, 30)
+hit_range_m = 7
+hit_half_height_m = 0.8
+movement_distance_m = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.33

@@ -328,7 +328,9 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 				var offset := target.global_position - player.global_position
 				var forward := offset.x * hit_direction
 				in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and absf(offset.y) <= _line_half_height_m * PrototypePlayer.PIXELS_PER_METER
-				if definition.skill_id == &"sword_rising":
+				if definition.hit_below_m >= 0.0:
+					in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and offset.y >= -_line_half_height_m * PrototypePlayer.PIXELS_PER_METER and offset.y <= definition.hit_below_m * PrototypePlayer.PIXELS_PER_METER
+				elif definition.skill_id == &"sword_rising":
 					in_range = forward >= 0 and forward <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER and offset.y >= -_line_half_height_m * PrototypePlayer.PIXELS_PER_METER and offset.y <= 0.4 * PrototypePlayer.PIXELS_PER_METER
 			if in_range:
 				targets.append(target)
@@ -447,6 +449,8 @@ func _on_player_evade_started() -> void:
 
 func _on_player_interrupted(reason: String) -> void:
 	_clear_waves()
+	_slash_remaining_s = 0.0
+	slash_sprite.visible = false
 	_line_remaining_s = 0.0
 	queue_redraw()
 	if _action != Action.NONE:

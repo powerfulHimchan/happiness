@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_windwheel"
+display_name = "풍륜봉"
+execution_style = &"spin"
+effect_summary = "주변2.8m · 회전4타 · 막타 일반 적0.6m 밀침"
+cooldown_s = 8
+duration_s = 0.85
+hit_times_s = PackedFloat32Array(0.12, 0.3, 0.48, 0.66)
+damage = PackedInt32Array(10, 10, 10, 18)
+hit_range_m = 2.8
+hit_half_height_m = 0.8
+movement_distance_m = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.2

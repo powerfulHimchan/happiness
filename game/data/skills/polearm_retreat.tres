@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_retreat"
+display_name = "퇴보 찌르기"
+execution_style = &"line"
+effect_summary = "후퇴1.6m · 정면3.6m · 2타 · 막타0.8m 밀침"
+cooldown_s = 7
+duration_s = 0.6
+hit_times_s = PackedFloat32Array(0.18, 0.42)
+damage = PackedInt32Array(16, 24)
+hit_range_m = 3.6
+hit_half_height_m = 0.55
+movement_distance_m = -1.6
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.26

@@ -5,6 +5,22 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp375_384_runtime_test.gd"
+  "$game_root/scripts/combat/weapon_family_presentation.gd"
+  "$game_root/assets/weapons/fist.svg"
+  "$game_root/assets/weapons/staff.svg"
+  "$game_root/assets/weapons/polearm.svg"
+  "$game_root/assets/weapons/shield.svg"
+  "$game_root/data/skills/fist_rising.tres"
+  "$game_root/data/skills/fist_cross.tres"
+  "$game_root/data/skills/fist_advancing.tres"
+  "$game_root/data/skills/staff_ember_volley.tres"
+  "$game_root/data/skills/staff_frost_ring.tres"
+  "$game_root/data/skills/staff_thunder_echo.tres"
+  "$game_root/data/skills/polearm_windwheel.tres"
+  "$game_root/data/skills/polearm_retreat.tres"
+  "$game_root/data/skills/shield_rush.tres"
+  "$game_root/data/skills/shield_ring.tres"
   "$game_root/scripts/combat/staff_combat_controller.gd"
   "$game_root/scripts/combat/staff_magic_bolt.gd"
   "$game_root/scripts/combat/polearm_combat_controller.gd"
@@ -777,6 +793,16 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for expansion_skill in fist_rising fist_cross fist_advancing staff_ember_volley staff_frost_ring staff_thunder_echo polearm_windwheel polearm_retreat shield_rush shield_ring; do
+    for expansion_hero in roan lumi; do
+      for expansion_direction in 1 -1; do
+        for expansion_phase in combat seed resume; do
+          checked_godot 90s --headless --path "$game_root" \
+            --script res://tests/gp375_384_runtime_test.gd -- "$expansion_phase" "$expansion_skill" "$expansion_hero" "$expansion_direction"
+        done
+      done
+    done
+  done
   for new_family in staff polearm shield; do
     case "$new_family" in
       staff) new_script=gp354_runtime_test; new_jobs="flame_sage frost_mage"; new_base=flame_sage ;;

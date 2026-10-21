@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_frost_ring"
+display_name = "서리 파문"
+execution_style = &"spin"
+effect_summary = "주변2.4m · 서리3파 · 12/12/20피해"
+cooldown_s = 8
+duration_s = 0.8
+hit_times_s = PackedFloat32Array(0.16, 0.38, 0.6)
+damage = PackedInt32Array(12, 12, 20)
+hit_range_m = 2.4
+hit_half_height_m = 0.8
+movement_distance_m = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24

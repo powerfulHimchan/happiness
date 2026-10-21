@@ -32,23 +32,19 @@ func _damage_target(target: PrototypeTarget, attack_id: StringName, damage: int,
 			&"polearm_sweep": distance = 60.0
 			&"polearm_thrust": distance = 100.0
 			&"polearm_cycle": distance = 80.0 if hit_index == 2 else 0.0
+			&"polearm_windwheel": distance = 60.0 if hit_index == 3 else 0.0
+			&"polearm_retreat": distance = 80.0 if hit_index == 1 else 0.0
 		if distance > 0:
 			var direction := signf(target.global_position.x - player.global_position.x)
 			(target as PrototypeEnemy).apply_pole_push((float(player.facing_direction) if is_zero_approx(direction) else direction) * distance)
 	return result
 
 func _draw() -> void:
-	if not active or _slash_remaining_s <= 0: return
-	var center := Vector2(0,-38)
-	var direction := _line_direction if _action == Action.LINE_SLASH else player.facing_direction
-	if _action == Action.LINE_SLASH:
-		draw_line(center,center+Vector2(400 * direction,0),Color("d7f6bb"),9,true)
-	else:
-		var full := _action == Action.SPIN_SLASH
-		var radius := _current_skill().hit_range_m * 100 if full else 280.0
-		var angle := 0.0 if direction > 0 else PI
-		draw_arc(center,radius,0.0 if full else angle-PI*.4,TAU if full else angle+PI*.4,48,Color("ade3bb",.6),7,true)
-		draw_line(center,center+Vector2(radius*direction,-25),Color("f4e5b5"),6,true)
+	if not active or player.damage_receiver.dead: return
+	var direction := _line_visual_direction if _action == Action.LINE_SLASH else player.facing_direction
+	WeaponFamilyPresentation.draw_equipment(self, "polearm", direction, _slash_remaining_s > 0, _action_elapsed_s)
+	var radius := _current_skill().hit_range_m * 100 if _current_skill() != null else 280.0
+	WeaponFamilyPresentation.draw_impact(self, "polearm", direction, radius, _action == Action.SPIN_SLASH, _slash_remaining_s)
 
 func _update_slash_visual() -> void:
 	slash_sprite.visible = false

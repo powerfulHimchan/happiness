@@ -24,7 +24,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 func _is_guarding() -> bool:
 	if not active or _action == Action.NONE or not player.can_continue_combat_action(): return false
 	var definition := _current_skill()
-	return definition != null and (definition.skill_id == &"shield_guard" or (definition.skill_id == &"shield_counter" and _action_elapsed_s < definition.hit_times_s[0]))
+	return definition != null and (definition.skill_id == &"shield_guard" or (definition.skill_id == &"shield_counter" and _action_elapsed_s < definition.hit_times_s[0]) or (definition.skill_id == &"shield_rush" and _action_elapsed_s < 0.32))
 
 func _guard_multiplier(event: DamageEvent) -> float:
 	if not _is_guarding() or event.damage <= 0 or not event.tags.has("enemy") or event.tags.has("hazard") or event.tags.has("trap"): return 1.0
@@ -42,6 +42,7 @@ func _damage_target(target: PrototypeTarget, attack_id: StringName, damage: int,
 	if result == DamageReceiver.Result.APPLIED and target is PrototypeEnemy and target.is_targetable():
 		if counter: (target as PrototypeEnemy).apply_shield_stun(1.0)
 		elif attack_id == &"shield_slam": (target as PrototypeEnemy).apply_shield_stun(1.2)
+		elif attack_id == &"shield_ring" and hit_index == 1: (target as PrototypeEnemy).apply_shield_stun(0.8)
 	return result
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
@@ -66,21 +67,16 @@ func _build_metrics() -> Dictionary:
 	return metrics
 
 func _draw() -> void:
-	if not active: return
-	var direction := _line_direction if _action != Action.NONE else player.facing_direction
-	var center := Vector2(45 * direction,-40)
+	if not active or player.damage_receiver.dead: return
+	var direction := _line_direction if _action == Action.LINE_SLASH else player.facing_direction
+	WeaponFamilyPresentation.draw_equipment(self, "shield", direction, _slash_remaining_s > 0 or _is_guarding(), _action_elapsed_s)
 	var color := Color("ffd58a") if _counter_armed else Color("b6e3ff")
-	var angle := 0.0 if direction > 0 else PI
 	if _is_guarding():
-		draw_circle(center,48,Color(color,.16))
-		draw_arc(center,50,angle-PI*.6,angle+PI*.6,24,color,3,true)
-	var points := PackedVector2Array([center+Vector2(-19,-28),center+Vector2(19,-28),center+Vector2(23,7),center+Vector2(0,30),center+Vector2(-23,7)])
-	draw_colored_polygon(points,Color("365d78"))
-	points.append(points[0])
-	draw_polyline(points,color,3,true)
-	draw_line(center+Vector2(0,-18),center+Vector2(0,17),color,3,true)
-	draw_line(center+Vector2(-12,-3),center+Vector2(12,-3),color,3,true)
-	if _slash_remaining_s > 0: draw_arc(center,65,angle-PI*.5,angle+PI*.5,24,Color("ffe8be"),8,true)
+		var center := Vector2(62 * direction, -45)
+		var angle := 0.0 if direction > 0 else PI
+		draw_arc(center, 56, angle - PI * .6, angle + PI * .6, 32, Color(color, .18), 14, true)
+		draw_arc(center, 56, angle - PI * .6, angle + PI * .6, 32, color, 3, true)
+	WeaponFamilyPresentation.draw_impact(self, "shield", direction, 200 if _action == Action.SPIN_SLASH else 130, _action == Action.SPIN_SLASH, _slash_remaining_s)
 
 func _update_slash_visual() -> void:
 	slash_sprite.visible = false

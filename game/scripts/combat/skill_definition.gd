@@ -16,6 +16,8 @@ extends Resource
 @export var damage: PackedInt32Array = PackedInt32Array()
 @export var hit_range_m: float = 0.0
 @export var hit_half_height_m: float = 0.90
+# Negative preserves the symmetric hit box; uppercuts can bound the downward reach.
+@export var hit_below_m: float = -1.0
 @export var movement_distance_m: float = 0.0
 @export var max_targets: int = 0
 @export var ricochet_damage: int = 0
