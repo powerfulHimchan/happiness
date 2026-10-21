@@ -19,7 +19,7 @@ static func seed_for(run_id: String) -> int:
 	return value
 
 static func create(run_id: String) -> Dictionary:
-	return {"seed":seed_for(run_id),"cleared":0,"coins":0,"actions":[],"stock":[]}
+	return {"seed":seed_for(run_id),"cleared":0,"coins":0,"actions":[],"stock":[],"tasks":1}
 
 static func reward(route: String) -> int:
 	return CLEAR_COINS+int(ROUTE_BONUS.get(route,0))
@@ -113,14 +113,17 @@ static func _integer(value: Variant, low: int, high: int) -> bool:
 	return (value is int or value is float) and is_finite(float(value)) and float(value) == floorf(float(value)) and value >= low and value <= high
 
 static func valid_state(value: Variant, checkpoint: Dictionary) -> bool:
-	if not value is Dictionary or value.size() != 5: return false
+	if not value is Dictionary or value.size() != (6 if value.has("tasks") else 5): return false
+	if value.has("tasks") and not _integer(value.tasks,1,1): return false
 	if not checkpoint.get("weapons") is Dictionary or not checkpoint.weapons.get("equipment") is Dictionary: return false
 	var stage: Dictionary = checkpoint.stage
 	var expected := mini(int(stage.number),int(stage.limit)-1)
-	if not _integer(value.get("seed"),0,1000000006) or int(value.seed) != seed_for(String(checkpoint.recorder.id)) or not _integer(value.get("cleared"),expected,expected) or not _integer(value.get("coins"),0,10000) or not value.get("actions") is Array or value.actions.size() > 100 or not value.get("stock") is Array: return false
+	if not _integer(value.get("seed"),0,1000000006) or int(value.seed) != seed_for(String(checkpoint.recorder.id)) or not _integer(value.get("cleared"),expected,expected) or not _integer(value.get("coins"),0,10000) or not value.get("actions") is Array or value.actions.size() > 140 or not value.get("stock") is Array: return false
 	var spent := 0
 	var last := 0
 	var seen := {}
+	var ledger: Array = []
+	var task_ids := {}
 	for action in value.actions:
 		if not action is Dictionary or action.size() != 4 or not _integer(action.get("stage"),1,expected) or not action.get("id") is String or not action.get("skill") is String or not _integer(action.get("slot"),-1,1): return false
 		var number := int(action.stage)
@@ -129,7 +132,17 @@ static func valid_state(value: Variant, checkpoint: Dictionary) -> bool:
 		var key := str(number)+":"+String(action.id)
 		if seen.has(key): return false
 		seen[key] = true
-		if action.id == "reroll":
+		if String(action.id).begins_with(RunTasks.PREFIX):
+			var task_state := checkpoint.duplicate()
+			task_state.supplies = value.duplicate()
+			task_state.supplies.actions = ledger
+			task_state.stage = stage.duplicate()
+			task_state.stage.history = stage.history.filter(func(entry: Dictionary) -> bool: return int(entry.stage) <= number)
+			if not RunTasks.valid_receipt(action,value,task_state): return false
+			if task_ids.has(action.id): return false
+			task_ids[action.id] = true
+			spent -= int(RunTasks.definition(String(action.id).trim_prefix(RunTasks.PREFIX)).coins)
+		elif action.id == "reroll":
 			if action.skill != "" or action.slot != -1: return false
 			spent += REROLL_COST
 		else:
@@ -144,6 +157,7 @@ static func valid_state(value: Variant, checkpoint: Dictionary) -> bool:
 		for entry in stage.history:
 			if int(entry.stage) <= number: earned += reward(String(entry.route))
 		if spent > earned: return false
+		ledger.append(action)
 	var earned := 0
 	for entry in stage.history:
 		if int(entry.stage) <= expected: earned += reward(String(entry.route))

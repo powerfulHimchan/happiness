@@ -83,6 +83,9 @@ func _ready() -> void:
 	controls.weapon_reward_selected.connect(_claim_weapon_reward)
 	controls.skill_reward_selected.connect(_claim_skill_reward)
 	controls.relic_reward_selected.connect(_claim_relic_reward)
+	controls.tasks_open_requested.connect(_open_tasks)
+	controls.task_claim_requested.connect(_claim_task)
+	controls.tasks_close_requested.connect(_close_tasks)
 	controls.shop_open_requested.connect(_open_supply_shop)
 	controls.shop_buy_requested.connect(_buy_supply)
 	controls.shop_reroll_requested.connect(_reroll_supplies)
@@ -1539,7 +1542,7 @@ func _supply_context() -> Dictionary:
 	return {"health":player.damage_receiver.health,"max_health":player.damage_receiver.max_health,"potions":player.potions_remaining,"potion_capacity":player.potions_capacity(),"gauge":ultimate_controller.gauge,"equipment":weapon_controller.equipment.duplicate(),"blueprints":weapon_controller.blueprints.duplicate(),"skills":weapon_controller.skills.duplicate(true),"cooldowns":cooldowns}
 
 func _sync_supply_shop(message: String = "") -> void:
-	controls.update_supply_shop({"enabled":not run_shop.is_empty(),"coins":int(run_shop.get("coins",0)),"stage":int(run_shop.get("cleared",0)),"rerolled":RunSupplyShop.rerolled(run_shop,int(run_shop.get("cleared",0))),"cards":RunSupplyShop.cards(run_shop,_supply_context()),"context":_supply_context()},message)
+	controls.update_supply_shop({"enabled":not run_shop.is_empty(),"tasks_enabled":RunTasks.enabled(run_shop),"coins":int(run_shop.get("coins",0)),"stage":int(run_shop.get("cleared",0)),"rerolled":RunSupplyShop.rerolled(run_shop,int(run_shop.get("cleared",0))),"cards":RunSupplyShop.cards(run_shop,_supply_context()),"context":_supply_context()},message)
 
 func _shop_allowed(mode: int) -> bool:
 	return controls.current_screen_mode() == mode and not run_shop.is_empty() and stage_runner.has_next_stage() and stage_runner.stage_complete and stage_runner.reward_claimed and growth.run_active and not player.damage_receiver.dead and not growth.choosing and not growth.awaiting_job_confirmation
@@ -1618,4 +1621,35 @@ func _reroll_supplies() -> bool:
 	controls.shop_selected_id = ""
 	controls.shop_slot = -1
 	_sync_supply_shop("기술 재입고 완료 · 이번 휴식1회")
+	return true
+
+
+func _task_context() -> Dictionary:
+	return {"stage":stage_runner.checkpoint_snapshot(),"growth":growth.checkpoint_snapshot(),"weapons":weapon_controller.checkpoint_snapshot(),"supplies":run_shop}
+
+func _sync_tasks(message: String = "") -> void:
+	controls.update_tasks({"coins":int(run_shop.get("coins",0)),"cards":RunTasks.cards(_task_context())},message)
+
+func _open_tasks() -> void:
+	if not _shop_allowed(20) or not RunTasks.enabled(run_shop): return
+	_sync_tasks()
+	controls.show_tasks()
+
+func _close_tasks() -> void:
+	if not _shop_allowed(21): return
+	_sync_supply_shop()
+	controls.show_supply_shop()
+
+func _claim_task(id: String) -> bool:
+	if not _shop_allowed(21) or not RunTasks.ready(run_shop,id,_task_context()): return false
+	var previous := run_shop.duplicate(true)
+	var task := RunTasks.definition(id)
+	run_shop.coins += int(task.coins)
+	run_shop.actions.append({"stage":int(run_shop.cleared),"id":RunTasks.PREFIX+id,"slot":-1,"skill":""})
+	if _save_checkpoint(stage_runner.current_metrics(),false) != OK:
+		run_shop = previous
+		_sync_tasks("저장 실패 · 보상 수령을 다시 시도하세요")
+		return false
+	_sync_supply_shop()
+	_sync_tasks("%s · 보급전%d 수령 완료" % [task.name,task.coins])
 	return true

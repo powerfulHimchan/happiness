@@ -8,7 +8,7 @@ static func layout(safe: Rect2, count: int) -> Dictionary:
 		cards.append(Rect2(safe.position+Vector2(safe.size.x*(.055+index*.305),safe.size.y*.23),Vector2(width,safe.size.y*.36)))
 	var slots: Array[Rect2] = []
 	for index in 2: slots.append(Rect2(safe.position+Vector2(safe.size.x*(.12+index*.40),safe.size.y*.65),Vector2(safe.size.x*.36,safe.size.y*.07)))
-	return {"cards":cards,"slots":slots,"previous":Rect2(safe.position+Vector2(safe.size.x*.055,safe.size.y*.14),Vector2(safe.size.x*.18,safe.size.y*.06)),"next":Rect2(safe.position+Vector2(safe.size.x*.765,safe.size.y*.14),Vector2(safe.size.x*.18,safe.size.y*.06)),"back":Rect2(safe.position+Vector2(safe.size.x*.055,safe.size.y*.83),Vector2(safe.size.x*.23,safe.size.y*.09)),"reroll":Rect2(safe.position+Vector2(safe.size.x*.32,safe.size.y*.83),Vector2(safe.size.x*.25,safe.size.y*.09)),"confirm":Rect2(safe.position+Vector2(safe.size.x*.61,safe.size.y*.83),Vector2(safe.size.x*.335,safe.size.y*.09))}
+	return {"tasks":Rect2(safe.position+safe.size*Vector2(.055,.045),safe.size*Vector2(.18,.055)),"cards":cards,"slots":slots,"previous":Rect2(safe.position+Vector2(safe.size.x*.055,safe.size.y*.14),Vector2(safe.size.x*.18,safe.size.y*.06)),"next":Rect2(safe.position+Vector2(safe.size.x*.765,safe.size.y*.14),Vector2(safe.size.x*.18,safe.size.y*.06)),"back":Rect2(safe.position+Vector2(safe.size.x*.055,safe.size.y*.83),Vector2(safe.size.x*.23,safe.size.y*.09)),"reroll":Rect2(safe.position+Vector2(safe.size.x*.32,safe.size.y*.83),Vector2(safe.size.x*.25,safe.size.y*.09)),"confirm":Rect2(safe.position+Vector2(safe.size.x*.61,safe.size.y*.83),Vector2(safe.size.x*.335,safe.size.y*.09))}
 
 static func draw(ui: Control) -> void:
 	var view: Dictionary = ui.supply_shop_snapshot()
@@ -17,6 +17,7 @@ static func draw(ui: Control) -> void:
 	ui.draw_texture_rect(SupplyShopArt.BACKDROP,Rect2(Vector2.ZERO,ui.size),false)
 	ui._draw_village_text("여행 보급소",Rect2(safe.position+Vector2(safe.size.x*.25,safe.size.y*.035),Vector2(safe.size.x*.35,safe.size.y*.07)),32,Color("ffe1a3"))
 	SupplyShopArt.draw_wallet(ui,Rect2(safe.position+Vector2(safe.size.x*.66,safe.size.y*.045),Vector2(safe.size.x*.285,safe.size.y*.055)),int(data.get("coins",0)))
+	if data.get("tasks_enabled",false): ui._draw_button(view.tasks,"여행자의 과제",true)
 	ui._draw_button(view.previous,"이전",view.page > 0)
 	ui._draw_button(view.next,"다음",view.page < view.pages-1)
 	ui._draw_village_text("%d/%d · %d스테이지 휴식" % [view.page+1,view.pages,int(data.get("stage",0))],Rect2(safe.position+Vector2(safe.size.x*.27,safe.size.y*.14),Vector2(safe.size.x*.46,safe.size.y*.06)),18,Color("bdd3df"))

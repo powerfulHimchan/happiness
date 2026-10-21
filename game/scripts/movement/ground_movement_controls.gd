@@ -40,6 +40,9 @@ signal run_build_finished
 signal story_acknowledged(id: String)
 signal story_journal_started
 signal story_journal_finished
+signal tasks_open_requested
+signal task_claim_requested(id: String)
+signal tasks_close_requested
 signal shop_open_requested
 signal shop_buy_requested(id: String, slot: int)
 signal shop_reroll_requested
@@ -68,6 +71,7 @@ enum ScreenMode {
 	STORY,
 	STORY_JOURNAL,
 	SUPPLY_SHOP,
+	RUN_TASKS,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -250,6 +254,11 @@ var job_confirm_rect := Rect2()
 var job_ultimate_rects: Array[Rect2] = []
 var job_ultimates: Array[Dictionary] = []
 var selected_job_ultimate: int = -1
+var task_data: Dictionary = {}
+var task_page := 0
+var task_filter := "all"
+var task_selected_id := ""
+var task_message := ""
 var shop_open_rect: Rect2
 var shop_data: Dictionary = {"enabled":false}
 var shop_page: int = 0
@@ -442,6 +451,10 @@ func _input(event: InputEvent) -> void:
 		close_run_build()
 		get_viewport().set_input_as_handled()
 		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.RUN_TASKS:
+		tasks_close_requested.emit()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.SUPPLY_SHOP:
 		shop_close_requested.emit()
 		get_viewport().set_input_as_handled()
@@ -478,6 +491,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.RUN_TASKS:
+		RunTaskView.draw(self)
+		return
 	if screen_mode == ScreenMode.SUPPLY_SHOP:
 		SupplyShopView.draw(self)
 		return
@@ -1579,6 +1595,9 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.RUN_TASKS:
+		_handle_task_touch(position)
+		return
 	if screen_mode == ScreenMode.SUPPLY_SHOP:
 		_handle_supply_touch(position)
 		return
@@ -3692,6 +3711,9 @@ func supply_shop_snapshot() -> Dictionary:
 
 func _handle_supply_touch(position: Vector2) -> void:
 	var view := supply_shop_snapshot()
+	if shop_data.get("tasks_enabled",false) and view.tasks.has_point(position):
+		tasks_open_requested.emit()
+		return
 	if view.back.has_point(position):
 		shop_close_requested.emit()
 		return
@@ -3717,3 +3739,43 @@ func _handle_supply_touch(position: Vector2) -> void:
 		shop_reroll_requested.emit()
 	elif view.confirm.has_point(position) and not selected.is_empty() and selected.ready:
 		shop_buy_requested.emit(shop_selected_id,shop_slot)
+
+
+func update_tasks(data: Dictionary, message: String = "") -> void:
+	task_data = data.duplicate(true)
+	task_message = message
+	task_page = RunTaskView.snapshot(self).page
+	queue_redraw()
+
+func show_tasks() -> void:
+	release_all_inputs()
+	task_page = 0
+	task_filter = "all"
+	task_selected_id = ""
+	screen_mode = ScreenMode.RUN_TASKS
+	queue_redraw()
+
+func _handle_task_touch(position: Vector2) -> void:
+	var view := RunTaskView.snapshot(self)
+	if view.back.has_point(position):
+		tasks_close_requested.emit()
+		return
+	for index in view.tabs.size():
+		if view.tabs[index].has_point(position):
+			task_filter = RunTaskView.FILTERS[index]
+			task_page = 0
+			task_selected_id = ""
+			return
+	if view.previous.has_point(position) or view.next.has_point(position):
+		task_page = clampi(view.page+(-1 if view.previous.has_point(position) else 1),0,view.pages-1)
+		task_selected_id = ""
+		return
+	for index in view.cards.size():
+		if view.cards[index].has_point(position):
+			task_selected_id = view.items[index].id
+			return
+	if view.confirm.has_point(position):
+		for card in task_data.get("cards",[]):
+			if card.id == task_selected_id and card.ready:
+				task_claim_requested.emit(task_selected_id)
+				return

@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/scripts/economy/run_tasks.gd"
+  "$game_root/scripts/ui/run_task_view.gd"
+  "$game_root/tests/gp448_477_runtime_test.gd"
   "$project_root/game/scripts/ui/supply_shop_art.gd"
   "$project_root/game/assets/supplies/travel_stall.svg"
   "$project_root/game/assets/supplies/meal.svg"
@@ -815,6 +818,18 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for task_hero in roan lumi; do
+    for task_id in first_steps steady_steps long_road toward_dawn meadow_scout wind_scout forest_scout ruins_scout festival_scout gate_scout damage_500 damage_1500 damage_3000 skills_10 skills_30 sword_training bow_training fist_training staff_training polearm_training shield_training level_5 level_10 first_job advanced_job rare_pair hero_pair shop_regular fresh_stock prepared_traveler; do
+      for task_phase in seed resume next; do
+        checked_godot 90s --headless --path "$game_root" \
+          --script res://tests/gp448_477_runtime_test.gd -- "$task_phase" "$task_id" "$task_hero"
+      done
+    done
+    for task_phase in catalog legacy spend; do
+      checked_godot 90s --headless --path "$game_root" \
+        --script res://tests/gp448_477_runtime_test.gd -- "$task_phase" first_steps "$task_hero"
+    done
+  done
   for supply_hero in roan lumi; do
     for supply_family in sword bow fist staff polearm shield; do
       for supply_item in "weapon_$supply_family" "skill_${supply_family}_0" "skill_${supply_family}_1"; do
