@@ -59,6 +59,10 @@ func _run() -> void:
 			saved.stage.erase("reward_claimed")
 			saved.weapons.erase("equipment")
 			saved.weapons.erase("blueprints")
+			if not _check(store.save_checkpoint(saved) == ERR_INVALID_DATA, "장비 없는 저장에 최신 보급 데이터 혼합 차단"):
+				return
+			# GP-105~107에는 보급 상점도 없었다. 실제 이전 형식으로 검사한다.
+			saved.erase("supplies")
 			if not _check(store.save_checkpoint(saved) == OK, "이전 버전 저장 준비"):
 				return
 	else:
@@ -137,11 +141,15 @@ func _run() -> void:
 		elif mode == "legacy-resume":
 			if not _check(controls.current_screen_mode() == 9 and runner.reward_claimed and weapons.equipment == {"sword": 0, "bow": 0}, "이전 버전은 일반 장비·경로 선택으로 호환 복원"):
 				return
+			if not _check(not saved.has("supplies") and sandbox.run_shop.is_empty() and not controls.shop_data.enabled, "이전 저장에 보급 상점·재화 소급 생성 없음"):
+				return
 			_tap(controls.stage_route_rects[0].get_center())
 			if not _finish_stage():
 				return
 			_tap(controls.weapon_reward_skip_rect.get_center())
 			if not _check(controls.current_screen_mode() == 9 and store.load_checkpoint().stage.reward_claimed and weapons.equipment == {"sword": 0, "bow": 0}, "현재 무기 유지도 저장하고 다음 경로로 진행"):
+				return
+			if not _check(not store.load_checkpoint().has("supplies"), "이전 도전의 다음 저장도 보급 필드 없이 유지"):
 				return
 			store.clear_checkpoint()
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(RECORD_PATH))
