@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_cross"
+display_name = "양면봉"
+execution_style = &"line"
+effect_summary = "앞/뒤3.2m · 24/24피해 · 각 일반 적0.4m 밀침"
+cooldown_s = 8
+duration_s = 0.65
+hit_times_s = PackedFloat32Array(0.18, 0.42)
+damage = PackedInt32Array(24, 24)
+hit_range_m = 3.2
+hit_half_height_m = 0.65
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.25
+hit_directions = PackedInt32Array(1, -1)

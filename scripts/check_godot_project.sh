@@ -5,6 +5,13 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp385_414_runtime_test.gd"
+  "$game_root/scripts/growth/prototype_weapon_training.gd"
+  "$game_root/data/skills/polearm_cross.tres"
+  "$game_root/data/skills/shield_wave.tres"
+  "$game_root/assets/weapons/motif_striker.svg"
+  "$game_root/assets/weapons/motif_weaver.svg"
+  "$game_root/assets/weapons/motif_balanced.svg"
   "$game_root/tests/gp375_384_runtime_test.gd"
   "$game_root/scripts/combat/weapon_family_presentation.gd"
   "$game_root/assets/weapons/fist.svg"
@@ -793,6 +800,24 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  checked_godot 90s --headless --path "$game_root" \
+    --script res://tests/gp385_414_runtime_test.gd -- catalog striker_fist roan 1
+  for content_item in striker_fist weaver_fist balanced_fist striker_staff weaver_staff balanced_staff striker_polearm weaver_polearm balanced_polearm striker_shield weaver_shield balanced_shield fist_pendant fist_sigil staff_pendant staff_sigil polearm_pendant polearm_sigil shield_pendant shield_sigil fist_basic_training fist_skill_training staff_basic_training staff_skill_training polearm_basic_training polearm_skill_training shield_basic_training shield_skill_training polearm_cross shield_wave; do
+    for content_hero in roan lumi; do
+      for content_phase in seed resume finish; do
+        checked_godot 90s --headless --path "$game_root" \
+          --script res://tests/gp385_414_runtime_test.gd -- "$content_phase" "$content_item" "$content_hero" 1
+      done
+    done
+  done
+  for new_skill in polearm_cross shield_wave; do
+    for content_hero in roan lumi; do
+      for content_direction in 1 -1; do
+        checked_godot 90s --headless --path "$game_root" \
+          --script res://tests/gp385_414_runtime_test.gd -- combat "$new_skill" "$content_hero" "$content_direction"
+      done
+    done
+  done
   for expansion_skill in fist_rising fist_cross fist_advancing staff_ember_volley staff_frost_ring staff_thunder_echo polearm_windwheel polearm_retreat shield_rush shield_ring; do
     for expansion_hero in roan lumi; do
       for expansion_direction in 1 -1; do

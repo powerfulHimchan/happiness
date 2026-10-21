@@ -12,7 +12,7 @@ signal job_manifested(job: Dictionary)
 const ORDINARY_XP := 10
 const ELITE_XP := 30
 const EVASIVE_BARRIER_RECOVERY := 5
-const CARDS: Array[Dictionary] = [
+const BASE_CARDS: Array[Dictionary] = [
 	{"id": "sword_power", "title": "예리한 검", "category": "sword", "lines": ["검 기본 공격·스킬", "피해 +15%"], "tags": {"strength": 2.5, "determination": 1.5}},
 	{"id": "bow_power", "title": "힘찬 시위", "category": "bow", "lines": ["활 기본 공격·스킬", "피해 +15%"], "tags": {"shooting": 2.5, "nature": 1.5}},
 	{"id": "power", "title": "새벽의 힘", "category": "common", "lines": ["모든 무기 기본 공격·스킬", "피해 +10%"], "tags": {"strength": 1.25, "shooting": 1.25}},
@@ -56,6 +56,13 @@ const CARDS: Array[Dictionary] = [
 	{"id": "shield_power", "title": "굳센 방패", "category": "shield", "lines": ["방패 공격·스킬·필살기", "피해 +15%"], "tags": {"defense": 2.5, "faith": 1.5}},
 	{"id": "fist_power", "title": "날쌘 주먹", "category": "fist", "lines": ["주먹 기본 공격·스킬", "피해 +15%"], "tags": {"technique": 2.5, "chain": 1.5}},
 ]
+
+static var CARDS: Array[Dictionary] = _build_cards()
+
+static func _build_cards() -> Array[Dictionary]:
+	var result: Array[Dictionary] = BASE_CARDS.duplicate(true)
+	result.append_array(PrototypeWeaponTraining.CARDS)
+	return result
 
 var level: int = 1
 var experience: int = 0
@@ -133,6 +140,7 @@ func reset_run(starting_weapon: String = "sword") -> void:
 	run_active = true
 	offered_cards.clear()
 	ranks.clear()
+	player.weapon_training.clear()
 	selection_message = ""
 	_rewarded_lives.clear()
 	jobs.reset(starting_weapon)
@@ -163,6 +171,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	total_experience = int(state.total_xp)
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
+	player.weapon_training = PrototypeWeaponTraining.selected(ranks)
 	ultimate.set_time_collector_boost_unlocked(int(ranks.get("time_collector_boost", 0)) == 1)
 	player.set_orb_magnet_unlocked(int(ranks.get("orb_magnet", 0)) == 1)
 	player.set_orb_vitality_unlocked(int(ranks.get("orb_vitality", 0)) == 1)
@@ -281,6 +290,7 @@ func choose_card(index: int) -> bool:
 	var selected_tags: Dictionary = offered_cards[index].get("tags", {})
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
+	player.weapon_training = PrototypeWeaponTraining.selected(ranks)
 	match card_id:
 		"barrier_focus": player.barrier_focus_unlocked = true
 		"crisis_power": player.crisis_power_unlocked = true

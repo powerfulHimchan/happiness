@@ -100,7 +100,7 @@ func _reward_save() -> bool:
 	if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and store.load_checkpoint() == saved, "다른 무기 슬롯에 주입한 스킬 저장 거부"): return false
 	var cards := PrototypeSkillRewards.codex_cards(weapons.skills,1.25)
 	var own: Array = cards.filter(func(card: Dictionary) -> bool: return card.id == skill_id)
-	if not _check(cards.size() == 56 and own.size() == 1 and own[0].open and own[0].status == "이번 도전 · 슬롯 2" and own[0].lines[0].contains("%.1f초" % (PrototypeSkillRewards.SKILLS[skill_id].cooldown_s/1.25)), "56종 도감·장착 슬롯·시계추 표시"): return false
+	if not _check(cards.size() == PrototypeSkillRewards.SKILLS.size() and own.size() == 1 and own[0].open and own[0].status == "이번 도전 · 슬롯 2" and own[0].lines[0].contains("%.1f초" % (PrototypeSkillRewards.SKILLS[skill_id].cooldown_s/1.25)), "56종 도감·장착 슬롯·시계추 표시"): return false
 	return true
 
 func _target_at(key: String, offset: Vector2) -> PrototypeTarget:

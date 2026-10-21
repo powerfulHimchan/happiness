@@ -711,10 +711,14 @@ func _draw_weapon_rewards() -> void:
 		draw_style_box(_panel_style(PANEL_COLOR), rect)
 		if selected_weapon_reward == index:
 			draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 4)
-		_draw_text_centered(String(item.name), Rect2(rect.position + Vector2(0, rect.size.y * 0.10), Vector2(rect.size.x, 40)), 22 if weapon_reward_cards.size() > 2 else 27, ACTIVE_COLOR)
-		_draw_text_centered("현재: %s" % String(item.previous_name), Rect2(rect.position + Vector2(0, rect.size.y * 0.27), Vector2(rect.size.x, 30)), 15 if weapon_reward_cards.size() > 2 else 17, MUTED_TEXT_COLOR)
+		var with_icon: bool = WeaponFamilyPresentation.TEXTURES.has(item.weapon_id)
+		if with_icon:
+			WeaponFamilyPresentation.draw_icon(self,String(item.weapon_id),int(item.grade),String(item.blueprint),Rect2(Vector2(rect.get_center().x-46,rect.position.y+rect.size.y*.04),Vector2(92,rect.size.y*.23)))
+		_draw_village_text(String(item.name), Rect2(rect.position + Vector2(8,rect.size.y*(.29 if with_icon else .10)),Vector2(rect.size.x-16,40)),22 if weapon_reward_cards.size()>2 else 27,ACTIVE_COLOR)
+		_draw_village_text("현재: %s" % String(item.previous_name),Rect2(rect.position+Vector2(8,rect.size.y*(.43 if with_icon else .27)),Vector2(rect.size.x-16,30)),15 if weapon_reward_cards.size()>2 else 17,MUTED_TEXT_COLOR)
 		for line in item.lines.size():
-			_draw_text_centered(String(item.lines[line]), Rect2(rect.position + Vector2(0, rect.size.y * (0.44 + line * 0.16)), Vector2(rect.size.x, 30)), 18, TEXT_COLOR)
+			_draw_village_text(String(item.lines[line]),Rect2(rect.position+Vector2(8,rect.size.y*((.57+line*.12) if with_icon else (.44+line*.16))),Vector2(rect.size.x-16,30)),18,TEXT_COLOR)
+
 	var reward_note := checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "보조 무기의 고유 효과는 50% 적용 · 등급 피해는 주 무기만"
 	if movement_metrics.get("run_route_id", "") == "clockwork" and not checkpoint_message.begins_with("중간 저장 실패"):
 		reward_note = "태엽 폐허 통과 · 체력 +20 / 필살기 +50 추가 지급 (상한 적용)"
@@ -3220,7 +3224,14 @@ func _draw_relic_rewards() -> void:
 		draw_style_box(_panel_style(Color("365d68") if selected_relic_offer == offer_index else PANEL_COLOR), rect)
 		_draw_village_text("희귀 · " + String(offer.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.07), Vector2(rect.size.x - 24, 42)), mini(28, maxi(16, int(rect.size.x * 0.095))), Color("ffca78"))
 		var center := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.37)
-		if offer.id == PrototypeRelic.PHOENIX_ID:
+		if offer.has("weapon"):
+			var relic_color: Color = WeaponFamilyPresentation.COLORS[String(offer.weapon)]
+			if offer.damage_kind == "all":
+				draw_arc(center+Vector2(0,-18),24,PI,TAU,24,Color("d9e6df"),3,true)
+			else:
+				draw_arc(center,34,0,TAU,32,relic_color,3,true)
+			WeaponFamilyPresentation.draw_icon(self,String(offer.weapon),1,"",Rect2(center-Vector2(28,29),Vector2(56,58)))
+		elif offer.id == PrototypeRelic.PHOENIX_ID:
 			var feather := PackedVector2Array([center + Vector2(0, -28), center + Vector2(18, -8), center + Vector2(14, 14), center + Vector2(0, 30), center + Vector2(-14, 14), center + Vector2(-18, -8)])
 			draw_colored_polygon(feather, Color("ffa86a"))
 			draw_line(center + Vector2(0, -16), center + Vector2(0, 33), Color("fff1cf"), 3.0)

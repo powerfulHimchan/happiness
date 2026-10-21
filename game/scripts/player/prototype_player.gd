@@ -94,6 +94,7 @@ var lifesteal_progress: int = 0
 var lifesteal_allowed: Callable
 var _lifesteal_flash_remaining_s: float = 0.0
 var growth_common_bonus: float = 0.0
+var weapon_training: Dictionary = {}
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
 var growth_fist_bonus: float = 0.0
@@ -607,13 +608,13 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := float(get("growth_" + weapon_id + "_bonus")) if weapon_id in PrototypeWeaponRewards.FAMILY_IDS else 0.0
-	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind)
+	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
 	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
 
 
 func expansion_damage_multiplier(weapon_id: String, kind: String) -> float:
-	var value := 1.0
+	var value := PrototypeRelic.family_damage_multiplier(String(relic_state.get("id", "")), weapon_id, kind) if not relic_state.get("used", false) else 1.0
 	if has_active_relic(PrototypeRelic.SWORD_PENDANT_ID) and weapon_id == "sword": value *= 1.15
 	if has_active_relic(PrototypeRelic.BOW_PENDANT_ID) and weapon_id == "bow": value *= 1.15
 	if kind == "basic" and crisis_power_unlocked and is_crisis_health(): value *= 1.20
@@ -827,6 +828,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	guardian_choice = ""
 	set_job_emblem("", Color.WHITE)
 	growth_common_bonus = 0.0
+	weapon_training.clear()
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
 	growth_fist_bonus = 0.0

@@ -72,7 +72,26 @@ const OFFERS: Array[Dictionary] = [
 	{"id": "skill_prism", "name": "기술의 프리즘", "lines": ["스킬 적중 게이지 +3", "모든 무기 · 게이지 최대100", "도전 중 지속 · 하나만 보유"]},
 	{"id": "dawn_dial", "name": "새벽의 시계판", "lines": ["필살기 감속 시간 +1초", "다음 발동부터 · 여운과 합산", "도전 중 지속 · 하나만 보유"]},
 	{"id": "barrier_lens", "name": "방벽 렌즈", "lines": ["방벽 잔량이 있으면 스킬1.25배", "모든 무기 스킬 · 적중 시 잔량 기준", "도전 중 지속 · 하나만 보유"]},
+	{"id": "fist_pendant", "name": "권갑 수련의 펜던트", "weapon": "fist", "damage_kind": "all", "multiplier": 1.15, "lines": ["권갑 피해1.15배", "기본·스킬·공격 필살기", "이번 도전 · 유물 하나만 보유"]},
+	{"id": "fist_sigil", "name": "권갑 비전 문장", "weapon": "fist", "damage_kind": "skill", "multiplier": 1.3, "lines": ["권갑 스킬 피해1.3배", "다른 계열·기본·필살기 유지", "이번 도전 · 유물 하나만 보유"]},
+	{"id": "staff_pendant", "name": "지팡이 수련의 펜던트", "weapon": "staff", "damage_kind": "all", "multiplier": 1.15, "lines": ["지팡이 피해1.15배", "기본·스킬·공격 필살기", "이번 도전 · 유물 하나만 보유"]},
+	{"id": "staff_sigil", "name": "지팡이 비전 문장", "weapon": "staff", "damage_kind": "skill", "multiplier": 1.3, "lines": ["지팡이 스킬 피해1.3배", "다른 계열·기본·필살기 유지", "이번 도전 · 유물 하나만 보유"]},
+	{"id": "polearm_pendant", "name": "장봉 수련의 펜던트", "weapon": "polearm", "damage_kind": "all", "multiplier": 1.15, "lines": ["장봉 피해1.15배", "기본·스킬·공격 필살기", "이번 도전 · 유물 하나만 보유"]},
+	{"id": "polearm_sigil", "name": "장봉 비전 문장", "weapon": "polearm", "damage_kind": "skill", "multiplier": 1.3, "lines": ["장봉 스킬 피해1.3배", "다른 계열·기본·필살기 유지", "이번 도전 · 유물 하나만 보유"]},
+	{"id": "shield_pendant", "name": "방패 수련의 펜던트", "weapon": "shield", "damage_kind": "all", "multiplier": 1.15, "lines": ["방패 피해1.15배", "기본·스킬·공격 필살기", "이번 도전 · 유물 하나만 보유"]},
+	{"id": "shield_sigil", "name": "방패 비전 문장", "weapon": "shield", "damage_kind": "skill", "multiplier": 1.3, "lines": ["방패 스킬 피해1.3배", "다른 계열·기본·필살기 유지", "이번 도전 · 유물 하나만 보유"]},
 ]
+
+static func family_profile(id: String) -> Dictionary:
+	for offer in OFFERS:
+		if offer.id == id and offer.has("weapon"): return offer
+	return {}
+
+static func family_damage_multiplier(id: String, family: String, kind: String) -> float:
+	var relic := family_profile(id)
+	if relic.is_empty() or relic.weapon != family or kind not in ["basic", "skill", "ultimate"]: return 1.0
+	return float(relic.multiplier) if relic.damage_kind == "all" or relic.damage_kind == kind else 1.0
+
 
 static func valid_id(id: String) -> bool:
 	return OFFERS.any(func(offer: Dictionary) -> bool: return offer.id == id)
@@ -83,6 +102,8 @@ static func valid_state(value: Variant) -> bool:
 static func hud(state: Dictionary) -> String:
 	if state.is_empty():
 		return "유물 없음"
+	var family := family_profile(String(state.id))
+	if not family.is_empty(): return String(family.name) + " · " + String(family.lines[0])
 	if state.id == IRON_LEAF_ID: return "강철 잎 · 체력80% 이상: 전투 피해 -15%"
 	if state.id == LAST_SPARK_ID: return "마지막 불꽃 · 체력30% 이하: 스킬 피해1.3배"
 	if state.id == SWORD_PENDANT_ID: return "검사의 펜던트 · 검 피해1.15배"
@@ -137,7 +158,7 @@ static func codex_cards(state: Dictionary) -> Array[Dictionary]:
 			CLOCK_ID: "스킬만 적용 · 공격/회피 유지", DEW_ID: "구슬·휴식·흡수 회복 유지",
 			SEAL_ID: "파괴 핵 반영 후 적용 · 경직 유지", WIND_ID: "획득 전 회피의 남은 대기 유지",
 			SEED_ID: "현재 최대 체력 기준 · 소수 올림", DUEL_ID: "보조 무기도 적용 · 근접 활 보정 유지",
-		}.get(offer.id, "소비한 깃털은 재부활 불가")
+		}.get(offer.id, "해당 계열만 적용 · 성장/장비 뒤 반올림" if offer.has("weapon") else "소비한 깃털은 재부활 불가")
 		lines.append(detail)
 		var status := "이번 도전 · 사용 완료" if owned and bool(state.get("used", false)) else "이번 도전 · 보유 중" if owned else "미보유 · 효과 미리 보기"
 		result.append({"id": offer.id, "name": offer.name, "open": owned, "status": status, "lines": lines})

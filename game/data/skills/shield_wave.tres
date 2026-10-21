@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"shield_wave"
+display_name = "서약의 파동"
+execution_style = &"wave"
+effect_summary = "전방4.5m · 피해36 · 최대2개체 관통 · 방어 효과 없음"
+cooldown_s = 8
+duration_s = 0.6
+hit_times_s = PackedFloat32Array(0.24)
+damage = PackedInt32Array(36)
+hit_range_m = 4.5
+hit_half_height_m = 0.6
+movement_distance_m = 0
+max_targets = 2
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.32

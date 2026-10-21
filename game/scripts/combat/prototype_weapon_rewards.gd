@@ -35,7 +35,21 @@ const DESIGNS := {
 	"guardian_bow": {"weapon": "bow", "name": "수호 활", "kind": "basic", "damage": [0.0, 0.15, 0.25], "unique": [0.0, 0.20, 0.30]},
 	"sera_sword": {"weapon": "sword", "name": "약속의 검", "kind": "basic", "damage": [0.0, 0.20, 0.30], "unique": [0.0, 0.15, 0.25]},
 	"sera_bow": {"weapon": "bow", "name": "왕관의 활", "kind": "skill", "damage": [0.0, 0.20, 0.30], "unique": [0.0, 0.15, 0.25]},
+	"striker_fist": {"weapon": "fist", "name": "강격 권갑", "kind": "basic", "damage": [0, 0.05, 0.1], "unique": [0, 0.2, 0.35]},
+	"weaver_fist": {"weapon": "fist", "name": "비전 권갑", "kind": "skill", "damage": [0, 0.05, 0.1], "unique": [0, 0.2, 0.35]},
+	"balanced_fist": {"weapon": "fist", "name": "조화 권갑", "kind": "basic", "damage": [0, 0.25, 0.45], "unique": [0, 0, 0.05]},
+	"striker_staff": {"weapon": "staff", "name": "강격 지팡이", "kind": "basic", "damage": [0, 0.05, 0.1], "unique": [0, 0.2, 0.35]},
+	"weaver_staff": {"weapon": "staff", "name": "비전 지팡이", "kind": "skill", "damage": [0, 0.05, 0.1], "unique": [0, 0.2, 0.35]},
+	"balanced_staff": {"weapon": "staff", "name": "조화 지팡이", "kind": "skill", "damage": [0, 0.25, 0.45], "unique": [0, 0, 0.05]},
+	"striker_polearm": {"weapon": "polearm", "name": "강격 장봉", "kind": "basic", "damage": [0, 0.05, 0.1], "unique": [0, 0.2, 0.35]},
+	"weaver_polearm": {"weapon": "polearm", "name": "비전 장봉", "kind": "skill", "damage": [0, 0.05, 0.1], "unique": [0, 0.2, 0.35]},
+	"balanced_polearm": {"weapon": "polearm", "name": "조화 장봉", "kind": "basic", "damage": [0, 0.25, 0.45], "unique": [0, 0, 0.05]},
+	"striker_shield": {"weapon": "shield", "name": "강격 방패", "kind": "basic", "damage": [0, 0.05, 0.1], "unique": [0, 0.2, 0.35]},
+	"weaver_shield": {"weapon": "shield", "name": "비전 방패", "kind": "skill", "damage": [0, 0.05, 0.1], "unique": [0, 0.2, 0.35]},
+	"balanced_shield": {"weapon": "shield", "name": "조화 방패", "kind": "skill", "damage": [0, 0.25, 0.45], "unique": [0, 0, 0.05]},
 }
+
+const EXPANSION_DESIGNS := ["striker_fist", "weaver_fist", "balanced_fist", "striker_staff", "weaver_staff", "balanced_staff", "striker_polearm", "weaver_polearm", "balanced_polearm", "striker_shield", "weaver_shield", "balanced_shield"]
 
 static func design_profile(id: String) -> Dictionary:
 	return DESIGNS.get(id, BLUEPRINTS.get(id, {}))
@@ -126,10 +140,14 @@ static func codex_cards(unlocked: Dictionary, equipment: Dictionary = {}, bluepr
 				if item.is_empty(): continue
 				entries.append(item)
 	for design in DESIGNS:
+		if design in EXPANSION_DESIGNS: continue
 		for grade in [1, 2]:
 			entries.append(profile(DESIGNS[design].weapon, grade, design))
 	for weapon in ["fist", "staff", "polearm", "shield"]:
 		for grade in GRADE_NAMES.size(): entries.append(profile(weapon, grade))
+	# Append the new designs after all fifty original codex entries.
+	for design in EXPANSION_DESIGNS:
+		for grade in [1, 2]: entries.append(profile(DESIGNS[design].weapon, grade, design))
 	for item in entries:
 		var weapon: String = item.weapon_id
 		var grade: int = item.grade

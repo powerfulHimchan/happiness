@@ -34,6 +34,7 @@ func _damage_target(target: PrototypeTarget, attack_id: StringName, damage: int,
 			&"polearm_cycle": distance = 80.0 if hit_index == 2 else 0.0
 			&"polearm_windwheel": distance = 60.0 if hit_index == 3 else 0.0
 			&"polearm_retreat": distance = 80.0 if hit_index == 1 else 0.0
+			&"polearm_cross": distance = 40.0
 		if distance > 0:
 			var direction := signf(target.global_position.x - player.global_position.x)
 			(target as PrototypeEnemy).apply_pole_push((float(player.facing_direction) if is_zero_approx(direction) else direction) * distance)
