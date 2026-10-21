@@ -26,3 +26,6 @@ extends Resource
 @export var can_turn: bool = false
 @export var evade_cancel_start_s: float = 0.0
 @export var ultimate_gain: int = 0
+# GP-493–497: staff spells declare their projectile/area presentation and hit rules.
+@export_enum("magic", "fire", "ice", "lightning") var projectile_element: String = "magic"
+@export var projectile_blast_m: float = 0.0

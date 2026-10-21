@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_horizon"
+display_name = "지평 사연봉"
+execution_style = &"line"
+effect_summary = "정면4.2m · 4타 · 방향 고정"
+cooldown_s = 9
+duration_s = 0.88
+hit_times_s = PackedFloat32Array(0.16, 0.34, 0.52, 0.7)
+damage = PackedInt32Array(12, 12, 12, 24)
+hit_range_m = 4.2
+hit_half_height_m = 0.5
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8

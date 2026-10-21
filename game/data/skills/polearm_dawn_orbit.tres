@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_dawn_orbit"
+display_name = "여명 회천봉"
+execution_style = &"spin"
+effect_summary = "주변3.2m · 4타 · 이동 불가"
+cooldown_s = 11
+duration_s = 0.94
+hit_times_s = PackedFloat32Array(0.18, 0.4, 0.62, 0.8)
+damage = PackedInt32Array(12, 12, 12, 26)
+hit_range_m = 3.2
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"shield_retreat_bash"
+display_name = "물러선 방패"
+execution_style = &"line"
+effect_summary = "후퇴1m · 정면2.2m · 1타"
+cooldown_s = 8
+duration_s = 0.62
+hit_times_s = PackedFloat32Array(0.3)
+damage = PackedInt32Array(46)
+hit_range_m = 2.2
+hit_half_height_m = 0.8
+movement_distance_m = -1.0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8

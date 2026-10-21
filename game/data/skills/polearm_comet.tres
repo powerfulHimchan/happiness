@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_comet"
+display_name = "유성 찌르기"
+execution_style = &"line"
+effect_summary = "전진2m · 정면3.3m · 2타"
+cooldown_s = 10
+duration_s = 0.7
+hit_times_s = PackedFloat32Array(0.24, 0.5)
+damage = PackedInt32Array(26, 36)
+hit_range_m = 3.3
+hit_half_height_m = 0.5
+movement_distance_m = 2.0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8

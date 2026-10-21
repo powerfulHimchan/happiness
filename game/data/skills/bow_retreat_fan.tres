@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"bow_retreat_fan"
+display_name = "후퇴 부채시"
+execution_style = &"spread"
+effect_summary = "후퇴1.4m · 3발씩2회 · 방향 고정"
+cooldown_s = 9
+duration_s = 0.58
+hit_times_s = PackedFloat32Array(0.18, 0.38)
+damage = PackedInt32Array(12, 12)
+hit_range_m = 8
+hit_half_height_m = 0.9
+movement_distance_m = -1.4
+max_targets = 1
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+spread_angles_deg = PackedFloat32Array(-12, 0, 12)

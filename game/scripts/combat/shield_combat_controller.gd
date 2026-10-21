@@ -76,7 +76,9 @@ func _draw() -> void:
 		var angle := 0.0 if direction > 0 else PI
 		draw_arc(center, 56, angle - PI * .6, angle + PI * .6, 32, Color(color, .18), 14, true)
 		draw_arc(center, 56, angle - PI * .6, angle + PI * .6, 32, color, 3, true)
-	WeaponFamilyPresentation.draw_impact(self, "shield", direction, 200 if _action == Action.SPIN_SLASH else 130, _action == Action.SPIN_SLASH, _slash_remaining_s)
+	var definition := _current_skill()
+	var radius := definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER if definition != null and _action == Action.SPIN_SLASH else 130.0
+	WeaponFamilyPresentation.draw_impact(self, "shield", direction, radius, _action == Action.SPIN_SLASH, _slash_remaining_s)
 
 func _update_slash_visual() -> void:
 	slash_sprite.visible = false

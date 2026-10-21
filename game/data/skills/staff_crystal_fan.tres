@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_crystal_fan"
+display_name = "수정 부채탄"
+execution_style = &"staff_fan"
+effect_summary = "정면36도 · 얼음탄3발 · 각2개체"
+cooldown_s = 9
+duration_s = 0.6
+hit_times_s = PackedFloat32Array(0.2)
+damage = PackedInt32Array(20)
+hit_range_m = 7
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 2
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+spread_angles_deg = PackedFloat32Array(-18, 0, 18)
+projectile_element = "ice"

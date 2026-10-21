@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"sword_dawn_chain"
+display_name = "새벽 오연격"
+execution_style = &"line"
+effect_summary = "정면2.1m · 빠른5타 · 방향 고정"
+cooldown_s = 9
+duration_s = 0.9
+hit_times_s = PackedFloat32Array(0.12, 0.26, 0.4, 0.54, 0.72)
+damage = PackedInt32Array(9, 9, 9, 9, 22)
+hit_range_m = 2.1
+hit_half_height_m = 0.7
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_skyward"
+display_name = "천공 올려치기"
+execution_style = &"line"
+effect_summary = "정면2.4m · 위2.2m/아래0.35m"
+cooldown_s = 8
+duration_s = 0.64
+hit_times_s = PackedFloat32Array(0.2, 0.44)
+damage = PackedInt32Array(20, 30)
+hit_range_m = 2.4
+hit_half_height_m = 2.2
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+hit_below_m = 0.35

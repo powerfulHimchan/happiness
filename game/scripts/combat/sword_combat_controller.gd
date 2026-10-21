@@ -115,8 +115,9 @@ func _draw() -> void:
 		return
 	var end_x := _line_range_px * _line_visual_direction
 	var height := _line_half_height_m * PrototypePlayer.PIXELS_PER_METER
-	var rising := _current_skill() != null and _current_skill().skill_id == &"sword_rising"
-	var bottom := 0.4 * PrototypePlayer.PIXELS_PER_METER if rising else height
+	var definition := _current_skill()
+	var rising := definition != null and (definition.skill_id == &"sword_rising" or definition.hit_below_m >= 0.0)
+	var bottom := definition.hit_below_m * PrototypePlayer.PIXELS_PER_METER if definition != null and definition.hit_below_m >= 0.0 else 0.4 * PrototypePlayer.PIXELS_PER_METER if rising else height
 	draw_rect(Rect2(Vector2(minf(0, end_x), -height if rising else -38 - height), Vector2(_line_range_px, height + bottom)), Color("ffd166", 0.18))
 	draw_line(Vector2(0, -38), Vector2(end_x, -38), Color("fff2cc"), 7, true)
 	draw_line(Vector2(0, -50), Vector2(end_x * 0.95, -50), Color("ffd166"), 3, true)

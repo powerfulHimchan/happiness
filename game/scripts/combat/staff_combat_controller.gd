@@ -27,10 +27,16 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 	super._start_skill(action,definition,cooldown_remaining_s,slot)
 	if sequence == _action_sequence: return
 	_lightning_radius_px = 160.0 if definition.skill_id == &"staff_thunder_echo" else 180.0
+	if definition.execution_style == &"staff_anchor": _lightning_radius_px = definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER
 	_cast_direction = (_captured_target.global_position - player.global_position).normalized() if _valid_target(_captured_target) else Vector2(player.facing_direction,0)
 	_lightning_anchor = _captured_target.global_position if _valid_target(_captured_target) else player.global_position + Vector2(250 * player.facing_direction,0)
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
+	if String(definition.execution_style).begins_with("staff_"):
+		_execute_dawn_spell(definition, hit_index)
+		last_combat_log = "%s 발동" % definition.display_name
+		queue_redraw()
+		return
 	match definition.skill_id:
 		&"staff_fireball": _spawn_bolt(definition.skill_id,int(definition.damage[hit_index]),_cast_direction,"fire",1,120)
 		&"staff_ice_lance": _spawn_bolt(definition.skill_id,int(definition.damage[hit_index]),_cast_direction,"ice",3,0)
@@ -49,6 +55,21 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 			_lightning_flash = 0.22
 	last_combat_log = "%s 발동" % definition.display_name
 	queue_redraw()
+
+func _execute_dawn_spell(definition: SkillDefinition, hit_index: int) -> void:
+	if definition.execution_style in [&"staff_bolt", &"staff_fan"]:
+		var angles := definition.spread_angles_deg if definition.execution_style == &"staff_fan" else PackedFloat32Array([0.0])
+		for index in angles.size():
+			_spawn_bolt(definition.skill_id, int(definition.damage[hit_index]), _cast_direction.rotated(deg_to_rad(angles[index])), definition.projectile_element, definition.max_targets, definition.projectile_blast_m * PrototypePlayer.PIXELS_PER_METER, hit_index * 16 + index)
+		return
+	var anchored := definition.execution_style == &"staff_anchor"
+	var center := _lightning_anchor if anchored else player.global_position
+	for node in get_tree().get_nodes_in_group("targetable"):
+		var target := node as PrototypeTarget
+		if target != null and target.is_targetable() and target.global_position.distance_to(center) <= definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER:
+			if _damage_target(target, definition.skill_id, int(definition.damage[hit_index]), 0.1, PackedStringArray(["staff", "skill", definition.projectile_element]), hit_index) == DamageReceiver.Result.APPLIED: skill_hit_count += 1
+	if anchored: _lightning_flash = 0.22
+	_show_slash(SKILL_FLASH_S, hit_index)
 
 func _spawn_bolt(id: StringName, base_damage: int, direction: Vector2, element: String, hits: int, radius: float, hit_index: int = 0) -> void:
 	var bolt := StaffMagicBolt.new()
@@ -85,7 +106,9 @@ func _draw() -> void:
 	var definition := _current_skill()
 	if definition != null and definition.skill_id == &"staff_frost_ring":
 		WeaponFamilyPresentation.draw_impact(self, "shield", player.facing_direction, 240, true, _slash_remaining_s)
-	if (definition != null and definition.skill_id in [&"staff_lightning", &"staff_thunder_echo"]) or _lightning_flash > 0:
+	if definition != null and definition.execution_style == &"staff_ring":
+		WeaponFamilyPresentation.draw_impact(self, "staff", player.facing_direction, definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER, true, _slash_remaining_s)
+	if (definition != null and (definition.skill_id in [&"staff_lightning", &"staff_thunder_echo"] or definition.execution_style == &"staff_anchor")) or _lightning_flash > 0:
 		var anchor := to_local(_lightning_anchor) + PrototypeTarget.BODY_CENTER
 		var radius := _lightning_radius_px
 		draw_arc(anchor, radius, 0, TAU, 48, Color("d4b7ff", 0.5), 2, true)

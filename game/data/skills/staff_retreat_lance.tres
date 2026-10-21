@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_retreat_lance"
+display_name = "퇴보 빙창"
+execution_style = &"staff_bolt"
+effect_summary = "후퇴1.4m · 빙창2발 · 각3개체"
+cooldown_s = 10
+duration_s = 0.7
+hit_times_s = PackedFloat32Array(0.22, 0.46)
+damage = PackedInt32Array(24, 28)
+hit_range_m = 7
+hit_half_height_m = 0.9
+movement_distance_m = -1.4
+max_targets = 3
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+projectile_element = "ice"

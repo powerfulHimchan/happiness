@@ -3,6 +3,36 @@ extends RefCounted
 
 ## 무기별 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
 const SKILLS := {
+	"sword_dawn_chain": preload("res://data/skills/sword_dawn_chain.tres"),
+	"sword_retreat_wave": preload("res://data/skills/sword_retreat_wave.tres"),
+	"sword_orbit": preload("res://data/skills/sword_orbit.tres"),
+	"sword_high_arc": preload("res://data/skills/sword_high_arc.tres"),
+	"sword_returning_edge": preload("res://data/skills/sword_returning_edge.tres"),
+	"bow_prism_fan": preload("res://data/skills/bow_prism_fan.tres"),
+	"bow_starlit_rain": preload("res://data/skills/bow_starlit_rain.tres"),
+	"bow_swallow_trio": preload("res://data/skills/bow_swallow_trio.tres"),
+	"bow_drill": preload("res://data/skills/bow_drill.tres"),
+	"bow_retreat_fan": preload("res://data/skills/bow_retreat_fan.tres"),
+	"fist_dawn_barrage": preload("res://data/skills/fist_dawn_barrage.tres"),
+	"fist_retreat_palm": preload("res://data/skills/fist_retreat_palm.tres"),
+	"fist_spiral": preload("res://data/skills/fist_spiral.tres"),
+	"fist_sky_chain": preload("res://data/skills/fist_sky_chain.tres"),
+	"fist_twin_pulse": preload("res://data/skills/fist_twin_pulse.tres"),
+	"staff_crystal_fan": preload("res://data/skills/staff_crystal_fan.tres"),
+	"staff_meteor_pair": preload("res://data/skills/staff_meteor_pair.tres"),
+	"staff_dawn_pulse": preload("res://data/skills/staff_dawn_pulse.tres"),
+	"staff_storm_seal": preload("res://data/skills/staff_storm_seal.tres"),
+	"staff_retreat_lance": preload("res://data/skills/staff_retreat_lance.tres"),
+	"polearm_horizon": preload("res://data/skills/polearm_horizon.tres"),
+	"polearm_dawn_orbit": preload("res://data/skills/polearm_dawn_orbit.tres"),
+	"polearm_skyward": preload("res://data/skills/polearm_skyward.tres"),
+	"polearm_back_cross": preload("res://data/skills/polearm_back_cross.tres"),
+	"polearm_comet": preload("res://data/skills/polearm_comet.tres"),
+	"shield_dawn_chain": preload("res://data/skills/shield_dawn_chain.tres"),
+	"shield_retreat_bash": preload("res://data/skills/shield_retreat_bash.tres"),
+	"shield_orbit": preload("res://data/skills/shield_orbit.tres"),
+	"shield_twin_wave": preload("res://data/skills/shield_twin_wave.tres"),
+	"shield_cross_march": preload("res://data/skills/shield_cross_march.tres"),
 	"polearm_cross": preload("res://data/skills/polearm_cross.tres"),
 	"shield_wave": preload("res://data/skills/shield_wave.tres"),
 
@@ -66,15 +96,16 @@ const SKILLS := {
 	"bow_ricochet": preload("res://data/skills/bow_ricochet.tres"),
 	"sword_cross": preload("res://data/skills/sword_cross.tres"),
 }
-const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave", "sword_cross", "sword_rising", "sword_revolve", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet", "bow_chain", "bow_fan_piercing", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley"]}
-const STAFF_POOL := ["staff_fireball", "staff_ice_lance", "staff_lightning", "staff_ember_volley", "staff_frost_ring", "staff_thunder_echo"]
-const POLEARM_POOL := ["polearm_sweep", "polearm_thrust", "polearm_cycle", "polearm_windwheel", "polearm_retreat", "polearm_cross"]
-const SHIELD_POOL := ["shield_guard", "shield_counter", "shield_slam", "shield_rush", "shield_ring", "shield_wave"]
-const FIST_POOL := ["fist_dash", "fist_flurry", "fist_wave", "fist_rising", "fist_cross", "fist_advancing"]
-const LABELS := {"polearm_cross": "양면", "shield_wave": "서약파", "fist_rising": "승천", "fist_cross": "교차권", "fist_advancing": "진격권", "staff_ember_volley": "불씨", "staff_frost_ring": "서리", "staff_thunder_echo": "뇌광", "polearm_windwheel": "풍륜", "polearm_retreat": "퇴보", "shield_rush": "수호진", "shield_ring": "원형격", "staff_fireball": "화염", "staff_ice_lance": "얼음", "staff_lightning": "낙뢰", "polearm_sweep": "횡소", "polearm_thrust": "관통", "polearm_cycle": "윤회", "shield_guard": "방어", "shield_counter": "응수", "shield_slam": "강타", "fist_dash": "쇄도", "fist_flurry": "연환", "fist_wave": "파동", "sword_flurry": "질풍", "sword_cleave": "대지", "sword_twin_wave": "쌍월", "sword_sweep": "삼중", "sword_backstep": "물러", "sword_alternating": "사방", "bow_needle": "바늘", "bow_heavy": "중압", "bow_wide_fan": "부채", "bow_storm": "폭풍", "bow_echo": "메아리", "bow_seeking_volley": "추적연", "sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
+const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave", "sword_cross", "sword_rising", "sword_revolve", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "sword_dawn_chain", "sword_retreat_wave", "sword_orbit", "sword_high_arc", "sword_returning_edge"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet", "bow_chain", "bow_fan_piercing", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley", "bow_prism_fan", "bow_starlit_rain", "bow_swallow_trio", "bow_drill", "bow_retreat_fan"]}
+const STAFF_POOL := ["staff_fireball", "staff_ice_lance", "staff_lightning", "staff_ember_volley", "staff_frost_ring", "staff_thunder_echo", "staff_crystal_fan", "staff_meteor_pair", "staff_dawn_pulse", "staff_storm_seal", "staff_retreat_lance"]
+const POLEARM_POOL := ["polearm_sweep", "polearm_thrust", "polearm_cycle", "polearm_windwheel", "polearm_retreat", "polearm_cross", "polearm_horizon", "polearm_dawn_orbit", "polearm_skyward", "polearm_back_cross", "polearm_comet"]
+const SHIELD_POOL := ["shield_guard", "shield_counter", "shield_slam", "shield_rush", "shield_ring", "shield_wave", "shield_dawn_chain", "shield_retreat_bash", "shield_orbit", "shield_twin_wave", "shield_cross_march"]
+const FIST_POOL := ["fist_dash", "fist_flurry", "fist_wave", "fist_rising", "fist_cross", "fist_advancing", "fist_dawn_barrage", "fist_retreat_palm", "fist_spiral", "fist_sky_chain", "fist_twin_pulse"]
+const LABELS := {"sword_dawn_chain": "오연", "sword_retreat_wave": "퇴월", "sword_orbit": "나선", "sword_high_arc": "천공", "sword_returning_edge": "왕복", "bow_prism_fan": "오색", "bow_starlit_rain": "별비", "bow_swallow_trio": "제비", "bow_drill": "나선시", "bow_retreat_fan": "퇴산", "fist_dawn_barrage": "육연", "fist_retreat_palm": "퇴장", "fist_spiral": "회권", "fist_sky_chain": "천련", "fist_twin_pulse": "쌍파", "staff_crystal_fan": "수정", "staff_meteor_pair": "쌍별", "staff_dawn_pulse": "맥동", "staff_storm_seal": "폭풍인", "staff_retreat_lance": "퇴빙", "polearm_horizon": "지평", "polearm_dawn_orbit": "회천", "polearm_skyward": "천봉", "polearm_back_cross": "퇴교", "polearm_comet": "유성", "shield_dawn_chain": "서련", "shield_retreat_bash": "퇴격", "shield_orbit": "삼환", "shield_twin_wave": "쌍서", "shield_cross_march": "진교", "polearm_cross": "양면", "shield_wave": "서약파", "fist_rising": "승천", "fist_cross": "교차권", "fist_advancing": "진격권", "staff_ember_volley": "불씨", "staff_frost_ring": "서리", "staff_thunder_echo": "뇌광", "polearm_windwheel": "풍륜", "polearm_retreat": "퇴보", "shield_rush": "수호진", "shield_ring": "원형격", "staff_fireball": "화염", "staff_ice_lance": "얼음", "staff_lightning": "낙뢰", "polearm_sweep": "횡소", "polearm_thrust": "관통", "polearm_cycle": "윤회", "shield_guard": "방어", "shield_counter": "응수", "shield_slam": "강타", "fist_dash": "쇄도", "fist_flurry": "연환", "fist_wave": "파동", "sword_flurry": "질풍", "sword_cleave": "대지", "sword_twin_wave": "쌍월", "sword_sweep": "삼중", "sword_backstep": "물러", "sword_alternating": "사방", "bow_needle": "바늘", "bow_heavy": "중압", "bow_wide_fan": "부채", "bow_storm": "폭풍", "bow_echo": "메아리", "bow_seeking_volley": "추적연", "sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
+const DAWN_SKILLS := ["sword_dawn_chain", "sword_retreat_wave", "sword_orbit", "sword_high_arc", "sword_returning_edge", "bow_prism_fan", "bow_starlit_rain", "bow_swallow_trio", "bow_drill", "bow_retreat_fan", "fist_dawn_barrage", "fist_retreat_palm", "fist_spiral", "fist_sky_chain", "fist_twin_pulse", "staff_crystal_fan", "staff_meteor_pair", "staff_dawn_pulse", "staff_storm_seal", "staff_retreat_lance", "polearm_horizon", "polearm_dawn_orbit", "polearm_skyward", "polearm_back_cross", "polearm_comet", "shield_dawn_chain", "shield_retreat_bash", "shield_orbit", "shield_twin_wave", "shield_cross_march"]
 const CODEX_PAGE_SIZE := 3
 # 새 기술을 뒤에 붙여 이전 도감의 페이지 순서를 보존한다.
-const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley", "fist_dash", "fist_flurry", "fist_wave", "staff_fireball", "staff_ice_lance", "staff_lightning", "polearm_sweep", "polearm_thrust", "polearm_cycle", "shield_guard", "shield_counter", "shield_slam", "fist_rising", "fist_cross", "fist_advancing", "staff_ember_volley", "staff_frost_ring", "staff_thunder_echo", "polearm_windwheel", "polearm_retreat", "shield_rush", "shield_ring", "polearm_cross", "shield_wave"]
+const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley", "fist_dash", "fist_flurry", "fist_wave", "staff_fireball", "staff_ice_lance", "staff_lightning", "polearm_sweep", "polearm_thrust", "polearm_cycle", "shield_guard", "shield_counter", "shield_slam", "fist_rising", "fist_cross", "fist_advancing", "staff_ember_volley", "staff_frost_ring", "staff_thunder_echo", "polearm_windwheel", "polearm_retreat", "shield_rush", "shield_ring", "polearm_cross", "shield_wave", "sword_dawn_chain", "sword_retreat_wave", "sword_orbit", "sword_high_arc", "sword_returning_edge", "bow_prism_fan", "bow_starlit_rain", "bow_swallow_trio", "bow_drill", "bow_retreat_fan", "fist_dawn_barrage", "fist_retreat_palm", "fist_spiral", "fist_sky_chain", "fist_twin_pulse", "staff_crystal_fan", "staff_meteor_pair", "staff_dawn_pulse", "staff_storm_seal", "staff_retreat_lance", "polearm_horizon", "polearm_dawn_orbit", "polearm_skyward", "polearm_back_cross", "polearm_comet", "shield_dawn_chain", "shield_retreat_bash", "shield_orbit", "shield_twin_wave", "shield_cross_march"]
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
 static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
@@ -129,8 +160,8 @@ static func lines(id: String, recharge_multiplier: float = 1.0) -> Array[String]
 	var definition: SkillDefinition = SKILLS[id]
 	var result: Array[String] = ["재사용 %.1f초 · 동작 %.2f초" % [definition.cooldown_s / recharge_multiplier, definition.duration_s]]
 	result.append("타격 %d회 · 기본 피해 %d" % [definition.damage.size(), _total_damage(definition)])
-	if id in ["bow_spread", "bow_fan_piercing"] or definition.execution_style == &"spread":
-		result[1] = "화살 %d발 · 각 기본 피해 %d" % [definition.spread_angles_deg.size(), int(definition.damage[0])]
+	if id in ["bow_spread", "bow_fan_piercing"] or definition.execution_style in [&"spread", &"staff_fan"]:
+		result[1] = "%s %d발 · 각 기본 피해 %d" % ["마법탄" if definition.execution_style == &"staff_fan" else "화살", definition.spread_angles_deg.size() * definition.hit_times_s.size(), int(definition.damage[0])]
 	if id == "bow_ricochet":
 		result[1] = "첫 피해%d · 도탄 피해%d" % [definition.damage[0], definition.ricochet_damage]
 	if id == "sword_cross":

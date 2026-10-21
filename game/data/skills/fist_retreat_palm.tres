@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"fist_retreat_palm"
+display_name = "퇴보 장타"
+execution_style = &"line"
+effect_summary = "후퇴1m · 정면2.4m · 1타"
+cooldown_s = 7
+duration_s = 0.55
+hit_times_s = PackedFloat32Array(0.28)
+damage = PackedInt32Array(42)
+hit_range_m = 2.4
+hit_half_height_m = 0.6
+movement_distance_m = -1.0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8

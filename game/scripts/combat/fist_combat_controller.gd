@@ -18,8 +18,10 @@ func _draw() -> void:
 	if not active or player.damage_receiver.dead: return
 	var direction := _line_visual_direction if _action == Action.LINE_SLASH else player.facing_direction
 	WeaponFamilyPresentation.draw_equipment(self, "fist", direction, _slash_remaining_s > 0, _action_elapsed_s)
-	var rising := _current_skill() != null and _current_skill().skill_id == &"fist_rising"
-	WeaponFamilyPresentation.draw_impact(self, "fist", direction, 94, false, _slash_remaining_s, rising)
+	var definition := _current_skill()
+	var rising := definition != null and (definition.skill_id == &"fist_rising" or definition.hit_below_m >= 0.0)
+	var circular := definition != null and definition.execution_style == &"spin"
+	WeaponFamilyPresentation.draw_impact(self, "fist", direction, definition.hit_range_m * PrototypePlayer.PIXELS_PER_METER if circular else 94.0, circular, _slash_remaining_s, rising)
 
 func _update_slash_visual() -> void:
 	slash_sprite.visible = false

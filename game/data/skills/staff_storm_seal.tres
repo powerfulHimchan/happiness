@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_storm_seal"
+display_name = "폭풍의 인장"
+execution_style = &"staff_anchor"
+effect_summary = "시전 위치1.2m · 낙뢰3타 · 고정"
+cooldown_s = 11
+duration_s = 0.92
+hit_times_s = PackedFloat32Array(0.2, 0.46, 0.72)
+damage = PackedInt32Array(18, 18, 30)
+hit_range_m = 1.2
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+projectile_element = "lightning"

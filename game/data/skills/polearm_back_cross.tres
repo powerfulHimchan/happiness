@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_back_cross"
+display_name = "퇴보 교차봉"
+execution_style = &"line"
+effect_summary = "전방/후방3.8m · 후퇴1.2m"
+cooldown_s = 8
+duration_s = 0.68
+hit_times_s = PackedFloat32Array(0.2, 0.46)
+damage = PackedInt32Array(26, 30)
+hit_range_m = 3.8
+hit_half_height_m = 0.6
+movement_distance_m = -1.2
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+hit_directions = PackedInt32Array(1, -1)

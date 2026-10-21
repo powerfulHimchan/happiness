@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"bow_starlit_rain"
+display_name = "별빛 소나기"
+execution_style = &"rain"
+effect_summary = "시전 위치1.8m · 범위5타 · 고정"
+cooldown_s = 12
+duration_s = 1.0
+hit_times_s = PackedFloat32Array(0.22, 0.38, 0.54, 0.7, 0.86)
+damage = PackedInt32Array(10, 10, 10, 10, 18)
+hit_range_m = 1.8
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8

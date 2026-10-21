@@ -3,8 +3,61 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
+check_shard_count="${GODOT_CHECK_SHARD_COUNT:-1}"
+check_shard_index="${GODOT_CHECK_SHARD_INDEX:-0}"
+if [[ ! "$check_shard_count" =~ ^[1-9][0-9]?$ || ! "$check_shard_index" =~ ^[0-9]{1,2}$ ]]; then
+  echo "Invalid Godot check shard." >&2
+  exit 1
+fi
+check_shard_count=$((10#$check_shard_count))
+check_shard_index=$((10#$check_shard_index))
+if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
+  echo "Godot check shard index must be smaller than count (1–16)." >&2
+  exit 1
+fi
 
 required_files=(
+  "$game_root/tests/gp508_510_art_runtime_test.gd"
+  "$game_root/scripts/ui/task_board_art.gd"
+  "$game_root/tests/gp478_507_runtime_test.gd"
+  "$game_root/assets/tasks/traveler_board.svg"
+  "$game_root/assets/tasks/path.svg"
+  "$game_root/assets/tasks/map.svg"
+  "$game_root/assets/tasks/battle.svg"
+  "$game_root/assets/tasks/skill.svg"
+  "$game_root/assets/tasks/growth.svg"
+  "$game_root/assets/tasks/gear.svg"
+  "$game_root/assets/tasks/trade.svg"
+  "$game_root/data/skills/sword_dawn_chain.tres"
+  "$game_root/data/skills/sword_retreat_wave.tres"
+  "$game_root/data/skills/sword_orbit.tres"
+  "$game_root/data/skills/sword_high_arc.tres"
+  "$game_root/data/skills/sword_returning_edge.tres"
+  "$game_root/data/skills/bow_prism_fan.tres"
+  "$game_root/data/skills/bow_starlit_rain.tres"
+  "$game_root/data/skills/bow_swallow_trio.tres"
+  "$game_root/data/skills/bow_drill.tres"
+  "$game_root/data/skills/bow_retreat_fan.tres"
+  "$game_root/data/skills/fist_dawn_barrage.tres"
+  "$game_root/data/skills/fist_retreat_palm.tres"
+  "$game_root/data/skills/fist_spiral.tres"
+  "$game_root/data/skills/fist_sky_chain.tres"
+  "$game_root/data/skills/fist_twin_pulse.tres"
+  "$game_root/data/skills/staff_crystal_fan.tres"
+  "$game_root/data/skills/staff_meteor_pair.tres"
+  "$game_root/data/skills/staff_dawn_pulse.tres"
+  "$game_root/data/skills/staff_storm_seal.tres"
+  "$game_root/data/skills/staff_retreat_lance.tres"
+  "$game_root/data/skills/polearm_horizon.tres"
+  "$game_root/data/skills/polearm_dawn_orbit.tres"
+  "$game_root/data/skills/polearm_skyward.tres"
+  "$game_root/data/skills/polearm_back_cross.tres"
+  "$game_root/data/skills/polearm_comet.tres"
+  "$game_root/data/skills/shield_dawn_chain.tres"
+  "$game_root/data/skills/shield_retreat_bash.tres"
+  "$game_root/data/skills/shield_orbit.tres"
+  "$game_root/data/skills/shield_twin_wave.tres"
+  "$game_root/data/skills/shield_cross_march.tres"
   "$game_root/scripts/economy/run_tasks.gd"
   "$game_root/scripts/ui/run_task_view.gd"
   "$game_root/tests/gp448_477_runtime_test.gd"
@@ -774,9 +827,25 @@ if [[ -n "$godot_command" ]]; then
   mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"
   trap 'rm -rf "$check_data_dir"' EXIT
   # Godot import는 스크립트 오류에도 종료 코드 0을 반환할 수 있다.
+  # Keep every phase of a script in one shard, preserving checkpoint dependencies.
+  declare -A check_script_shards=()
   checked_godot() {
     local check_timeout="$1"
     shift
+    local prior="" argument="" script="" assigned=""
+    for argument in "$@"; do
+      if [[ "$prior" == "--script" ]]; then script="$argument"; break; fi
+      prior="$argument"
+    done
+    if [[ -n "$script" ]] && (( check_shard_count > 1 )); then
+      assigned="${check_script_shards[$script]:-}"
+      if [[ -z "$assigned" ]]; then
+        assigned="$(printf '%s' "$script" | cksum | awk '{print $1}')"
+        assigned=$(( assigned % check_shard_count ))
+        check_script_shards[$script]="$assigned"
+      fi
+      if (( assigned != check_shard_index )); then return 0; fi
+    fi
     timeout "$check_timeout" "$godot_command" "$@" 2>&1 | tee "$check_data_dir/runtime.log"
     if rg -q '^ERROR:|SCRIPT ERROR:|Parse Error:' "$check_data_dir/runtime.log"; then
       echo "Godot runtime or script error detected." >&2
@@ -818,6 +887,16 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for dawn_hero in roan lumi; do
+    for dawn_skill in sword_dawn_chain sword_retreat_wave sword_orbit sword_high_arc sword_returning_edge bow_prism_fan bow_starlit_rain bow_swallow_trio bow_drill bow_retreat_fan fist_dawn_barrage fist_retreat_palm fist_spiral fist_sky_chain fist_twin_pulse staff_crystal_fan staff_meteor_pair staff_dawn_pulse staff_storm_seal staff_retreat_lance polearm_horizon polearm_dawn_orbit polearm_skyward polearm_back_cross polearm_comet shield_dawn_chain shield_retreat_bash shield_orbit shield_twin_wave shield_cross_march; do
+      for dawn_phase in seed resume next combat; do
+        checked_godot 60s --headless --path "$game_root" \
+          --script res://tests/gp478_507_runtime_test.gd -- "$dawn_phase" "$dawn_skill" "$dawn_hero" "$([[ "$dawn_hero" == roan ]] && echo 1 || echo -1)"
+      done
+    done
+  done
+  checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/gp478_507_runtime_test.gd -- catalog sword_dawn_chain roan 1
   for task_hero in roan lumi; do
     for task_id in first_steps steady_steps long_road toward_dawn meadow_scout wind_scout forest_scout ruins_scout festival_scout gate_scout damage_500 damage_1500 damage_3000 skills_10 skills_30 sword_training bow_training fist_training staff_training polearm_training shield_training level_5 level_10 first_job advanced_job rare_pair hero_pair shop_regular fresh_stock prepared_traveler; do
       for task_phase in seed resume next; do

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_meteor_pair"
+display_name = "쌍별 화염"
+execution_style = &"staff_bolt"
+effect_summary = "화염탄2발 · 폭발 반경1.4m"
+cooldown_s = 11
+duration_s = 0.76
+hit_times_s = PackedFloat32Array(0.2, 0.5)
+damage = PackedInt32Array(28, 32)
+hit_range_m = 7
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 1
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+projectile_element = "fire"
+projectile_blast_m = 1.4

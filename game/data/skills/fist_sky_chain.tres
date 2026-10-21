@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"fist_sky_chain"
+display_name = "천공 연권"
+execution_style = &"line"
+effect_summary = "정면1.2m · 위2.1m/아래0.3m · 3타"
+cooldown_s = 8
+duration_s = 0.66
+hit_times_s = PackedFloat32Array(0.16, 0.34, 0.52)
+damage = PackedInt32Array(13, 13, 24)
+hit_range_m = 1.2
+hit_half_height_m = 2.1
+movement_distance_m = 0
+max_targets = 0
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+hit_below_m = 0.3

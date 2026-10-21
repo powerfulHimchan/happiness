@@ -56,7 +56,7 @@ func configure(
 func _ready() -> void:
 	add_to_group("bow_projectile")
 	rotation = direction.angle()
-	if attack_id == &"bow_homing": arrow_sprite.modulate = Color("65e6ae")
+	if tags.has("homing"): arrow_sprite.modulate = Color("65e6ae")
 
 
 func set_tracking_target(target: PrototypeTarget) -> void:

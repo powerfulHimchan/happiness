@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"bow_prism_fan"
+display_name = "오색 관통"
+execution_style = &"spread"
+effect_summary = "정면48도 · 5발 · 각2개체 관통"
+cooldown_s = 11
+duration_s = 0.64
+hit_times_s = PackedFloat32Array(0.22)
+damage = PackedInt32Array(19)
+hit_range_m = 8
+hit_half_height_m = 0.9
+movement_distance_m = 0
+max_targets = 2
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24
+ultimate_gain = 8
+spread_angles_deg = PackedFloat32Array(-24, -12, 0, 12, 24)

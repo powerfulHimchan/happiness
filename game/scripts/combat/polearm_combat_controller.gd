@@ -45,7 +45,7 @@ func _draw() -> void:
 	var direction := _line_visual_direction if _action == Action.LINE_SLASH else player.facing_direction
 	WeaponFamilyPresentation.draw_equipment(self, "polearm", direction, _slash_remaining_s > 0, _action_elapsed_s)
 	var radius := _current_skill().hit_range_m * 100 if _current_skill() != null else 280.0
-	WeaponFamilyPresentation.draw_impact(self, "polearm", direction, radius, _action == Action.SPIN_SLASH, _slash_remaining_s)
+	WeaponFamilyPresentation.draw_impact(self, "polearm", direction, radius, _action == Action.SPIN_SLASH, _slash_remaining_s, _current_skill() != null and _current_skill().hit_below_m >= 0.0)
 
 func _update_slash_visual() -> void:
 	slash_sprite.visible = false
