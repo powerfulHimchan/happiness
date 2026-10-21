@@ -2,15 +2,15 @@ class_name PrototypeWeaponRewards
 extends RefCounted
 
 ## GP-108: 확정 성능의 무기 등급과 보조 고유 효과를 정의한다.
-const FAMILY_IDS := ["sword", "bow", "fist"]
+const FAMILY_IDS := ["sword", "bow", "fist", "staff", "polearm", "shield"]
 
 static func family_name(id: String) -> String:
-	return {"sword": "검", "bow": "활", "fist": "주먹"}.get(id, "없음")
+	return {"sword": "검", "bow": "활", "fist": "주먹", "staff": "지팡이", "polearm": "장봉", "shield": "방패"}.get(id, "없음")
 
 const GRADE_NAMES := ["일반", "희귀", "영웅"]
 const DAMAGE_BONUS := [0.0, 0.15, 0.30]
 const UNIQUE_BONUS := [0.0, 0.10, 0.20]
-const NAMES := {"sword": ["연습용 검", "풀잎 검", "새벽 검"], "bow": ["연습용 활", "씨앗 활", "바람 활"], "fist": ["연습용 권갑", "철제 권갑", "새벽 권갑"]}
+const NAMES := {"sword": ["연습용 검", "풀잎 검", "새벽 검"], "bow": ["연습용 활", "씨앗 활", "바람 활"], "fist": ["연습용 권갑", "철제 권갑", "새벽 권갑"], "staff": ["연습용 지팡이", "수정 지팡이", "여명 지팡이"], "polearm": ["연습용 장봉", "철목 장봉", "천공 장봉"], "shield": ["연습용 방패", "철벽 방패", "서약 방패"]}
 const BACKUP_RATIO := 0.50
 const CODEX_PAGE_SIZE := 3
 const BLUEPRINTS := {"clockwork_sword": {"weapon": "sword", "name": "태엽 검"}, "clockwork_bow": {"weapon": "bow", "name": "태엽 활"}}
@@ -73,7 +73,7 @@ static func profile(id: String, grade: int, blueprint: String = "") -> Dictionar
 	var design := design_profile(blueprint)
 	if not blueprint.is_empty() and (design.is_empty() or design.weapon != id or grade < 1):
 		return {}
-	var kind: String = String(design.get("kind", "skill" if id == "sword" else "basic"))
+	var kind: String = String(design.get("kind", "skill" if id in ["sword", "staff", "shield"] else "basic"))
 	var effect := "스킬" if kind == "skill" else "기본 공격"
 	var damage: float = DAMAGE_BONUS[grade] if blueprint.is_empty() else float(design.get("damage", CLOCKWORK_DAMAGE)[grade])
 	var unique: float = UNIQUE_BONUS[grade] if blueprint.is_empty() else float(design.get("unique", CLOCKWORK_UNIQUE)[grade])
@@ -128,7 +128,8 @@ static func codex_cards(unlocked: Dictionary, equipment: Dictionary = {}, bluepr
 	for design in DESIGNS:
 		for grade in [1, 2]:
 			entries.append(profile(DESIGNS[design].weapon, grade, design))
-	for grade in GRADE_NAMES.size(): entries.append(profile("fist", grade))
+	for weapon in ["fist", "staff", "polearm", "shield"]:
+		for grade in GRADE_NAMES.size(): entries.append(profile(weapon, grade))
 	for item in entries:
 		var weapon: String = item.weapon_id
 		var grade: int = item.grade

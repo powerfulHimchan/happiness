@@ -529,6 +529,9 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 		"relic": player.relic_state.duplicate(),
 	}
 	if weapon_controller.equipment.has("fist") or player.growth_fist_bonus > 0.0: state.player.fist = player.growth_fist_bonus
+	for family in ["staff", "polearm", "shield"]:
+		var bonus := float(player.get("growth_" + family + "_bonus"))
+		if weapon_controller.equipment.has(family) or bonus > 0.0: state.player[family] = bonus
 	if story_run.enabled: state.story = story_run.snapshot()
 	else: state.stage.erase("heart_threshold")
 	var error := checkpoint_store.save_checkpoint(state)
@@ -687,6 +690,8 @@ func continue_saved_run() -> bool:
 	player.growth_sword_bonus = float(state.player.sword)
 	player.growth_bow_bonus = float(state.player.bow)
 	player.growth_fist_bonus = float(state.player.get("fist", 0.0))
+	for family in ["staff", "polearm", "shield"]:
+		player.set("growth_" + family + "_bonus",float(state.player.get(family,0.0)))
 	guardian_companion = boss_legacy_store.restore_guardian(state.get("guardian_companion", {}))
 	sera_companion = boss_legacy_store.restore_sera(state.get("sera_companion", {}))
 	player.boss_legacy = boss_legacy_store.restore_active(state.get("boss_legacy", {}))

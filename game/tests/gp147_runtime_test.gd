@@ -39,7 +39,7 @@ func _run() -> void:
 	match phase:
 		"seed":
 			if not await _test_skill_codex(false, 1.0): return
-			if not _check(PrototypeSkillRewards.SKILLS.size() == PrototypeSkillRewards.POOLS.sword.size() + PrototypeSkillRewards.POOLS.bow.size() + PrototypeSkillRewards.FIST_POOL.size() and PrototypeSkillRewards.POOLS.sword.has("sword_wave") and PrototypeSkillRewards.POOLS.bow.has("bow_homing"), "전체 스킬·검 검기/활 후퇴 원본 보존"): return
+			if not _check(PrototypeSkillRewards.SKILLS.size() == PrototypeSkillRewards.POOLS.sword.size() + PrototypeSkillRewards.POOLS.bow.size() + PrototypeSkillRewards.FIST_POOL.size() + PrototypeSkillRewards.STAFF_POOL.size() + PrototypeSkillRewards.POLEARM_POOL.size() + PrototypeSkillRewards.SHIELD_POOL.size() and PrototypeSkillRewards.POOLS.sword.has("sword_wave") and PrototypeSkillRewards.POOLS.bow.has("bow_homing"), "전체 스킬·검 검기/활 후퇴 원본 보존"): return
 			if not _check(PrototypeSkillRewards.CODEX_ORDER.size() >= 16 and PrototypeSkillRewards.CODEX_ORDER.slice(14, 16) == ["bow_homing", "sword_wave"] and PrototypeSkillRewards.POOLS.sword.size() >= 8 and PrototypeSkillRewards.POOLS.bow.size() >= 8, "양 무기8종·이전15종 도감 순서 보존"): return
 			controls.begin_retry("sword", 5)
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "첫 정예 무기 유지"): return

@@ -10,6 +10,9 @@ signal player_died
 signal evade_started
 signal damage_received(event: DamageEvent)
 signal phoenix_revived
+signal shield_guard_applied
+
+var shield_guard_multiplier: Callable
 
 enum MobilityAction {
 	NONE,
@@ -94,6 +97,9 @@ var growth_common_bonus: float = 0.0
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
 var growth_fist_bonus: float = 0.0
+var growth_staff_bonus: float = 0.0
+var growth_polearm_bonus: float = 0.0
+var growth_shield_bonus: float = 0.0
 var weapon_equipment: Dictionary = {"sword": 0, "bow": 0}
 var weapon_blueprints: Dictionary = {"sword": "", "bow": ""}
 var job_emblem_id: String = ""
@@ -413,14 +419,16 @@ func is_ground_evading() -> bool:
 
 
 func receive_damage(event: DamageEvent) -> int:
-	# 공유 원본을 보존하고 파괴 핵·유물 보정 후 한 번만 반올림한다.
-	if event != null and (boss_legacy.get("choice") == "destroy" or not is_equal_approx(incoming_damage_multiplier(), 1.0)):
+	# 공유 원본을 보존하고 핵·유물·방패 보정 후 한 번만 반올림한다.
+	var guard_multiplier := float(shield_guard_multiplier.call(event)) if event != null and shield_guard_multiplier.is_valid() else 1.0
+	var guarded := guard_multiplier < 1.0
+	if event != null and (guarded or boss_legacy.get("choice") == "destroy" or not is_equal_approx(incoming_damage_multiplier(), 1.0)):
 		var incoming := DamageEvent.new()
 		incoming.event_id = event.event_id
 		incoming.attacker_id = event.attacker_id
 		incoming.attack_id = event.attack_id
-		incoming.damage = maxi(1, roundi(event.damage * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * incoming_damage_multiplier())) if event.damage > 0 else event.damage
-		incoming.stagger_s = event.stagger_s
+		incoming.damage = maxi(1, roundi(event.damage * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * incoming_damage_multiplier() * guard_multiplier)) if event.damage > 0 else event.damage
+		incoming.stagger_s = 0.0 if guarded else event.stagger_s
 		incoming.tags = event.tags.duplicate()
 		incoming.source_position = event.source_position
 		event = incoming
@@ -446,6 +454,7 @@ func receive_damage(event: DamageEvent) -> int:
 		_input_lock_remaining_s = maxf(_input_lock_remaining_s, event.stagger_s)
 		move_input = 0.0
 		move_input_vector = Vector2.ZERO
+		if guarded: shield_guard_applied.emit()
 		damage_received.emit(event)
 		if damage_receiver.dead:
 			_cancel_actions_for_recovery()
@@ -571,6 +580,22 @@ func _draw() -> void:
 			draw_arc(center+Vector2(8,0),16.0,-PI*0.7,PI*0.7,20,job_emblem_color,4.0,true)
 		else:
 			draw_circle(center, 8.0, job_emblem_color)
+	elif job_emblem_id in ["elementalist","flame_sage","frost_mage"]:
+		var points := PackedVector2Array([center+Vector2(0,-22),center+Vector2(17,0),center+Vector2(0,22),center+Vector2(-17,0),center+Vector2(0,-22)])
+		draw_polyline(points,job_emblem_color,3,true)
+		if job_emblem_id == "flame_sage": draw_circle(center,8,job_emblem_color)
+		elif job_emblem_id == "frost_mage":
+			for i in 3: draw_line(center+Vector2(0,-14).rotated(i*PI/3),center+Vector2(0,14).rotated(i*PI/3),job_emblem_color,3,true)
+	elif job_emblem_id in ["pilgrim","sky_monk","time_wanderer"]:
+		draw_line(center+Vector2(-15,14),center+Vector2(15,-14),job_emblem_color,5,true)
+		if job_emblem_id == "sky_monk": draw_arc(center,21,PI,TAU,18,job_emblem_color,3,true)
+		elif job_emblem_id == "time_wanderer": draw_polyline(PackedVector2Array([center+Vector2(-12,-15),center+Vector2(12,-15),center+Vector2(-12,15),center+Vector2(12,15),center+Vector2(-12,-15)]),job_emblem_color,3,true)
+	elif job_emblem_id in ["guardian","fortress_knight","rune_guardian"]:
+		draw_polyline(PackedVector2Array([center+Vector2(-16,-18),center+Vector2(16,-18),center+Vector2(14,6),center+Vector2(0,23),center+Vector2(-14,6),center+Vector2(-16,-18)]),job_emblem_color,3,true)
+		if job_emblem_id == "fortress_knight":
+			for tower in [-9,0,9]: draw_rect(Rect2(center+Vector2(tower-3,-11),Vector2(6,18)),job_emblem_color)
+		elif job_emblem_id == "rune_guardian": draw_polyline(PackedVector2Array([center+Vector2(0,-12),center+Vector2(9,0),center+Vector2(0,12),center+Vector2(-9,0),center+Vector2(0,-12)]),job_emblem_color,3,true)
+		else: draw_line(center+Vector2(0,-9),center+Vector2(0,10),job_emblem_color,3,true)
 	elif job_emblem_id == "vanguard":
 		var points := PackedVector2Array([center + Vector2(0, -18), center + Vector2(16, 0), center + Vector2(0, 18), center + Vector2(-16, 0), center + Vector2(0, -18)])
 		draw_polyline(points, job_emblem_color, 4.0, true)
@@ -581,7 +606,7 @@ func _draw() -> void:
 
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
-	var weapon_bonus := growth_sword_bonus if weapon_id == "sword" else growth_fist_bonus if weapon_id == "fist" else growth_bow_bonus
+	var weapon_bonus := float(get("growth_" + weapon_id + "_bonus")) if weapon_id in PrototypeWeaponRewards.FAMILY_IDS else 0.0
 	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
 	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
@@ -805,6 +830,9 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
 	growth_fist_bonus = 0.0
+	growth_staff_bonus = 0.0
+	growth_polearm_bonus = 0.0
+	growth_shield_bonus = 0.0
 	weapon_equipment = {"sword": 0, "bow": 0}
 	weapon_blueprints = {"sword": "", "bow": ""}
 	damage_receiver.max_health = MAX_HEALTH
@@ -1387,7 +1415,7 @@ func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
 		and lifesteal_allowed.is_valid() and lifesteal_allowed.call() \
 		and target.is_in_group("combat_enemy") and target.is_visible_in_tree() \
 		and event != null and event.attacker_id == &"player" \
-		and (event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist")) \
+		and (event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist") or event.tags.has("staff") or event.tags.has("polearm") or event.tags.has("shield")) \
 		and (event.tags.has("basic") or event.tags.has("skill")) \
 		and damage_receiver.health < damage_receiver.max_health
 	# 회복으로 문턱을 넘는 타격도 공격 시점의 배율을 한 번만 사용한다.

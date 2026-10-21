@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+weapon_id = &"polearm_basic"
+display_name = "연습용 장봉"
+attack_range_m = 2.8
+attack_interval_s = PackedFloat32Array(0.55, 0.7)
+damage = PackedInt32Array(10, 14)
+projectile_speed_mps = 0
+skill_ids = PackedStringArray("polearm_sweep", "polearm_thrust")

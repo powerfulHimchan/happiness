@@ -3,12 +3,15 @@ extends RefCounted
 
 ## GP-102: 성향의 출처별 가중치·상한과 기본 직업의 판정.
 const WEIGHTS := {"ability": 0.70, "weapon": 0.20, "special": 0.10}
-const PRIMARY_TAGS := ["strength", "shooting", "technique"]
-const TAG_NAMES := {"strength": "근력", "determination": "투지", "shooting": "사격", "nature": "자연", "technique": "기교", "chain": "연계"}
+const PRIMARY_TAGS := ["strength", "shooting", "technique", "magic", "focus", "defense"]
+const TAG_NAMES := {"strength": "근력", "determination": "투지", "shooting": "사격", "nature": "자연", "technique": "기교", "chain": "연계", "magic": "마력", "element": "원소", "focus": "집중", "harmony": "조화", "defense": "방어", "faith": "신념"}
 const JOBS: Array[Dictionary] = [
 	{"id": "vanguard", "name": "선봉대", "primary": "strength", "secondary": "determination", "weapon": "sword", "passive": "검 기본 공격·스킬 피해 +10%", "color": Color("ffd166")},
 	{"id": "tracker", "name": "추적자", "primary": "shooting", "secondary": "nature", "weapon": "bow", "passive": "활 기본 공격·스킬 피해 +10%", "color": Color("65e6ae")},
 	{"id": "martial_artist", "name": "무도가", "primary": "technique", "secondary": "chain", "weapon": "fist", "passive": "주먹 기본 공격·스킬 피해 +10%", "color": Color("f7b267")},
+	{"id": "elementalist", "name": "원소술사", "primary": "magic", "secondary": "element", "weapon": "staff", "passive": "지팡이 피해 +10%", "color": Color("c8a5ff")},
+	{"id": "pilgrim", "name": "순례자", "primary": "focus", "secondary": "harmony", "weapon": "polearm", "passive": "장봉 피해 +10%", "color": Color("a7e7c5")},
+	{"id": "guardian", "name": "수호자", "primary": "defense", "secondary": "faith", "weapon": "shield", "passive": "방패 피해 +10%", "color": Color("9ac5e8")},
 ]
 const PRIMARY_THRESHOLD := 5.0
 const SECONDARY_THRESHOLD := 3.0
@@ -26,6 +29,12 @@ const ADVANCED_JOBS: Array[Dictionary] = [
 	{"id": WARDEN_ID, "parent": "tracker", "name": "숲의 파수꾼", "primary": "shooting", "secondary": "nature", "weapon": "bow", "passive": "추적자 계승 · 활 피해 추가 +10% · 최대 체력 +40", "damage_bonus": 0.10, "health_bonus": 40, "requires": ["tracker_forest_aim"], "condition": "숲의 명중 보유 시 우선 진화", "color": Color("b5e585")},
 	{"id": "thunder_fist", "parent": "martial_artist", "name": "뇌권투사", "primary": "technique", "secondary": "chain", "weapon": "fist", "passive": "무도가 계승 · 주먹 피해 추가 +20% · 최대 체력 +10", "damage_bonus": 0.20, "health_bonus": 10, "condition": "연계의 극의 미보유 시 진화", "branch_card": "monk_chain", "color": Color("ffe66d")},
 	{"id": "phantom_dancer", "parent": "martial_artist", "name": "환영무희", "primary": "technique", "secondary": "chain", "weapon": "fist", "passive": "무도가 계승 · 주먹 피해 추가 +10% · 최대 체력 +30", "damage_bonus": 0.10, "health_bonus": 30, "requires": ["monk_chain"], "branch_card": "monk_chain", "condition": "연계의 극의 보유 시 우선 진화", "color": Color("cea5ff")},
+	{"id": "flame_sage", "parent": "elementalist", "name": "화염현자", "primary": "magic", "secondary": "element", "weapon": "staff", "passive": "원소술사 계승 · 지팡이 피해 추가 +20% · 최대 체력 +10", "damage_bonus": 0.2, "health_bonus": 10, "condition": "원소 조화 미보유 시 진화", "branch_card": "element_confluence", "color": Color("c8a5ff")},
+	{"id": "frost_mage", "parent": "elementalist", "name": "빙결술사", "primary": "magic", "secondary": "element", "weapon": "staff", "passive": "원소술사 계승 · 지팡이 피해 추가 +10% · 최대 체력 +30", "damage_bonus": 0.1, "health_bonus": 30, "condition": "원소 조화 보유 시 우선 진화", "branch_card": "element_confluence", "requires": ["element_confluence"], "color": Color("c8a5ff")},
+	{"id": "sky_monk", "parent": "pilgrim", "name": "천공봉승", "primary": "focus", "secondary": "harmony", "weapon": "polearm", "passive": "순례자 계승 · 장봉 피해 추가 +20% · 최대 체력 +10", "damage_bonus": 0.2, "health_bonus": 10, "condition": "순환의 깨달음 미보유 시 진화", "branch_card": "pilgrim_harmony", "color": Color("a7e7c5")},
+	{"id": "time_wanderer", "parent": "pilgrim", "name": "시간방랑자", "primary": "focus", "secondary": "harmony", "weapon": "polearm", "passive": "순례자 계승 · 장봉 피해 추가 +10% · 최대 체력 +30", "damage_bonus": 0.1, "health_bonus": 30, "condition": "순환의 깨달음 보유 시 우선 진화", "branch_card": "pilgrim_harmony", "requires": ["pilgrim_harmony"], "color": Color("a7e7c5")},
+	{"id": "fortress_knight", "parent": "guardian", "name": "성벽기사", "primary": "defense", "secondary": "faith", "weapon": "shield", "passive": "수호자 계승 · 방패 피해 추가 +20% · 최대 체력 +10", "damage_bonus": 0.2, "health_bonus": 10, "condition": "신념의 맹세 미보유 시 진화", "branch_card": "guardian_oath", "color": Color("9ac5e8")},
+	{"id": "rune_guardian", "parent": "guardian", "name": "룬 수호자", "primary": "defense", "secondary": "faith", "weapon": "shield", "passive": "수호자 계승 · 방패 피해 추가 +10% · 최대 체력 +30", "damage_bonus": 0.1, "health_bonus": 30, "condition": "신념의 맹세 보유 시 우선 진화", "branch_card": "guardian_oath", "requires": ["guardian_oath"], "color": Color("9ac5e8")},
 ]
 
 var job_id: String = ""
@@ -54,6 +63,10 @@ func add_special(weapon: String) -> void:
 
 
 func _weapon_tags(weapon: String) -> Dictionary:
+	if weapon == "staff": return {"magic": 1.0, "element": 0.6}
+	if weapon == "polearm": return {"focus": 1.0, "harmony": 0.6}
+	if weapon == "shield": return {"defense": 1.0, "faith": 0.6}
+
 	if weapon == "fist": return {"technique": 1.0, "chain": 0.6}
 	return {"strength": 1.0, "determination": 0.6} if weapon == "sword" else {"shooting": 1.0, "nature": 0.6}
 
@@ -122,6 +135,9 @@ func can_evolve() -> bool:
 
 func evolution_profile(ranks: Dictionary) -> Dictionary:
 	if not can_evolve(): return {}
+	if job_id == "elementalist": return profile("frost_mage" if int(ranks.get("element_confluence",0)) > 0 else "flame_sage")
+	if job_id == "pilgrim": return profile("time_wanderer" if int(ranks.get("pilgrim_harmony",0)) > 0 else "sky_monk")
+	if job_id == "guardian": return profile("rune_guardian" if int(ranks.get("guardian_oath",0)) > 0 else "fortress_knight")
 	if job_id == "martial_artist": return profile("phantom_dancer" if int(ranks.get("monk_chain", 0)) > 0 else "thunder_fist")
 	if job_id == "tracker": return profile(WARDEN_ID if int(ranks.get("tracker_forest_aim", 0)) > 0 else STORM_ID)
 	return profile(BREAKER_ID if int(ranks.get("vanguard_dawn_edge", 0)) > 0 else DRAGON_ID)
@@ -180,6 +196,12 @@ func hud_text() -> String:
 	if not job_id.is_empty():
 		if job_id == "vanguard":
 			return "선봉대 · 진화7+ · 근력%.1f/투지%.1f 남음" % [_remaining(EVOLUTION_PRIMARY, score("strength")), _remaining(EVOLUTION_SECONDARY, score("determination"))]
+		if job_id == "elementalist":
+			return "원소술사 · 진화7+ · 마력%.1f/원소%.1f 남음" % [_remaining(EVOLUTION_PRIMARY,score("magic")), _remaining(EVOLUTION_SECONDARY,score("element"))]
+		if job_id == "pilgrim":
+			return "순례자 · 진화7+ · 집중%.1f/조화%.1f 남음" % [_remaining(EVOLUTION_PRIMARY,score("focus")), _remaining(EVOLUTION_SECONDARY,score("harmony"))]
+		if job_id == "guardian":
+			return "수호자 · 진화7+ · 방어%.1f/신념%.1f 남음" % [_remaining(EVOLUTION_PRIMARY,score("defense")), _remaining(EVOLUTION_SECONDARY,score("faith"))]
 		if job_id == "martial_artist":
 			return "무도가 · 진화7+ · 기교%.1f/연계%.1f 남음" % [_remaining(EVOLUTION_PRIMARY, score("technique")), _remaining(EVOLUTION_SECONDARY, score("chain"))]
 		if job_id == "tracker":

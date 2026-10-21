@@ -61,6 +61,8 @@ var last_event_msec: int = -1
 var _state_elapsed_s: float = 0.0
 var _attack_cooldown_s: float = 0.0
 var _spawn_position: Vector2
+var _pole_falling: bool = false
+var _shield_stun_remaining_s: float = 0.0
 var _velocity: Vector2 = Vector2.ZERO
 var _attack_direction: Vector2 = Vector2.LEFT
 var _attack_distance_px: float = 0.0
@@ -97,10 +99,19 @@ func _process(delta: float) -> void:
 		_update_body_animation(delta * enemy_time_scale())
 		return
 	var scaled_delta := delta * enemy_time_scale()
+	var shield_stunned := _shield_stun_remaining_s > 0.0
+	_shield_stun_remaining_s = maxf(0.0,_shield_stun_remaining_s - scaled_delta)
 	_attack_cooldown_s = maxf(0.0, _attack_cooldown_s - scaled_delta)
 	_state_elapsed_s += scaled_delta
 	_update_body_animation(scaled_delta)
-	if festival_variant and enemy_type == EnemyType.LEAF_SLIME:
+	if _pole_falling:
+		_velocity.y += 1900.0 * scaled_delta
+		position.y = minf(_spawn_position.y,position.y + _velocity.y * scaled_delta)
+		_pole_falling = position.y < _spawn_position.y
+		_state_elapsed_s = 0.0
+	elif shield_stunned:
+		_state_elapsed_s = 0.0
+	elif festival_variant and enemy_type == EnemyType.LEAF_SLIME:
 		_update_festival_soldier(scaled_delta)
 	elif festival_variant and enemy_type == EnemyType.SEED_SACK:
 		_update_festival_turret()
@@ -143,6 +154,26 @@ func receive_damage(event: DamageEvent) -> int:
 	return result
 
 
+func apply_pole_push(distance_px: float) -> void:
+	if not is_targetable(): return
+	var before := position.x
+	position.x = clampf(position.x + distance_px,100.0,4900.0)
+	_spawn_position.x += position.x-before
+	_interrupt_for_control()
+	_attack_cooldown_s = maxf(_attack_cooldown_s,0.4)
+	_set_state(State.RECOVERY,"장봉 밀치기 · 공격 중단")
+
+func apply_shield_stun(duration_s: float) -> void:
+	if not is_targetable() or duration_s <= 0: return
+	_shield_stun_remaining_s = maxf(_shield_stun_remaining_s,duration_s)
+	_interrupt_for_control()
+	_set_state(State.RECOVERY,"방패 기절 · 공격 중단")
+
+func _interrupt_for_control() -> void:
+	_pole_falling = enemy_type == EnemyType.LEAF_SLIME and not festival_variant and position.y < _spawn_position.y
+	_combo_remaining = 0
+	_velocity = Vector2.ZERO
+
 func configure_route(route: String) -> void:
 	forest_variant = route == "forest"
 	ruins_variant = route == "ruins"
@@ -170,6 +201,8 @@ func reset_target() -> void:
 	last_enemy_log = "행동 대기"
 	last_event_msec = Time.get_ticks_msec()
 	_state_elapsed_s = 0.0
+	_pole_falling = false
+	_shield_stun_remaining_s = 0.0
 	_attack_cooldown_s = 0.0
 	_velocity = Vector2.ZERO
 	_attack_distance_px = 0.0

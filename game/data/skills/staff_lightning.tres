@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_lightning"
+display_name = "낙뢰"
+execution_style = &"line"
+effect_summary = "시전 위치 고정 · 주변1.8m 피해60"
+cooldown_s = 9
+duration_s = 0.75
+hit_times_s = PackedFloat32Array(0.35)
+damage = PackedInt32Array(60)
+hit_range_m = 7
+hit_half_height_m = 0.8
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.45

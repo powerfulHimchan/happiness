@@ -31,10 +31,18 @@ var _switch_buffered: bool = false
 @onready var bow_combat: BowCombatController = $"../BowCombatController"
 
 
+@onready var staff_combat: StaffCombatController = $"../StaffCombatController"
+@onready var polearm_combat: PolearmCombatController = $"../PolearmCombatController"
+@onready var shield_combat: ShieldCombatController = $"../ShieldCombatController"
+
+
 func _ready() -> void:
 	sword_combat.combat_metrics_changed.connect(_on_child_metrics.bind(SWORD_ID))
 	bow_combat.combat_metrics_changed.connect(_on_child_metrics.bind(BOW_ID))
 	fist_combat.combat_metrics_changed.connect(_on_child_metrics.bind("fist"))
+	staff_combat.combat_metrics_changed.connect(_on_child_metrics.bind("staff"))
+	polearm_combat.combat_metrics_changed.connect(_on_child_metrics.bind("polearm"))
+	shield_combat.combat_metrics_changed.connect(_on_child_metrics.bind("shield"))
 	_apply_active_weapon()
 
 
@@ -78,6 +86,9 @@ func prepare_next_stage() -> void:
 	sword_combat.prepare_next_stage()
 	bow_combat.prepare_next_stage()
 	fist_combat.prepare_next_stage()
+	staff_combat.prepare_next_stage()
+	polearm_combat.prepare_next_stage()
+	shield_combat.prepare_next_stage()
 	_emit_active_metrics()
 
 
@@ -132,7 +143,7 @@ func reset_combat(starting_weapon: String = SWORD_ID, backup: String = "") -> bo
 
 
 func combat_for(id: String) -> Node:
-	return sword_combat if id == SWORD_ID else bow_combat if id == BOW_ID else fist_combat
+	return sword_combat if id == SWORD_ID else bow_combat if id == BOW_ID else fist_combat if id == "fist" else staff_combat if id == "staff" else polearm_combat if id == "polearm" else shield_combat
 
 
 func backup_weapon() -> String:
@@ -200,7 +211,7 @@ func _perform_switch(reason: String) -> void:
 func _apply_active_weapon() -> void:
 	for family in PrototypeWeaponRewards.FAMILY_IDS: combat_for(family).set_active(family == active_weapon_id)
 	var combat: Node = combat_for(active_weapon_id)
-	target_selector.set_target_profile(_weapon_name(active_weapon_id), combat.weapon.attack_range_m, active_weapon_id == BOW_ID)
+	target_selector.set_target_profile(_weapon_name(active_weapon_id), combat.weapon.attack_range_m, active_weapon_id in [BOW_ID, "staff"])
 	_emit_active_metrics()
 
 
@@ -219,8 +230,6 @@ func _emit_active_metrics() -> void:
 
 
 func _enrich_metrics(metrics: Dictionary) -> void:
-	var sword_metrics := sword_combat.current_metrics()
-	var bow_metrics := bow_combat.current_metrics()
 	metrics["active_weapon_id"] = active_weapon_id
 	var own := PrototypeWeaponRewards.profile(active_weapon_id, int(equipment[active_weapon_id]), String(blueprints[active_weapon_id]))
 	var other := backup_weapon()
@@ -248,37 +257,21 @@ func _enrich_metrics(metrics: Dictionary) -> void:
 	metrics["weapon_switch_blocked_count"] = blocked_switch_count
 	metrics["weapon_switch_reserved_count"] = reserved_switch_count
 	metrics["weapon_switch_last_log"] = last_switch_log
-	metrics["sword_basic_remaining_s"] = sword_metrics.get("basic_attack_remaining_s", 0.0)
-	metrics["bow_basic_remaining_s"] = bow_metrics.get("basic_attack_remaining_s", 0.0)
-	metrics["sword_skill_1_cooldown_s"] = sword_metrics.get("skill_1_cooldown_s", 0.0)
-	metrics["sword_skill_2_cooldown_s"] = sword_metrics.get("skill_2_cooldown_s", 0.0)
-	metrics["bow_skill_1_cooldown_s"] = bow_metrics.get("skill_1_cooldown_s", 0.0)
-	metrics["bow_skill_2_cooldown_s"] = bow_metrics.get("skill_2_cooldown_s", 0.0)
-	var sword_hits := int(sword_metrics.get("basic_attack_count", 0)) \
-		+ int(sword_metrics.get("skill_hit_count", 0))
-	var bow_hits := int(bow_metrics.get("basic_attack_count", 0)) \
-		+ int(bow_metrics.get("skill_hit_count", 0))
-	var fist_metrics: Dictionary = fist_combat.current_metrics()
-	var fist_hits := int(fist_metrics.get("basic_attack_count", 0)) + int(fist_metrics.get("skill_hit_count", 0))
-	for field in ["basic_remaining_s", "skill_1_cooldown_s", "skill_2_cooldown_s"]:
-		metrics["fist_" + field] = fist_metrics.get("basic_attack_remaining_s" if field == "basic_remaining_s" else field, 0.0)
-	metrics.fist_total_hits = fist_hits
-	metrics.fist_basic_attack_count = fist_combat.basic_attack_count
-	metrics.fist_skill_hit_count = fist_combat.skill_hit_count
-	metrics.fist_total_damage = fist_combat.total_damage
-	var total_hits := sword_hits + bow_hits + fist_hits
-	metrics.fist_usage_ratio = float(fist_hits) / float(total_hits) if total_hits > 0 else 0.0
-	metrics["sword_basic_attack_count"] = int(sword_metrics.get("basic_attack_count", 0))
-	metrics["sword_skill_hit_count"] = int(sword_metrics.get("skill_hit_count", 0))
-	metrics["sword_total_hits"] = sword_hits
-	metrics["sword_total_damage"] = int(sword_metrics.get("combat_total_damage", 0))
-	metrics["bow_basic_attack_count"] = int(bow_metrics.get("basic_attack_count", 0))
-	metrics["bow_skill_hit_count"] = int(bow_metrics.get("skill_hit_count", 0))
-	metrics["bow_total_hits"] = bow_hits
-	metrics["bow_total_damage"] = int(bow_metrics.get("combat_total_damage", 0))
+	var total_hits := 0
+	for family in PrototypeWeaponRewards.FAMILY_IDS:
+		var source: Dictionary = combat_for(family).current_metrics()
+		var hits := int(source.get("basic_attack_count",0)) + int(source.get("skill_hit_count",0))
+		total_hits += hits
+		metrics[family + "_total_hits"] = hits
+		metrics[family + "_total_damage"] = int(source.get("combat_total_damage",0))
+		metrics[family + "_basic_attack_count"] = int(source.get("basic_attack_count",0))
+		metrics[family + "_skill_hit_count"] = int(source.get("skill_hit_count",0))
+		for field in ["basic_remaining_s", "skill_1_cooldown_s", "skill_2_cooldown_s"]:
+			metrics[family + "_" + field] = source.get("basic_attack_remaining_s" if field == "basic_remaining_s" else field,0.0)
 	metrics["weapon_usage_total_hits"] = total_hits
-	metrics["sword_usage_ratio"] = float(sword_hits) / float(total_hits) if total_hits > 0 else 0.0
-	metrics["bow_usage_ratio"] = float(bow_hits) / float(total_hits) if total_hits > 0 else 0.0
+	for family in PrototypeWeaponRewards.FAMILY_IDS:
+		metrics[family + "_usage_ratio"] = float(metrics[family + "_total_hits"]) / total_hits if total_hits > 0 else 0.0
+
 
 
 func _weapon_name(weapon_id: String) -> String:

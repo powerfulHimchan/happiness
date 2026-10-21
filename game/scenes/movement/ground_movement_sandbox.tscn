@@ -1,4 +1,4 @@
-[gd_scene load_steps=56 format=3]
+[gd_scene load_steps=68 format=3]
 
 [ext_resource type="Script" path="res://scripts/movement/ground_movement_sandbox.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/stage/recovery_orb_controller.gd" id="36_recovery_orbs"]
@@ -53,6 +53,19 @@
 [ext_resource type="Resource" path="res://data/weapons/fist_basic.tres" id="fist_weapon"]
 [ext_resource type="Resource" path="res://data/skills/fist_dash.tres" id="fist_dash"]
 [ext_resource type="Resource" path="res://data/skills/fist_flurry.tres" id="fist_flurry"]
+
+[ext_resource type="Script" path="res://scripts/combat/staff_combat_controller.gd" id="staff_controller"]
+[ext_resource type="Resource" path="res://data/weapons/staff_basic.tres" id="staff_weapon"]
+[ext_resource type="Resource" path="res://data/skills/staff_fireball.tres" id="staff_fireball"]
+[ext_resource type="Resource" path="res://data/skills/staff_ice_lance.tres" id="staff_ice_lance"]
+[ext_resource type="Script" path="res://scripts/combat/polearm_combat_controller.gd" id="polearm_controller"]
+[ext_resource type="Resource" path="res://data/weapons/polearm_basic.tres" id="polearm_weapon"]
+[ext_resource type="Resource" path="res://data/skills/polearm_sweep.tres" id="polearm_sweep"]
+[ext_resource type="Resource" path="res://data/skills/polearm_thrust.tres" id="polearm_thrust"]
+[ext_resource type="Script" path="res://scripts/combat/shield_combat_controller.gd" id="shield_controller"]
+[ext_resource type="Resource" path="res://data/weapons/shield_basic.tres" id="shield_weapon"]
+[ext_resource type="Resource" path="res://data/skills/shield_guard.tres" id="shield_guard"]
+[ext_resource type="Resource" path="res://data/skills/shield_counter.tres" id="shield_counter"]
 
 [sub_resource type="RectangleShape2D" id="LeftFloorShape"]
 size = Vector2(3300, 120)
@@ -209,6 +222,39 @@ skill_2 = ExtResource("19_bow_rain_skill")
 top_level = true
 visible = false
 texture = ExtResource("20_bow_rain_texture")
+
+[node name="StaffCombatController" type="Node2D" parent="Player"]
+z_index = 35
+script = ExtResource("staff_controller")
+weapon = ExtResource("staff_weapon")
+skill_1 = ExtResource("staff_fireball")
+skill_2 = ExtResource("staff_ice_lance")
+weapon_family = "staff"
+
+[node name="SwordSlash" type="Sprite2D" parent="Player/StaffCombatController"]
+visible = false
+
+[node name="PolearmCombatController" type="Node2D" parent="Player"]
+z_index = 35
+script = ExtResource("polearm_controller")
+weapon = ExtResource("polearm_weapon")
+skill_1 = ExtResource("polearm_sweep")
+skill_2 = ExtResource("polearm_thrust")
+weapon_family = "polearm"
+
+[node name="SwordSlash" type="Sprite2D" parent="Player/PolearmCombatController"]
+visible = false
+
+[node name="ShieldCombatController" type="Node2D" parent="Player"]
+z_index = 35
+script = ExtResource("shield_controller")
+weapon = ExtResource("shield_weapon")
+skill_1 = ExtResource("shield_guard")
+skill_2 = ExtResource("shield_counter")
+weapon_family = "shield"
+
+[node name="SwordSlash" type="Sprite2D" parent="Player/ShieldCombatController"]
+visible = false
 
 [node name="PrototypeWeaponController" type="Node" parent="Player"]
 script = ExtResource("16_weapon_controller")

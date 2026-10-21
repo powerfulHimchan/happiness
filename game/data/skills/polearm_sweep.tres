@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_sweep"
+display_name = "횡소봉"
+execution_style = &"spin"
+effect_summary = "주변3m · 피해24 · 일반 적0.6m 밀침"
+cooldown_s = 5
+duration_s = 0.55
+hit_times_s = PackedFloat32Array(0.22)
+damage = PackedInt32Array(24)
+hit_range_m = 3
+hit_half_height_m = 0.8
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.3

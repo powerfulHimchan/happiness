@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"staff_ice_lance"
+display_name = "얼음창"
+execution_style = &"line"
+effect_summary = "전방7m · 최대3개체 · 피해38"
+cooldown_s = 7
+duration_s = 0.65
+hit_times_s = PackedFloat32Array(0.28)
+damage = PackedInt32Array(38)
+hit_range_m = 7
+hit_half_height_m = 0.5
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.4

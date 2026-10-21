@@ -120,7 +120,7 @@ func _fire_beam() -> void:
 
 func _adjust_damage_event(event: DamageEvent) -> DamageEvent:
 	var adjusted := super._adjust_damage_event(event)
-	last_damage_multiplier = 1.5 if state == State.RECOVERY and (event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist")) else 1.0
+	last_damage_multiplier = 1.5 if state == State.RECOVERY and (event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist") or event.tags.has("staff") or event.tags.has("polearm") or event.tags.has("shield")) else 1.0
 	last_adjusted_damage = maxi(1, roundi(event.damage * last_damage_multiplier))
 	adjusted.damage = last_adjusted_damage
 	return adjusted

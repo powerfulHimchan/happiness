@@ -5,6 +5,26 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/scripts/combat/staff_combat_controller.gd"
+  "$game_root/scripts/combat/staff_magic_bolt.gd"
+  "$game_root/scripts/combat/polearm_combat_controller.gd"
+  "$game_root/scripts/combat/shield_combat_controller.gd"
+  "$game_root/data/weapons/staff_basic.tres"
+  "$game_root/data/weapons/polearm_basic.tres"
+  "$game_root/data/weapons/shield_basic.tres"
+  "$game_root/data/skills/staff_fireball.tres"
+  "$game_root/data/skills/staff_ice_lance.tres"
+  "$game_root/data/skills/staff_lightning.tres"
+  "$game_root/data/skills/polearm_sweep.tres"
+  "$game_root/data/skills/polearm_thrust.tres"
+  "$game_root/data/skills/polearm_cycle.tres"
+  "$game_root/data/skills/shield_guard.tres"
+  "$game_root/data/skills/shield_counter.tres"
+  "$game_root/data/skills/shield_slam.tres"
+  "$game_root/tests/gp354_runtime_test.gd"
+  "$game_root/tests/gp364_runtime_test.gd"
+  "$game_root/tests/gp374_runtime_test.gd"
+
   "$game_root/scripts/combat/fist_combat_controller.gd"
   "$game_root/data/weapons/fist_basic.tres"
   "$game_root/data/skills/fist_dash.tres"
@@ -493,10 +513,10 @@ if ! rg -q 'const SWITCH_COOLDOWN_S := 0\.50' "$game_root/scripts/combat/prototy
   exit 1
 fi
 
-if ! rg -q 'sword_combat\.current_metrics\(\)' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
-  || ! rg -q 'bow_combat\.current_metrics\(\)' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
-  || ! rg -q 'sword_basic_remaining_s' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
-  || ! rg -q 'bow_skill_2_cooldown_s' "$game_root/scripts/combat/prototype_weapon_controller.gd"; then
+if ! rg -q 'for family in PrototypeWeaponRewards\.FAMILY_IDS' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'combat_for\(family\)\.current_metrics\(\)' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'basic_attack_remaining_s' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q 'skill_2_cooldown_s' "$game_root/scripts/combat/prototype_weapon_controller.gd"; then
   echo "CP-205 per-weapon attack and skill cooldown state reporting is missing." >&2
   exit 1
 fi
@@ -608,7 +628,7 @@ fi
 
 if ! rg -q 'enum ScreenMode' "$game_root/scripts/movement/ground_movement_controls.gd" \
   || ! rg -q 'damage_cause_summary' "$game_root/scripts/player/prototype_player.gd" \
-  || ! rg -q 'sword_usage_ratio' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
+  || ! rg -q '_usage_ratio' "$game_root/scripts/combat/prototype_weapon_controller.gd" \
   || ! rg -q 'retry_requested\.connect\(_reset_test\)' "$game_root/scripts/movement/ground_movement_sandbox.gd"; then
 	echo "CP-304 combat HUD, result metrics, retry, or main flow is missing." >&2
 	exit 1
@@ -747,6 +767,26 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for new_family in staff polearm shield; do
+    case "$new_family" in
+      staff) new_script=gp354_runtime_test; new_jobs="flame_sage frost_mage"; new_base=flame_sage ;;
+      polearm) new_script=gp364_runtime_test; new_jobs="sky_monk time_wanderer"; new_base=sky_monk ;;
+      shield) new_script=gp374_runtime_test; new_jobs="fortress_knight rune_guardian"; new_base=fortress_knight ;;
+    esac
+    for new_character in roan lumi; do
+      for new_backup in sword bow fist staff polearm shield; do
+        if [[ "$new_backup" == "$new_family" ]]; then continue; fi
+        checked_godot 90s --headless --path "$game_root" \
+          --script "res://tests/$new_script.gd" -- combat "$new_character" "$new_base" "$new_backup"
+        for new_job in $new_jobs; do
+          for new_phase in seed resume legacy late; do
+            checked_godot 90s --headless --path "$game_root" \
+              --script "res://tests/$new_script.gd" -- "$new_phase" "$new_character" "$new_job" "$new_backup"
+          done
+        done
+      done
+    done
+  done
   for martial_character in roan lumi; do
     for martial_backup in sword bow; do
       checked_godot 90s --headless --path "$game_root" \
