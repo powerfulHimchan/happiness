@@ -5,6 +5,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$game_root/tests/gp415_444_runtime_test.gd"
+  "$game_root/scripts/economy/run_supply_shop.gd"
+  "$game_root/scripts/ui/supply_shop_view.gd"
   "$game_root/tests/gp385_414_runtime_test.gd"
   "$game_root/scripts/growth/prototype_weapon_training.gd"
   "$game_root/data/skills/polearm_cross.tres"
@@ -800,6 +803,26 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for supply_hero in roan lumi; do
+    for supply_family in sword bow fist staff polearm shield; do
+      for supply_item in "weapon_$supply_family" "skill_${supply_family}_0" "skill_${supply_family}_1"; do
+        for supply_phase in seed resume next; do
+          checked_godot 90s --headless --path "$game_root" \
+            --script res://tests/gp415_444_runtime_test.gd -- "$supply_phase" "$supply_item" "$supply_hero" "$supply_family"
+        done
+      done
+      for supply_phase in rules legacy progression; do
+        checked_godot 90s --headless --path "$game_root" \
+          --script res://tests/gp415_444_runtime_test.gd -- "$supply_phase" heal "$supply_hero" "$supply_family"
+      done
+    done
+    for supply_item in heal potion gauge refresh; do
+      for supply_phase in seed resume next; do
+        checked_godot 90s --headless --path "$game_root" \
+          --script res://tests/gp415_444_runtime_test.gd -- "$supply_phase" "$supply_item" "$supply_hero" sword
+      done
+    done
+  done
   checked_godot 90s --headless --path "$game_root" \
     --script res://tests/gp385_414_runtime_test.gd -- catalog striker_fist roan 1
   for content_item in striker_fist weaver_fist balanced_fist striker_staff weaver_staff balanced_staff striker_polearm weaver_polearm balanced_polearm striker_shield weaver_shield balanced_shield fist_pendant fist_sigil staff_pendant staff_sigil polearm_pendant polearm_sigil shield_pendant shield_sigil fist_basic_training fist_skill_training staff_basic_training staff_skill_training polearm_basic_training polearm_skill_training shield_basic_training shield_skill_training polearm_cross shield_wave; do

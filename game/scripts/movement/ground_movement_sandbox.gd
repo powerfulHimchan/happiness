@@ -23,6 +23,8 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var stage_runner: PrototypeStageRunner = $StageRunner
 @onready var growth: PrototypeGrowthController = $PrototypeGrowthController
 
+var run_shop: Dictionary = {}
+
 var _growth_pause_owned: bool = false
 var _growth_previous_tree_pause: bool = false
 var _growth_previous_controls_mode: int = Node.PROCESS_MODE_INHERIT
@@ -81,6 +83,10 @@ func _ready() -> void:
 	controls.weapon_reward_selected.connect(_claim_weapon_reward)
 	controls.skill_reward_selected.connect(_claim_skill_reward)
 	controls.relic_reward_selected.connect(_claim_relic_reward)
+	controls.shop_open_requested.connect(_open_supply_shop)
+	controls.shop_buy_requested.connect(_buy_supply)
+	controls.shop_reroll_requested.connect(_reroll_supplies)
+	controls.shop_close_requested.connect(_close_supply_shop)
 	controls.potion_recipe_selected.connect(_select_potion_recipe)
 	controls.route_records_retry_requested.connect(_retry_route_records)
 	controls.boss_choice_confirmed.connect(_resolve_boss_choice)
@@ -341,6 +347,8 @@ func _reset_test() -> void:
 	target_selector.reset_selection()
 	ultimate_controller.reset_ultimate()
 	test_recorder.start_run(run_id, controls.requested_run_mode, player.character_id, story_run.enabled, controls.requested_expedition)
+	run_shop = RunSupplyShop.create(run_id)
+	_sync_supply_shop()
 	_active_rewind_run_id = run_id
 	player.relic_run_id = run_id
 	if controls.requested_stage_limit > 0:
@@ -461,6 +469,8 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 			if story_run.enabled: _open_story(12)
 	elif growth.run_active and not player.damage_receiver.dead and _intermission_stage != stage_runner.stage_number:
 		_intermission_stage = stage_runner.stage_number
+		RunSupplyShop.grant(run_shop,stage_runner.checkpoint_snapshot(),weapon_controller.skills)
+		_sync_supply_shop()
 		controls.release_all_inputs()
 		var healing := ceili(player.damage_receiver.max_health * 0.20)
 		if stage_runner.route_id == "clockwork":
@@ -532,6 +542,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	for family in ["staff", "polearm", "shield"]:
 		var bonus := float(player.get("growth_" + family + "_bonus"))
 		if weapon_controller.equipment.has(family) or bonus > 0.0: state.player[family] = bonus
+	if not run_shop.is_empty(): state.supplies = run_shop.duplicate(true)
 	if story_run.enabled: state.story = story_run.snapshot()
 	else: state.stage.erase("heart_threshold")
 	var error := checkpoint_store.save_checkpoint(state)
@@ -674,6 +685,7 @@ func continue_saved_run() -> bool:
 		return false
 	if _discover_job(String(state.growth.job)) != OK:
 		return false
+	run_shop = state.get("supplies",{}).duplicate(true)
 	_restoring_checkpoint = true
 	story_run.restore(state.get("story", {}))
 	controls.selected_story_enabled = story_run.enabled
@@ -751,6 +763,7 @@ func continue_saved_run() -> bool:
 		_show_intermission_routes()
 	else:
 		controls.show_weapon_rewards(stage_runner.stage_number, PrototypeWeaponRewards.offers(stage_runner.stage_number, weapon_controller.equipment, weapon_controller.unlocked_blueprints, weapon_controller.blueprints))
+	_sync_supply_shop()
 	_update_story_status()
 	if story_run.enabled and not story_run.pending.is_empty(): _open_story(controls.current_screen_mode())
 	return true
@@ -964,6 +977,7 @@ func _on_boss_legacy_damage(_event: DamageEvent) -> void:
 
 
 func _show_intermission_routes() -> void:
+	_sync_supply_shop()
 	controls.update_skill_reward_status(weapon_controller.skills, stage_runner.skills_claimed)
 	controls.relic_offer_available = stage_runner.stage_number == 2 and player.relic_state.is_empty()
 	controls.show_stage_routes(stage_runner.stage_number, stage_runner.stage_limit, _stage_recovered_health, stage_runner.available_routes())
@@ -1515,3 +1529,93 @@ func _sera_assist() -> void:
 	event.damage = 40
 	event.tags = PackedStringArray(["helper"])
 	enemy.receive_damage(event)
+
+
+func _supply_context() -> Dictionary:
+	var cooldowns := {}
+	for family in weapon_controller.equipment:
+		var combat: Node = weapon_controller.combat_for(family)
+		cooldowns[family] = [float(combat.get("_skill_1_cooldown_s")),float(combat.get("_skill_2_cooldown_s"))]
+	return {"health":player.damage_receiver.health,"max_health":player.damage_receiver.max_health,"potions":player.potions_remaining,"potion_capacity":player.potions_capacity(),"gauge":ultimate_controller.gauge,"equipment":weapon_controller.equipment.duplicate(),"blueprints":weapon_controller.blueprints.duplicate(),"skills":weapon_controller.skills.duplicate(true),"cooldowns":cooldowns}
+
+func _sync_supply_shop(message: String = "") -> void:
+	controls.update_supply_shop({"enabled":not run_shop.is_empty(),"coins":int(run_shop.get("coins",0)),"stage":int(run_shop.get("cleared",0)),"rerolled":RunSupplyShop.rerolled(run_shop,int(run_shop.get("cleared",0))),"cards":RunSupplyShop.cards(run_shop,_supply_context()),"context":_supply_context()},message)
+
+func _shop_allowed(mode: int) -> bool:
+	return controls.current_screen_mode() == mode and not run_shop.is_empty() and stage_runner.has_next_stage() and stage_runner.stage_complete and stage_runner.reward_claimed and growth.run_active and not player.damage_receiver.dead and not growth.choosing and not growth.awaiting_job_confirmation
+
+func _open_supply_shop() -> void:
+	if not _shop_allowed(9): return
+	controls.release_all_inputs()
+	_sync_supply_shop()
+	controls.show_supply_shop()
+
+func _close_supply_shop() -> void:
+	if not _shop_allowed(20): return
+	_show_intermission_routes()
+
+func _buy_supply(id: String, slot: int = -1) -> bool:
+	if not _shop_allowed(20): return false
+	var reason := RunSupplyShop.blocked(run_shop,id,_supply_context())
+	if not reason.is_empty():
+		_sync_supply_shop(reason)
+		return false
+	var item := RunSupplyShop.product(id,int(run_shop.cleared))
+	var offer := RunSupplyShop.find_offer(run_shop,id)
+	if (item.kind == "skill" and slot not in [0,1]) or (item.kind != "skill" and slot != -1): return false
+	var previous_shop := run_shop.duplicate(true)
+	var previous_weapons := weapon_controller.checkpoint_snapshot()
+	var previous_health := player.damage_receiver.health
+	var previous_potions := player.potions_remaining
+	var previous_log := player.potion_log
+	var previous_gauge := ultimate_controller.gauge
+	var applied := true
+	match item.kind:
+		"weapon": applied = weapon_controller.equip_reward(item.family,int(item.grade))
+		"skill": applied = weapon_controller.replace_skill(offer.skill,slot)
+		"service":
+			match id:
+				"heal": player.apply_growth_health(0,ceili(player.damage_receiver.max_health*.30))
+				"potion": player.prepare_potions(player.potion_recipe,player.potions_remaining+1)
+				"gauge": ultimate_controller.gauge = mini(100,ultimate_controller.gauge+30)
+				"refresh":
+					for family in weapon_controller.equipment:
+						var combat: Node = weapon_controller.combat_for(family)
+						combat.set("_skill_1_cooldown_s",0.0)
+						combat.set("_skill_2_cooldown_s",0.0)
+	if not applied: return false
+	run_shop.coins -= int(item.cost)
+	run_shop.actions.append({"stage":int(run_shop.cleared),"id":id,"skill":String(offer.skill),"slot":slot})
+	if _save_checkpoint(stage_runner.current_metrics(),false) != OK:
+		run_shop = previous_shop
+		weapon_controller.restore_checkpoint(previous_weapons)
+		player.damage_receiver.health = previous_health
+		player.potions_remaining = previous_potions
+		player.potion_log = previous_log
+		ultimate_controller.gauge = previous_gauge
+		player._emit_metrics()
+		ultimate_controller.force_emit_metrics()
+		_sync_supply_shop("상점 저장 실패 · 잔액과 효과를 되돌렸습니다")
+		return false
+	controls.shop_selected_id = ""
+	controls.shop_slot = -1
+	player._emit_metrics()
+	ultimate_controller.force_emit_metrics()
+	weapon_controller.force_emit_metrics()
+	_sync_supply_shop("구매와 중간 저장 완료")
+	return true
+
+func _reroll_supplies() -> bool:
+	if not _shop_allowed(20) or RunSupplyShop.rerolled(run_shop,int(run_shop.cleared)) or int(run_shop.coins) < RunSupplyShop.REROLL_COST: return false
+	var previous := run_shop.duplicate(true)
+	run_shop.coins -= RunSupplyShop.REROLL_COST
+	run_shop.actions.append({"stage":int(run_shop.cleared),"id":"reroll","skill":"","slot":-1})
+	run_shop.stock = RunSupplyShop.stock(int(run_shop.seed),int(run_shop.cleared),1,weapon_controller.skills)
+	if _save_checkpoint(stage_runner.current_metrics(),false) != OK:
+		run_shop = previous
+		_sync_supply_shop("재입고 저장 실패 · 잔액과 재고를 되돌렸습니다")
+		return false
+	controls.shop_selected_id = ""
+	controls.shop_slot = -1
+	_sync_supply_shop("기술 재입고 완료 · 이번 휴식1회")
+	return true

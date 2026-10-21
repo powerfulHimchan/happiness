@@ -40,6 +40,10 @@ signal run_build_finished
 signal story_acknowledged(id: String)
 signal story_journal_started
 signal story_journal_finished
+signal shop_open_requested
+signal shop_buy_requested(id: String, slot: int)
+signal shop_reroll_requested
+signal shop_close_requested
 signal story_journal_retry_requested
 
 enum ScreenMode {
@@ -63,6 +67,7 @@ enum ScreenMode {
 	START_CHARACTER,
 	STORY,
 	STORY_JOURNAL,
+	SUPPLY_SHOP,
 }
 
 const PANEL_COLOR := Color("18394b")
@@ -245,6 +250,13 @@ var job_confirm_rect := Rect2()
 var job_ultimate_rects: Array[Rect2] = []
 var job_ultimates: Array[Dictionary] = []
 var selected_job_ultimate: int = -1
+var shop_open_rect: Rect2
+var shop_data: Dictionary = {"enabled":false}
+var shop_page: int = 0
+var shop_selected_id: String = ""
+var shop_slot: int = -1
+var shop_message: String = ""
+
 var skill_reward_open_rect: Rect2
 var skill_reward_loadout: Dictionary = PrototypeSkillRewards.defaults()
 var skill_reward_claimed: bool = true
@@ -430,6 +442,10 @@ func _input(event: InputEvent) -> void:
 		close_run_build()
 		get_viewport().set_input_as_handled()
 		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.SUPPLY_SHOP:
+		shop_close_requested.emit()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if screen_mode == ScreenMode.LAYOUT_EDITOR:
@@ -462,6 +478,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if screen_mode == ScreenMode.SUPPLY_SHOP:
+		SupplyShopView.draw(self)
+		return
 	if screen_mode == ScreenMode.STORY:
 		_draw_story()
 		return
@@ -776,6 +795,13 @@ func _refresh_stage_routes() -> void:
 	if relic_offer_available:
 		skill_reward_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.81), Vector2(safe.size.x * 0.43, safe.size.y * 0.08))
 		relic_reward_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.52, safe.size.y * 0.81), skill_reward_open_rect.size)
+	shop_open_rect = Rect2()
+	if shop_data.get("enabled",false):
+		var count_actions := 3 if relic_offer_available else 2
+		var action_width := safe.size.x*(.28 if count_actions == 3 else .43)
+		skill_reward_open_rect = Rect2(safe.position+Vector2(safe.size.x*.05,safe.size.y*.81),Vector2(action_width,safe.size.y*.08))
+		shop_open_rect = Rect2(safe.position+Vector2(safe.size.x*(.67 if count_actions == 3 else .52),safe.size.y*.81),skill_reward_open_rect.size)
+		if relic_offer_available: relic_reward_open_rect = Rect2(safe.position+Vector2(safe.size.x*.36,safe.size.y*.81),skill_reward_open_rect.size)
 	stage_route_previous_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.35), Vector2(safe.size.x * 0.22, safe.size.y * 0.06))
 	stage_route_next_rect = Rect2(safe.position + Vector2(safe.size.x * 0.73, safe.size.y * 0.35), Vector2(safe.size.x * 0.22, safe.size.y * 0.06))
 	stage_route_rects.clear()
@@ -812,6 +838,8 @@ func _draw_stage_routes() -> void:
 		_draw_text_centered("스킬 교체 완료", skill_reward_open_rect, 18, MUTED_TEXT_COLOR)
 	if relic_offer_available:
 		_draw_button(relic_reward_open_rect, "유물 선택 · %d종" % PrototypeRelic.OFFERS.size(), true)
+	if shop_data.get("enabled",false):
+		_draw_button(shop_open_rect,"보급소 · %d전" % int(shop_data.get("coins",0)),true)
 	if not checkpoint_message.is_empty():
 		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.91), Vector2(safe.size.x, 28)), 16, PASS_COLOR if checkpoint_available else WAIT_COLOR)
 
@@ -1550,6 +1578,9 @@ func _show_result_screen() -> void:
 
 
 func _handle_screen_touch(position: Vector2) -> void:
+	if screen_mode == ScreenMode.SUPPLY_SHOP:
+		_handle_supply_touch(position)
+		return
 	if screen_mode == ScreenMode.RUN_BUILD:
 		_handle_run_build_touch(position)
 		return
@@ -1703,6 +1734,9 @@ func _handle_screen_touch(position: Vector2) -> void:
 			begin_retry(selected_starting_weapon, selected_stage_limit, selected_run_mode, selected_character_id, selected_story_enabled, selected_expedition, selected_backup_weapon)
 		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
+		if shop_data.get("enabled",false) and shop_open_rect.has_point(position):
+			shop_open_requested.emit()
+			return
 		if relic_offer_available and relic_reward_open_rect.has_point(position):
 			release_all_inputs()
 			selected_relic_offer = 0
@@ -2183,6 +2217,9 @@ func _draw_header() -> void:
 	_draw_text("%s · %s" % [String(movement_metrics.get("run_route_name", "풀숲 길")), String(movement_metrics.get("run_route_terrain", "연습 지형"))], Vector2(center_x, top_y + 86.0), 15, ACTIVE_COLOR)
 
 	_draw_village_text(String(movement_metrics.get("stage_constraint_hint", "")), Rect2(Vector2(center_x, top_y + 100.0), Vector2(hud_rect.size.x * 0.27, 38)), 14, PASS_COLOR)
+
+	if shop_data.get("enabled",false):
+		_draw_text("보급전 %d" % int(shop_data.get("coins",0)),Vector2(center_x+hud_rect.size.x*.14,top_y+31),20,ACTIVE_COLOR)
 
 	var weapon_name: String = String(movement_metrics.get("weapon_name", "연습용 검"))
 	var skill_1_name: String = String(movement_metrics.get("skill_1_name", "스킬 1"))
@@ -3628,3 +3665,54 @@ func _draw_story_journal() -> void:
 	_draw_button(layout.back, "돌아가기", true)
 	if not String(snapshot.error).is_empty(): _draw_button(layout.retry, "저장 재시도", true)
 	_draw_village_text(String(snapshot.error), Rect2(safe.position + safe.size * Vector2(0.05, 0.84), safe.size * Vector2(0.90, 0.025)), 15, WAIT_COLOR)
+
+
+func update_supply_shop(data: Dictionary, message: String = "") -> void:
+	shop_data = data.duplicate(true)
+	shop_message = message
+	shop_page = clampi(shop_page,0,maxi(0,ceili(float(shop_data.get("cards",[]).size())/RunSupplyShop.PAGE_SIZE)-1))
+	queue_redraw()
+
+func show_supply_shop() -> void:
+	release_all_inputs()
+	shop_page = 0
+	shop_selected_id = ""
+	shop_slot = -1
+	screen_mode = ScreenMode.SUPPLY_SHOP
+	queue_redraw()
+
+func supply_shop_snapshot() -> Dictionary:
+	var items: Array = shop_data.get("cards",[]).slice(shop_page*RunSupplyShop.PAGE_SIZE,(shop_page+1)*RunSupplyShop.PAGE_SIZE)
+	var view := SupplyShopView.layout(_safe_area_in_viewport(),items.size())
+	view.items = items
+	view.page = shop_page
+	view.pages = maxi(1,ceili(float(shop_data.get("cards",[]).size())/RunSupplyShop.PAGE_SIZE))
+	return view
+
+func _handle_supply_touch(position: Vector2) -> void:
+	var view := supply_shop_snapshot()
+	if view.back.has_point(position):
+		shop_close_requested.emit()
+		return
+	if view.previous.has_point(position) or view.next.has_point(position):
+		shop_page = clampi(shop_page+(-1 if view.previous.has_point(position) else 1),0,view.pages-1)
+		shop_selected_id = ""
+		shop_slot = -1
+		return
+	for index in view.cards.size():
+		if view.cards[index].has_point(position):
+			shop_selected_id = String(view.items[index].id)
+			shop_slot = -1
+			return
+	var selected: Dictionary = {}
+	for item in shop_data.get("cards",[]):
+		if item.id == shop_selected_id: selected = item
+	if not selected.is_empty() and selected.kind == "skill":
+		for slot in 2:
+			if view.slots[slot].has_point(position):
+				shop_slot = slot
+				return
+	if view.reroll.has_point(position):
+		shop_reroll_requested.emit()
+	elif view.confirm.has_point(position) and not selected.is_empty() and selected.ready:
+		shop_buy_requested.emit(shop_selected_id,shop_slot)

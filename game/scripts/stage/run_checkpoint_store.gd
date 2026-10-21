@@ -281,6 +281,7 @@ static func valid_state(state: Dictionary) -> bool:
 		profile_valid = profile_valid or candidate.id == state.ultimate.profile
 	if not profile_valid or not state.recorder.get("id") is String or String(state.recorder.id).is_empty():
 		return false
+	if state.has("supplies") and not RunSupplyShop.valid_state(state.supplies,state): return false
 	return true
 
 
