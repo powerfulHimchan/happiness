@@ -234,12 +234,17 @@ func _render_shop() -> bool:
 		if not _advance_standard(): return false
 	else:
 		sandbox._open_supply_shop()
+		if mode == "sold" and not _check(sandbox._buy_supply("heal"),"실제 구매 후 품절 화면"): return false
+		if mode == "empty" and not _check(sandbox._buy_supply("weapon_"+family),"실제 승급 후 잔액 부족 화면"): return false
+		if mode == "rerolled" and not _check(sandbox._reroll_supplies(),"실제 기술 재입고 후 화면"): return false
 		controls.shop_page = int(OS.get_environment("SHOP_RENDER_PAGE"))
 		controls.shop_selected_id = String(controls.supply_shop_snapshot().items[0].id)
 		controls.shop_slot = 0
+	var before := _shop_snapshot()
 	controls.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
+	if not _check(_shop_snapshot() == before,"화면 그리기는 재화·스킬·체력·저장 무변경"): return false
 	var output := OS.get_environment("HAPPINESS_RENDER_DIR")
 	if not output.is_empty():
 		if not _check(root.get_texture().get_image().save_png(output+"/shop_"+family+"_"+character+"_"+str(controls.shop_page)+mode+".png") == OK,"상점 실제 화면 렌더"): return false

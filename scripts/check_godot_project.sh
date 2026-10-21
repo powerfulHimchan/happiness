@@ -5,6 +5,18 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 
 required_files=(
+  "$project_root/game/scripts/ui/supply_shop_art.gd"
+  "$project_root/game/assets/supplies/travel_stall.svg"
+  "$project_root/game/assets/supplies/meal.svg"
+  "$project_root/game/assets/supplies/potion.svg"
+  "$project_root/game/assets/supplies/charge.svg"
+  "$project_root/game/assets/supplies/refresh.svg"
+  "$project_root/game/assets/supplies/coin.svg"
+  "$project_root/game/assets/supplies/sword.svg"
+  "$project_root/game/assets/supplies/bow.svg"
+  "$project_root/game/assets/supplies/skill.svg"
+  "$project_root/game/assets/supplies/restock.svg"
+
   "$game_root/tests/gp415_444_runtime_test.gd"
   "$game_root/scripts/economy/run_supply_shop.gd"
   "$game_root/scripts/ui/supply_shop_view.gd"

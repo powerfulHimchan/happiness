@@ -840,6 +840,7 @@ func _draw_stage_routes() -> void:
 		_draw_button(relic_reward_open_rect, "유물 선택 · %d종" % PrototypeRelic.OFFERS.size(), true)
 	if shop_data.get("enabled",false):
 		_draw_button(shop_open_rect,"보급소 · %d전" % int(shop_data.get("coins",0)),true)
+		SupplyShopArt.draw_symbol(self,"coin",Rect2(shop_open_rect.position+Vector2(8,shop_open_rect.size.y*.18),Vector2.ONE*shop_open_rect.size.y*.64))
 	if not checkpoint_message.is_empty():
 		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.91), Vector2(safe.size.x, 28)), 16, PASS_COLOR if checkpoint_available else WAIT_COLOR)
 
@@ -2219,7 +2220,7 @@ func _draw_header() -> void:
 	_draw_village_text(String(movement_metrics.get("stage_constraint_hint", "")), Rect2(Vector2(center_x, top_y + 100.0), Vector2(hud_rect.size.x * 0.27, 38)), 14, PASS_COLOR)
 
 	if shop_data.get("enabled",false):
-		_draw_text("보급전 %d" % int(shop_data.get("coins",0)),Vector2(center_x+hud_rect.size.x*.14,top_y+31),20,ACTIVE_COLOR)
+		SupplyShopArt.draw_wallet(self,Rect2(Vector2(center_x+hud_rect.size.x*.14,top_y+5),Vector2(hud_rect.size.x*.12,35)),int(shop_data.get("coins",0)))
 
 	var weapon_name: String = String(movement_metrics.get("weapon_name", "연습용 검"))
 	var skill_1_name: String = String(movement_metrics.get("skill_1_name", "스킬 1"))

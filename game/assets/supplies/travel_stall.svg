@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs>
+<linearGradient id="night" x2="0" y2="1"><stop stop-color="#173e4c"/><stop offset="1" stop-color="#102934"/></linearGradient>
+<radialGradient id="glow"><stop stop-color="#ffd98b" stop-opacity=".4"/><stop offset="1" stop-color="#ffd98b" stop-opacity="0"/></radialGradient>
+<linearGradient id="wood" x2="0" y2="1"><stop stop-color="#8b6549"/><stop offset="1" stop-color="#3a3531"/></linearGradient>
+</defs>
+<path fill="url(#night)" d="M0 0h1600v900H0z"/>
+<path d="M0 636 231 436 479 609 750 391 1069 627 1400 412 1600 541V900H0" fill="#285461" opacity=".26"/>
+<path d="M0 752 345 588 626 732 1025 520 1323 708 1600 590V900H0" fill="#37626a" opacity=".2"/>
+<path d="M47 51v795M1553 51v795" stroke="#152b31" stroke-width="35"/>
+<path d="M47 51v795M1553 51v795" stroke="#886849" stroke-width="20"/>
+<path d="M42 67v740M1548 67v740" stroke="#bc9360" stroke-width="3" opacity=".7"/>
+<path d="M0 0h1600v42q-80 60-160 0-80 60-160 0-80 60-160 0-80 60-160 0-80 60-160 0-80 60-160 0-80 60-160 0-80 60-160 0-80 60-160 0-80 60-160 0Z" fill="#427c7c" stroke="#d9b773" stroke-width="4"/>
+<path d="M160 0v42q80 60 160 0V0M480 0v42q80 60 160 0V0M800 0v42q80 60 160 0V0M1120 0v42q80 60 160 0V0M1440 0v42q80 60 160 0V0" fill="#2b5b66"/>
+<g fill="url(#glow)"><circle cx="82" cy="186" r="140"/><circle cx="1518" cy="186" r="140"/></g>
+<g stroke="#d6ae6a" stroke-width="4" stroke-linejoin="round">
+<path d="M82 65v65m1436-65v65"/>
+<path d="m58 145 24-20 24 20v65l-24 17-24-17Zm1436 0 24-20 24 20v65l-24 17-24-17Z" fill="#e9ad59"/>
+<path d="M58 150h48m-48 55h48m1388-55h48m-48 55h48" stroke="#6b543d"/>
+<path d="M82 153v43m1436-43v43" stroke="#fff0bb" stroke-width="10"/>
+</g>
+<g fill="#82afac" opacity=".2"><circle cx="198" cy="143" r="2"/><circle cx="1421" cy="301" r="3"/><circle cx="152" cy="611" r="2"/><circle cx="1373" cy="713" r="2"/><circle cx="1210" cy="126" r="2"/></g>
+<rect x="20" y="844" width="1560" height="56" rx="10" fill="url(#wood)" stroke="#ae8757" stroke-width="4"/>
+<path d="M28 864h1544M275 847v53m346-53v53m365-53v53m349-53v53" stroke="#2c3331" stroke-width="3" opacity=".5"/>
+<g stroke="#b28a59" stroke-width="3" fill="#574b39"><path d="M97 807h87v35H97zM106 783h68v24h-68zM1411 780h81v63h-81z"/><path d="m1411 780 81 63m0-63-81 63M100 823h81"/></g>
+</svg>
