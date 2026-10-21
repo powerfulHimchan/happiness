@@ -742,6 +742,16 @@ if [[ -n "$godot_command" ]]; then
       return 1
     fi
   }
+  checked_android_export_pack() {
+    local check_timeout="$1"
+    shift
+    timeout "$check_timeout" "$godot_command" "$@" 2>&1 | tee "$check_data_dir/runtime.log"
+    if rg -q '^SCRIPT ERROR:|^Parse Error:' "$check_data_dir/runtime.log" \
+      || { rg '^ERROR:' "$check_data_dir/runtime.log" | rg -v 'resources still in use at exit' >/dev/null; }; then
+      echo "Godot Android resource export reported an unexpected script or runtime error." >&2
+      return 1
+    fi
+  }
   checked_godot 120s --headless --path "$game_root" --import
   checked_godot 45s --headless --path "$game_root" \
     --script res://tests/character_art_runtime_test.gd
@@ -761,7 +771,7 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/heart_art_runtime_test.gd
   # Scene conversion may report an error with exit code zero. Check the actual
   # Android resource pack and boot its converted scenes, without building an APK.
-  checked_godot 120s --headless --path "$game_root" \
+  checked_android_export_pack 120s --headless --path "$game_root" \
     --export-pack "Android Debug APK" "$check_data_dir/android-resources.pck"
   test -s "$check_data_dir/android-resources.pck"
   checked_godot 45s --headless \

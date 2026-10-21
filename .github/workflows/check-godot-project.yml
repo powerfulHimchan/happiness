@@ -29,8 +29,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ripgrep adb
-          adb start-server
+          sudo apt-get install -y ripgrep
           mkdir -p "${RUNNER_TEMP}/godot-check"
           curl -fsSL \
             "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" \
