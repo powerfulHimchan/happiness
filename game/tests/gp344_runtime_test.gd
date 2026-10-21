@@ -137,7 +137,7 @@ func _run() -> void:
 			for ignored in 2: _tap(controls.village_snapshot().pager.next.get_center())
 			var view: Dictionary = controls.village_snapshot()
 			var own: Array = view.cards.filter(func(card: Dictionary) -> bool: return card.id == martial_job)
-			if not _check(view.advanced_pages == 3 and own.size() == 1 and own[0].open and own[0].progress.hint == "이번 도전에서 진화 완료", "무도가 두 진화의 영구 발견·현재 도감"): return
+			if not _check(view.advanced_pages == ceili(float(PrototypeJobProgress.ADVANCED_JOBS.size()) / PrototypeVillageView.ADVANCED_PAGE_SIZE) and own.size() == 1 and own[0].open and own[0].progress.hint == "이번 도전에서 진화 완료", "무도가 두 진화의 영구 발견·현재 도감"): return
 			if not await _layout_check(): return
 			_tap(controls.village_snapshot().layout["continue"].get_center())
 			if not _next_without_layout() or not _finish_stage() or not sandbox._claim_weapon_reward(""): return
@@ -176,12 +176,12 @@ func _test_start_selection() -> bool:
 		controls.size = dimensions
 		controls._refresh_start_weapon_layout()
 		var safe: Rect2 = controls.layout_snapshot().safe
-		if not _check(controls.start_weapon_card_rects.size() == 3 and controls.start_backup_rects.size() == 3, "세 무기 선택·보조 버튼"): return false
-		for index in 3:
+		if not _check(controls.start_weapon_card_rects.size() == PrototypeWeaponRewards.FAMILY_IDS.size() and controls.start_backup_rects.size() == PrototypeWeaponRewards.FAMILY_IDS.size(), "세 무기 선택·보조 버튼"): return false
+		for index in PrototypeWeaponRewards.FAMILY_IDS.size():
 			if not _check(safe.encloses(controls.start_weapon_card_rects[index]) and controls.start_weapon_card_rects[index].encloses(controls.start_backup_rects[index]), "두 화면비 주·보조 선택 안전 영역"): return false
 			_tap(controls.start_weapon_card_rects[index].get_center())
 			if not _check(controls.selected_starting_weapon == PrototypeWeaponRewards.FAMILY_IDS[index] and controls.selected_backup_weapon != controls.selected_starting_weapon, "주 무기 선택은 서로 다른 두 계열 유지"): return false
-			for other in 3:
+			for other in PrototypeWeaponRewards.FAMILY_IDS.size():
 				_tap(controls.start_backup_rects[other].get_center())
 				if not _check(controls.selected_backup_weapon == PrototypeWeaponRewards.FAMILY_IDS[other] and controls.selected_backup_weapon != controls.selected_starting_weapon, "보조 선택·현재 주 무기와 교환"): return false
 				_tap(controls.start_weapon_card_rects[index].get_center())

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_thrust"
+display_name = "관통봉"
+execution_style = &"line"
+effect_summary = "전방4m · 피해32 · 일반 적1m 밀침"
+cooldown_s = 7
+duration_s = 0.4
+hit_times_s = PackedFloat32Array(0.18)
+damage = PackedInt32Array(32)
+hit_range_m = 4
+hit_half_height_m = 0.55
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.24

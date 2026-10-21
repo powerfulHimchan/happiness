@@ -109,7 +109,7 @@ func _shield_raised() -> bool:
 
 func _adjust_damage_event(event: DamageEvent) -> DamageEvent:
 	var multiplier := 1.0
-	if event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist"):
+	if event.tags.has("sword") or event.tags.has("bow") or event.tags.has("fist") or event.tags.has("staff") or event.tags.has("polearm") or event.tags.has("shield"):
 		if state == State.STUNNED: multiplier = 1.50
 		elif state == State.RECOVERY: multiplier = 1.25
 		elif _shield_raised() and (event.source_position.x - global_position.x) * _charge_direction >= 0:

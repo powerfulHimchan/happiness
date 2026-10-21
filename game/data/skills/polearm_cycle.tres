@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"polearm_cycle"
+display_name = "윤회봉"
+execution_style = &"spin"
+effect_summary = "주변2.6m · 3타 · 막타 일반 적0.8m 밀침"
+cooldown_s = 9
+duration_s = 0.65
+hit_times_s = PackedFloat32Array(0.12, 0.3, 0.48)
+damage = PackedInt32Array(12, 12, 20)
+hit_range_m = 2.6
+hit_half_height_m = 0.8
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.32

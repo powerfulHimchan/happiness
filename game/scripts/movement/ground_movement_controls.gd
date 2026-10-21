@@ -1090,7 +1090,7 @@ func show_start_weapon_selection() -> void:
 func _refresh_start_weapon_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	var gap := minf(32.0, safe.size.x * 0.03)
-	var card_width := (safe.size.x * 0.90 - gap * 2) / 3.0
+	var card_width := (safe.size.x * 0.90 - gap * (PrototypeWeaponRewards.FAMILY_IDS.size()-1)) / PrototypeWeaponRewards.FAMILY_IDS.size()
 	expedition_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.105), Vector2(safe.size.x * 0.62, safe.size.y * 0.065))
 	character_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.70, safe.size.y * 0.105), Vector2(safe.size.x * 0.25, safe.size.y * 0.065))
 	start_length_rects.clear()
@@ -1099,7 +1099,7 @@ func _refresh_start_weapon_layout() -> void:
 		start_length_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (length_width + gap), safe.size.y * 0.19), Vector2(length_width, safe.size.y * 0.065)))
 	start_weapon_card_rects.clear()
 	start_backup_rects.clear()
-	for index in 3:
+	for index in PrototypeWeaponRewards.FAMILY_IDS.size():
 		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.28), Vector2(card_width, safe.size.y * 0.29)))
 	for rect in start_weapon_card_rects:
 		start_backup_rects.append(Rect2(rect.position + Vector2(12, rect.size.y * 0.75), Vector2(rect.size.x - 24, rect.size.y * 0.20)))
@@ -1153,10 +1153,10 @@ func _draw_start_weapon_selection() -> void:
 		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
 		_draw_button(start_length_rects[index], label, selected)
 	var ids := PrototypeWeaponRewards.FAMILY_IDS
-	var names := ["검", "활", "주먹"]
-	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m", "자동 4연타 · 사거리 1.1m"]
-	var skills := ["돌진 베기 · 회전 베기", "관통 화살 · 화살비", "쇄도권 · 연환권"]
-	for index in 3:
+	var names := ["검", "활", "주먹", "지팡이", "장봉", "방패"]
+	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m", "자동 4연타 · 사거리 1.1m", "자동 마법탄 · 사거리 7m", "자동 2연소 · 정면 2.8m", "자동 가격 · 사거리 1.5m"]
+	var skills := ["돌진 베기 · 회전 베기", "관통 화살 · 화살비", "쇄도권 · 연환권", "화염구 · 얼음창", "횡소봉 · 관통봉", "방패 올리기 · 응수"]
+	for index in ids.size():
 		var rect := start_weapon_card_rects[index]
 		var selected: bool = selected_starting_weapon == ids[index]
 		draw_style_box(_panel_style(Color("254f51") if selected else PANEL_COLOR), rect)
@@ -1165,7 +1165,7 @@ func _draw_start_weapon_selection() -> void:
 		var labels := [names[index] + (" · 선택됨" if selected else ""), descriptions[index], skills[index]]
 		var offsets := [0.07, 0.32, 0.52, 0.73]
 		for line_index in labels.size():
-			_draw_text_centered(labels[line_index], Rect2(rect.position + Vector2(0, rect.size.y * offsets[line_index]), Vector2(rect.size.x, 38)), 24 if line_index == 0 else 15, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
+			_draw_village_text(labels[line_index], Rect2(rect.position + Vector2(8, rect.size.y * offsets[line_index]), Vector2(rect.size.x-16, 38)), 24 if line_index == 0 else 15, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
 		_draw_button(start_backup_rects[index], "보조 · 선택됨" if selected_backup_weapon == ids[index] else "보조로 선택", selected_backup_weapon == ids[index])
 	_draw_memory_cards()
 	if not pending_boss_legacy.is_empty():
@@ -1499,6 +1499,7 @@ func _show_result_screen() -> void:
 	var bow_hits := int(movement_metrics.get("bow_total_hits", 0))
 	var fist_hits := int(movement_metrics.get("fist_total_hits", 0))
 	var total_hits := sword_hits + bow_hits + fist_hits
+	for family in ["staff", "polearm", "shield"]: total_hits += int(movement_metrics.get(family + "_total_hits",0))
 	result_snapshot = {
 		"expedition": int(movement_metrics.get("expedition", 0)),
 		"character_id": String(movement_metrics.get("character_id", "roan")),
@@ -1529,6 +1530,12 @@ func _show_result_screen() -> void:
 		"bow_ratio": float(bow_hits) / float(total_hits) if total_hits > 0 else 0.0,
 		"record_summary": _current_record_summary(),
 	}
+	for family in ["staff", "polearm", "shield"]:
+		var hits := int(movement_metrics.get(family + "_total_hits",0))
+		result_snapshot[family + "_hits"] = hits
+		result_snapshot[family + "_damage"] = int(movement_metrics.get(family + "_total_damage",0))
+		result_snapshot[family + "_ratio"] = float(hits) / total_hits if total_hits > 0 else 0.0
+
 	if movement_metrics.get("run_mode") in ["regions", JourneyRoutePlan.MODE]:
 		result_snapshot.run_mode = movement_metrics.run_mode
 		result_snapshot.visited_regions = movement_metrics.get("run_visited_regions", []).duplicate()
@@ -2996,7 +3003,7 @@ func village_snapshot() -> Dictionary:
 			tabs[["forge", "weapons", "skills"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
 	if village_page in ["advanced_jobs", "abilities", "skills", "forge", "weapons", "history", "relics", "atlas"]:
 		pager = {"previous": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06)), "next": Rect2(safe.position + Vector2(safe.size.x * 0.71, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06))}
-	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(safe, cards.size(), checkpoint_available), "tabs": tabs, "pager": pager, "ability_page": ability_codex_page, "ability_pages": pages, "skill_page": skill_codex_page, "skill_pages": skill_pages, "weapon_page": weapon_codex_page, "weapon_pages": weapon_pages, "history_page": record_history_page, "history_pages": history_pages, "relic_page": relic_codex_page, "relic_pages": relic_pages, "route_page": route_atlas_page, "route_pages": route_pages, "advanced_page": advanced_job_page, "advanced_pages": advanced_pages, "codex_page": advanced_job_page if village_page == "advanced_jobs" else route_atlas_page if village_page == "atlas" else relic_codex_page if village_page == "relics" else record_history_page if village_page == "history" else weapon_codex_page if village_page in ["forge", "weapons"] else skill_codex_page if village_page == "skills" else ability_codex_page, "codex_pages": advanced_pages if village_page == "advanced_jobs" else route_pages if village_page == "atlas" else relic_pages if village_page == "relics" else history_pages if village_page == "history" else weapon_pages if village_page in ["forge", "weapons"] else skill_pages if village_page == "skills" else pages}
+	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(safe, cards.size(), checkpoint_available, village_page == "jobs"), "tabs": tabs, "pager": pager, "ability_page": ability_codex_page, "ability_pages": pages, "skill_page": skill_codex_page, "skill_pages": skill_pages, "weapon_page": weapon_codex_page, "weapon_pages": weapon_pages, "history_page": record_history_page, "history_pages": history_pages, "relic_page": relic_codex_page, "relic_pages": relic_pages, "route_page": route_atlas_page, "route_pages": route_pages, "advanced_page": advanced_job_page, "advanced_pages": advanced_pages, "codex_page": advanced_job_page if village_page == "advanced_jobs" else route_atlas_page if village_page == "atlas" else relic_codex_page if village_page == "relics" else record_history_page if village_page == "history" else weapon_codex_page if village_page in ["forge", "weapons"] else skill_codex_page if village_page == "skills" else ability_codex_page, "codex_pages": advanced_pages if village_page == "advanced_jobs" else route_pages if village_page == "atlas" else relic_pages if village_page == "relics" else history_pages if village_page == "history" else weapon_pages if village_page in ["forge", "weapons"] else skill_pages if village_page == "skills" else pages}
 
 
 func _handle_village_touch(position: Vector2) -> void:
@@ -3113,6 +3120,9 @@ func _draw_village() -> void:
 		if village_page == "village":
 			var roof_y := rect.position.y + rect.size.y * 0.13
 			draw_colored_polygon(PackedVector2Array([Vector2(rect.position.x + 20, roof_y), Vector2(rect.get_center().x, rect.position.y - 10), Vector2(rect.end.x - 20, roof_y)]), Color("ab765b") if card.open else Color("607078"))
+		if village_page == "jobs" and snapshot.cards.size() > 5:
+			_draw_base_job_card(card,rect)
+			continue
 		if village_page == "advanced_jobs":
 			_draw_advanced_job_card(card, rect)
 			continue
@@ -3137,6 +3147,14 @@ func _draw_village() -> void:
 		_draw_button(layout["continue"], "이어하기", true)
 	_draw_button(story_journal_open_rect, "기억 수첩", false)
 
+
+func _draw_base_job_card(card: Dictionary, rect: Rect2) -> void:
+	var lines: Array = card.display_lines
+	_draw_village_text(String(card.name),Rect2(rect.position+Vector2(8,rect.size.y*.04),Vector2(rect.size.x-16,rect.size.y*.10)),24,TEXT_COLOR)
+	var status := "발견 · 현재" if String(card.status).contains("현재") else "영구 발견" if card.open else "미발견"
+	_draw_village_text(status,Rect2(rect.position+Vector2(8,rect.size.y*.17),Vector2(rect.size.x-16,rect.size.y*.07)),16,ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
+	var line_height := rect.size.y*.66 / lines.size()
+	for i in lines.size(): _draw_village_text(String(lines[i]),Rect2(rect.position+Vector2(8,rect.size.y*.27+i*line_height),Vector2(rect.size.x-16,line_height)),14,TEXT_COLOR)
 
 func _draw_advanced_job_card(card: Dictionary, rect: Rect2) -> void:
 	_draw_village_text(String(card.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.03), Vector2(rect.size.x - 24, rect.size.y * 0.13)), 26, TEXT_COLOR)

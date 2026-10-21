@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"shield_guard"
+display_name = "방패 올리기"
+execution_style = &"line"
+effect_summary = "1.2초 전방 적 피해60% 감소 · 경직 방어"
+cooldown_s = 6
+duration_s = 1.2
+hit_times_s = PackedFloat32Array()
+damage = PackedInt32Array()
+hit_range_m = 0
+hit_half_height_m = 0.8
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.18

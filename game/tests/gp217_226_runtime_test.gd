@@ -184,7 +184,7 @@ func _test_design_damage(id: String, grade: int) -> bool:
 func _test_catalog() -> bool:
 	var cards := PrototypeWeaponRewards.codex_cards({})
 	var original := ["sword_0", "sword_1", "sword_2", "clockwork_sword_1", "clockwork_sword_2", "bow_0", "bow_1", "bow_2", "clockwork_bow_1", "clockwork_bow_2"]
-	if not _check(cards.size() == 41 and cards.slice(0, 10).map(func(card: Dictionary) -> String: return card.id) == original, "기존10 순서/ID 유지·기존 장비 순서 유지·수호·세라8종 포함 총38"): return false
+	if not _check(cards.size() == 50 and cards.slice(0, 10).map(func(card: Dictionary) -> String: return card.id) == original, "기존10 순서/ID 유지·기존 장비 순서 유지·수호·세라8종 포함 총38"): return false
 	for id in EXPECTED:
 		var values: Array = EXPECTED[id]
 		if not _check(PrototypeWeaponRewards.profile(values[0], 0, id).is_empty() and PrototypeWeaponRewards.profile("bow" if values[0] == "sword" else "sword", 1, id).is_empty(), "일반 등급·잘못된 무기 설계 거부"): return false

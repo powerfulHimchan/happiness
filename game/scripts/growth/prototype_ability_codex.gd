@@ -24,7 +24,7 @@ static func cards(discovered: Dictionary, ranks: Dictionary) -> Array[Dictionary
 	for card in definitions():
 		var lines: Array[String] = []
 		for line in card.lines: lines.append(String(line))
-		var condition := "검 관련·무작위 후보" if card.category == "sword" else "활 관련·무작위 후보" if card.category == "bow" else "주먹 관련·무작위 후보" if card.category == "fist" else "공용·무작위 후보"
+		var condition := "검 관련·무작위 후보" if card.category == "sword" else "활 관련·무작위 후보" if card.category == "bow" else "주먹 관련·무작위 후보" if card.category == "fist" else PrototypeWeaponRewards.family_name(card.category) + " 관련·무작위 후보" if card.category in ["staff", "polearm", "shield"] else "공용·무작위 후보"
 		if card.has("job"):
 			condition = String(PrototypeJobProgress.profile(card.job).name) + " 발현 후"
 		if card.has("requires"):

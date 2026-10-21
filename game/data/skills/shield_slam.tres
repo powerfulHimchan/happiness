@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/skill_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+skill_id = &"shield_slam"
+display_name = "충격 강타"
+execution_style = &"line"
+effect_summary = "전방1.8m · 피해40 · 일반 적1.2초 기절"
+cooldown_s = 8
+duration_s = 0.6
+hit_times_s = PackedFloat32Array(0.3)
+damage = PackedInt32Array(40)
+hit_range_m = 1.8
+hit_half_height_m = 0.8
+can_move = false
+can_turn = false
+evade_cancel_start_s = 0.38

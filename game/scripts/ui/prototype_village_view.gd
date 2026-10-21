@@ -9,10 +9,10 @@ const RECORD_TABS := ["records", "record_lengths", "history"]
 const TAB_LABELS := {"advanced_jobs": "상위 직업", "bonds": "세라의 인연", "record_lengths": "길이별 통계", "records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
 const TITLES := {"advanced_jobs": "상위 직업 도감", "bonds": "기억의 쉼터 · 세라의 인연", "record_lengths": "광장 · 도전 길이별 통계", "history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
 
-static func layout(safe: Rect2, card_count: int, can_continue: bool) -> Dictionary:
+static func layout(safe: Rect2, card_count: int, can_continue: bool, single_row: bool = false) -> Dictionary:
 	var cards: Array[Rect2] = []
 	var gap := safe.size.x * 0.02
-	var columns := 3 if card_count > 5 else card_count
+	var columns := card_count if single_row else 3 if card_count > 5 else card_count
 	var rows := ceili(float(card_count) / columns)
 	var width := (safe.size.x * 0.90 - gap * (columns - 1)) / columns
 	var row_gap := safe.size.y * 0.025
@@ -77,7 +77,7 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 					lines.append("필살기: " + String(extra.name))
 				lines.append("전용 강화: " + String(abilities[2].title))
 				var status := "발견 · 현재 도전" if discovered and current_job == job.id else "영구 발견" if discovered else "미발견 · 성향을 채워 발현"
-				result.append({"id": job.id, "name": job.name, "open": discovered, "status": status, "lines": lines})
+				result.append({"id": job.id, "name": job.name, "open": discovered, "status": status, "lines": lines, "display_lines": base_job_lines(job, conditions)})
 		"forge":
 			for id in PrototypeWeaponRewards.PERMANENT_DESIGNS:
 				var design := PrototypeWeaponRewards.design_profile(id)
@@ -137,8 +137,16 @@ static func cards(page: String, memories: Dictionary, blueprints: Dictionary, su
 				{"name": "대장간", "open": not blueprints.is_empty(), "status": "무기·스킬 도감 언제든 조회", "lines": ["무기 설계도 %d/%d" % [blueprints.size(), PrototypeWeaponRewards.PERMANENT_DESIGNS.size()], "태엽·수호·세라 무기 · 스킬 %d종" % PrototypeSkillRewards.SKILLS.size(), "등급 · 보조 효과 · 장착 상태"]},
 				{"name": "기억의 쉼터", "open": not memories.is_empty() or not sera_choices.is_empty(), "status": "기억 · 유물 · 세라의 인연", "lines": ["영구 기억 %d/2 · 세라 인연 %d/2" % [memories.size(), sera_choices.size()], "영구 기억 · 유물 · 세라 지원", "효과 · 획득 조건 · 보유 상태"]},
 				{"name": "광장 기록", "open": true, "lines": ["여행의 발자취", "완주 · 미완료 · 소요 시간", "이 기기에 저장된 도전 기록"]},
-				{"name": "성장 도감", "open": true, "status": "직업 · 능력 조건 확인", "lines": ["발견한 직업 %d/2" % discovered_jobs.size(), "선봉대 · 추적자 · 능력 도감", "조건 · 강화 가지 · 효과"]},
+				{"name": "성장 도감", "open": true, "status": "직업 · 능력 조건 확인", "lines": ["발견한 직업 %d/%d" % [discovered_jobs.size(), PrototypeJobProgress.JOBS.size()+PrototypeJobProgress.ADVANCED_JOBS.size()], "기본 %d · 상위 %d · 능력 도감" % [PrototypeJobProgress.JOBS.size(),PrototypeJobProgress.ADVANCED_JOBS.size()], "조건 · 강화 가지 · 효과"]},
 				{"name": "약방", "open": bool(memories.get("clockwork_guard", false)) or bool(memories.get("core_echo", false)), "status": "약초사 정착" if memories.get("clockwork_guard", false) else "소분 조제 해금" if memories.get("core_echo", false) else "구출: 농축 · 파괴: 소분", "lines": ["기본 25% · 2개", "농축 40%·1개 / 소분 20%·3개", "다음 도전의 회복약 선택"]},
 				{"name": "지도 제작소", "open": true, "status": "언제든 경로 비교", "lines": ["답사한 경로 %d/%d" % [surveyed_routes.size(), PrototypeRouteAtlas.IDS.size()], "풀숲 · 바람 · 태엽 · 숲 · 유적", "지형 · 보너스 · 통과 기록"]},
 			])
 	return result
+
+static func base_job_lines(job: Dictionary, conditions: String) -> Array[String]:
+	var abilities := PrototypeJobRewards.cards_for(String(job.id))
+	var lines: Array[String] = [conditions,String(job.passive).replace("기본 공격·스킬 피해","피해"),"능력: " + String(abilities[0].title),"능력: " + String(abilities[1].title)]
+	for ultimate in PrototypeJobRewards.ultimates_for(String(job.id)): lines.append("필살기: " + String(ultimate.name))
+	lines.append("능력70·무기20·특수10")
+	lines.append("강화: " + String(abilities[2].title))
+	return lines

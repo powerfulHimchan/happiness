@@ -51,6 +51,9 @@ const CARDS: Array[Dictionary] = [
 	{"id": "orb_bloom", "title": "구슬 개화", "category": "common", "lines": ["회복 구슬 회복20% → 25%", "최대 체력 기준 · 소수 올림"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["orb_vitality"]},
 	{"id": "potion_efficiency", "title": "회복약 정통", "category": "common", "lines": ["숙련 회복약 회복 추가 +5%p", "모든 조제 · 개수 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["potion_mastery"]},
 	{"id": "time_attunement", "title": "시간 조율", "category": "common", "lines": ["적중 게이지 기본5/스킬10", "유물과 합산 · 최대100"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1, "requires": ["time_collector"]},
+	{"id": "staff_power", "title": "맑은 마력", "category": "staff", "lines": ["지팡이 공격·스킬·필살기", "피해 +15%"], "tags": {"magic": 2.5, "element": 1.5}},
+	{"id": "polearm_power", "title": "흔들림 없는 봉", "category": "polearm", "lines": ["장봉 공격·스킬·필살기", "피해 +15%"], "tags": {"focus": 2.5, "harmony": 1.5}},
+	{"id": "shield_power", "title": "굳센 방패", "category": "shield", "lines": ["방패 공격·스킬·필살기", "피해 +15%"], "tags": {"defense": 2.5, "faith": 1.5}},
 	{"id": "fist_power", "title": "날쌘 주먹", "category": "fist", "lines": ["주먹 기본 공격·스킬", "피해 +15%"], "tags": {"technique": 2.5, "chain": 1.5}},
 ]
 
@@ -87,6 +90,9 @@ func _ready() -> void:
 	weapons.sword_combat.hit_registered.connect(_on_weapon_hit.bind("sword"))
 	weapons.bow_combat.hit_registered.connect(_on_weapon_hit.bind("bow"))
 	weapons.fist_combat.hit_registered.connect(_on_weapon_hit.bind("fist"))
+	weapons.staff_combat.hit_registered.connect(_on_weapon_hit.bind("staff"))
+	weapons.polearm_combat.hit_registered.connect(_on_weapon_hit.bind("polearm"))
+	weapons.shield_combat.hit_registered.connect(_on_weapon_hit.bind("shield"))
 	(get_node("../Player/UltimateController") as UltimateController).precise_evade_registered.connect(_on_precise_evade)
 	player.evade_started.connect(_on_evade_started)
 	for node in get_tree().get_nodes_in_group("combat_enemy"):
@@ -305,6 +311,9 @@ func choose_card(index: int) -> bool:
 		"sword_power": player.growth_sword_bonus += 0.15
 		"bow_power": player.growth_bow_bonus += 0.15
 		"fist_power": player.growth_fist_bonus += 0.15
+		"staff_power": player.growth_staff_bonus += 0.15
+		"polearm_power": player.growth_polearm_bonus += 0.15
+		"shield_power": player.growth_shield_bonus += 0.15
 		"power": player.growth_common_bonus += 0.10
 		"vitality": player.apply_growth_health(20, 20)
 		"recovery": player.apply_growth_health(10, 40)
@@ -324,7 +333,7 @@ func choose_card(index: int) -> bool:
 		var job := PrototypeJobProgress.profile(String(offered_cards[index].job))
 		if job.weapon == "sword": player.growth_sword_bonus += float(effect.get("damage", 0.0))
 		elif job.weapon == "bow": player.growth_bow_bonus += float(effect.get("damage", 0.0))
-		else: player.growth_fist_bonus += float(effect.get("damage", 0.0))
+		else: player.set("growth_" + String(job.weapon) + "_bonus",float(player.get("growth_" + String(job.weapon) + "_bonus")) + float(effect.get("damage",0.0)))
 		player.apply_growth_health(int(effect.get("health", 0)), int(effect.get("heal", 0)))
 	choosing = false
 	offered_cards.clear()
@@ -381,7 +390,7 @@ func _try_manifest_job() -> bool:
 	elif job["weapon"] == "bow":
 		player.growth_bow_bonus += 0.10
 	else:
-		player.growth_fist_bonus += 0.10
+		player.set("growth_" + String(job.weapon) + "_bonus",float(player.get("growth_" + String(job.weapon) + "_bonus")) + 0.10)
 	player.set_job_emblem(String(job["id"]), job["color"])
 	job_manifested.emit(job)
 	return true
@@ -397,7 +406,7 @@ func try_evolve_job() -> bool:
 	elif job.weapon == "bow":
 		player.growth_bow_bonus += float(job.damage_bonus)
 	else:
-		player.growth_fist_bonus += float(job.damage_bonus)
+		player.set("growth_" + String(job.weapon) + "_bonus",float(player.get("growth_" + String(job.weapon) + "_bonus")) + float(job.damage_bonus))
 	# 최대 체력 증가는 회복75% 규칙과 분리하고 실제 회복만 기존 경로로 처리한다.
 	player.apply_growth_health(int(job.health_bonus), int(job.health_bonus))
 	awaiting_job_confirmation = true

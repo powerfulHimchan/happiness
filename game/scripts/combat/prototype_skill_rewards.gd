@@ -3,6 +3,16 @@ extends RefCounted
 
 ## 무기별 스킬 중 미보유 두 후보를 순환 조회한다. 조회는 보상을 소비하지 않는다.
 const SKILLS := {
+	"staff_fireball": preload("res://data/skills/staff_fireball.tres"),
+	"staff_ice_lance": preload("res://data/skills/staff_ice_lance.tres"),
+	"staff_lightning": preload("res://data/skills/staff_lightning.tres"),
+	"polearm_sweep": preload("res://data/skills/polearm_sweep.tres"),
+	"polearm_thrust": preload("res://data/skills/polearm_thrust.tres"),
+	"polearm_cycle": preload("res://data/skills/polearm_cycle.tres"),
+	"shield_guard": preload("res://data/skills/shield_guard.tres"),
+	"shield_counter": preload("res://data/skills/shield_counter.tres"),
+	"shield_slam": preload("res://data/skills/shield_slam.tres"),
+
 	"fist_dash": preload("res://data/skills/fist_dash.tres"),
 	"fist_flurry": preload("res://data/skills/fist_flurry.tres"),
 	"fist_wave": preload("res://data/skills/fist_wave.tres"),
@@ -43,11 +53,14 @@ const SKILLS := {
 	"sword_cross": preload("res://data/skills/sword_cross.tres"),
 }
 const POOLS := {"sword": ["sword_dash", "sword_spin", "sword_crescent", "sword_line", "sword_triple", "sword_thrust", "sword_charge", "sword_wave", "sword_cross", "sword_rising", "sword_revolve", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating"], "bow": ["bow_piercing", "bow_arrow_rain", "bow_volley", "bow_spread", "bow_focus", "bow_double_piercing", "bow_retreat", "bow_homing", "bow_ricochet", "bow_chain", "bow_fan_piercing", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley"]}
+const STAFF_POOL := ["staff_fireball", "staff_ice_lance", "staff_lightning"]
+const POLEARM_POOL := ["polearm_sweep", "polearm_thrust", "polearm_cycle"]
+const SHIELD_POOL := ["shield_guard", "shield_counter", "shield_slam"]
 const FIST_POOL := ["fist_dash", "fist_flurry", "fist_wave"]
-const LABELS := {"fist_dash": "쇄도", "fist_flurry": "연환", "fist_wave": "파동", "sword_flurry": "질풍", "sword_cleave": "대지", "sword_twin_wave": "쌍월", "sword_sweep": "삼중", "sword_backstep": "물러", "sword_alternating": "사방", "bow_needle": "바늘", "bow_heavy": "중압", "bow_wide_fan": "부채", "bow_storm": "폭풍", "bow_echo": "메아리", "bow_seeking_volley": "추적연", "sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
+const LABELS := {"staff_fireball": "화염", "staff_ice_lance": "얼음", "staff_lightning": "낙뢰", "polearm_sweep": "횡소", "polearm_thrust": "관통", "polearm_cycle": "윤회", "shield_guard": "방어", "shield_counter": "응수", "shield_slam": "강타", "fist_dash": "쇄도", "fist_flurry": "연환", "fist_wave": "파동", "sword_flurry": "질풍", "sword_cleave": "대지", "sword_twin_wave": "쌍월", "sword_sweep": "삼중", "sword_backstep": "물러", "sword_alternating": "사방", "bow_needle": "바늘", "bow_heavy": "중압", "bow_wide_fan": "부채", "bow_storm": "폭풍", "bow_echo": "메아리", "bow_seeking_volley": "추적연", "sword_revolve": "선회", "bow_fan_piercing": "확산", "sword_rising": "올려", "bow_chain": "연쇄", "sword_dash": "돌진", "sword_spin": "회전", "sword_crescent": "반달", "sword_line": "일섬", "bow_piercing": "관통", "bow_arrow_rain": "화살비", "bow_volley": "연사", "bow_spread": "산개", "sword_triple": "삼연", "bow_focus": "집중", "sword_thrust": "찌르기", "bow_double_piercing": "이중", "sword_charge": "돌파", "bow_retreat": "후퇴", "bow_homing": "추적", "sword_wave": "검기", "bow_ricochet": "도탄", "sword_cross": "교차"}
 const CODEX_PAGE_SIZE := 3
 # 새 기술을 뒤에 붙여 이전 도감의 페이지 순서를 보존한다.
-const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley", "fist_dash", "fist_flurry", "fist_wave"]
+const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley", "fist_dash", "fist_flurry", "fist_wave", "staff_fireball", "staff_ice_lance", "staff_lightning", "polearm_sweep", "polearm_thrust", "polearm_cycle", "shield_guard", "shield_counter", "shield_slam"]
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
 static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
@@ -68,21 +81,31 @@ static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1
 static func defaults(families: Array = ["sword", "bow"]) -> Dictionary:
 	var result := {}
 	for family in families:
-		var pool: Array = FIST_POOL if family == "fist" else POOLS.get(family, [])
+		var pool: Array = pool_for(String(family))
 		if pool.size() >= 2: result[family] = pool.slice(0, 2)
 	return result
 
 static func valid_loadout(value: Variant) -> bool:
 	if not value is Dictionary or value.size() != 2: return false
 	for weapon in value:
-		var pool: Array = FIST_POOL if weapon == "fist" else POOLS.get(weapon, [])
+		var pool: Array = pool_for(String(weapon))
 		if pool.is_empty() or not value[weapon] is Array or value[weapon].size() != 2: return false
 		if value[weapon][0] == value[weapon][1]: return false
 		for id in value[weapon]:
 			if not id is String or id not in pool: return false
 	return true
 
+static func pool_for(family: String) -> Array:
+	if family == "staff": return STAFF_POOL
+	if family == "polearm": return POLEARM_POOL
+	if family == "shield": return SHIELD_POOL
+	return FIST_POOL if family == "fist" else POOLS.get(family, [])
+
 static func weapon_for(id: String) -> String:
+	if id in STAFF_POOL: return "staff"
+	if id in POLEARM_POOL: return "polearm"
+	if id in SHIELD_POOL: return "shield"
+
 	if id in FIST_POOL: return "fist"
 	for weapon in POOLS:
 		if id in POOLS[weapon]: return weapon
@@ -137,7 +160,7 @@ static func offer_page_count(loadout: Dictionary) -> int:
 	for weapon in PrototypeWeaponRewards.FAMILY_IDS:
 		if not loadout.has(weapon): continue
 		var candidates := 0
-		for id in (FIST_POOL if weapon == "fist" else POOLS[weapon]):
+		for id in pool_for(String(weapon)):
 			if id not in loadout[weapon]: candidates += 1
 		count = maxi(count, candidates)
 	return count
@@ -148,7 +171,7 @@ static func offers(loadout: Dictionary, offset: int = 0, recharge_multiplier: fl
 	for weapon in PrototypeWeaponRewards.FAMILY_IDS:
 		if not loadout.has(weapon): continue
 		candidates[weapon] = []
-		for id in (FIST_POOL if weapon == "fist" else POOLS[weapon]):
+		for id in pool_for(String(weapon)):
 			if id not in loadout[weapon]:
 				candidates[weapon].append(id)
 	# 무기를 번갈아 제안해 기존 후보와 새 후보를 같은 화면에서 비교한다.

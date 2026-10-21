@@ -246,6 +246,11 @@ static func valid_state(state: Dictionary) -> bool:
 	bow_bonus += int(ranks.get("storm_arrow", 0)) * 0.25
 	var fist_bonus := int(ranks.get("fist_power", 0)) * 0.15 + (0.10 if parent == "martial_artist" else 0.0)
 	if job.get("weapon", "") == "fist" and job.has("parent"): fist_bonus += float(job.damage_bonus)
+	var extra_bonuses := {}
+	for family in ["staff", "polearm", "shield"]:
+		var base: String = {"staff":"elementalist","polearm":"pilgrim","shield":"guardian"}[family]
+		extra_bonuses[family] = int(ranks.get(family + "_power",0)) * 0.15 + (0.10 if parent == base else 0.0)
+		if job.get("weapon", "") == family and job.has("parent"): extra_bonuses[family] += float(job.damage_bonus)
 	for card in valid_cards:
 		var effect: Dictionary = card.get("job_effect", {})
 		var rank := int(ranks.get(card.id, 0))
@@ -253,7 +258,10 @@ static func valid_state(state: Dictionary) -> bool:
 		if not effect.is_empty():
 			if job.weapon == "sword": sword_bonus += float(effect.get("damage", 0.0)) * rank
 			elif job.weapon == "bow": bow_bonus += float(effect.get("damage", 0.0)) * rank
-			else: fist_bonus += float(effect.get("damage", 0.0)) * rank
+			elif job.weapon == "fist": fist_bonus += float(effect.get("damage", 0.0)) * rank
+			else: extra_bonuses[job.weapon] += float(effect.get("damage",0.0)) * rank
+	for family in extra_bonuses:
+		if not _number(player.get(family,0),0,100) or not is_equal_approx(float(player.get(family,0)),float(extra_bonuses[family])): return false
 	if not _number(player.get("fist", 0), 0, 100) or not is_equal_approx(float(player.get("fist", 0)), fist_bonus): return false
 	if int(player.max_health) != expected_max or not is_equal_approx(float(player.common), int(ranks.get("power", 0)) * 0.10) or not is_equal_approx(float(player.sword), sword_bonus) or not is_equal_approx(float(player.bow), bow_bonus):
 		return false
