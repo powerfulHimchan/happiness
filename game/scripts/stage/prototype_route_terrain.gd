@@ -84,6 +84,8 @@ func configure(stage: int, route: String, enabled: bool = true, regional_start: 
 		body.add_child(shape)
 		add_child(body)
 	queue_redraw()
+	# The root owns the sky/ground canvas, so region switches invalidate it too.
+	(get_parent() as CanvasItem).queue_redraw()
 
 
 func _physics_process(delta: float) -> void:
@@ -149,20 +151,12 @@ func _draw() -> void:
 	if route_id == "forest":
 		base = Color("467b55")
 		rim = Color("e5ef9e")
-		for x in range(900, 4800, 380):
-			var stem := Vector2(x, 180)
-			draw_line(stem, stem + Vector2(80, 420), Color("49795c"), 12)
-			for y in range(60, 420, 60):
-				draw_circle(stem + Vector2(y * 0.19, y), 24, Color("9bd394", 0.55))
 	if route_id == "ruins":
 		base = Color("567d9c")
 		rim = Color("ffe5a0")
-		for x in range(1000, 4800, 420):
-			var center := Vector2(x, 330)
-			draw_circle(center, 55, Color("6da4bc", 0.35))
-			draw_arc(center, 55, 0, TAU, 32, rim, 3)
-			draw_line(center, center + Vector2(0, -35), rim, 4)
-			draw_line(center, center + Vector2(28, 14), rim, 4)
+	if RegionalLandscapeArt.supports(route_id):
+		base = RegionalLandscapeArt.palette(route_id).soil
+		rim = RegionalLandscapeArt.palette(route_id).edge
 	for index in platforms.size():
 		var rect := platforms[index]
 		if route_id == "festival":
@@ -179,6 +173,7 @@ func _draw() -> void:
 		draw_rect(Rect2(rect.position, Vector2(rect.size.x, 8)), rim, true)
 		for x in range(int(rect.position.x + 18), int(rect.end.x), 40):
 			draw_line(Vector2(x, rect.position.y + 12), Vector2(x, rect.end.y - 4), rim.darkened(0.25), 2)
+		RegionalLandscapeArt.draw_platform_inlay(self, route_id, rect)
 		var text := "풀숲 다리 · 그대로 전진" if route_id == "meadow" else "바람 발판 %d · 길게 점프" % (index + 1)
 		if route_id == "clockwork":
 			text = "태엽 발판 %d · 낙하 주의" % (index + 1)

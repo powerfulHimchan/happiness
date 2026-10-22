@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="640" viewBox="0 0 800 640">
+<defs><linearGradient id="bark" x2="1" y2="0"><stop stop-color="#5d8983"/><stop offset=".55" stop-color="#81a38c"/><stop offset="1" stop-color="#5a8681"/></linearGradient><linearGradient id="leaf" x2="0" y2="1"><stop stop-color="#80aa93"/><stop offset="1" stop-color="#a7c3a0"/></linearGradient></defs>
+<!-- Roots reach toward the sky, crowns hang over a quiet woodland shrine. -->
+<g fill="none" stroke="#71978a" stroke-linecap="round"><path d="M224 183Q221 64 144 23M243 159Q283 66 250 7M218 125Q172 86 97 91M576 157Q548 44 610 7M588 145Q632 73 713 71M565 105Q533 49 472 23" stroke-width="21"/><path d="M144 23L139 0M144 23L99 7M250 7L287 0M97 91L64 65M97 91L49 108M610 7L644 0M713 71L756 48M713 71L765 86M472 23L455 0" stroke-width="10"/></g>
+<path d="M176 112Q222 160 197 292L167 410L234 443Q270 342 255 223L275 124Z" fill="url(#bark)"/>
+<path d="M532 110Q578 200 542 334L531 403L600 437Q629 287 601 186L622 116Z" fill="url(#bark)"/>
+<g fill="none" stroke="#b0bda0" stroke-width="5" opacity=".6"><path d="M228 162Q211 280 201 365M563 145Q598 254 570 370"/><path d="M248 275L261 311M587 226L607 259"/></g>
+<g fill="url(#leaf)" stroke="#6f9c8d" stroke-width="4">
+ <path d="M61 382Q84 319 145 331Q172 286 221 319Q286 292 315 346Q380 344 372 404Q356 461 298 464Q266 519 220 478Q156 511 127 466Q61 469 61 422Z"/>
+ <path d="M451 372Q465 312 522 329Q556 293 603 321Q665 308 688 355Q746 359 738 415Q727 471 672 464Q646 518 597 480Q543 513 513 467Q446 474 451 417Z"/>
+</g>
+<g fill="#b6cba9" opacity=".8"><path d="M104 383Q130 353 166 367Q142 402 104 383M232 354Q266 333 295 367Q252 378 232 354M151 432Q190 405 218 439Q184 458 151 432M516 365Q546 342 576 372Q540 391 516 365M618 408Q653 376 690 410Q652 436 618 408"/></g>
+<g fill="none" stroke="#88aa90" stroke-width="5"><path d="M142 453Q128 509 164 536M286 439Q272 508 291 537M523 452Q505 510 532 546M668 451Q683 501 660 539"/></g>
+<g fill="#d3d5ad"><ellipse cx="161" cy="539" rx="8" ry="13"/><ellipse cx="290" cy="540" rx="7" ry="12"/><ellipse cx="532" cy="547" rx="7" ry="12"/><ellipse cx="660" cy="541" rx="8" ry="13"/></g>
+<path d="M301 611L316 541L340 541V485Q399 419 458 485V541H482L501 611Z" fill="#7f9f91" stroke="#a7baa0" stroke-width="5"/>
+<path d="M362 584V500Q398 458 435 500V584Z" fill="#557f7a"/>
+<path d="M398 488Q371 513 399 549Q427 513 398 488Z" fill="#b6c9a4"/><path d="M398 501V544" stroke="#799f8a" stroke-width="4"/>
+<path d="M284 613Q397 578 515 613" fill="none" stroke="#adc0a2" stroke-width="13"/>
+<g fill="#c0c9ae"><path d="M73 611V578M58 579Q73 555 89 579Z"/><path d="M695 611V581M679 582Q695 559 713 582Z"/></g>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="640" viewBox="0 0 800 640">
+<defs>
+ <linearGradient id="tower" x2="1" y2="0"><stop stop-color="#d0d8be"/><stop offset=".52" stop-color="#f0ead0"/><stop offset="1" stop-color="#c3cdb6"/></linearGradient>
+ <linearGradient id="roof" x2="0" y2="1"><stop stop-color="#789b9a"/><stop offset="1" stop-color="#557f83"/></linearGradient>
+</defs>
+<!-- A distant, unoccupied landmark. The sails are deliberately still. -->
+<path d="M26 610Q170 544 286 568Q455 513 626 568Q715 554 795 612Z" fill="#8daf8b"/>
+<path d="M233 590L273 296L444 296L492 590Z" fill="url(#tower)" stroke="#7d9b8c" stroke-width="5"/>
+<path d="M254 302L356 162L464 302Z" fill="url(#roof)" stroke="#6b8e8e" stroke-width="5"/>
+<path d="M281 278L356 180L431 278" fill="none" stroke="#a9bdb0" stroke-width="6"/>
+<path d="M347 182V143M335 145H383L347 162" fill="#d6c68c" stroke="#8ba394" stroke-width="4"/>
+<path d="M259 387H458M250 449H470M242 514H480" fill="none" stroke="#b7c7ad" stroke-width="6"/>
+<path d="M308 590V533Q357 472 405 533V590" fill="#7c998b" stroke="#9fb19b" stroke-width="5"/>
+<path d="M331 590V542Q357 506 381 542V590" fill="#a5b4a1"/>
+<path d="M331 443V414Q357 385 382 414V443Z" fill="#7d9d97" stroke="#c3d1b9" stroke-width="7"/>
+<path d="M355 404V440M331 424H382" stroke="#e1dcb9" stroke-width="4"/>
+<g transform="translate(357 322) rotate(-27)" stroke-linejoin="round">
+ <g fill="#ede8cb" stroke="#91aa9b" stroke-width="5">
+  <path d="M-17-28L-31-208L37-208L20-28Z"/><path d="M28-17L208-31L208 37L28 20Z"/>
+  <path d="M17 28L31 208L-37 208L-20 28Z"/><path d="M-28 17L-208 31L-208-37L-28-20Z"/>
+ </g>
+ <g stroke="#b7c4ac" stroke-width="4">
+  <path d="M-25-178H32M-24-145H29M-21-110H26M-20-76H23M75-21V23M110-23V26M145-25V29M178-28V32"/>
+  <path d="M-32 178H25M-29 145H24M-26 110H21M-23 76H20M-75-23V21M-110-26V23M-145-29V25M-178-32V28"/>
+ </g>
+ <circle r="28" fill="#8da59a" stroke="#d9d9b8" stroke-width="7"/><circle r="10" fill="#e3d9ae"/>
+</g>
+<path d="M525 594V518M582 594V500M642 599V511M705 604V526M519 541L711 552M520 571L710 582" stroke="#9bae8b" stroke-width="9" stroke-linecap="round"/>
+<g fill="#d1ddbd"><path d="M105 600Q54 548 79 514Q120 533 119 574Q146 524 172 542Q175 580 137 604Z"/><path d="M510 609Q487 558 518 549Q552 570 539 607Z"/></g>
+<g fill="#e9e5c5"><circle cx="120" cy="561" r="7"/><circle cx="187" cy="593" r="6"/><circle cx="537" cy="580" r="6"/><circle cx="750" cy="593" r="7"/></g>
+</svg>

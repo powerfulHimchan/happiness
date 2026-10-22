@@ -232,18 +232,29 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	# 카메라가 이동해도 화면을 채우는 넓은 임시 평원.
-	draw_rect(Rect2(-700.0, -400.0, 6500.0, 1400.0), Color("b9ecf2"), true)
-	draw_circle(Vector2(900.0, 160.0), 90.0, Color("fff3b0"))
-	_draw_hills()
-	draw_rect(LEFT_FLOOR_RECT, Color("6aa66b"), true)
-	draw_rect(RIGHT_FLOOR_RECT, Color("6aa66b"), true)
-	draw_rect(Rect2(LEFT_FLOOR_RECT.position, Vector2(LEFT_FLOOR_RECT.size.x, 18.0)), Color("b8d86f"), true)
-	draw_rect(Rect2(RIGHT_FLOOR_RECT.position, Vector2(RIGHT_FLOOR_RECT.size.x, 18.0)), Color("b8d86f"), true)
+	var terrain: PrototypeRouteTerrain = $RouteTerrain
+	var route := terrain.route_id
+	var landscape := stage_runner.stage_enabled and not terrain.heart_arena and RegionalLandscapeArt.supports(route)
+	var soil := Color("6aa66b")
+	var edge := Color("b8d86f")
+	if landscape:
+		RegionalLandscapeArt.draw_backdrop(self, route, terrain.region_section)
+		soil = RegionalLandscapeArt.palette(route).soil
+		edge = RegionalLandscapeArt.palette(route).edge
+	else:
+		draw_rect(Rect2(-700.0, -400.0, 6500.0, 1400.0), Color("b9ecf2"), true)
+		draw_circle(Vector2(900.0, 160.0), 90.0, Color("fff3b0"))
+		_draw_hills()
+	draw_rect(LEFT_FLOOR_RECT, soil, true)
+	draw_rect(RIGHT_FLOOR_RECT, soil, true)
+	draw_rect(Rect2(LEFT_FLOOR_RECT.position, Vector2(LEFT_FLOOR_RECT.size.x, 18.0)), edge, true)
+	draw_rect(Rect2(RIGHT_FLOOR_RECT.position, Vector2(RIGHT_FLOOR_RECT.size.x, 18.0)), edge, true)
+	if landscape:
+		RegionalLandscapeArt.draw_floor_details(self, route, [LEFT_FLOOR_RECT, RIGHT_FLOOR_RECT])
 	draw_rect(FALL_ZONE_RECT, Color("173147"), true)
 	draw_rect(Rect2(FALL_ZONE_RECT.position, Vector2(FALL_ZONE_RECT.size.x, 14.0)), Color("f26b5e"), true)
-	draw_rect(PRACTICE_PLATFORM_RECT, Color("507f5b"), true)
-	draw_rect(Rect2(PRACTICE_PLATFORM_RECT.position, Vector2(PRACTICE_PLATFORM_RECT.size.x, 10.0)), Color("d9ef85"), true)
+	draw_rect(PRACTICE_PLATFORM_RECT, soil.darkened(0.12) if landscape else Color("507f5b"), true)
+	draw_rect(Rect2(PRACTICE_PLATFORM_RECT.position, Vector2(PRACTICE_PLATFORM_RECT.size.x, 10.0)), edge if landscape else Color("d9ef85"), true)
 	_draw_track_markers()
 	draw_string(
 		ThemeDB.fallback_font,
