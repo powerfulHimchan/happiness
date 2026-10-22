@@ -39,10 +39,10 @@ func _on_guard_applied() -> void:
 func _damage_target(target: PrototypeTarget, attack_id: StringName, damage: int, stagger_s: float, tags: PackedStringArray, hit_index: int) -> int:
 	var counter := attack_id == &"shield_counter" and _counter_armed
 	var result := super._damage_target(target,attack_id,60 if counter else damage,stagger_s,tags,hit_index)
-	if result == DamageReceiver.Result.APPLIED and target is PrototypeEnemy and target.is_targetable():
-		if counter: (target as PrototypeEnemy).apply_shield_stun(1.0)
-		elif attack_id == &"shield_slam": (target as PrototypeEnemy).apply_shield_stun(1.2)
-		elif attack_id == &"shield_ring" and hit_index == 1: (target as PrototypeEnemy).apply_shield_stun(0.8)
+	if result == DamageReceiver.Result.APPLIED and target.is_targetable() and (target is PrototypeEnemy or (target.has_method("allows_regional_control") and bool(target.call("allows_regional_control")))):
+		if counter: target.call("apply_shield_stun", 1.0)
+		elif attack_id == &"shield_slam": target.call("apply_shield_stun", 1.2)
+		elif attack_id == &"shield_ring" and hit_index == 1: target.call("apply_shield_stun", 0.8)
 	return result
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:

@@ -94,11 +94,11 @@ func _update_presentation(delta: float) -> void:
 		tint = Color(1.65, 1.65, 1.65)
 		stretch *= Vector2(1.05, 0.95)
 	body_sprite.flip_h = _visual_facing < 0.0
-	body_sprite.scale = BODY_SCALE * stretch
+	body_sprite.scale = (BODY_SCALE if region_species == "boar" else Vector2.ONE) * stretch
 	body_sprite.rotation = angle
 	body_sprite.self_modulate = tint
 	# Squash and lean around the player's floor (actor-local y=60).
-	body_sprite.position = Vector2(0.0, 60.0) - Vector2(0.0, FOOT_Y * body_sprite.scale.y).rotated(angle) + offset
+	body_sprite.position = Vector2(0.0, 60.0) - Vector2(0.0, (FOOT_Y if region_species == "boar" else 70.0) * body_sprite.scale.y).rotated(angle) + offset
 	queue_redraw()
 
 

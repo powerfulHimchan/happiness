@@ -12,7 +12,7 @@ const WAVE_ONE := {"slime": Vector2(1530, 780), "seed": Vector2(2160, 600), "win
 const WAVE_TWO := {"slime": Vector2(4090, 780), "seed": Vector2(4670, 780), "wind": Vector2(4380, 550)}
 
 static func objective(index: int) -> String:
-	return ["시계탑을 향해 중심부로 전진", "높은 회랑의 씨앗 포대·공중 정령 처치", "시계탑 발판을 건너 궁전 앞 광장으로 이동", "궁전 앞 양쪽 적과 공중 정령 처치"][index]
+	return ["시계탑을 향해 중심부로 전진", "높은 회랑의 행복 행렬 인형 처치", "시계탑 발판을 건너 궁전 앞 광장으로 이동", "궁전 앞 행복 행렬 인형의 깃발탄 회피"][index]
 
 static func draw_backdrop(canvas: Node2D) -> void:
 	var stone := Color("cdd9e6")

@@ -46,6 +46,10 @@ const DANGER_LINE_COLOR := Color("ff7043")
 
 @export var player_path: NodePath
 
+var region_species: String = "boar"
+var _region_original_texture: Texture2D
+var _region_charge_origin := Vector2.ZERO
+var _control_stun_s: float = 0.0
 var state: int = State.IDLE
 var phase: int = 1
 var current_pattern: int = Pattern.NONE
@@ -78,20 +82,21 @@ var shockwave_attack_id: StringName = &"boar_shockwave"
 
 func _ready() -> void:
 	super._ready()
+	_region_original_texture = body_sprite.texture
 	add_to_group("combat_enemy")
 	add_to_group("elite_enemy")
 	warning_ring.visible = false
 	warning_line.visible = false
 	warning_ring.modulate = DANGER_RING_COLOR
 	warning_line.default_color = DANGER_LINE_COLOR
-	_set_state(State.IDLE, "갑옷 멧돼지 등장 · 활 약점")
+	_set_state(State.IDLE, region_enemy_name() + " 등장 · 활 약점")
 
 
 func _process(delta: float) -> void:
 	super._process(delta)
 	if not is_targetable():
 		if state != State.DEAD:
-			_set_state(State.DEAD, "갑옷 멧돼지 처치")
+			_set_state(State.DEAD, region_enemy_name() + " 처치")
 		return
 	var scaled_delta := delta * enemy_time_scale()
 	_state_elapsed_s += scaled_delta
@@ -128,7 +133,7 @@ func receive_damage(event: DamageEvent) -> int:
 	if result != DamageReceiver.Result.APPLIED:
 		return result
 	if not is_targetable():
-		_set_state(State.DEAD, "갑옷 멧돼지 처치")
+		_set_state(State.DEAD, region_enemy_name() + " 처치")
 		return result
 	if phase == 1 and float(damage_receiver.health) / float(damage_receiver.max_health) <= PHASE_TWO_HEALTH_RATIO:
 		phase = 2
@@ -141,6 +146,7 @@ func reset_target() -> void:
 	super.reset_target()
 	state = State.IDLE
 	phase = 1
+	_control_stun_s = 0.0
 	current_pattern = Pattern.NONE
 	last_pattern = Pattern.NONE
 	pattern_history.clear()
@@ -168,7 +174,8 @@ func reset_target() -> void:
 func current_metrics() -> Dictionary:
 	return {
 		"enemy_key": target_key,
-		"enemy_name": "갑옷 멧돼지",
+		"enemy_name": region_enemy_name(),
+		"enemy_species": region_species,
 		"enemy_state": state_name(),
 		"enemy_warning": state == State.WARNING,
 		"enemy_alive": is_targetable(),
@@ -218,6 +225,9 @@ func state_name() -> String:
 
 
 func pattern_name(pattern: int) -> String:
+	if region_species == "vine_hunter": return "덩굴 도약" if pattern == Pattern.CHARGE else "뿌리 파문" if pattern == Pattern.SHOCKWAVE else "없음"
+	if region_species == "clock_sentry": return "시곗바늘 돌진" if pattern == Pattern.CHARGE else "시간 파문" if pattern == Pattern.SHOCKWAVE else "없음"
+	if region_species == "drummer": return "북 파동" if pattern != Pattern.NONE else "없음"
 	if pattern == Pattern.CHARGE:
 		return "돌진"
 	if pattern == Pattern.SHOCKWAVE:
@@ -234,7 +244,10 @@ func _update_idle(delta: float) -> void:
 
 
 func _begin_next_pattern() -> void:
+	_region_charge_origin = position
+	_control_stun_s = 0.0
 	current_pattern = Pattern.SHOCKWAVE if last_pattern == Pattern.CHARGE else Pattern.CHARGE
+	if region_species == "drummer": current_pattern = Pattern.SHOCKWAVE
 	last_pattern = current_pattern
 	pattern_history.append(current_pattern)
 	if pattern_history.size() > 8:
@@ -259,7 +272,7 @@ func _update_warning() -> void:
 			attack_count += 1
 			charge_count += 1
 			_charge_hit_consumed = false
-			_set_state(State.CHARGING, "갑옷 멧돼지 돌진")
+			_set_state(State.CHARGING, region_enemy_name() + " " + pattern_name(Pattern.CHARGE))
 	else:
 		if _state_elapsed_s >= _shockwave_warning_duration():
 			attack_count += 1
@@ -271,7 +284,12 @@ func _update_warning() -> void:
 
 func _update_charge(delta: float) -> void:
 	position.x += _charge_direction * _charge_speed_mps() * PrototypePlayer.PIXELS_PER_METER * delta
+	if region_species != "boar": position.x = clampf(position.x, LEFT_WALL_X, RIGHT_WALL_X)
 	_try_charge_damage()
+	if region_species in ["vine_hunter", "clock_sentry", "mask_guard", "parade_doll"] and absf(position.x - _region_charge_origin.x) >= (520.0 if region_species == "vine_hunter" else 360.0):
+		if region_species == "clock_sentry": position = _region_charge_origin
+		_begin_recovery(region_enemy_name() + " 공격 뒤 빈틈")
+		return
 	if position.x <= LEFT_WALL_X or position.x >= RIGHT_WALL_X:
 		position.x = clampf(position.x, LEFT_WALL_X, RIGHT_WALL_X)
 		_set_state(State.STUNNED, "벽 충돌 · %.1f초 검 약점" % _wall_stun_duration())
@@ -317,6 +335,8 @@ func _spawn_shockwaves() -> void:
 		)
 		wave.attacker_id = attacker_id
 		wave.attack_id = shockwave_attack_id
+		wave.set_enemy_time_scale(enemy_time_scale())
+		if region_species != "boar": wave.wave_texture = load("res://assets/enemies/%s_wave.svg" % (region_species if region_species in ["vine_hunter", "clock_sentry", "drummer"] else "drummer"))
 		var wave_parent := get_tree().current_scene
 		if wave_parent == null:
 			wave_parent = get_tree().root
@@ -390,6 +410,8 @@ func _update_phase_visual() -> void:
 
 
 func _charge_warning_duration() -> float:
+	if region_species == "vine_hunter": return 0.65 if phase == 2 else 0.90
+	if region_species == "clock_sentry": return 0.60 if phase == 2 else 0.85
 	return CHARGE_WARNING_PHASE_TWO_S if phase == 2 else CHARGE_WARNING_PHASE_ONE_S
 
 
@@ -398,6 +420,8 @@ func _shockwave_warning_duration() -> float:
 
 
 func _charge_speed_mps() -> float:
+	if region_species == "vine_hunter": return 7.0 if phase == 2 else 5.5
+	if region_species == "clock_sentry": return 10.0 if phase == 2 else 8.0
 	return CHARGE_SPEED_PHASE_TWO_MPS if phase == 2 else CHARGE_SPEED_PHASE_ONE_MPS
 
 
@@ -410,4 +434,38 @@ func _shockwave_damage() -> int:
 
 
 func _wall_stun_duration() -> float:
+	if _control_stun_s > 0.0: return _control_stun_s
 	return WALL_STUN_PHASE_TWO_S if phase == 2 else WALL_STUN_PHASE_ONE_S
+
+
+func configure_region(route: String) -> void:
+	region_species = String(RegionalEnemyRoster.ELITES.get(RegionalEnemyRoster.region(route), "boar"))
+	attacker_id = StringName("armored_boar" if region_species == "boar" else region_species)
+	charge_attack_id = StringName("boar_charge" if region_species == "boar" else region_species + "_charge")
+	shockwave_attack_id = StringName("boar_shockwave" if region_species == "boar" else region_species + "_wave")
+	body_sprite.texture = _region_original_texture if region_species == "boar" else RegionalEnemyRoster.texture(region_species)
+	body_color = Color.WHITE
+	armor_marker.visible = region_species == "boar"
+
+
+func region_enemy_name() -> String:
+	return String(RegionalEnemyRoster.NAMES.get(region_species, "갑옷 멧돼지"))
+
+
+func apply_shield_stun(duration_s: float) -> void:
+	if not is_targetable() or duration_s <= 0.0: return
+	_control_stun_s = duration_s
+	_phase_two_second_wave_pending = false
+	current_pattern = Pattern.NONE
+	_set_state(State.STUNNED, region_enemy_name() + " · 방패 기절")
+
+
+func apply_pole_push(distance_px: float) -> void:
+	if not is_targetable(): return
+	position.x = clampf(position.x + distance_px, LEFT_WALL_X, RIGHT_WALL_X)
+	_phase_two_second_wave_pending = false
+	_begin_recovery(region_enemy_name() + " · 장봉 밀치기")
+
+
+func allows_regional_control() -> bool:
+	return region_species != "boar"

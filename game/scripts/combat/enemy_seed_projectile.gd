@@ -10,6 +10,7 @@ var direction: Vector2 = Vector2.LEFT
 var attacker_id: StringName = &"seed_sack"
 var attack_id: StringName = &"seed_volley"
 var damage_tags := PackedStringArray(["enemy", "projectile", "seed"])
+var projectile_texture: Texture2D
 var base_color := Color.WHITE
 var damage: int = 7
 var speed_px_s: float = 550.0
@@ -37,6 +38,7 @@ func configure(
 func _ready() -> void:
 	add_to_group("enemy_time_scaled")
 	add_to_group("enemy_projectile")
+	if projectile_texture != null: projectile_sprite.texture = projectile_texture
 	rotation = direction.angle()
 	_update_visual()
 

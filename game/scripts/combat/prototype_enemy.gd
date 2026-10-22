@@ -43,6 +43,8 @@ const DANGER_LINE_COLOR := Color("ff7043")
 @export_enum("풀잎 슬라임", "씨앗 포대", "바람 정령") var enemy_type: int = EnemyType.LEAF_SLIME
 @export var player_path: NodePath
 
+var roster_id: String = ""
+var regional_pattern: RegionalEnemyPattern
 var expedition_patterns: bool = false
 var forest_variant: bool = false
 var ruins_variant: bool = false
@@ -111,6 +113,8 @@ func _process(delta: float) -> void:
 		_state_elapsed_s = 0.0
 	elif shield_stunned:
 		_state_elapsed_s = 0.0
+	elif regional_pattern != null:
+		regional_pattern.tick(self, scaled_delta)
 	elif festival_variant and enemy_type == EnemyType.LEAF_SLIME:
 		_update_festival_soldier(scaled_delta)
 	elif festival_variant and enemy_type == EnemyType.SEED_SACK:
@@ -170,11 +174,16 @@ func apply_shield_stun(duration_s: float) -> void:
 	_set_state(State.RECOVERY,"방패 기절 · 공격 중단")
 
 func _interrupt_for_control() -> void:
+	if regional_pattern != null:
+		regional_pattern.reset()
+		regional_pattern.returned = true
 	_pole_falling = enemy_type == EnemyType.LEAF_SLIME and not festival_variant and position.y < _spawn_position.y
 	_combo_remaining = 0
 	_velocity = Vector2.ZERO
 
-func configure_route(route: String) -> void:
+func configure_route(route: String, use_roster: bool = false, wave: int = 1) -> void:
+	roster_id = RegionalEnemyRoster.regular_id(route, enemy_type, wave) if use_roster else ""
+	regional_pattern = RegionalEnemyPattern.new(roster_id) if RegionalEnemyRoster.is_custom(roster_id) else null
 	forest_variant = route == "forest"
 	ruins_variant = route == "ruins"
 	festival_variant = route == "festival"
@@ -182,14 +191,16 @@ func configure_route(route: String) -> void:
 	if festival_variant:
 		if enemy_type == EnemyType.LEAF_SLIME: body_sprite.texture = FESTIVAL_SOLDIER_TEXTURE
 		elif enemy_type == EnemyType.SEED_SACK: body_sprite.texture = FESTIVAL_TURRET_TEXTURE
+	if regional_pattern != null: body_sprite.texture = RegionalEnemyRoster.texture(roster_id)
 	_combo_remaining = 0
 	queue_redraw()
-	body_color = Color("b8e38b") if forest_variant else Color.WHITE if ruins_variant or festival_variant else _original_body_color
+	body_color = Color.WHITE if regional_pattern != null else Color("b8e38b") if forest_variant else Color.WHITE if ruins_variant or festival_variant else _original_body_color
 	visual_animation.reset(body_sprite)
 	_update_body_animation(0.0)
 
 
 func reset_target() -> void:
+	if regional_pattern != null: regional_pattern.reset()
 	super.reset_target()
 	state = State.IDLE
 	_clock_aim = Vector2.LEFT
@@ -229,6 +240,7 @@ func current_metrics() -> Dictionary:
 		"enemy_key": target_key,
 		"enemy_name": enemy_name(),
 		"enemy_type": enemy_type,
+		"enemy_species": roster_id,
 		"enemy_expedition_patterns": expedition_patterns,
 		"enemy_forest_variant": forest_variant,
 		"enemy_ruins_variant": ruins_variant,
@@ -246,6 +258,8 @@ func current_metrics() -> Dictionary:
 
 
 func warning_feedback_snapshot() -> Dictionary:
+	if regional_pattern != null:
+		return {"color": DANGER_LINE_COLOR, "shape": "부채" if regional_pattern.ranged() and roster_id != "bird" else "직선", "uses_color_and_shape": true}
 	return {
 		"color": DANGER_LINE_COLOR if enemy_type == EnemyType.WIND_SPIRIT else DANGER_RING_COLOR,
 		"shape": "부채" if (forest_variant or festival_variant) and enemy_type == EnemyType.SEED_SACK else "직선" if enemy_type == EnemyType.WIND_SPIRIT or (festival_variant and enemy_type == EnemyType.LEAF_SLIME) else "원형",
@@ -254,6 +268,7 @@ func warning_feedback_snapshot() -> Dictionary:
 
 
 func enemy_name() -> String:
+	if RegionalEnemyRoster.NAMES.has(roster_id): return RegionalEnemyRoster.NAMES[roster_id]
 	if ruins_variant and enemy_type == EnemyType.SEED_SACK: return "별시계 인형"
 	if festival_variant and enemy_type == EnemyType.LEAF_SLIME: return "장난감 병정"
 	if festival_variant and enemy_type == EnemyType.SEED_SACK: return "축제 포탑"
@@ -506,6 +521,17 @@ func _fire_seed_volley() -> void:
 
 func _update_body_animation(delta: float) -> void:
 	if body_sprite == null: return
+	if regional_pattern != null:
+		var facing := -1 if is_instance_valid(player) and player.global_position.x < global_position.x else 1
+		if state == State.ATTACK or state == State.WARNING: facing = -1 if regional_pattern.aim.x < 0 else 1
+		# Dedicated sheets share a 160px canvas; keep health/selection at actor origin.
+		visual_animation.animate(body_sprite, 2, state, delta, facing, state == State.IDLE,
+			_hit_flash_remaining_s > 0.0, true, _state_elapsed_s / regional_pattern.warning_duration())
+		body_sprite.scale = Vector2(0.82, 0.82) * Vector2(1.0 + sin(visual_animation.elapsed_s * 4.0) * 0.015, 1.0)
+		if state == State.DEAD:
+			var collapse := clampf(visual_animation.elapsed_s / 0.35, 0.0, 1.0)
+			body_sprite.scale.y *= 1.0 - collapse * 0.55
+		return
 	var enabled := not ((ruins_variant and enemy_type == EnemyType.SEED_SACK) or (festival_variant and enemy_type != EnemyType.WIND_SPIRIT))
 	var facing := 1
 	var moving := false
@@ -578,6 +604,12 @@ func _update_warning_visual() -> void:
 
 
 func _draw() -> void:
+	if regional_pattern != null:
+		if state == State.WARNING and regional_pattern.ranged() and roster_id != "bird":
+			for angle in [-18.0, 18.0]:
+				var start := Vector2(0, -38)
+				draw_line(start, start + regional_pattern.aim.rotated(deg_to_rad(angle)) * regional_pattern.distance(), Color(DANGER_LINE_COLOR, 0.75), 3.0)
+		return
 	if not (forest_variant or festival_variant) or enemy_type != EnemyType.SEED_SACK or state != State.WARNING:
 		return
 	var origin := Vector2(0.0, -54.0)

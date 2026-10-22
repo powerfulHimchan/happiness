@@ -193,7 +193,7 @@ func _attack_origin_global() -> Vector2:
 
 func _emit_metrics() -> void:
 	target_metrics_changed.emit({
-		"target_key": current_target.target_key if is_instance_valid(current_target) else "없음",
+		"target_key": _target_display_name(),
 		"target_distance_m": _current_distance_m,
 		"target_candidate_count": _candidate_count,
 		"target_rear_filtered": _rear_filtered_count,
@@ -216,3 +216,11 @@ func _draw() -> void:
 	var end_angle := PI * 0.5 if player.facing_direction > 0 else PI * 1.5
 	draw_arc(center, radius, start_angle, end_angle, 40, Color("fff3b0", 0.34), 3.0, true)
 	draw_circle(center, 6.0, Color("ffd166", 0.72))
+
+
+func _target_display_name() -> String:
+	if not is_instance_valid(current_target): return "없음"
+	if current_target.has_method("current_metrics"):
+		var enemy_metrics: Dictionary = current_target.call("current_metrics")
+		return String(enemy_metrics.get("enemy_name", current_target.target_key))
+	return current_target.target_key

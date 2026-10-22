@@ -5,6 +5,7 @@ extends Node2D
 
 const HIT_RADIUS_PX := 54.0
 
+var wave_texture: Texture2D
 var wave_id: String = ""
 var attacker_id: StringName = &"armored_boar"
 var attack_id: StringName = &"boar_shockwave"
@@ -35,6 +36,7 @@ func configure(
 func _ready() -> void:
 	add_to_group("enemy_time_scaled")
 	add_to_group("enemy_projectile")
+	if wave_texture != null: wave_sprite.texture = wave_texture
 	wave_sprite.flip_h = direction_sign < 0.0
 	_update_visual()
 

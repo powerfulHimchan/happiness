@@ -13,7 +13,7 @@ const WAVE_TWO := {"slime": Vector2(4070, 780), "seed": Vector2(4420, 660), "win
 const RESIDENTS: Array[Vector2] = [Vector2(2520, 470), Vector2(2690, 470), Vector2(2860, 470)]
 
 static func objective(index: int) -> String:
-	return ["하얀 성벽을 향해 전진", "성문 앞 슬라임·씨앗 포대·공중 정령 처치", "성문 계단을 넘어 성벽 쉼터로 이동", "성벽 위 원거리 적과 공중 정령 처치", "성문 정예를 처치하고 중심부로 이동"][index]
+	return ["하얀 성벽을 향해 전진", "성문 앞 미소 가면 경비병 처치", "성문 계단을 넘어 성벽 쉼터로 이동", "성벽 위 미소 가면 경비병의 창 찌르기 회피", "성문 정예를 처치하고 중심부로 이동"][index]
 
 static func draw_backdrop(canvas: Node2D) -> void:
 	var stone := Color("d3dfdf")

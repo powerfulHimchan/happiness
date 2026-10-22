@@ -25,7 +25,7 @@ const SECTION_NAMES: Array[String] = [
 ]
 const SECTION_OBJECTIVES: Array[String] = [
 	"첫 관문까지 전진",
-	"풀잎 슬라임과 씨앗 포대 처치",
+	"풀잎 슬라임과 바람뿔 토끼 처치",
 	"발판과 낙하 구간을 지나 전진",
 	"두 무기를 전환해 혼합 웨이브 처치",
 	"돌진을 벽으로 유도해 정예 처치",
@@ -39,11 +39,11 @@ const ADVANCE_TWO_X := 3830.0
 @export_range(1, 10) var stage_limit: int = 1
 
 const ROUTES: Array[Dictionary] = [
-	{"id": "meadow", "name": "풀숲 길", "lines": ["다리로 전진 · 가까운 혼합 전투", "첫 웨이브 · 슬라임 + 씨앗 포대", "체력 20 추가 회복"]},
+	{"id": "meadow", "name": "풀숲 길", "lines": ["다리로 전진 · 가까운 혼합 전투", "첫 웨이브 · 슬라임 + 바람뿔 토끼", "체력 20 추가 회복"]},
 	{"id": "wind", "name": "바람 길", "lines": ["징검 발판 · 흩어진 원거리 전투", "첫 웨이브 · 슬라임 + 바람 정령", "필살기 게이지 +25"]},
 ]
 const RISK_ROUTE := {"id": "clockwork", "name": "태엽 폐허 · 위험", "lines": ["좁은 발판 · 적 체력 +20%", "첫 웨이브 · 세 종류의 적", "통과: 체력 +20 · 필살기 +50"]}
-const FOREST_ROUTE := {"id": "forest", "name": "거꾸로 자란 숲", "lines": ["움직이는 덩굴 · 고정 쉼터", "연속 도약 · 넓은 씨앗 · 재돌진", "정예 통과: 회복+10 · 게이지+15"]}
+const FOREST_ROUTE := {"id": "forest", "name": "거꾸로 자란 숲", "lines": ["움직이는 덩굴 · 고정 쉼터", "씨앗 포대 · 포자 나방 · 덩굴 사냥꾼", "정예 통과: 회복+10 · 게이지+15"]}
 const RUINS_ROUTE := {"id": "ruins", "name": "별시계 유적", "lines": ["멈춤·반복 발판과 시간 함정", "태엽 인형의 기억된 이중 사격", "정예 통과: 방벽+10 · 게이지+20"]}
 const FESTIVAL_ROUTE := {"id": "festival", "name": "태엽 축제장", "lines": ["회전 놀이 발판 · 기계 승강대", "병정의 행진 돌진 · 포탑 부채탄", "정예 통과: 회복+15 · 게이지+10"]}
 const CITY_GATE_ROUTE := {"id": "city_gate", "name": "행복의 나라 성문", "lines": ["9스테이지 · 하얀 성벽과 미소 짓는 주민", "성문 계단 · 혼합 전투와 행복의 수호기사", "통과 후 중심부로 이동"]}
@@ -157,7 +157,8 @@ func reset_stage() -> void:
 	for enemy in _all_combat_enemies():
 		if enemy is PrototypeEnemy:
 			(enemy as PrototypeEnemy).expedition_patterns = expedition >= 3 and run_mode == JourneyRoutePlan.MODE
-			(enemy as PrototypeEnemy).configure_route(route_id)
+			(enemy as PrototypeEnemy).configure_route(route_id, true)
+		if enemy == armored_boar: armored_boar.configure_region(route_id)
 		if enemy is ExpeditionBoss:
 			(enemy as ExpeditionBoss).expedition_patterns = expedition >= 4 and run_mode == JourneyRoutePlan.MODE
 		enemy.damage_receiver.max_health = _enemy_health(enemy)
@@ -456,7 +457,7 @@ func current_metrics() -> Dictionary:
 			Section.ADVANCE_TWO:
 				objective = "풀숲 다리를 건너 전진" if route_id == "meadow" else "길게 점프해 바람 발판 건너기"
 			Section.WAVE_ONE:
-				objective = "슬라임과 씨앗 포대 처치" if route_id == "meadow" else "슬라임과 바람 정령 처치"
+				objective = "슬라임과 바람뿔 토끼 처치" if route_id == "meadow" else "슬라임과 바람 정령 처치"
 			Section.WAVE_TWO:
 				objective = "가까운 혼합 웨이브 처치" if route_id == "meadow" else "활·점프로 흩어진 적 처치"
 	if uses_boss() and current_section == Section.ELITE:
@@ -466,9 +467,9 @@ func current_metrics() -> Dictionary:
 			section_name = "보스 · " + BossSera.BOSS_NAME
 			objective = "돌진 경고·지면 파문·빛살 틈 회피 · 공격 뒤 왕관 빈틈"
 	if route_id == "clockwork" and not stage_complete:
-		objective = ["첫 관문까지 전진", "강화된 슬라임·씨앗·바람 처치", "좁은 태엽 발판을 점프로 건너기", "강화된 혼합 웨이브 처치", "강화된 갑옷 멧돼지 처치"][display_index]
+		objective = ["첫 관문까지 전진", "강화된 슬라임·토끼·바람 정령 처치", "좁은 태엽 발판을 점프로 건너기", "강화된 혼합 웨이브 처치", "강화된 갑옷 멧돼지 처치"][display_index]
 	if route_id == "forest" and not stage_complete and current_section != Section.ELITE:
-		objective = ["숲 입구까지 전진", "연속 도약·다섯 씨앗 경고 회피", "움직이는 덩굴과 고정 쉼터 건너기", "공중 정령 재돌진·높낮이 혼합 전투"][display_index]
+		objective = ["숲 입구까지 전진", "다섯 씨앗·포자탄 경고 회피", "움직이는 덩굴과 고정 쉼터 건너기", "포자 나방·높낮이 혼합 전투"][display_index]
 	if route_id == "ruins" and not stage_complete and current_section != Section.ELITE:
 		objective = ["유적 입구까지 전진", "인형 이중 사격·시간 함정 회피", "멈춤·반복 발판과 고정 쉼터 건너기", "혼합 웨이브·시간 함정 회피"][display_index]
 		if clock_traps.state != ClockTrapController.State.OFF:
@@ -478,10 +479,13 @@ func current_metrics() -> Dictionary:
 	if awaiting_guardian_choice():
 		objective = "성문 승리 · 수호기사 구출 또는 파괴를 선택하세요"
 	if route_id == "festival" and not stage_complete and current_section != Section.ELITE:
-		objective = ["축제장 입구까지 전진", "병정 행진 돌진·포탑 부채탄 회피", "회전 발판·기계 승강대 건너기", "병정·포탑·공중 정령 혼합 전투"][display_index]
+		objective = ["축제장 입구까지 전진", "병정 행진 돌진·포탑 부채탄 회피", "회전 발판·기계 승강대 건너기", "병정·포탑·풍선 광대 혼합 전투"][display_index]
 	if region_section() == 2 and not stage_complete:
 		objective = RegionStageLayout.objective(route_id, display_index)
 		if route_id == "ruins" and clock_traps.state != ClockTrapController.State.OFF: objective += " · " + clock_traps.status_text()
+	if not stage_complete and current_section == Section.ELITE and not uses_boss() and not uses_guardian():
+		section_name = "정예 · " + armored_boar.region_enemy_name()
+		objective = "%s · 경고 후 공격 회피와 반격" % armored_boar.region_enemy_name()
 	var target_s := 0.0 if stage_complete else float(SECTION_TARGET_SECONDS[display_index])
 	var visited := visited_regions()
 	var route_name: String = route_profile(route_id).get("name", "알 수 없는 경로")
@@ -610,7 +614,13 @@ func _finish_current_section() -> void:
 	_emit_metrics()
 
 
+func _configure_roster_wave(wave: int) -> void:
+	for enemy in [leaf_slime, seed_sack, wind_spirit]:
+		enemy.configure_route(route_id, true, wave)
+
+
 func _activate_wave_one() -> void:
+	_configure_roster_wave(1)
 	if route_id == JourneyRoutePlan.CORE:
 		_activate_city_core_wave(1)
 		return
@@ -644,6 +654,7 @@ func _activate_wave_one() -> void:
 
 
 func _activate_wave_two() -> void:
+	_configure_roster_wave(2)
 	if route_id == JourneyRoutePlan.CORE:
 		_activate_city_core_wave(2)
 		return
@@ -741,6 +752,7 @@ func _restore_combat_sandbox() -> void:
 		if enemy in [boss, guardian, sera, heart]:
 			_deactivate_enemy(enemy)
 			continue
+		if enemy == armored_boar: armored_boar.configure_region("wind")
 		if enemy is PrototypeEnemy:
 			(enemy as PrototypeEnemy).configure_route("meadow")
 		var initial_position: Vector2 = _initial_positions.get(enemy.get_path(), enemy.position)

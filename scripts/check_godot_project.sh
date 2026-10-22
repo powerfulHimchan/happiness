@@ -17,6 +17,9 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/tests/regional_roster_runtime_test.gd"
+  "$game_root/scripts/combat/regional_enemy_roster.gd"
+  "$game_root/scripts/combat/regional_enemy_pattern.gd"
   "$game_root/tests/gp508_510_art_runtime_test.gd"
   "$game_root/scripts/ui/task_board_art.gd"
   "$game_root/tests/gp478_507_runtime_test.gd"
@@ -879,6 +882,8 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/sera_art_runtime_test.gd
   checked_godot 45s --headless --path "$game_root" \
     --script res://tests/heart_art_runtime_test.gd
+  checked_godot 60s --headless --path "$game_root" \
+    --script res://tests/regional_roster_runtime_test.gd
   # Scene conversion may report an error with exit code zero. Check the actual
   # Android resource pack and boot its converted scenes, without building an APK.
   checked_android_export_pack 120s --headless --path "$game_root" \

@@ -39,6 +39,6 @@ static func wave(route: String, number: int) -> Dictionary:
 static func objective(route: String, index: int) -> String:
 	if index == 0: return String(TITLES[route]) + " 입구까지 전진"
 	if index == 2: return String(DESCRIPTIONS[route]) + " 건너기"
-	if index == 1: return "슬라임·원거리 적·공중 정령 혼합 전투"
-	if index == 3: return "수관 발판 위 적과 공중 정령 처치" if route == "forest" else "양쪽 적과 공중 정령 처치"
+	if index == 1: return {"wind": "슬라임·바람뿔 토끼·바람 정령 혼합 전투", "forest": "씨앗 포대·포자 나방 혼합 전투", "ruins": "별시계 인형·되감기 인형 혼합 전투", "festival": "병정·포탑·풍선 광대 혼합 전투"}[route]
+	if index == 3: return "수관 발판 위 씨앗 포대와 포자 나방 처치" if route == "forest" else "양쪽 지역 전용 적 처치"
 	return "두 번째 구간의 정예 처치"

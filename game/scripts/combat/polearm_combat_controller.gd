@@ -25,7 +25,7 @@ func _in_basic_range(target: PrototypeTarget) -> bool:
 
 func _damage_target(target: PrototypeTarget, attack_id: StringName, damage: int, stagger_s: float, tags: PackedStringArray, hit_index: int) -> int:
 	var result := super._damage_target(target,attack_id,damage,stagger_s,tags,hit_index)
-	if result == DamageReceiver.Result.APPLIED and target is PrototypeEnemy and target.is_targetable():
+	if result == DamageReceiver.Result.APPLIED and target.is_targetable() and (target is PrototypeEnemy or (target.has_method("allows_regional_control") and bool(target.call("allows_regional_control")))):
 		var distance := 0.0
 		match attack_id:
 			&"polearm_basic": distance = 30.0 if hit_index == 1 else 0.0
@@ -37,7 +37,7 @@ func _damage_target(target: PrototypeTarget, attack_id: StringName, damage: int,
 			&"polearm_cross": distance = 40.0
 		if distance > 0:
 			var direction := signf(target.global_position.x - player.global_position.x)
-			(target as PrototypeEnemy).apply_pole_push((float(player.facing_direction) if is_zero_approx(direction) else direction) * distance)
+			target.call("apply_pole_push", (float(player.facing_direction) if is_zero_approx(direction) else direction) * distance)
 	return result
 
 func _draw() -> void:
