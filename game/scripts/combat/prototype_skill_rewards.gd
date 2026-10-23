@@ -120,7 +120,10 @@ static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1
 		var effect := lines(id, rate)
 		effect.append("시작 장착 · 새 도전마다 초기화" if id in starting.get(weapon, []) else "정예 후 스킬 보상에서 슬롯 교체")
 		effect.append("표기 피해는 강화 전 기본값")
-		effect.append("재충전 배율 ×%.2f" % rate if active and rate > 1.0 else "첫·두 번째 정예 후 교체 가능")
+		var recharge_note := "시계추 적용 · 재사용 -20%" if active and recharge_multiplier > 1.0 else "첫·두 번째 정예 후 교체 가능"
+		if active and rate > recharge_multiplier:
+			recharge_note = ("시계추·숙련" if recharge_multiplier > 1.0 else "숙련")+" · 재충전 ×%.2f" % rate
+		effect.append(recharge_note)
 		result.append({"id": id, "weapon": weapon, "name": (PrototypeWeaponRewards.family_name(weapon) + " · ") + String(SKILLS[id].display_name), "open": slot >= 0, "status": status, "lines": effect})
 	return result
 

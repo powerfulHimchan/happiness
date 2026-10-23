@@ -137,6 +137,10 @@ func _effects() -> bool:
 			for offer in offers:
 				var rate := player.skill_recharge_multiplier(offer.weapon)
 				if not _check(offer.lines[0].contains("%.1f초" % (PrototypeSkillRewards.SKILLS[offer.id].cooldown_s/rate)), "후보 교체 시간은 계열별 실제 값"): return false
+		var codex := PrototypeSkillRewards.codex_cards(weapons.skills,player.skill_recharge_multiplier(),player.family_skill_recharge())
+		for card in codex:
+			var rate := player.skill_recharge_multiplier(card.weapon)
+			if not _check(card.lines[0].contains("%.1f초" % (PrototypeSkillRewards.SKILLS[card.id].cooldown_s/rate)) and card.lines[-1].contains("시계추") == clock and card.lines[-1].contains("숙련") == (mastery_style == "rhythm" and card.weapon == family), "스킬 도감의 계열별 시간·시계추/숙련 설명"): return false
 	player.relic_state = original_relic
 	if not _actual_hits(): return false
 	weapons._apply_active_weapon()

@@ -275,6 +275,10 @@ func _resolve_growth() -> bool:
 			_tap(controls.job_ultimate_rects[0].get_center())
 			_tap(controls.job_confirm_rect.get_center())
 		elif growth.choosing:
+			# Legacy regression fixtures isolate baseline combat from new conditional mastery.
+			if String(growth.offered_cards[0].id).contains("_mastery_"):
+				growth.offered_cards[0] = PrototypeAbilityCodex.profile(weapons.active_weapon_id+"_power")
+				sandbox._on_growth_choices_requested(growth.offered_cards,growth.level,growth.rerolls_remaining)
 			_tap(controls.growth_card_rects[0].get_center())
 		else:
 			return true
