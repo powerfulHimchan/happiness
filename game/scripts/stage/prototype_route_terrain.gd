@@ -137,11 +137,7 @@ func _draw() -> void:
 		return
 	var base := Color("729452") if route_id == "meadow" else Color("5688a9")
 	var rim := Color("d3e996") if route_id == "meadow" else Color("c5f2ff")
-	if route_id == JourneyRoutePlan.GATE and not platforms.is_empty():
-		CityGateLayout.draw_backdrop(self)
-		base = Color("839eae")
-		rim = Color("f4e1ad")
-	elif route_id == JourneyRoutePlan.CORE and not platforms.is_empty():
+	if route_id == JourneyRoutePlan.CORE and not platforms.is_empty():
 		CityCoreLayout.draw_backdrop(self)
 		base = Color("8d88b5")
 		rim = Color("f4e1ad")
@@ -160,8 +156,6 @@ func _draw() -> void:
 	for index in platforms.size():
 		var rect := platforms[index]
 		if route_id == "festival":
-			base = Color("b15e74")
-			rim = Color("ffe2a3")
 			if index == 1:
 				var hub := base_platforms[1].get_center() + Vector2(0, 16 if region_section == 2 else FESTIVAL_ORBIT.y)
 				draw_arc(hub, 72, 0, TAU, 32, rim, 5)
@@ -191,8 +185,3 @@ func _draw() -> void:
 		if region_section == 2 and index == 0: text = String(RegionStageLayout.TITLES[route_id]) + " · 2/2"
 		elif region_section == 2 and index == 4: text = "출구 쉼터 · 안전 복귀"
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, -18), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("173147"))
-	if route_id == "festival":
-		for x in range(900, 4800, 400):
-			draw_line(Vector2(x, 280), Vector2(x + 320, 280), rim, 3)
-			for flag_x in range(x, x + 320, 40):
-				draw_colored_polygon(PackedVector2Array([Vector2(flag_x, 280), Vector2(flag_x + 30, 280), Vector2(flag_x + 15, 320)]), base)

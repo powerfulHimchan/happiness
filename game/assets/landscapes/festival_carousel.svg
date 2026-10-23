@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="640" viewBox="0 0 800 640">
+<defs>
+ <linearGradient id="rose" x2="0" y2="1"><stop stop-color="#c3a3ac"/><stop offset="1" stop-color="#a28fa3"/></linearGradient>
+ <linearGradient id="cream" x2="0" y2="1"><stop stop-color="#e0d4af"/><stop offset="1" stop-color="#bdb8a4"/></linearGradient>
+ <g id="horse" fill="#d6c7b0" stroke="#9c9a9d" stroke-width="4" stroke-linejoin="round">
+  <path d="M-35 9L-48-12L-51-35L-36-27L-22-42L-8-38L-4-17L14-3L38 0L46 14L32 22L25 46H13L15 20H-11L-17 45H-28L-25 18Z"/>
+  <path d="M-9-9L12 1L7 15H-13Z" fill="#b59ca9"/><circle cx="-25" cy="-28" r="3" fill="#839194"/>
+ </g>
+</defs>
+<!-- The wheel, horses and lanterns are painted scenery, never moving platforms. -->
+<g transform="translate(568 254)" fill="none" stroke="#9e9caf" stroke-width="7">
+ <circle r="150"/><circle r="126" stroke="#b9b0b6" stroke-width="3"/>
+ <path d="M0-150V150M-150 0H150M-106-106L106 106M106-106L-106 106" stroke-width="4"/>
+ <path d="M-85 339L0 0L85 339" stroke-width="16"/><circle r="19" fill="#d4c5aa"/>
+</g>
+<g fill="url(#rose)" stroke="#9999a7" stroke-width="4">
+ <path d="M544 91H591L599 116V144H536V116Z"/><path d="M692 235H739L747 260V288H684V260Z"/>
+ <path d="M544 383H591L599 408V436H536V408Z"/><path d="M396 235H443L451 260V288H388V260Z"/>
+</g>
+<g fill="#d9ceb1"><path d="M544 115H591V131H544ZM692 259H739V275H692ZM544 407H591V423H544ZM396 259H443V275H396Z"/></g>
+<path d="M53 579H501L521 605H34Z" fill="#9f9baa"/><path d="M61 555H490V583H61Z" fill="url(#rose)" stroke="#9997a6" stroke-width="5"/>
+<path d="M95 542H461V558H95Z" fill="url(#cream)"/>
+<g stroke="#bcb79f" stroke-width="9"><path d="M116 311V545M214 311V545M340 311V545M439 311V545"/></g>
+<g stroke="#dfd2ac" stroke-width="3"><path d="M116 319V542M214 319V542M340 319V542M439 319V542"/></g>
+<g transform="translate(163 455)"><use href="#horse"/></g>
+<g transform="translate(293 429)"><use href="#horse"/></g>
+<g transform="translate(414 460)"><use href="#horse"/></g>
+<path d="M70 311L121 263L273 182L425 263L479 311Z" fill="url(#cream)" stroke="#9995a4" stroke-width="6" stroke-linejoin="round"/>
+<path d="M273 182L205 311H126L180 249ZM273 182L343 311H420L367 249Z" fill="url(#rose)"/>
+<path d="M70 311H479V334Q454 361 428 334Q402 361 377 334Q351 361 325 334Q299 361 273 334Q247 361 221 334Q195 361 170 334Q144 361 118 334Q92 361 70 334Z" fill="#baa2ad" stroke="#9995a4" stroke-width="5"/>
+<path d="M273 183V130M272 132L322 146L273 163" fill="#c0a9b4" stroke="#aaaca4" stroke-width="5" stroke-linejoin="round"/>
+<g fill="#e1d6b3"><circle cx="99" cy="321" r="5"/><circle cx="149" cy="321" r="5"/><circle cx="199" cy="321" r="5"/><circle cx="249" cy="321" r="5"/><circle cx="299" cy="321" r="5"/><circle cx="349" cy="321" r="5"/><circle cx="399" cy="321" r="5"/><circle cx="449" cy="321" r="5"/></g>
+<path d="M539 573H724V593H539Z" fill="#9c9cab"/><path d="M551 574V491H711V574Z" fill="#c1b8ad" stroke="#9e9ca7" stroke-width="5"/>
+<path d="M538 491L571 450H694L725 491Z" fill="url(#rose)" stroke="#9e9ca7" stroke-width="5"/>
+<path d="M578 517H684V552H578Z" fill="#8e98a7"/><path d="M584 521H677" stroke="#ded0ac" stroke-width="5"/>
+<g stroke="#a6a6a5" stroke-width="3" fill="#d7c7b1"><path d="M47 494V565M737 431V565"/><ellipse cx="47" cy="476" rx="20" ry="27"/><ellipse cx="737" cy="413" rx="18" ry="26"/></g>
+<path d="M48 609H746" stroke="#9e9da7" stroke-width="8" stroke-linecap="round"/>
+</svg>

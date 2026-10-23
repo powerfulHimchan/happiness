@@ -17,6 +17,10 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/stage/regional_landscape_art.gd"
+  "$game_root/assets/landscapes/clockwork_foundry.svg"
+  "$game_root/assets/landscapes/festival_carousel.svg"
+  "$game_root/assets/landscapes/smiling_city_gate.svg"
   "$game_root/scripts/growth/prototype_weapon_mastery.gd"
   "$game_root/tests/gp515_544_runtime_test.gd"
   "$game_root/tests/regional_roster_runtime_test.gd"
@@ -1688,7 +1692,8 @@ if [[ -n "$godot_command" ]]; then
       --script res://tests/gp125_runtime_test.gd -- "$branch_phase"
   done
   for codex_phase in seed resume finish legacy-fail legacy-resume; do
-    checked_godot 45s --headless --path "$game_root" \
+    # The expanded ability codex visits every page at two viewport sizes.
+    checked_godot 90s --headless --path "$game_root" \
       --script res://tests/gp126_runtime_test.gd -- "$codex_phase"
   done
   for tactical_phase in seed resume finish legacy combat; do

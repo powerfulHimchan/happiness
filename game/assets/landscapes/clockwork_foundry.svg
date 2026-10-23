@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="640" viewBox="0 0 800 640">
+<defs>
+ <linearGradient id="wall" x2="0" y2="1"><stop stop-color="#b4a48c"/><stop offset="1" stop-color="#8d9289"/></linearGradient>
+ <linearGradient id="copper" x2="1" y2="1"><stop stop-color="#c6b393"/><stop offset="1" stop-color="#968d80"/></linearGradient>
+ <g id="gear" fill="#9d9c8d" stroke="#798c8c" stroke-width="6">
+  <path d="M-18-92H18L24-73L42-64L63-69L85-42L73-24L76-6L94 8L85 42L63 43L50 58L48 80L15 92L0 76L-20 75L-38 88L-66 68L-63 45L-75 29L-96 23L-96-12L-75-22L-67-40L-71-63L-43-84L-23-74Z"/>
+  <circle r="57" fill="#839393"/><circle r="39" fill="#b5b09b"/><circle r="14" fill="#798c8c"/>
+  <path d="M0-39V-15M34 20L14 8M-34 20L-14 8" stroke="#8b938c" stroke-width="12"/>
+ </g>
+</defs>
+<!-- Quiet, abandoned workshop: all gears and steam are static scenery. -->
+<g fill="#afbab0" opacity=".65"><ellipse cx="604" cy="99" rx="48" ry="31"/><ellipse cx="634" cy="57" rx="34" ry="25"/><ellipse cx="576" cy="32" rx="43" ry="22"/></g>
+<path d="M108 585V286L194 237L279 286V215H488V280L560 242L669 296V585Z" fill="url(#wall)" stroke="#82918c" stroke-width="7"/>
+<path d="M89 292L193 225L292 286M262 219H504M487 285L559 231L689 295" fill="none" stroke="#81918e" stroke-width="16" stroke-linejoin="round"/>
+<path d="M560 253V128H616V275M550 129H626V109H550Z" fill="#9da295" stroke="#82918c" stroke-width="6"/>
+<path d="M104 552H674V584H104Z" fill="#81938e"/>
+<g stroke="#8d9a91" stroke-width="4" opacity=".7"><path d="M114 352H278M490 352H667M114 432H667M114 512H667M157 312V352M220 352V393M151 393V432M599 312V352M556 352V393M619 393V432M198 432V472M557 472V512"/></g>
+<g fill="#708a8d" stroke="#c2baa1" stroke-width="9"><path d="M143 328Q191 286 238 328V385H143Z"/><path d="M524 328Q571 286 619 328V385H524Z"/></g>
+<g fill="none" stroke="#aeb2a0" stroke-width="5"><path d="M191 307V383M144 350H237M571 307V383M526 350H617"/></g>
+<path d="M298 582V425Q379 344 460 425V582Z" fill="#748b8c" stroke="#b9b09a" stroke-width="13"/>
+<path d="M326 582V439Q379 390 432 439V582" fill="none" stroke="#92a098" stroke-width="6"/>
+<g stroke="#a7ad9b" stroke-width="5"><path d="M349 432V572M379 420V572M409 432V572"/></g>
+<path d="M298 252H458V280H298Z" fill="#a8ac99"/>
+<g transform="translate(378 315)"><use href="#gear"/><circle r="28" fill="#bdbaa0" stroke="#8a9b93" stroke-width="5"/><path d="M0-19V0L17 10" fill="none" stroke="#7b9291" stroke-width="5" stroke-linecap="round"/></g>
+<g transform="translate(182 484) rotate(16) scale(.62)"><use href="#gear"/></g>
+<g transform="translate(567 483) rotate(-18) scale(.76)"><use href="#gear"/></g>
+<path d="M126 576H95V466H112M640 573H698V418H665" fill="none" stroke="#7c9390" stroke-width="18" stroke-linejoin="round"/>
+<path d="M126 576H95V466H112M640 573H698V418H665" fill="none" stroke="#b1b09b" stroke-width="8" stroke-linejoin="round"/>
+<g fill="url(#copper)" stroke="#87978e" stroke-width="4"><path d="M61 584L91 548L127 555L143 585Z"/><path d="M640 586L658 557L688 553L716 585Z"/><path d="M228 584L245 566L275 573L282 584Z"/></g>
+<path d="M61 603H733M103 588H691" stroke="#81998e" stroke-width="9" stroke-linecap="round"/>
+</svg>

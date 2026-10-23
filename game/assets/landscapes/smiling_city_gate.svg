@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="640" viewBox="0 0 800 640">
+<defs>
+ <linearGradient id="stone" x2="1" y2="0"><stop stop-color="#9eafb7"/><stop offset=".45" stop-color="#d6ddd5"/><stop offset="1" stop-color="#afbec1"/></linearGradient>
+ <linearGradient id="roof" x2="0" y2="1"><stop stop-color="#b2a9bc"/><stop offset="1" stop-color="#8e9bb1"/></linearGradient>
+ <linearGradient id="arch" x2="0" y2="1"><stop stop-color="#788fa4"/><stop offset="1" stop-color="#b0c1c2"/></linearGradient>
+</defs>
+<!-- Two watch towers, a welcome clock and a visible open arch. -->
+<path d="M77 601V271H238V601ZM562 601V271H723V601Z" fill="url(#stone)" stroke="#92a6b2" stroke-width="6"/>
+<path d="M238 600V274H562V600H514V428Q400 257 286 428V600Z" fill="url(#stone)" stroke="#92a6b2" stroke-width="6"/>
+<path d="M286 600V428Q400 257 514 428V600Z" fill="url(#arch)"/>
+<path d="M264 598V421Q400 217 536 421V598" fill="none" stroke="#d7cba9" stroke-width="17"/>
+<path d="M286 598V428Q400 257 514 428V598" fill="none" stroke="#93a8b3" stroke-width="6"/>
+<path d="M94 284V193H220V284ZM580 284V193H707V284Z" fill="url(#stone)" stroke="#92a6b2" stroke-width="6"/>
+<path d="M62 207L157 80L252 207ZM547 207L644 80L739 207Z" fill="url(#roof)" stroke="#90a0b0" stroke-width="6" stroke-linejoin="round"/>
+<path d="M86 207L157 112L228 207M572 207L644 112L716 207" fill="none" stroke="#c2b9bf" stroke-width="4"/>
+<path d="M157 81V28M644 81V28" stroke="#c7bea5" stroke-width="6"/>
+<path d="M157 30L214 44L157 62ZM644 30L701 44L644 62Z" fill="#d6c6a4" stroke="#b8b8ad" stroke-width="3"/>
+<path d="M66 275H248V300H66ZM552 275H734V300H552ZM66 552H248V581H66ZM552 552H734V581H552Z" fill="#a1b1b6"/>
+<g fill="#7d93a6" stroke="#c7d0c8" stroke-width="6"><path d="M132 260V232Q157 195 182 232V260ZM619 260V232Q644 195 669 232V260Z"/><path d="M132 414V360Q157 323 182 360V414ZM619 414V360Q644 323 669 360V414Z"/></g>
+<g stroke="#bec9c4" stroke-width="4"><path d="M157 225V258M644 225V258M157 351V411M644 351V411"/></g>
+<path d="M235 277V234H264V250H292V234H321V250H350V234H379V250H408V234H437V250H466V234H495V250H523V234H562V277Z" fill="#c6d0cc" stroke="#9aadb5" stroke-width="4"/>
+<g stroke="#a6b7bc" stroke-width="3" fill="none"><path d="M80 446H236M80 495H236M564 446H719M564 495H719M106 446V495M181 495V550M589 446V495M669 495V550M240 309H561"/></g>
+<g transform="translate(400 301)">
+ <circle r="49" fill="#d8cfb2" stroke="#9dafaF" stroke-width="7"/>
+ <circle r="36" fill="#b2c1c3" stroke="#e1d6b4" stroke-width="3"/>
+ <path d="M0-27V0L21 11" fill="none" stroke="#7e96a7" stroke-width="6" stroke-linecap="round"/>
+ <circle r="5" fill="#d9cfb0"/>
+</g>
+<g fill="#b6a9b8" stroke="#96a7b1" stroke-width="4"><path d="M102 439H133V521L117 535L102 521ZM676 439H707V521L691 535L676 521Z"/></g>
+<g fill="none" stroke="#dfd3b4" stroke-width="3" stroke-linecap="round"><path d="M109 469Q117 478 126 469M684 469Q692 478 700 469"/></g>
+<path d="M52 601H748V618H52Z" fill="#92a8b3"/><path d="M72 584H727V602H72Z" fill="#bdcbc9"/>
+<path d="M292 596L328 565H473L510 596Z" fill="#a0b4bb"/><path d="M311 591H489M330 578H470" fill="none" stroke="#c7d0c8" stroke-width="4"/>
+<g fill="#91a9a1"><path d="M57 599Q37 558 63 554Q90 555 89 599ZM711 599Q709 552 739 554Q764 561 745 599Z"/></g>
+</svg>
