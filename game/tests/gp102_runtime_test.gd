@@ -25,6 +25,9 @@ func _run() -> void:
 	await process_frame
 	weapons.sword_combat.set_process(false)
 	weapons.bow_combat.set_process(false)
+	# This scoring fixture advances enemies manually; disable automatic physics attacks too.
+	weapons.sword_combat.set_physics_process(false)
+	weapons.bow_combat.set_physics_process(false)
 	(sandbox.get_node("CombatFeedbackController") as CombatFeedbackController).configure(0.0, false, false)
 	for job_index in 2:
 		controls.begin_retry()
