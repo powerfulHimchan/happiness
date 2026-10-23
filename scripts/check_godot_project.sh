@@ -17,6 +17,8 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/growth/prototype_weapon_mastery.gd"
+  "$game_root/tests/gp515_544_runtime_test.gd"
   "$game_root/tests/regional_roster_runtime_test.gd"
   "$game_root/scripts/combat/regional_enemy_roster.gd"
   "$game_root/scripts/combat/regional_enemy_pattern.gd"
@@ -892,6 +894,16 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  for mastery_hero in roan lumi; do
+    for mastery_family in sword bow fist staff polearm shield; do
+      for mastery_style in ground air focus resolve rhythm; do
+        for mastery_phase in seed resume next; do
+          checked_godot 60s --headless --path "$game_root" \
+            --script res://tests/gp515_544_runtime_test.gd -- "$mastery_phase" "${mastery_family}_mastery_${mastery_style}" "$mastery_hero"
+        done
+      done
+    done
+  done
   for dawn_hero in roan lumi; do
     for dawn_skill in sword_dawn_chain sword_retreat_wave sword_orbit sword_high_arc sword_returning_edge bow_prism_fan bow_starlit_rain bow_swallow_trio bow_drill bow_retreat_fan fist_dawn_barrage fist_retreat_palm fist_spiral fist_sky_chain fist_twin_pulse staff_crystal_fan staff_meteor_pair staff_dawn_pulse staff_storm_seal staff_retreat_lance polearm_horizon polearm_dawn_orbit polearm_skyward polearm_back_cross polearm_comet shield_dawn_chain shield_retreat_bash shield_orbit shield_twin_wave shield_cross_march; do
       for dawn_phase in seed resume next combat; do

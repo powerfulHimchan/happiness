@@ -27,7 +27,7 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			for weapon in state.equipment:
 				for slot in 2:
 					var id: String = state.skills[weapon][slot]
-					var lines := PrototypeSkillRewards.lines(id, float(state.recharge))
+					var lines := PrototypeSkillRewards.lines(id, float(state.get("family_recharge", {}).get(weapon, state.recharge)))
 					lines.append("남은 대기 %.1f초" % float(state.cooldowns[weapon][slot]))
 					lines.append("표기 피해는 강화 전 기본값")
 					result.append({"id": id, "name": PrototypeSkillRewards.SKILLS[id].display_name, "status": "%s · 슬롯 %d" % [PrototypeWeaponRewards.family_name(String(weapon)), slot + 1], "lines": lines, "open": true})

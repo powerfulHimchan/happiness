@@ -62,6 +62,7 @@ static var CARDS: Array[Dictionary] = _build_cards()
 static func _build_cards() -> Array[Dictionary]:
 	var result: Array[Dictionary] = BASE_CARDS.duplicate(true)
 	result.append_array(PrototypeWeaponTraining.CARDS)
+	result.append_array(PrototypeWeaponMastery.CARDS)
 	return result
 
 var level: int = 1
@@ -141,6 +142,7 @@ func reset_run(starting_weapon: String = "sword") -> void:
 	offered_cards.clear()
 	ranks.clear()
 	player.weapon_training.clear()
+	player.weapon_mastery.clear()
 	selection_message = ""
 	_rewarded_lives.clear()
 	jobs.reset(starting_weapon)
@@ -172,6 +174,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	rerolls_remaining = int(state.rerolls)
 	ranks = state.ranks.duplicate(true)
 	player.weapon_training = PrototypeWeaponTraining.selected(ranks)
+	player.weapon_mastery = PrototypeWeaponMastery.selected(ranks)
 	ultimate.set_time_collector_boost_unlocked(int(ranks.get("time_collector_boost", 0)) == 1)
 	player.set_orb_magnet_unlocked(int(ranks.get("orb_magnet", 0)) == 1)
 	player.set_orb_vitality_unlocked(int(ranks.get("orb_vitality", 0)) == 1)
@@ -291,6 +294,7 @@ func choose_card(index: int) -> bool:
 	var card_id := String(offered_cards[index]["id"])
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	player.weapon_training = PrototypeWeaponTraining.selected(ranks)
+	player.weapon_mastery = PrototypeWeaponMastery.selected(ranks)
 	match card_id:
 		"barrier_focus": player.barrier_focus_unlocked = true
 		"crisis_power": player.crisis_power_unlocked = true

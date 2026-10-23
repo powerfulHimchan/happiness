@@ -3029,7 +3029,7 @@ func village_snapshot() -> Dictionary:
 	if village_page == "skills":
 		var active := bool(movement_metrics.get("growth_run_active", false))
 		var loadout: Dictionary = movement_metrics.get("weapon_skills", {}) if active else {}
-		var all_skills := PrototypeSkillRewards.codex_cards(loadout, float(movement_metrics.get("skill_recharge_multiplier", 1.0)))
+		var all_skills := PrototypeSkillRewards.codex_cards(loadout, float(movement_metrics.get("skill_recharge_multiplier", 1.0)), movement_metrics.get("family_skill_recharge", {}) if active else {})
 		cards = all_skills.slice(skill_codex_page * PrototypeSkillRewards.CODEX_PAGE_SIZE, (skill_codex_page + 1) * PrototypeSkillRewards.CODEX_PAGE_SIZE)
 	var active_run := bool(movement_metrics.get("growth_run_active", false))
 	var all_weapons := PrototypeWeaponRewards.codex_cards(unlocked_weapon_blueprints, movement_metrics.get("weapon_equipment", {}) if active_run else {}, movement_metrics.get("weapon_blueprints", {}) if active_run else {}, String(movement_metrics.get("active_weapon_id", "")) if active_run else "")
@@ -3352,7 +3352,7 @@ func update_skill_reward_status(loadout: Dictionary, claimed: bool) -> void:
 	skill_reward_loadout = loadout.duplicate(true)
 	skill_reward_claimed = claimed
 	skill_reward_offset = 0
-	skill_reward_offers = PrototypeSkillRewards.offers(loadout, 0, float(movement_metrics.get("skill_recharge_multiplier", 1.0)))
+	skill_reward_offers = PrototypeSkillRewards.offers(loadout, 0, float(movement_metrics.get("skill_recharge_multiplier", 1.0)), movement_metrics.get("family_skill_recharge", {}))
 	queue_redraw()
 
 
@@ -3388,7 +3388,7 @@ func _handle_skill_reward_touch(position: Vector2) -> void:
 	_refresh_skill_reward_layout()
 	if skill_reward_cycle_rect.has_point(position):
 		skill_reward_offset = (skill_reward_offset + 1) % PrototypeSkillRewards.offer_page_count(skill_reward_loadout)
-		skill_reward_offers = PrototypeSkillRewards.offers(skill_reward_loadout, skill_reward_offset, float(movement_metrics.get("skill_recharge_multiplier", 1.0)))
+		skill_reward_offers = PrototypeSkillRewards.offers(skill_reward_loadout, skill_reward_offset, float(movement_metrics.get("skill_recharge_multiplier", 1.0)), movement_metrics.get("family_skill_recharge", {}))
 		selected_skill_offer = -1
 		selected_skill_slot = -1
 		queue_redraw()
@@ -3432,7 +3432,7 @@ func _draw_skill_rewards() -> void:
 		var label := "슬롯 %d · %s" % [i + 1, PrototypeSkillRewards.SKILLS[id].display_name if not id.is_empty() else "기술을 먼저 선택"]
 		_draw_village_text(label, Rect2(rect.position + Vector2(12, 10), Vector2(rect.size.x - 24, rect.size.y * 0.25)), 22, TEXT_COLOR)
 		if not id.is_empty():
-			var lines := PrototypeSkillRewards.lines(id, float(movement_metrics.get("skill_recharge_multiplier", 1.0)))
+			var lines := PrototypeSkillRewards.lines(id, float(movement_metrics.get("family_skill_recharge", {}).get(PrototypeSkillRewards.weapon_for(id), movement_metrics.get("skill_recharge_multiplier", 1.0))))
 			for j in lines.size():
 				_draw_village_text(lines[j], Rect2(rect.position + Vector2(12, rect.size.y * (0.35 + j * 0.19)), Vector2(rect.size.x - 24, rect.size.y * 0.15)), 17, MUTED_TEXT_COLOR)
 	_draw_text_centered(checkpoint_message if checkpoint_message.begins_with("중간 저장 실패") else "정예마다 한 번 교체 · 교체한 스킬은 대기시간부터 시작", Rect2(safe.position + Vector2(0, safe.size.y * 0.77), Vector2(safe.size.x, safe.size.y * 0.05)), 17, MUTED_TEXT_COLOR)

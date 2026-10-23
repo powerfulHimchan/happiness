@@ -95,6 +95,7 @@ var lifesteal_allowed: Callable
 var _lifesteal_flash_remaining_s: float = 0.0
 var growth_common_bonus: float = 0.0
 var weapon_training: Dictionary = {}
+var weapon_mastery: Dictionary = {}
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
 var growth_fist_bonus: float = 0.0
@@ -498,8 +499,16 @@ func skill_relic_multiplier(kind: String) -> float:
 	return PrototypeRelic.RUNE_SKILL_MULTIPLIER if kind == "skill" and has_active_relic(PrototypeRelic.RUNE_ID) else 1.0
 
 
-func skill_recharge_multiplier() -> float:
-	return PrototypeRelic.CLOCK_RECHARGE_MULTIPLIER if relic_state.get("id", "") == PrototypeRelic.CLOCK_ID and relic_state.get("used", false) == false else 1.0
+func skill_recharge_multiplier(family: String = "") -> float:
+	var relic := PrototypeRelic.CLOCK_RECHARGE_MULTIPLIER if has_active_relic(PrototypeRelic.CLOCK_ID) else 1.0
+	return relic * PrototypeWeaponMastery.recharge_multiplier(weapon_mastery, family)
+
+
+func family_skill_recharge() -> Dictionary:
+	var result := {}
+	for family in PrototypeWeaponRewards.FAMILY_IDS:
+		result[family] = skill_recharge_multiplier(family)
+	return result
 
 
 func combat_gauge_multiplier() -> float:
@@ -608,7 +617,7 @@ func _draw() -> void:
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	var weapon_bonus := float(get("growth_" + weapon_id + "_bonus")) if weapon_id in PrototypeWeaponRewards.FAMILY_IDS else 0.0
-	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind)
+	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind) * PrototypeWeaponMastery.damage_multiplier(weapon_mastery, weapon_id, kind, is_on_floor(), damage_receiver.health, damage_receiver.max_health)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
 	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
 
@@ -829,6 +838,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	set_job_emblem("", Color.WHITE)
 	growth_common_bonus = 0.0
 	weapon_training.clear()
+	weapon_mastery.clear()
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
 	growth_fist_bonus = 0.0
@@ -1313,6 +1323,7 @@ func _emit_metrics() -> void:
 		"potion_recipe": potion_recipe,
 		"potion_log": potion_log + (" · 체력 회복75%" if expedition >= 2 else ""),
 		"skill_recharge_multiplier": skill_recharge_multiplier(),
+		"family_skill_recharge": family_skill_recharge(),
 		"relic_damage_multiplier": relic_damage_multiplier(),
 		"incoming_damage_multiplier": incoming_damage_multiplier(),
 		"basic_relic_multiplier": basic_relic_multiplier("basic"),

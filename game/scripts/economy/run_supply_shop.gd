@@ -100,7 +100,7 @@ static func cards(shop: Dictionary, context: Dictionary) -> Array[Dictionary]:
 		var item := product(String(offer.id),int(shop.cleared))
 		if item.kind == "skill":
 			item.name = PrototypeSkillRewards.SKILLS[offer.skill].display_name
-			item.lines = PrototypeSkillRewards.lines(String(offer.skill)).slice(0,3)
+			item.lines = PrototypeSkillRewards.lines(String(offer.skill),float(context.get("family_recharge",{}).get(item.family,1.0))).slice(0,3)
 		elif item.kind == "weapon":
 			item.lines.append("현재: "+PrototypeWeaponRewards.profile(item.family,int(context.equipment[item.family]),String(context.blueprints[item.family])).name)
 		item.skill = offer.skill

@@ -1099,7 +1099,7 @@ func _capture_run_build() -> Dictionary:
 		"growth": growth.metrics_snapshot(), "stage": stage_runner.current_metrics(),
 		"equipment": weapon_controller.equipment.duplicate(), "blueprints": weapon_controller.blueprints.duplicate(),
 		"skills": weapon_controller.skills.duplicate(true), "active": weapon_controller.active_weapon_id,
-		"recharge": player.skill_recharge_multiplier(), "damage": damage, "cooldowns": cooldowns,
+		"recharge": player.skill_recharge_multiplier(), "family_recharge": player.family_skill_recharge(), "damage": damage, "cooldowns": cooldowns,
 		"health": {
 			"current": player.damage_receiver.health, "maximum": player.damage_receiver.max_health,
 			"barrier": player.damage_receiver.barrier_health, "barrier_max": player.barrier_capacity() if player.barrier_unlocked else 0,
@@ -1550,7 +1550,7 @@ func _supply_context() -> Dictionary:
 	for family in weapon_controller.equipment:
 		var combat: Node = weapon_controller.combat_for(family)
 		cooldowns[family] = [float(combat.get("_skill_1_cooldown_s")),float(combat.get("_skill_2_cooldown_s"))]
-	return {"health":player.damage_receiver.health,"max_health":player.damage_receiver.max_health,"potions":player.potions_remaining,"potion_capacity":player.potions_capacity(),"gauge":ultimate_controller.gauge,"equipment":weapon_controller.equipment.duplicate(),"blueprints":weapon_controller.blueprints.duplicate(),"skills":weapon_controller.skills.duplicate(true),"cooldowns":cooldowns}
+	return {"health":player.damage_receiver.health,"max_health":player.damage_receiver.max_health,"potions":player.potions_remaining,"potion_capacity":player.potions_capacity(),"gauge":ultimate_controller.gauge,"equipment":weapon_controller.equipment.duplicate(),"blueprints":weapon_controller.blueprints.duplicate(),"skills":weapon_controller.skills.duplicate(true),"cooldowns":cooldowns,"family_recharge":player.family_skill_recharge()}
 
 func _sync_supply_shop(message: String = "") -> void:
 	controls.update_supply_shop({"enabled":not run_shop.is_empty(),"tasks_enabled":RunTasks.enabled(run_shop),"coins":int(run_shop.get("coins",0)),"stage":int(run_shop.get("cleared",0)),"rerolled":RunSupplyShop.rerolled(run_shop,int(run_shop.get("cleared",0))),"cards":RunSupplyShop.cards(run_shop,_supply_context()),"context":_supply_context()},message)

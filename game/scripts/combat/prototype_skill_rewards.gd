@@ -108,7 +108,7 @@ const CODEX_PAGE_SIZE := 3
 const CODEX_ORDER := ["sword_dash", "bow_piercing", "sword_spin", "bow_arrow_rain", "sword_crescent", "bow_volley", "sword_line", "bow_spread", "sword_triple", "bow_focus", "sword_thrust", "bow_double_piercing", "sword_charge", "bow_retreat", "bow_homing", "sword_wave", "bow_ricochet", "sword_cross", "sword_rising", "bow_chain", "sword_revolve", "bow_fan_piercing", "sword_flurry", "sword_cleave", "sword_twin_wave", "sword_sweep", "sword_backstep", "sword_alternating", "bow_needle", "bow_heavy", "bow_wide_fan", "bow_storm", "bow_echo", "bow_seeking_volley", "fist_dash", "fist_flurry", "fist_wave", "staff_fireball", "staff_ice_lance", "staff_lightning", "polearm_sweep", "polearm_thrust", "polearm_cycle", "shield_guard", "shield_counter", "shield_slam", "fist_rising", "fist_cross", "fist_advancing", "staff_ember_volley", "staff_frost_ring", "staff_thunder_echo", "polearm_windwheel", "polearm_retreat", "shield_rush", "shield_ring", "polearm_cross", "shield_wave", "sword_dawn_chain", "sword_retreat_wave", "sword_orbit", "sword_high_arc", "sword_returning_edge", "bow_prism_fan", "bow_starlit_rain", "bow_swallow_trio", "bow_drill", "bow_retreat_fan", "fist_dawn_barrage", "fist_retreat_palm", "fist_spiral", "fist_sky_chain", "fist_twin_pulse", "staff_crystal_fan", "staff_meteor_pair", "staff_dawn_pulse", "staff_storm_seal", "staff_retreat_lance", "polearm_horizon", "polearm_dawn_orbit", "polearm_skyward", "polearm_back_cross", "polearm_comet", "shield_dawn_chain", "shield_retreat_bash", "shield_orbit", "shield_twin_wave", "shield_cross_march"]
 
 ## GP-132: 실제 스킬 원본을 읽는다. 도감 조회는 장착이나 보상을 변경하지 않는다.
-static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
+static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1.0, family_recharge: Dictionary = {}) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var active := valid_loadout(loadout)
 	var starting := defaults(PrototypeWeaponRewards.FAMILY_IDS)
@@ -116,10 +116,11 @@ static func codex_cards(loadout: Dictionary = {}, recharge_multiplier: float = 1
 		var weapon := weapon_for(id)
 		var slot: int = loadout.get(weapon, []).find(id) if active else starting.get(weapon, []).find(id)
 		var status := "이번 도전 · 슬롯 %d" % (slot + 1) if active and slot >= 0 else "미장착 · 효과 미리 보기" if active else "시작 스킬 · 슬롯 %d" % (slot + 1) if slot >= 0 else "보상 교체 스킬"
-		var effect := lines(id, recharge_multiplier if active else 1.0)
+		var rate := float(family_recharge.get(weapon, recharge_multiplier)) if active else 1.0
+		var effect := lines(id, rate)
 		effect.append("시작 장착 · 새 도전마다 초기화" if id in starting.get(weapon, []) else "정예 후 스킬 보상에서 슬롯 교체")
 		effect.append("표기 피해는 강화 전 기본값")
-		effect.append("시계추 적용 · 재사용 -20%" if active and recharge_multiplier > 1.0 else "첫·두 번째 정예 후 교체 가능")
+		effect.append("재충전 배율 ×%.2f" % rate if active and rate > 1.0 else "첫·두 번째 정예 후 교체 가능")
 		result.append({"id": id, "weapon": weapon, "name": (PrototypeWeaponRewards.family_name(weapon) + " · ") + String(SKILLS[id].display_name), "open": slot >= 0, "status": status, "lines": effect})
 	return result
 
@@ -210,7 +211,7 @@ static func offer_page_count(loadout: Dictionary) -> int:
 		count = maxi(count, candidates)
 	return count
 
-static func offers(loadout: Dictionary, offset: int = 0, recharge_multiplier: float = 1.0) -> Array[Dictionary]:
+static func offers(loadout: Dictionary, offset: int = 0, recharge_multiplier: float = 1.0, family_recharge: Dictionary = {}) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var candidates := {}
 	for weapon in PrototypeWeaponRewards.FAMILY_IDS:
@@ -225,5 +226,5 @@ static func offers(loadout: Dictionary, offset: int = 0, recharge_multiplier: fl
 			if not loadout.has(weapon): continue
 			var id: String = candidates[weapon][posmod(offset + index, candidates[weapon].size())]
 			if not result.any(func(card: Dictionary) -> bool: return card.id == id):
-				result.append({"id": id, "weapon": weapon, "name": SKILLS[id].display_name, "lines": lines(id, recharge_multiplier)})
+				result.append({"id": id, "weapon": weapon, "name": SKILLS[id].display_name, "lines": lines(id, float(family_recharge.get(weapon, recharge_multiplier)))})
 	return result
