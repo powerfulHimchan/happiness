@@ -832,22 +832,33 @@ if [[ -n "$godot_command" ]]; then
   mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"
   trap 'rm -rf "$check_data_dir"' EXIT
   # Godot import는 스크립트 오류에도 종료 코드 0을 반환할 수 있다.
-  # Keep every phase of a script in one shard, preserving checkpoint dependencies.
+  # Preserve checkpoint dependencies while sharding isolated content matrices.
   declare -A check_script_shards=()
   checked_godot() {
     local check_timeout="$1"
     shift
-    local prior="" argument="" script="" assigned=""
+    local prior="" argument="" script="" assigned="" shard_key="" user_args_started="false"
+    local -a user_args=()
     for argument in "$@"; do
-      if [[ "$prior" == "--script" ]]; then script="$argument"; break; fi
+      if [[ "$prior" == "--script" ]]; then script="$argument"; fi
+      if [[ "$user_args_started" == "true" ]]; then user_args+=("$argument"); fi
+      if [[ "$argument" == "--" ]]; then user_args_started="true"; fi
       prior="$argument"
     done
+    shard_key="$script"
+    # These content matrices isolate saves by every argument after phase.
+    # Keep seed/resume/next together, distribute independent content cases.
+    case "$script" in
+      res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd)
+        shard_key="$script|${user_args[*]:1}"
+        ;;
+    esac
     if [[ -n "$script" ]] && (( check_shard_count > 1 )); then
-      assigned="${check_script_shards[$script]:-}"
+      assigned="${check_script_shards[$shard_key]:-}"
       if [[ -z "$assigned" ]]; then
-        assigned="$(printf '%s' "$script" | cksum | awk '{print $1}')"
+        assigned="$(printf '%s' "$shard_key" | cksum | awk '{print $1}')"
         assigned=$(( assigned % check_shard_count ))
-        check_script_shards[$script]="$assigned"
+        check_script_shards[$shard_key]="$assigned"
       fi
       if (( assigned != check_shard_index )); then return 0; fi
     fi
