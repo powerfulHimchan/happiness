@@ -1039,6 +1039,7 @@ func show_main_screen() -> void:
 	_leave_village_environment()
 	release_all_inputs()
 	screen_mode = ScreenMode.MAIN
+	_refresh_main_screen_layout()
 	queue_redraw()
 
 
@@ -2121,23 +2122,6 @@ func _refresh_layout() -> void:
 		Vector2(buttons_x + result_button_size.x + result_gap, buttons_y),
 		result_button_size
 	)
-	main_start_rect = Rect2(
-		Vector2(result_panel_rect.get_center().x - 310.0, result_panel_rect.end.y - 106.0),
-		Vector2(280.0, 68.0)
-	)
-	main_layout_rect = Rect2(
-		Vector2(result_panel_rect.get_center().x + 30.0, result_panel_rect.end.y - 106.0),
-		Vector2(280.0, 68.0)
-	)
-	main_feedback_rect = Rect2(
-		Vector2(result_panel_rect.get_center().x - 310.0, result_panel_rect.end.y - 190.0),
-		Vector2(280.0, 56.0)
-	)
-	main_village_rect = Rect2(Vector2(result_panel_rect.get_center().x + 30.0, result_panel_rect.end.y - 190.0), Vector2(280.0, 56.0))
-	main_continue_rect = Rect2(
-		Vector2(result_panel_rect.get_center().x - 140.0, result_panel_rect.end.y - 274.0),
-		Vector2(280.0, 56.0)
-	)
 	feedback_panel_rect = result_panel_rect
 	var feedback_row_x := feedback_panel_rect.position.x + 310.0
 	var feedback_row_width := feedback_panel_rect.size.x - 380.0
@@ -2193,6 +2177,7 @@ func _refresh_layout() -> void:
 		Vector2(safe.end.x - action_width - 20.0, safe.position.y + 20.0),
 		Vector2(action_width, 54.0)
 	)
+	_refresh_main_screen_layout()
 
 
 func _draw_header() -> void:
@@ -2360,38 +2345,19 @@ func _draw_result_screen() -> void:
 
 
 func _draw_main_screen() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.92), true)
-	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), result_panel_rect)
-	_draw_text_centered(
-		"행복 이야기",
-		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 96.0), Vector2(result_panel_rect.size.x, 80.0)),
-		44,
-		ACTIVE_COLOR
-	)
-	_draw_text_centered(
-		"칭호 · " + PermanentAchievements.title_name(achievement_state) if not String(achievement_state.get("title", "")).is_empty() else "영구 업적 %d/50 · 광장 기록에서 확인" % PermanentAchievements.earned_count(achievement_state),
-		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 188.0), Vector2(result_panel_rect.size.x, 46.0)),
-		25,
-		TEXT_COLOR
-	)
-	_draw_text_centered(
-		BossLegacyStore.description(String(pending_boss_legacy.get("choice", ""))) if not pending_boss_legacy.is_empty() else "완료 지점 저장 · 앱을 종료해도 이어하기",
-		Rect2(Vector2(result_panel_rect.position.x, result_panel_rect.position.y + 244.0), Vector2(result_panel_rect.size.x, 40.0)),
-		19,
-		MUTED_TEXT_COLOR
-	)
-	if not checkpoint_available:
-		_draw_text_centered("영구 기억 %d/2 · 설계도 %d/%d%s%s" % [unlocked_memories.size(), unlocked_weapon_blueprints.size(), PrototypeWeaponRewards.PERMANENT_DESIGNS.size(), " · 수호기사 동행" if guardian_companion_unlocked else "", " · 세라 동행" if sera_companion_unlocked else ""], Rect2(result_panel_rect.position + Vector2(0, 300), Vector2(result_panel_rect.size.x, 30)), 18, MUTED_TEXT_COLOR)
-	_refresh_story_entry_layout()
-	_draw_button(story_journal_open_rect, "기억 수첩", false)
-	_draw_button(main_feedback_rect, "설정", false)
-	_draw_button(main_village_rect, "시간의 닻 마을", true)
-	if checkpoint_available:
-		_draw_button(main_continue_rect, "이어하기", true)
-	if not checkpoint_message.is_empty():
-		_draw_text_centered(checkpoint_message, Rect2(Vector2(result_panel_rect.position.x, main_continue_rect.position.y - 30.0), Vector2(result_panel_rect.size.x, 26.0)), 15, MUTED_TEXT_COLOR)
-	_draw_button(main_start_rect, "새 도전" if checkpoint_available else "스테이지 시작", not checkpoint_available)
-	_draw_button(main_layout_rect, "조작 배치", false)
+	_refresh_main_screen_layout()
+	StartScreenView.draw(self)
+
+
+func _refresh_main_screen_layout() -> void:
+	var boxes := StartScreenView.layout(_safe_area_in_viewport(), checkpoint_available)
+	main_continue_rect = boxes["continue"]
+	main_start_rect = boxes.start
+	main_village_rect = boxes.village
+	main_feedback_rect = boxes.settings
+	main_layout_rect = boxes.controls
+	if screen_mode == ScreenMode.MAIN:
+		story_journal_open_rect = boxes.journal
 
 
 func _draw_feedback_settings() -> void:
@@ -3629,7 +3595,7 @@ func _draw_story() -> void:
 func _refresh_story_entry_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	match screen_mode:
-		ScreenMode.MAIN: story_journal_open_rect = Rect2(result_panel_rect.position + Vector2(30, 24), Vector2(160, 48))
+		ScreenMode.MAIN: _refresh_main_screen_layout()
 		ScreenMode.RESULT: story_journal_open_rect = Rect2(Vector2(result_panel_rect.position.x + 18, result_retry_rect.position.y), Vector2(90, result_retry_rect.size.y))
 		ScreenMode.VILLAGE: story_journal_open_rect = Rect2(safe.position + safe.size * Vector2(0.72, 0.035), safe.size * Vector2(0.23, 0.065))
 		ScreenMode.START_CHARACTER: _refresh_character_layout()

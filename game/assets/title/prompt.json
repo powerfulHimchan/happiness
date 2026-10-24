@@ -1,0 +1,7 @@
+{
+  "tool": "built-in image_gen",
+  "concept": {
+    "name": "dawn-road",
+    "prompt": "Use case: stylized-concept. Create one polished 16:9 landscape game title-screen background concept for Happiness Tale: Rewind to Dawn, a bright clean cartoon fantasy 2D Android side-scrolling roguelite about traveling toward a mysterious happiness kingdom and rewinding time. Clean vector-like shapes, layered atmospheric depth, elegant restrained details, soft light, readable silhouettes, no photorealism, no pixel art. This is environment art only: NO text, letters, logos, UI, buttons, watermarks or inset frames. Reserve quiet negative space on the LEFT 40 percent for future menu text, while the scenic focal point sits on the RIGHT. A winding path through soft green meadows and white flowers at dawn, leading toward a distant small whimsical kingdom and a clock tower on the right. Peach gold sun, cool teal shadows, pale turquoise sky. Hopeful with a subtle sense of mystery. No characters."
+  }
+}

@@ -22,6 +22,10 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/ui/start_screen_view.gd"
+  "$game_root/tests/start_screen_runtime_test.gd"
+  "$game_root/assets/title/dawn-road.png"
+  "$game_root/assets/title/menu-shade.tres"
   "$game_root/scripts/ui/relic_art.gd"
   "$game_root/tests/gp608_617_art_runtime_test.gd"
   "$game_root/assets/relics/phoenix_feather.svg"
@@ -916,6 +920,8 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 45s --headless --path "$game_root" \
+    --script res://tests/start_screen_runtime_test.gd
   checked_godot 90s --headless --path "$game_root" \
     --script res://tests/gp608_617_art_runtime_test.gd
   for achievement_phase in catalog seed resume live failure corrupt; do
