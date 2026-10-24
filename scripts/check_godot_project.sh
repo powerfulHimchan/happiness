@@ -5,6 +5,11 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 game_root="$project_root/game"
 check_shard_count="${GODOT_CHECK_SHARD_COUNT:-1}"
 check_shard_index="${GODOT_CHECK_SHARD_INDEX:-0}"
+check_timeout_multiplier="${GODOT_CHECK_TIMEOUT_MULTIPLIER:-1}"
+if [[ ! "$check_timeout_multiplier" =~ ^[1-4]$ ]]; then
+  echo "Godot check timeout multiplier must be an integer from 1 to 4." >&2
+  exit 1
+fi
 if [[ ! "$check_shard_count" =~ ^[1-9][0-9]?$ || ! "$check_shard_index" =~ ^[0-9]{1,2}$ ]]; then
   echo "Invalid Godot check shard." >&2
   exit 1
@@ -17,6 +22,18 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/ui/relic_art.gd"
+  "$game_root/tests/gp608_617_art_runtime_test.gd"
+  "$game_root/assets/relics/phoenix_feather.svg"
+  "$game_root/assets/relics/clock_fragment.svg"
+  "$game_root/assets/relics/spring_dew.svg"
+  "$game_root/assets/relics/dawn_ember.svg"
+  "$game_root/assets/relics/hourglass.svg"
+  "$game_root/assets/relics/guardian_seal.svg"
+  "$game_root/assets/relics/wind_knot.svg"
+  "$game_root/assets/relics/vital_seed.svg"
+  "$game_root/assets/relics/duelist_emblem.svg"
+  "$game_root/assets/relics/arcane_emblem.svg"
   "$game_root/scripts/ui/achievement_art.gd"
   "$game_root/assets/achievements/honors_hall.svg"
   "$game_root/assets/achievements/exploration.svg"
@@ -855,6 +872,7 @@ if [[ -n "$godot_command" ]]; then
   checked_godot() {
     local check_timeout="$1"
     shift
+    check_timeout="$(( ${check_timeout%s} * check_timeout_multiplier ))s"
     local prior="" argument="" script="" assigned="" shard_key="" user_args_started="false"
     local -a user_args=()
     for argument in "$@"; do
@@ -889,6 +907,7 @@ if [[ -n "$godot_command" ]]; then
   checked_android_export_pack() {
     local check_timeout="$1"
     shift
+    check_timeout="$(( ${check_timeout%s} * check_timeout_multiplier ))s"
     timeout "$check_timeout" "$godot_command" "$@" 2>&1 | tee "$check_data_dir/runtime.log"
     if rg -q '^SCRIPT ERROR:|^Parse Error:' "$check_data_dir/runtime.log" \
       || { rg '^ERROR:' "$check_data_dir/runtime.log" | rg -v 'resources still in use at exit' >/dev/null; }; then
@@ -897,6 +916,8 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 90s --headless --path "$game_root" \
+    --script res://tests/gp608_617_art_runtime_test.gd
   for achievement_phase in catalog seed resume live failure corrupt; do
     checked_godot 120s --headless --path "$game_root" \
       --script res://tests/gp548_597_runtime_test.gd -- "$achievement_phase"

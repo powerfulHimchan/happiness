@@ -3218,6 +3218,9 @@ func _draw_village() -> void:
 		if village_page == "achievements":
 			_draw_achievement_card(card, rect)
 			continue
+		if village_page == "relics" and RelicArt.supports(String(card.id)):
+			RelicArt.draw_codex_card(self, card, rect)
+			continue
 		var compact: bool = village_page == "village" and snapshot.cards.size() > 5
 		var title_rect := Rect2(rect.position + Vector2(12, rect.size.y * (0.04 if compact else 0.16)), Vector2(rect.size.x - 24, rect.size.y * (0.20 if compact else 0.13)))
 		_draw_village_text(card.name, title_rect, 26, TEXT_COLOR)
@@ -3316,7 +3319,9 @@ func _draw_relic_rewards() -> void:
 		draw_style_box(_panel_style(Color("365d68") if selected_relic_offer == offer_index else PANEL_COLOR), rect)
 		_draw_village_text("희귀 · " + String(offer.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.07), Vector2(rect.size.x - 24, 42)), mini(28, maxi(16, int(rect.size.x * 0.095))), Color("ffca78"))
 		var center := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.37)
-		if offer.has("weapon"):
+		if RelicArt.supports(String(offer.id)):
+			RelicArt.draw_reward(self, String(offer.id), rect)
+		elif offer.has("weapon"):
 			var relic_color: Color = WeaponFamilyPresentation.COLORS[String(offer.weapon)]
 			if offer.damage_kind == "all":
 				draw_arc(center+Vector2(0,-18),24,PI,TAU,24,Color("d9e6df"),3,true)

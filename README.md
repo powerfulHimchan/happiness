@@ -1,5 +1,7 @@
 # Happiness Tale: Rewind to Dawn
 
+GP-608–617에서 **유물 원화10종**을 추가했습니다. 불사조 깃털·시계추·이슬·불씨·모래시계·수호 인장·바람 매듭·생명의 씨앗·결투/마력 문장을 유물 선택과 도감에 함께 표시합니다. 도감의 보유·소진 상태를 구분하고 기존 획득·효과·저장을 유지합니다. [그래픽 목록과 검증](docs/prototype/GP608_617_RELIC_ART_STATUS.md).
+
 GP-598–607에서 **영구 업적 그래픽10종**을 추가했습니다. 광장 기록관 배경과 탐험·직업·무기·성장·엔딩·원정·기억·인연·비밀 문양9종을 업적50개에 연결하고, 상위 직업·미달성·달성·칭호 장착을 별·자물쇠·체크·왕관으로 구분합니다. [그래픽 목록과 검증](docs/prototype/GP598_607_ACHIEVEMENT_ART_STATUS.md).
 
 GP-515–544에서 **여섯 무기 전투 숙련 30종**을 추가했습니다. 해당 무기 강화 후 지상 기본·공중 스킬·집중·결의·재충전 특화를 선택하고 능력 도감과 이어하기에 보존합니다. 집중과 결의는 택1이며 재충전은 해당 무기의 두 슬롯과 보조 상태에 적용됩니다. [30종 목록·효과·검증 범위](docs/prototype/GP515_544_WEAPON_MASTERY_STATUS.md).
@@ -162,6 +164,8 @@ Godot 4.7.2 stable에서 [`game/project.godot`](game/project.godot)를 엽니다
 ./scripts/check_godot_project.sh
 godot --path game --editor
 ```
+
+CPU 자원이 제한된 로컬 환경에서는 `GODOT_CHECK_TIMEOUT_MULTIPLIER=3 bash scripts/check_godot_project.sh`로 각 검사의 시간 제한을 늘릴 수 있습니다. 배율은1–4이며 기본값1과 CI 기본 설정은 유지합니다. 검사 내용·선후 관계·오류 판정은 동일합니다.
 
 자세한 실행과 Android 연결 방법은 [Godot 프로토타입 안내](game/README.md)를 참고하세요.
 
