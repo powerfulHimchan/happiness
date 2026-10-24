@@ -118,7 +118,7 @@ static func valid_state(value: Variant, checkpoint: Dictionary) -> bool:
 	if not checkpoint.get("weapons") is Dictionary or not checkpoint.weapons.get("equipment") is Dictionary: return false
 	var stage: Dictionary = checkpoint.stage
 	var expected := mini(int(stage.number),int(stage.limit)-1)
-	if not _integer(value.get("seed"),0,1000000006) or int(value.seed) != seed_for(String(checkpoint.recorder.id)) or not _integer(value.get("cleared"),expected,expected) or not _integer(value.get("coins"),0,10000) or not value.get("actions") is Array or value.actions.size() > 140 or not value.get("stock") is Array: return false
+	if not _integer(value.get("seed"),0,1000000006) or int(value.seed) != seed_for(String(checkpoint.recorder.id)) or not _integer(value.get("cleared"),expected,expected) or not _integer(value.get("coins"),0,10000) or not value.get("actions") is Array or value.actions.size() > 9*11+RunTasks.DEFINITIONS.size() or not value.get("stock") is Array: return false
 	var spent := 0
 	var last := 0
 	var seen := {}

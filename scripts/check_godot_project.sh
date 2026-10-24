@@ -22,6 +22,8 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/economy/advanced_run_tasks.gd"
+  "$game_root/tests/gp618_667_runtime_test.gd"
   "$game_root/scripts/ui/start_screen_view.gd"
   "$game_root/tests/start_screen_runtime_test.gd"
   "$game_root/assets/title/dawn-road.png"
@@ -889,7 +891,7 @@ if [[ -n "$godot_command" ]]; then
     # These content matrices isolate saves by every argument after phase.
     # Keep seed/resume/next together, distribute independent content cases.
     case "$script" in
-      res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd)
+      res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd|res://tests/gp618_667_runtime_test.gd)
         shard_key="$script|${user_args[*]:1}"
         ;;
     esac
@@ -954,6 +956,24 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 45s --headless \
     --main-pack "$check_data_dir/android-resources.pck" --quit-after 30
   echo "Android resource export and packed game boot: OK"
+  checked_godot 60s --headless --path "$game_root" \
+    --script res://tests/gp618_667_runtime_test.gd -- catalog
+  for trial_hero in roan lumi; do
+    for trial_family in sword bow fist staff polearm shield; do
+      for trial_style in precision growth equipment discipline journey expert; do
+        for trial_phase in seed resume next; do
+          checked_godot 90s --headless --path "$game_root" \
+            --script res://tests/gp618_667_runtime_test.gd -- "$trial_phase" "trial_${trial_family}_${trial_style}" "$trial_hero"
+        done
+      done
+    done
+    for trial_route in meadow wind forest ruins festival city_gate; do
+      for trial_phase in seed resume next; do
+        checked_godot 90s --headless --path "$game_root" \
+          --script res://tests/gp618_667_runtime_test.gd -- "$trial_phase" "trial_route_${trial_route}" "$trial_hero"
+      done
+    done
+  done
   for mastery_hero in roan lumi; do
     for mastery_family in sword bow fist staff polearm shield; do
       for mastery_style in ground air focus resolve rhythm; do

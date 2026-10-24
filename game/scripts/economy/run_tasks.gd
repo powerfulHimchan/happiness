@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Per-run objectives derive from existing checkpoint counters; viewing never awards coins.
 const PREFIX := "task:"
-const DEFINITIONS: Array[Dictionary] = [
+const BASE_DEFINITIONS: Array[Dictionary] = [
 	{"id":"first_steps","name":"첫 발걸음","kind":"stage","target":1,"coins":5,"hint":"스테이지1개 완료"},
 	{"id":"steady_steps","name":"꾸준한 걸음","kind":"stage","target":3,"coins":10,"hint":"스테이지3개 완료"},
 	{"id":"long_road","name":"긴 여정","kind":"stage","target":5,"coins":15,"hint":"스테이지5개 완료"},
@@ -36,6 +36,21 @@ const DEFINITIONS: Array[Dictionary] = [
 	{"id":"prepared_traveler","name":"빈틈없는 준비","kind":"services","target":3,"coins":5,"hint":"회복·충전·정비 서비스3개 구매"},
 ]
 
+# Appended IDs preserve every original objective and receipt.
+static var DEFINITIONS: Array[Dictionary] = _definitions()
+
+static func _definitions() -> Array[Dictionary]:
+	var result: Array[Dictionary] = BASE_DEFINITIONS.duplicate(true)
+	result.append_array(AdvancedRunTasks.definitions())
+	return result
+
+static func category(task: Dictionary) -> String:
+	if task.has("category"): return task.category
+	if task.kind in ["damage", "hits", "family"]: return "combat"
+	if task.kind in ["stage", "route"]: return "explore"
+	if task.kind in ["purchases", "rerolls", "services"]: return "trade"
+	return "growth"
+
 static func definition(id: String) -> Dictionary:
 	for task in DEFINITIONS:
 		if task.id == id: return task
@@ -48,6 +63,7 @@ static func claimed(shop: Dictionary, id: String) -> bool:
 	return shop.get("actions",[]).any(func(action: Dictionary) -> bool: return action.id == PREFIX+id)
 
 static func progress(task: Dictionary, state: Dictionary) -> int:
+	if task.kind == "compound": return AdvancedRunTasks.progress(task,state)
 	var weapons: Dictionary = state.get("weapons",{})
 	var growth: Dictionary = state.get("growth",{})
 	var history: Array = state.get("stage",{}).get("history",[])
@@ -76,6 +92,7 @@ static func valid_receipt(action: Dictionary, shop: Dictionary, state: Dictionar
 	if not enabled(shop) or action.skill != "" or int(action.slot) != -1: return false
 	var task := definition(String(action.id).trim_prefix(PREFIX))
 	if task.is_empty() or progress(task,state) < int(task.target): return false
+	if task.kind == "compound": return AdvancedRunTasks.valid_receipt(task,action,state)
 	if task.kind in ["stage","route"] and int(action.stage) < int(task.target): return false
 	if task.get("route","") == "city_gate" and int(action.stage) < 9: return false
 	if task.kind == "advanced" and int(action.stage) < 7: return false
@@ -92,11 +109,14 @@ static func cards(state: Dictionary) -> Array[Dictionary]:
 		var stage: Dictionary = state.get("stage",{})
 		var limit := int(stage.get("limit",10))
 		var mode := String(stage.get("run_mode","standard"))
-		var restriction := ""
+		var restriction := AdvancedRunTasks.restriction(task,state) if task.kind == "compound" else ""
 		if task.kind == "family" and not state.get("weapons",{}).get("equipment",{}).has(task.family): restriction = "다른 무기의 새 도전에서 진행"
 		elif task.kind == "stage" and int(task.target) >= limit: restriction = "더 긴 도전에서 진행"
 		elif (task.kind == "advanced" and limit <= 7) or (task.get("route","") == "city_gate" and mode != "journey"): restriction = "10스테이지 여정에서 진행"
 		elif task.kind == "route" and task.route != "meadow" and mode != "journey" and limit <= 3: restriction = "5스테이지 도전부터 진행"
+		card.category = category(task)
+		card.conditions = AdvancedRunTasks.conditions(task,state) if task.kind == "compound" else []
+		card.fraction = AdvancedRunTasks.fraction(task,state) if task.kind == "compound" else float(card.progress)/float(card.target)
 		card.unavailable = not restriction.is_empty()
 		card.status = "수령 완료" if card.claimed else "보상 수령 가능" if card.ready else restriction if card.unavailable else "진행 중"
 		result.append(card)

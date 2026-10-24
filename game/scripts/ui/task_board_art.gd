@@ -14,6 +14,7 @@ const ICONS := {
 }
 
 static func symbol(card: Dictionary) -> String:
+	if card.kind == "compound": return card.get("family","map")
 	return {"stage":"path","route":"map","damage":"battle","hits":"skill","family":card.get("family","skill"),"level":"growth","job":"growth","advanced":"growth","equipment":"gear","purchases":"trade","rerolls":"trade","services":"trade"}.get(card.kind,"path")
 
 static func state(card: Dictionary) -> String:
@@ -21,6 +22,7 @@ static func state(card: Dictionary) -> String:
 
 static func status_text(card: Dictionary) -> String:
 	if not card.get("unavailable",false) or card.claimed or card.ready: return card.status
+	if card.kind == "compound": return "조건 확인"
 	if card.kind == "family": return "미휴대 무기"
 	if card.kind == "stage": return "더 긴 도전"
 	if card.kind == "advanced" or card.get("route","") == "city_gate": return "전체 여정"
@@ -57,7 +59,7 @@ static func draw_card(ui: Control, card: Dictionary, rect: Rect2, selected: bool
 		ui.draw_arc(center,8,-PI*.5,PI*.8,24,color,1.5,true)
 	var bar: Rect2 = areas.bar
 	ui.draw_rect(bar,Color("102631"))
-	ui.draw_rect(Rect2(bar.position,Vector2(bar.size.x*clampf(float(card.progress)/maxf(1.0,float(card.target)),0.0,1.0),bar.size.y)),color)
+	ui.draw_rect(Rect2(bar.position,Vector2(bar.size.x*clampf(float(card.get("fraction",float(card.progress)/maxf(1.0,float(card.target)))),0.0,1.0),bar.size.y)),color)
 	ui._draw_village_text(card.name,areas.title,21,Color("f6e2b6"))
 	ui._draw_village_text(card.hint,areas.hint,16,Color("d0dfe1"))
 	ui._draw_village_text("%d/%d · %s" % [card.progress,card.target,status_text(card)],areas.status,15,color)

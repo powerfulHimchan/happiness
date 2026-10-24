@@ -59,7 +59,7 @@ func _run() -> void:
 			controls.show_main_screen()
 			if not _check(controls.begin_retry(family,3,"standard",character,false,0,"bow" if family == "sword" else "sword") and not RunTasks.claimed(sandbox.run_shop,task_id) and sandbox.run_shop.coins == 0,"새 도전의 과제/지갑 초기화"): return
 	else:
-		var mode := "standard" if phase == "spend" or (task.kind == "route" and task.route != "city_gate") else "journey"
+		var mode := "standard" if phase == "spend" or (task.get("route","") != "" and task.route != "city_gate") else "journey"
 		if not _check(controls.begin_retry(family,5 if mode == "standard" else 10,mode,character,false,0,"bow" if family == "sword" else "sword"),"과제 포함 새 도전"): return
 		if not _check(not sandbox._claim_task(task_id) and not RunTasks.claimed(sandbox.run_shop,task_id),"전투 중 과제 수령 차단"): return
 		player.damage_receiver.health = 30
@@ -187,7 +187,7 @@ func _task_ui() -> bool:
 				if not _check(view.items[index].id not in seen and controls.layout_snapshot().safe.encloses(view.cards[index]),"30종 과제 페이지·안전 영역"): return false
 				seen.append(view.items[index].id)
 			_tap(view.next.get_center())
-		if not _check(seen.size() == 30 and _shop_snapshot() == before,"게시판 열람·페이지는 효과와 저장 무변경"): return false
+		if not _check(seen.size() == RunTasks.DEFINITIONS.size() and _shop_snapshot() == before,"게시판 열람·페이지는 효과와 저장 무변경"): return false
 	_tap(RunTaskView.snapshot(controls).tabs[1].get_center())
 	for ignored in RunTaskView.snapshot(controls).pages:
 		var view := RunTaskView.snapshot(controls)
@@ -263,11 +263,11 @@ func _legacy_tasks() -> bool:
 func _task_catalog() -> bool:
 	var ids: Array[String] = []
 	var context := {"weapons":{"equipment":{"sword":0,"bow":0}},"growth":{"level":1,"job":""},"stage":{"history":[]},"supplies":{"tasks":1,"actions":[]}}
-	for entry in RunTasks.DEFINITIONS:
+	for entry in RunTasks.BASE_DEFINITIONS:
 		if not _check(entry.id not in ids and entry.coins > 0 and entry.target > 0,"과제30종 고유 ID·양수 목표/보상"): return false
 		ids.append(entry.id)
 		if not _check(not RunTasks.ready(context.supplies,entry.id,context),"빈 도전 미달성 과제 수령 금지"): return false
-	var cards := RunTasks.cards(context)
+	var cards := RunTasks.cards(context).filter(func(card: Dictionary) -> bool: return card.kind != "compound")
 	if not _check(ids.size() == 30 and cards.filter(func(card: Dictionary) -> bool: return card.get("unavailable",false)).size() == 5,"30종 목록·미휴대 네 무기/성문 여정 조건 명시"): return false
 	context.stage.limit = 3
 	var short_cards := RunTasks.cards(context)

@@ -261,6 +261,8 @@ var selected_job_ultimate: int = -1
 var task_data: Dictionary = {}
 var task_page := 0
 var task_filter := "all"
+var task_category := "all"
+var task_sort := "catalog"
 var task_selected_id := ""
 var task_message := ""
 var shop_open_rect: Rect2
@@ -3757,6 +3759,8 @@ func show_tasks() -> void:
 	release_all_inputs()
 	task_page = 0
 	task_filter = "all"
+	task_category = "all"
+	task_sort = "catalog"
 	task_selected_id = ""
 	screen_mode = ScreenMode.RUN_TASKS
 	queue_redraw()
@@ -3771,14 +3775,24 @@ func _handle_task_touch(position: Vector2) -> void:
 			task_filter = RunTaskView.FILTERS[index]
 			task_page = 0
 			task_selected_id = ""
+			task_message = ""
 			return
+	if view.category.has_point(position) or view.sort.has_point(position):
+		if view.category.has_point(position): task_category = RunTaskView.CATEGORIES[(RunTaskView.CATEGORIES.find(task_category)+1)%RunTaskView.CATEGORIES.size()]
+		else: task_sort = RunTaskView.SORTS[(RunTaskView.SORTS.find(task_sort)+1)%RunTaskView.SORTS.size()]
+		task_page = 0
+		task_selected_id = ""
+		task_message = ""
+		return
 	if view.previous.has_point(position) or view.next.has_point(position):
 		task_page = clampi(view.page+(-1 if view.previous.has_point(position) else 1),0,view.pages-1)
 		task_selected_id = ""
+		task_message = ""
 		return
 	for index in view.cards.size():
 		if view.cards[index].has_point(position):
 			task_selected_id = view.items[index].id
+			task_message = ""
 			return
 	if view.confirm.has_point(position):
 		for card in task_data.get("cards",[]):
