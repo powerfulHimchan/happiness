@@ -36,6 +36,7 @@ var _stage_recovered_health: int = 0
 var checkpoint_store := RunCheckpointStore.new()
 var boss_legacy_store := BossLegacyStore.new()
 var ability_discovery_store := AbilityDiscoveryStore.new()
+var achievement_store := AchievementStore.new()
 var story_journal_store := StoryJournalStore.new()
 var story_run := PrototypeStoryRun.new()
 var _story_return_mode: int = 0
@@ -92,6 +93,7 @@ func _ready() -> void:
 	controls.shop_close_requested.connect(_close_supply_shop)
 	controls.potion_recipe_selected.connect(_select_potion_recipe)
 	controls.route_records_retry_requested.connect(_retry_route_records)
+	controls.achievement_title_selected.connect(_select_achievement_title)
 	controls.boss_choice_confirmed.connect(_resolve_boss_choice)
 	controls.continue_requested.connect(continue_saved_run)
 	controls.growth_card_selected.connect(growth.choose_card)
@@ -976,6 +978,7 @@ func _update_boss_legacy_status() -> void:
 	controls.update_job_codex_status(progress.jobs, _job_codex_message)
 	controls.update_potion_recipe_status(String(progress.potion_recipe))
 	controls.update_route_atlas_status(progress.routes, _route_atlas_message)
+	_sync_achievements()
 
 
 func _select_potion_recipe(id: String) -> bool:
@@ -1046,6 +1049,7 @@ func _record_abilities(ids: Array) -> Error:
 	var error := ability_discovery_store.discover(ids)
 	_ability_codex_message = "능력 기록 저장 실패 · 다시 선택하거나 이어하기로 재시도하세요" if error != OK else ""
 	controls.update_ability_codex_status(ability_discovery_store.snapshot(), _ability_codex_message)
+	if error == OK: _sync_achievements()
 	return error
 
 
@@ -1053,6 +1057,7 @@ func _discover_job(id: String) -> Error:
 	var error: Error = OK if id.is_empty() else boss_legacy_store.discover_job(id)
 	_job_codex_message = "직업 기록 저장 실패 · 확인을 눌러 다시 시도하세요" if error != OK else ""
 	controls.update_job_codex_status(boss_legacy_store.progress_snapshot().jobs, _job_codex_message)
+	if error == OK: _sync_achievements()
 	return error
 
 
@@ -1078,6 +1083,7 @@ func _flush_route_records() -> void:
 		_pending_route_records.clear()
 	_route_atlas_message = "지도 기록 저장 실패 · 경로 카드를 눌러 재시도" if error != OK else ""
 	controls.update_route_atlas_status(boss_legacy_store.progress_snapshot().routes, _route_atlas_message)
+	if error == OK: _sync_achievements()
 
 
 func _retry_route_records() -> void:
@@ -1149,6 +1155,7 @@ func _active_story_status() -> Dictionary:
 
 func _update_story_status() -> void:
 	controls.update_story_status(_active_story_status())
+	_sync_achievements()
 
 
 func _open_story(return_mode: int) -> void:
@@ -1664,3 +1671,20 @@ func _claim_task(id: String) -> bool:
 	_sync_supply_shop()
 	_sync_tasks("%s · 보급전%d 수령 완료" % [task.name,task.coins])
 	return true
+
+
+func _sync_achievements() -> Error:
+	var observed := PermanentAchievements.observations(boss_legacy_store.progress_snapshot(), story_journal_store.snapshot(), ability_discovery_store.snapshot())
+	var error := achievement_store.observe(observed)
+	controls.update_achievement_status(achievement_store.snapshot(), "업적 기록 실패 · 업적 카드를 눌러 재시도" if error != OK else "")
+	return error
+
+
+func _select_achievement_title(id: String) -> bool:
+	if controls.current_screen_mode() != 13 or controls.village_page != "achievements" or PermanentAchievements.definition(id).is_empty(): return false
+	if not controls.achievement_message.is_empty() and _sync_achievements() != OK: return false
+	var state := achievement_store.snapshot()
+	if not PermanentAchievements.earned(state, id): return false
+	var error := achievement_store.select_title("" if state.title == id else id)
+	controls.update_achievement_status(achievement_store.snapshot(), "칭호 저장 실패 · 카드를 눌러 재시도" if error != OK else "")
+	return error == OK

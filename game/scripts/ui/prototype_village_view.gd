@@ -5,9 +5,9 @@ extends RefCounted
 const FACILITIES := ["forge", "memories", "records", "jobs", "apothecary", "atlas"]
 const HISTORY_PAGE_SIZE := 3
 const ADVANCED_PAGE_SIZE := 2
-const RECORD_TABS := ["records", "record_lengths", "history"]
-const TAB_LABELS := {"advanced_jobs": "상위 직업", "bonds": "세라의 인연", "record_lengths": "길이별 통계", "records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
-const TITLES := {"advanced_jobs": "상위 직업 도감", "bonds": "기억의 쉼터 · 세라의 인연", "record_lengths": "광장 · 도전 길이별 통계", "history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
+const RECORD_TABS := ["records", "record_lengths", "history", "achievements"]
+const TAB_LABELS := {"achievements": "영구 업적", "advanced_jobs": "상위 직업", "bonds": "세라의 인연", "record_lengths": "길이별 통계", "records": "전체 통계", "history": "최근 도전", "jobs": "직업 도감", "abilities": "능력 도감", "memories": "영구 기억", "relics": "유물 도감", "forge": "무기 설계도", "skills": "스킬 도감", "weapons": "무기 도감"}
+const TITLES := {"achievements": "광장 · 영구 업적", "advanced_jobs": "상위 직업 도감", "bonds": "기억의 쉼터 · 세라의 인연", "record_lengths": "광장 · 도전 길이별 통계", "history": "광장 · 최근 도전", "village": "시간의 닻 마을", "forge": "대장간 · 설계도", "skills": "대장간 · 스킬 도감", "weapons": "대장간 · 무기 도감", "memories": "기억의 쉼터 · 영구 기억", "relics": "기억의 쉼터 · 유물 도감", "records": "광장 · 도전 기록", "jobs": "직업 도감", "abilities": "능력 도감", "apothecary": "약방 · 회복약 조제", "atlas": "지도 제작소 · 경로 도감"}
 
 static func layout(safe: Rect2, card_count: int, can_continue: bool, single_row: bool = false) -> Dictionary:
 	var cards: Array[Rect2] = []
@@ -29,6 +29,8 @@ static func layout(safe: Rect2, card_count: int, can_continue: bool, single_row:
 static func cards(page: String, memories: Dictionary, blueprints: Dictionary, summary: Dictionary, discovered_jobs: Dictionary = {}, current_job: String = "", potion_recipe: String = PrototypePotionRecipes.BASIC, surveyed_routes: Dictionary = {}, current_relic: Dictionary = {}, sera_choices: Dictionary = {}, run_state: Dictionary = {}) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	match page:
+		"achievements":
+			pass
 		"advanced_jobs":
 			for job in PrototypeJobProgress.ADVANCED_JOBS:
 				var found := bool(discovered_jobs.get(job.id, false))

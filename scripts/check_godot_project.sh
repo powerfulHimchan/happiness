@@ -17,6 +17,9 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/growth/permanent_achievements.gd"
+  "$game_root/scripts/stage/achievement_store.gd"
+  "$game_root/tests/gp548_597_runtime_test.gd"
   "$game_root/scripts/stage/regional_landscape_art.gd"
   "$game_root/assets/landscapes/clockwork_foundry.svg"
   "$game_root/assets/landscapes/festival_carousel.svg"
@@ -883,6 +886,10 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for achievement_phase in catalog seed resume live failure corrupt; do
+    checked_godot 120s --headless --path "$game_root" \
+      --script res://tests/gp548_597_runtime_test.gd -- "$achievement_phase"
+  done
   checked_godot 45s --headless --path "$game_root" \
     --script res://tests/character_art_runtime_test.gd
   checked_godot 45s --headless --path "$game_root" \
