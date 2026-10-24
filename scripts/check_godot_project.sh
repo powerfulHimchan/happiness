@@ -17,6 +17,17 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/ui/achievement_art.gd"
+  "$game_root/assets/achievements/honors_hall.svg"
+  "$game_root/assets/achievements/exploration.svg"
+  "$game_root/assets/achievements/vocation.svg"
+  "$game_root/assets/achievements/weapon.svg"
+  "$game_root/assets/achievements/growth.svg"
+  "$game_root/assets/achievements/ending.svg"
+  "$game_root/assets/achievements/expedition.svg"
+  "$game_root/assets/achievements/memory.svg"
+  "$game_root/assets/achievements/bond.svg"
+  "$game_root/assets/achievements/secret.svg"
   "$game_root/scripts/growth/permanent_achievements.gd"
   "$game_root/scripts/stage/achievement_store.gd"
   "$game_root/tests/gp548_597_runtime_test.gd"

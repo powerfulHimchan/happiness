@@ -193,6 +193,15 @@ func _ui(select_all: bool) -> void:
 			for i in view.cards.size():
 				var card: Dictionary = view.cards[i]
 				_check(card.open and card.progress == card.target, "earned card uses persisted state")
+				var regions := AchievementArt.regions(view.layout.cards[i])
+				var category := String(PermanentAchievements.definition(card.id).category)
+				_check(AchievementArt.CATEGORIES.has(category) and AchievementArt.ICONS.has(AchievementArt.symbol(card)), "every achievement category has an imported emblem: " + card.id)
+				for area in regions.values():
+					_check(view.layout.cards[i].encloses(area), "art and text stay within card")
+				var keys: Array = regions.keys()
+				for first in keys.size():
+					for second in range(first + 1, keys.size()):
+						_check(not regions[keys[first]].intersects(regions[keys[second]]), "emblem, category, title, details and bar do not overlap")
 				seen.append(String(card.id))
 				if select_all and dimensions == Vector2(1280, 720):
 					_tap(view.layout.cards[i].get_center())

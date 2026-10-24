@@ -3165,6 +3165,8 @@ func _draw_village() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("182d36"))
 	draw_rect(Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.75)), Color("2b4b43"))
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
+	if village_page == "achievements":
+		AchievementArt.draw_backdrop(self, safe)
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
 	var subtitle := "도전 사이에 머무는 작은 안식처" if village_page == "village" else "설계도는 정예 보상에서 획득" if village_page == "forge" else "기억 장착은 새 도전 준비에서 선택" if village_page == "memories" else "발현 조건을 채워 도전마다 직업을 발견하세요" if village_page == "jobs" else "다섯 경로의 지형·보너스·선택 조건을 비교하세요" if village_page == "atlas" else "다음 새 도전의 회복약을 선택하세요" if village_page == "apothecary" else "이 기기의 로컬 도전 기록"
 	if village_page == "advanced_jobs":
@@ -3239,14 +3241,7 @@ func _draw_village() -> void:
 
 
 func _draw_achievement_card(card: Dictionary, rect: Rect2) -> void:
-	if card.selected: draw_rect(rect.grow(-3), ACTIVE_COLOR, false, 3)
-	_draw_village_text(String(card.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.08), Vector2(rect.size.x - 24, rect.size.y * 0.16)), 24, TEXT_COLOR)
-	_draw_village_text(String(card.status), Rect2(rect.position + Vector2(12, rect.size.y * 0.27), Vector2(rect.size.x - 24, rect.size.y * 0.10)), 16, ACTIVE_COLOR if card.open else MUTED_TEXT_COLOR)
-	for i in card.lines.size():
-		_draw_village_text(String(card.lines[i]), Rect2(rect.position + Vector2(12, rect.size.y * (0.41 + i * 0.095)), Vector2(rect.size.x - 24, rect.size.y * 0.09)), 16, TEXT_COLOR)
-	var bar := Rect2(rect.position + Vector2(12, rect.size.y * 0.87), Vector2(rect.size.x - 24, rect.size.y * 0.035))
-	draw_rect(bar, Color("304854"))
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(card.progress) / int(card.target), bar.size.y)), ACTIVE_COLOR if card.open else Color("6aa0ab"))
+	AchievementArt.draw_card(self, card, rect)
 
 
 func _draw_base_job_card(card: Dictionary, rect: Rect2) -> void:
