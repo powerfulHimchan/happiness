@@ -22,6 +22,8 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/growth/prototype_combat_tactics.gd"
+  "$game_root/tests/gp668_717_runtime_test.gd"
   "$game_root/scripts/ui/run_preparation_view.gd"
   "$game_root/scripts/ui/equipped_hero_preview.gd"
   "$game_root/assets/preparation/storybook.svg"
@@ -895,7 +897,7 @@ if [[ -n "$godot_command" ]]; then
     # These content matrices isolate saves by every argument after phase.
     # Keep seed/resume/next together, distribute independent content cases.
     case "$script" in
-      res://tests/gp344_runtime_test.gd|res://tests/gp354_runtime_test.gd|res://tests/gp364_runtime_test.gd|res://tests/gp374_runtime_test.gd|res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd|res://tests/gp618_667_runtime_test.gd)
+      res://tests/gp344_runtime_test.gd|res://tests/gp354_runtime_test.gd|res://tests/gp364_runtime_test.gd|res://tests/gp374_runtime_test.gd|res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd|res://tests/gp618_667_runtime_test.gd|res://tests/gp668_717_runtime_test.gd)
         shard_key="$script|${user_args[*]:1}"
         ;;
     esac
@@ -926,6 +928,24 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 90s --headless --path "$game_root" \
+    --script res://tests/gp668_717_runtime_test.gd -- catalog
+  for tactics_hero in roan lumi; do
+    for tactics_family in sword bow fist staff polearm shield; do
+      for tactics_style in ground_skill air_basic barrier_basic barrier_skill calm_rhythm crisis_rhythm; do
+        for tactics_phase in seed resume next; do
+          checked_godot 90s --headless --path "$game_root" \
+            --script res://tests/gp668_717_runtime_test.gd -- "$tactics_phase" "${tactics_family}_tactic_${tactics_style}" "$tactics_hero"
+        done
+      done
+    done
+    for tactics_support in evasive_barrier_master restorative_barrier_master victory_resilience_master orb_bloom_master time_attunement_master nimble_master; do
+      for tactics_phase in seed resume next; do
+        checked_godot 90s --headless --path "$game_root" \
+          --script res://tests/gp668_717_runtime_test.gd -- "$tactics_phase" "$tactics_support" "$tactics_hero"
+      done
+    done
+  done
   checked_godot 90s --headless --path "$game_root" \
     --script res://tests/run_preparation_runtime_test.gd
   checked_godot 45s --headless --path "$game_root" \

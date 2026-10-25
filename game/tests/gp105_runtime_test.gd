@@ -185,8 +185,8 @@ func _resolve_growth() -> bool:
 				saw_job_card = true
 			if growth.rerolls_remaining == 1:
 				growth.reroll()
-			# Legacy regression fixtures isolate baseline combat from new conditional mastery.
-			if String(growth.offered_cards[0].id).contains("_mastery_"):
+			# Legacy regression fixtures isolate baseline combat from conditional mastery and tactics.
+			if String(growth.offered_cards[0].id).contains("_mastery_") or String(growth.offered_cards[0].id).contains("_tactic_"):
 				growth.offered_cards[0] = PrototypeAbilityCodex.profile(weapons.active_weapon_id+"_power")
 				sandbox._on_growth_choices_requested(growth.offered_cards,growth.level,growth.rerolls_remaining)
 			_tap(controls.growth_card_rects[0].get_center())

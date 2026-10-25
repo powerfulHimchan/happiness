@@ -160,6 +160,8 @@ var run_build_reader: Callable
 var run_build_state: Dictionary = {}
 var run_build_tab: int = 0
 var run_build_page: int = 0
+var run_build_filter: int = 0
+var run_build_order: int = 0
 var run_build_owned: bool = false
 var run_build_resume_pending: bool = false
 var result_panel_rect := Rect2()
@@ -3467,6 +3469,8 @@ func open_run_build() -> bool:
 	run_build_state = state.duplicate(true)
 	run_build_tab = 0
 	run_build_page = 0
+	run_build_filter = 0
+	run_build_order = 0
 	run_build_owned = true
 	screen_mode = ScreenMode.RUN_BUILD
 	run_build_started.emit()
@@ -3491,11 +3495,11 @@ func _leave_run_build() -> void:
 
 
 func run_build_snapshot() -> Dictionary:
-	var all_cards := PrototypeRunBuildView.cards(run_build_tab, run_build_state)
+	var all_cards := PrototypeRunBuildView.browse(run_build_tab, run_build_state, run_build_filter, run_build_order)
 	var pages := maxi(1, ceili(float(all_cards.size()) / PrototypeRunBuildView.PAGE_SIZE))
 	var page := clampi(run_build_page, 0, pages - 1)
 	var cards := all_cards.slice(page * PrototypeRunBuildView.PAGE_SIZE, (page + 1) * PrototypeRunBuildView.PAGE_SIZE)
-	return {"tab": run_build_tab, "page": page, "pages": pages, "count": all_cards.size(), "cards": cards.duplicate(true), "layout": PrototypeRunBuildView.layout(_safe_area_in_viewport(), cards.size())}
+	return {"tab": run_build_tab, "filter":run_build_filter, "order":run_build_order, "page": page, "pages": pages, "count": all_cards.size(), "cards": cards.duplicate(true), "layout": PrototypeRunBuildView.layout(_safe_area_in_viewport(), cards.size())}
 
 
 func _handle_run_build_touch(position: Vector2) -> void:
@@ -3508,7 +3512,17 @@ func _handle_run_build_touch(position: Vector2) -> void:
 		if layout.tabs[index].has_point(position):
 			run_build_tab = index
 			run_build_page = 0
+			run_build_filter = 0
+			run_build_order = 0
 			return
+	var filters := PrototypeRunBuildView.filter_labels(run_build_tab)
+	var orders := PrototypeRunBuildView.order_labels(run_build_tab)
+	if not filters.is_empty() and layout.filter.has_point(position):
+		run_build_filter = (run_build_filter+1)%filters.size()
+		run_build_page = 0
+	if not orders.is_empty() and layout.order.has_point(position):
+		run_build_order = (run_build_order+1)%orders.size()
+		run_build_page = 0
 	if layout.previous.has_point(position): run_build_page = maxi(0, int(snapshot.page) - 1)
 	if layout.next.has_point(position): run_build_page = mini(int(snapshot.pages) - 1, int(snapshot.page) + 1)
 
@@ -3522,6 +3536,10 @@ func _draw_run_build() -> void:
 	_draw_village_text("조회 중 전투 정지 · 닫으면 3초 뒤 복귀", Rect2(safe.position + Vector2(0, safe.size.y * 0.14), Vector2(safe.size.x, safe.size.y * 0.05)), 20, MUTED_TEXT_COLOR)
 	for index in layout.tabs.size():
 		_draw_button(layout.tabs[index], PrototypeRunBuildView.TABS[index], index == run_build_tab)
+	var filters := PrototypeRunBuildView.filter_labels(run_build_tab)
+	var orders := PrototypeRunBuildView.order_labels(run_build_tab)
+	if not filters.is_empty(): _draw_button(layout.filter, "분류 · "+String(filters[run_build_filter]), true)
+	if not orders.is_empty(): _draw_button(layout.order, String(orders[run_build_order]), true)
 	for index in snapshot.cards.size():
 		var card: Dictionary = snapshot.cards[index]
 		var rect: Rect2 = layout.cards[index]

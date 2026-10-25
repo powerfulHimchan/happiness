@@ -1097,8 +1097,12 @@ func _capture_run_build() -> Dictionary:
 	weapon_controller._enrich_metrics(metrics)
 	var damage := {}
 	var cooldowns := {}
+	var damage_stances := {}
+	var tactic_conditions := {}
 	for weapon in weapon_controller.equipment:
 		damage[weapon] = {"basic": player.growth_damage(100, weapon, "basic"), "skill": player.growth_damage(100, weapon, "skill")}
+		damage_stances[weapon] = {"ground_basic":player.growth_damage_preview(100,weapon,"basic",true), "air_basic":player.growth_damage_preview(100,weapon,"basic",false), "ground_skill":player.growth_damage_preview(100,weapon,"skill",true), "air_skill":player.growth_damage_preview(100,weapon,"skill",false)}
+		tactic_conditions[weapon] = PrototypeCombatTactics.condition_lines(player.combat_tactics,weapon,player.is_on_floor(),player.damage_receiver.health,player.damage_receiver.max_health,player.damage_receiver.barrier_health)
 		cooldowns[weapon] = [float(metrics[weapon + "_skill_1_cooldown_s"]), float(metrics[weapon + "_skill_2_cooldown_s"])]
 	return {
 		"character_id": player.character_id, "story": _active_story_status(),
@@ -1106,6 +1110,7 @@ func _capture_run_build() -> Dictionary:
 		"equipment": weapon_controller.equipment.duplicate(), "blueprints": weapon_controller.blueprints.duplicate(),
 		"skills": weapon_controller.skills.duplicate(true), "active": weapon_controller.active_weapon_id,
 		"recharge": player.skill_recharge_multiplier(), "family_recharge": player.family_skill_recharge(), "damage": damage, "cooldowns": cooldowns,
+		"damage_stances":damage_stances, "tactic_conditions":tactic_conditions,
 		"health": {
 			"current": player.damage_receiver.health, "maximum": player.damage_receiver.max_health,
 			"barrier": player.damage_receiver.barrier_health, "barrier_max": player.barrier_capacity() if player.barrier_unlocked else 0,

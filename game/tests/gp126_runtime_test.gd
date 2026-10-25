@@ -110,7 +110,7 @@ func _run() -> void:
 			if not _check(controls.village_snapshot().cards.filter(func(card: Dictionary) -> bool: return card.id == "vanguard_edge" and card.status == "이번 도전 1등급").size() == 1, "직업 카드의 현재 도전 등급"): return
 			controls.begin_retry()
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "이전 도전 저장의 실제 검 능력 준비"): return
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(GP126_BOOK))
+			if not _check(DirAccess.remove_absolute(ProjectSettings.globalize_path(GP126_BOOK)) == OK and not FileAccess.file_exists(GP126_BOOK), "이전 저장 복구 검사용 발견 파일 제거 확인"): return
 		"legacy-fail":
 			var saved := store.load_checkpoint()
 			if not _check(not saved.is_empty() and controls.discovered_abilities.is_empty() and controls.checkpoint_available and not sandbox.continue_saved_run() and controls.current_screen_mode() == 2 and store.load_checkpoint() == saved, "이전 저장 복구 실패는 이어하기·정상 저장 보호"): return
@@ -196,8 +196,11 @@ func _test_book_layout() -> bool:
 			for card in snapshot.cards:
 				var source := PrototypeAbilityCodex.profile(card.id)
 				seen.append(String(card.id))
-				if not _check(card.name == source.title and card.lines[0] == source.lines[0] and card.lines[1] == source.lines[1] and card.lines.size() == 5 and card.open == controls.discovered_abilities.has(card.id), "기본·강화·직업 카드 실제 원본 데이터·발견 상태"): return false
-				if source.has("requires") and not _check(String(PrototypeAbilityCodex.profile(source.requires[0]).title) in card.lines[2], "강화 가지 선행 조건"): return false
+				if not _check(card.name == source.title and card.lines[0] == source.lines[0] and card.lines[1] == source.lines[1] and card.lines.size() == 5 + (1 if source.has("excludes") else 0) and card.open == controls.discovered_abilities.has(card.id), "기본·강화·직업 카드 실제 원본 데이터·발견 상태"): return false
+				for required in source.get("requires", []):
+					if not _check(String(PrototypeAbilityCodex.profile(required).title) in card.lines[2], "모든 강화 가지 선행 조건"): return false
+				for excluded in source.get("excludes", []):
+					if not _check(String(PrototypeAbilityCodex.profile(excluded).title) in card.lines[3], "실제 상호 배제 안내"): return false
 				if source.has("job") and not _check(String(PrototypeJobProgress.profile(source.job).name) in card.lines[2], "직업 카드 발현 조건"): return false
 			controls.queue_redraw()
 			await process_frame

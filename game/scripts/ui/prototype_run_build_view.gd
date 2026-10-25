@@ -4,6 +4,53 @@ extends RefCounted
 ## GP-141: 실제 도전 스냅샷을 조회용 카드로 표시한다. 저장·장착·능력 선택은 하지 않는다.
 const TABS := ["보유 능력", "장비·스킬", "도전 정보"]
 const PAGE_SIZE := 3
+const ABILITY_FILTERS := ["전체", "공용", "검", "활", "주먹", "지팡이", "장봉", "방패", "직업"]
+const ABILITY_ORDERS := ["목록순", "이름순", "등급순"]
+const EQUIPMENT_FILTERS := ["전체", "주 무기", "보조 무기"]
+const EQUIPMENT_ORDERS := ["목록순", "재사용 대기순", "자세별 피해", "전술 상태"]
+
+static func filter_labels(tab: int) -> Array:
+	return ABILITY_FILTERS if tab == 0 else EQUIPMENT_FILTERS if tab == 1 else []
+
+static func order_labels(tab: int) -> Array:
+	return ABILITY_ORDERS if tab == 0 else EQUIPMENT_ORDERS if tab == 1 else []
+
+static func browse(tab: int, state: Dictionary, filter_index: int = 0, order_index: int = 0) -> Array[Dictionary]:
+	var result := cards(tab,state)
+	if state.is_empty() or tab == 2: return result
+	if tab == 0:
+		if filter_index > 0:
+			var category: String = (["common"]+PrototypeWeaponRewards.FAMILY_IDS+["job"])[clampi(filter_index-1,0,7)]
+			result = result.filter(func(card: Dictionary) -> bool:
+				var profile := PrototypeAbilityCodex.profile(String(card.id))
+				return not profile.is_empty() and (profile.has("job") if category == "job" else profile.category == category and not profile.has("job")))
+		if order_index == 1:
+			result.sort_custom(func(a: Dictionary,b: Dictionary) -> bool: return a.name < b.name if a.name != b.name else a.id < b.id)
+		elif order_index == 2:
+			var ranks: Dictionary = state.growth.growth_ranks
+			result.sort_custom(func(a: Dictionary,b: Dictionary) -> bool: return int(ranks.get(a.id,0)) > int(ranks.get(b.id,0)) if ranks.get(a.id,0) != ranks.get(b.id,0) else a.id < b.id)
+	else:
+		if order_index in [2,3]:
+			result.clear()
+			for family in state.equipment:
+				var lines: Array[String] = []
+				if order_index == 2:
+					var values: Dictionary = state.get("damage_stances",{}).get(family,{})
+					lines.assign(["기본 피해100 기준 · 현재 체력/방벽", "지상 기본 %d · 공중 기본 %d" % [int(values.get("ground_basic",0)),int(values.get("air_basic",0))], "지상 스킬 %d · 공중 스킬 %d" % [int(values.get("ground_skill",0)),int(values.get("air_skill",0))], "거리·적 방어 보정 전 · 최종 반올림", "현재 장비·유물·성장 조건을 반영"])
+				else:
+					for line in state.get("tactic_conditions",{}).get(family,[]): lines.append(String(line))
+					if lines.is_empty(): lines.append("선택한 무기 전술 없음")
+					lines.append("체력 %d/%d · 방벽 %d" % [state.health.current,state.health.maximum,state.health.barrier])
+					lines.append("열기 직전 상태 · 조회 중 조건 정지")
+				result.append({"id":family,"weapon":family,"name":PrototypeWeaponRewards.family_name(family),"status":"주 무기" if family == state.active else "보조 무기","lines":lines,"open":true})
+		elif order_index == 1:
+			result = result.filter(func(card: Dictionary) -> bool: return card.has("remaining"))
+			result.sort_custom(func(a: Dictionary,b: Dictionary) -> bool: return a.remaining < b.remaining if a.remaining != b.remaining else a.id < b.id)
+		if filter_index in [1,2]:
+			result = result.filter(func(card: Dictionary) -> bool: return (card.get("weapon","") == state.active) == (filter_index == 1))
+	if result.is_empty():
+		result.append({"id":"empty","name":"해당 항목 없음","status":"다른 분류를 선택하세요","lines":["선택한 조건에 맞는 보유 항목이 없습니다","조회는 장착·성장·저장을 바꾸지 않습니다"],"open":false})
+	return result
 
 static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -23,14 +70,14 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 				lines.append("기본 피해100 기준 %d" % int(state.damage[weapon].basic))
 				lines.append("스킬 피해100 기준 %d" % int(state.damage[weapon].skill))
 				lines.append("성장·기억·장비·유물 반영 · 거리 보정 전")
-				result.append({"id": weapon, "name": item.name, "status": "주 무기" if state.active == weapon else "보조 무기", "lines": lines, "open": true})
+				result.append({"id": weapon, "weapon":weapon, "name": item.name, "status": "주 무기" if state.active == weapon else "보조 무기", "lines": lines, "open": true})
 			for weapon in state.equipment:
 				for slot in 2:
 					var id: String = state.skills[weapon][slot]
 					var lines := PrototypeSkillRewards.lines(id, float(state.get("family_recharge", {}).get(weapon, state.recharge)))
 					lines.append("남은 대기 %.1f초" % float(state.cooldowns[weapon][slot]))
 					lines.append("표기 피해는 강화 전 기본값")
-					result.append({"id": id, "name": PrototypeSkillRewards.SKILLS[id].display_name, "status": "%s · 슬롯 %d" % [PrototypeWeaponRewards.family_name(String(weapon)), slot + 1], "lines": lines, "open": true})
+					result.append({"id": id, "weapon":weapon, "remaining":float(state.cooldowns[weapon][slot]), "name": PrototypeSkillRewards.SKILLS[id].display_name, "status": "%s · 슬롯 %d" % [PrototypeWeaponRewards.family_name(String(weapon)), slot + 1], "lines": lines, "open": true})
 		2:
 			var stage: Dictionary = state.stage
 			result.append({"id": "progress", "name": "이번 도전", "status": "%d / %d 스테이지" % [int(stage.run_stage_number), int(stage.run_stage_count)], "lines": ["주인공 · " + PrototypeCharacters.display_name(String(state.get("character_id", "roan"))) + (" · 원정 %d" % int(stage.expedition) if stage.get("expedition", 0) > 0 else ""), String(stage.stage_section_name), String(stage.run_route_name), "현재 스테이지 %.1f초" % float(stage.stage_elapsed_s), "레벨 %d · 경험치 %d/%d" % [int(state.growth.growth_level), int(state.growth.growth_xp), int(state.growth.growth_next_xp)], "조회 중 전투와 대기시간 정지"], "open": true})
@@ -84,8 +131,11 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 
 static func layout(safe: Rect2, count: int) -> Dictionary:
 	var base := PrototypeVillageView.layout(safe, maxi(1, count), false)
+	for index in base.cards.size():
+		base.cards[index].position.y = safe.position.y+safe.size.y*0.39
+		base.cards[index].size.y = safe.size.y*0.37
 	var tabs: Array[Rect2] = []
 	var width := safe.size.x * 0.28
 	for index in 3:
 		tabs.append(Rect2(safe.position + Vector2(safe.size.x * (0.06 + index * 0.30), safe.size.y * 0.23), Vector2(width, safe.size.y * 0.07)))
-	return {"cards": base.cards, "tabs": tabs, "back": Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.86), Vector2(safe.size.x * 0.40, safe.size.y * 0.09)), "previous": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.78), Vector2(safe.size.x * 0.23, safe.size.y * 0.055)), "next": Rect2(safe.position + Vector2(safe.size.x * 0.72, safe.size.y * 0.78), Vector2(safe.size.x * 0.23, safe.size.y * 0.055))}
+	return {"cards": base.cards, "tabs": tabs, "filter":Rect2(safe.position+Vector2(safe.size.x*.05,safe.size.y*.315),Vector2(safe.size.x*.44,safe.size.y*.06)), "order":Rect2(safe.position+Vector2(safe.size.x*.51,safe.size.y*.315),Vector2(safe.size.x*.44,safe.size.y*.06)), "back": Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.86), Vector2(safe.size.x * 0.40, safe.size.y * 0.09)), "previous": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.78), Vector2(safe.size.x * 0.23, safe.size.y * 0.055)), "next": Rect2(safe.position + Vector2(safe.size.x * 0.72, safe.size.y * 0.78), Vector2(safe.size.x * 0.23, safe.size.y * 0.055))}

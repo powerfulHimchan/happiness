@@ -219,7 +219,7 @@ func _on_weapon_hit(is_skill: bool, _target: PrototypeTarget, _damage: int) -> v
 
 
 func weapon_hit_gauge_amount(is_skill: bool) -> int:
-	var amount := (10 if is_skill else 5) if player.time_attunement_unlocked else (SKILL_HIT_GAIN if is_skill else BASIC_HIT_GAIN)
+	var amount := (12 if is_skill else 6) if player.time_attunement_unlocked and player.combat_tactics.has("time_attunement_master") else (10 if is_skill else 5) if player.time_attunement_unlocked else (SKILL_HIT_GAIN if is_skill else BASIC_HIT_GAIN)
 	if is_skill and player.has_active_relic(PrototypeRelic.SKILL_PRISM_ID): amount += 3
 	if not is_skill and player.has_active_relic(PrototypeRelic.TEMPO_BELL_ID): amount += 2
 	return combat_gauge_amount(amount)

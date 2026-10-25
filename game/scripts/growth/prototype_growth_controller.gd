@@ -63,6 +63,7 @@ static func _build_cards() -> Array[Dictionary]:
 	var result: Array[Dictionary] = BASE_CARDS.duplicate(true)
 	result.append_array(PrototypeWeaponTraining.CARDS)
 	result.append_array(PrototypeWeaponMastery.CARDS)
+	result.append_array(PrototypeCombatTactics.CARDS)
 	return result
 
 var level: int = 1
@@ -143,6 +144,7 @@ func reset_run(starting_weapon: String = "sword") -> void:
 	ranks.clear()
 	player.weapon_training.clear()
 	player.weapon_mastery.clear()
+	player.combat_tactics.clear()
 	selection_message = ""
 	_rewarded_lives.clear()
 	jobs.reset(starting_weapon)
@@ -175,6 +177,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	ranks = state.ranks.duplicate(true)
 	player.weapon_training = PrototypeWeaponTraining.selected(ranks)
 	player.weapon_mastery = PrototypeWeaponMastery.selected(ranks)
+	player.combat_tactics = PrototypeCombatTactics.selected(ranks)
 	ultimate.set_time_collector_boost_unlocked(int(ranks.get("time_collector_boost", 0)) == 1)
 	player.set_orb_magnet_unlocked(int(ranks.get("orb_magnet", 0)) == 1)
 	player.set_orb_vitality_unlocked(int(ranks.get("orb_vitality", 0)) == 1)
@@ -295,6 +298,7 @@ func choose_card(index: int) -> bool:
 	ranks[card_id] = int(ranks.get(card_id, 0)) + 1
 	player.weapon_training = PrototypeWeaponTraining.selected(ranks)
 	player.weapon_mastery = PrototypeWeaponMastery.selected(ranks)
+	player.combat_tactics = PrototypeCombatTactics.selected(ranks)
 	match card_id:
 		"barrier_focus": player.barrier_focus_unlocked = true
 		"crisis_power": player.crisis_power_unlocked = true
@@ -481,13 +485,13 @@ func _draw_cards() -> Array[Dictionary]:
 
 func victory_recovery_amount() -> int:
 	if not run_active or int(ranks.get("victory_recovery", 0)) != 1: return 0
-	var percent := 4 if int(ranks.get("victory_resilience", 0)) == 1 else 3 if int(ranks.get("victory_recovery_boost", 0)) == 1 else 2
+	var percent := 5 if int(ranks.get("victory_resilience_master", 0)) == 1 else 4 if int(ranks.get("victory_resilience", 0)) == 1 else 3 if int(ranks.get("victory_recovery_boost", 0)) == 1 else 2
 	return ceili(player.damage_receiver.max_health * percent / 100.0)
 
 
 func evasive_barrier_amount() -> int:
 	if not run_active or int(ranks.get("evasive_barrier", 0)) != 1 or not player.barrier_unlocked: return 0
-	return 8 if int(ranks.get("evasive_barrier_boost", 0)) == 1 else EVASIVE_BARRIER_RECOVERY
+	return 11 if int(ranks.get("evasive_barrier_master", 0)) == 1 else 8 if int(ranks.get("evasive_barrier_boost", 0)) == 1 else EVASIVE_BARRIER_RECOVERY
 
 
 func metrics_snapshot() -> Dictionary:

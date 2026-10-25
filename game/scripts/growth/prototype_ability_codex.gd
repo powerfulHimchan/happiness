@@ -21,16 +21,27 @@ static func valid_ids(value: Variant) -> bool:
 
 static func cards(discovered: Dictionary, ranks: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for card in definitions():
+	# Resolve prerequisite names from this snapshot instead of copying the entire
+	# catalog again for every prerequisite on every page draw.
+	var catalog := definitions()
+	var by_id := {}
+	for definition in catalog: by_id[definition.id] = definition
+	for card in catalog:
 		var lines: Array[String] = []
 		for line in card.lines: lines.append(String(line))
 		var condition := "검 관련·무작위 후보" if card.category == "sword" else "활 관련·무작위 후보" if card.category == "bow" else "주먹 관련·무작위 후보" if card.category == "fist" else PrototypeWeaponRewards.family_name(card.category) + " 관련·무작위 후보" if card.category in ["staff", "polearm", "shield"] else "공용·무작위 후보"
 		if card.has("job"):
 			condition = String(PrototypeJobProgress.profile(card.job).name) + " 발현 후"
 		if card.has("requires"):
-			var prerequisite := String(profile(card.requires[0]).title) + " 획득 후"
+			var prerequisites: Array[String] = []
+			for required in card.requires: prerequisites.append(String(by_id[required].title))
+			var prerequisite := " + ".join(prerequisites) + " 획득 후"
 			condition = condition + " · " + prerequisite if card.has("job") else prerequisite
 		lines.append("조건: " + condition)
+		if card.has("excludes"):
+			var exclusive: Array[String] = []
+			for other in card.excludes: exclusive.append(String(by_id[other].title))
+			lines.append("택1: " + " / ".join(exclusive) + "와 동시 선택 불가")
 		lines.append("도전당 1회 선택" if card.get("max_rank", 99) == 1 else "선택할 때마다 효과 누적")
 		var tags: Array[String] = []
 		for tag in card.tags:

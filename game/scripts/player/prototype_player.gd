@@ -96,6 +96,7 @@ var _lifesteal_flash_remaining_s: float = 0.0
 var growth_common_bonus: float = 0.0
 var weapon_training: Dictionary = {}
 var weapon_mastery: Dictionary = {}
+var combat_tactics: Dictionary = {}
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
 var growth_fist_bonus: float = 0.0
@@ -352,7 +353,7 @@ func set_combat_evade_allowed(allowed: bool) -> void:
 
 
 func ground_evade_cooldown_s() -> float:
-	return GROUND_EVADE_COOLDOWN_S * (0.8 if nimble_evade_unlocked else 1.0) * (0.9 if nimble_mastery_unlocked and nimble_evade_unlocked else 1.0) * (PrototypeRelic.WIND_COOLDOWN_MULTIPLIER if has_active_relic(PrototypeRelic.WIND_ID) else 1.0)
+	return GROUND_EVADE_COOLDOWN_S * (0.9 if combat_tactics.has("nimble_master") and nimble_mastery_unlocked else 1.0) * (0.8 if nimble_evade_unlocked else 1.0) * (0.9 if nimble_mastery_unlocked and nimble_evade_unlocked else 1.0) * (PrototypeRelic.WIND_COOLDOWN_MULTIPLIER if has_active_relic(PrototypeRelic.WIND_ID) else 1.0)
 
 
 func set_nimble_evade_unlocked(enabled: bool) -> void:
@@ -413,7 +414,7 @@ func set_restorative_barrier_boost_unlocked(enabled: bool) -> void:
 
 func potion_barrier_recovery() -> int:
 	if not restorative_barrier_unlocked or not barrier_unlocked: return 0
-	return 15 if restorative_barrier_boost_unlocked else 10
+	return 20 if combat_tactics.has("restorative_barrier_master") and restorative_barrier_boost_unlocked else 15 if restorative_barrier_boost_unlocked else 10
 
 
 func is_ground_evading() -> bool:
@@ -501,7 +502,8 @@ func skill_relic_multiplier(kind: String) -> float:
 
 func skill_recharge_multiplier(family: String = "") -> float:
 	var relic := PrototypeRelic.CLOCK_RECHARGE_MULTIPLIER if has_active_relic(PrototypeRelic.CLOCK_ID) else 1.0
-	return relic * PrototypeWeaponMastery.recharge_multiplier(weapon_mastery, family)
+	var tactics := PrototypeCombatTactics.recharge_multiplier(combat_tactics, family, damage_receiver.health, damage_receiver.max_health) if is_instance_valid(damage_receiver) else 1.0
+	return relic * PrototypeWeaponMastery.recharge_multiplier(weapon_mastery, family) * tactics
 
 
 func family_skill_recharge() -> Dictionary:
@@ -616,8 +618,12 @@ func _draw() -> void:
 
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
+	return growth_damage_preview(base_damage, weapon_id, kind, is_on_floor())
+
+
+func growth_damage_preview(base_damage: int, weapon_id: String, kind: String, grounded: bool) -> int:
 	var weapon_bonus := float(get("growth_" + weapon_id + "_bonus")) if weapon_id in PrototypeWeaponRewards.FAMILY_IDS else 0.0
-	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind) * PrototypeWeaponMastery.damage_multiplier(weapon_mastery, weapon_id, kind, is_on_floor(), damage_receiver.health, damage_receiver.max_health)
+	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind) * PrototypeWeaponMastery.damage_multiplier(weapon_mastery, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health) * PrototypeCombatTactics.damage_multiplier(combat_tactics, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health, damage_receiver.barrier_health)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
 	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
 
@@ -746,7 +752,7 @@ func set_orb_vitality_unlocked(enabled: bool) -> void:
 
 
 func recovery_orb_heal_percent() -> int:
-	return roundi(RecoveryOrbController.HEAL_RATIO * 100) * (2 if orb_vitality_unlocked else 1) + (5 if orb_bloom_unlocked and orb_vitality_unlocked else 0) + (PrototypeRelic.SEED_ORB_BONUS if has_active_relic(PrototypeRelic.SEED_ID) else 0)
+	return roundi(RecoveryOrbController.HEAL_RATIO * 100) * (2 if orb_vitality_unlocked else 1) + (5 if orb_bloom_unlocked and orb_vitality_unlocked else 0) + (5 if combat_tactics.has("orb_bloom_master") and orb_bloom_unlocked and orb_vitality_unlocked else 0) + (PrototypeRelic.SEED_ORB_BONUS if has_active_relic(PrototypeRelic.SEED_ID) else 0)
 
 
 func recovery_orb_heal_amount() -> int:
@@ -839,6 +845,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	growth_common_bonus = 0.0
 	weapon_training.clear()
 	weapon_mastery.clear()
+	combat_tactics.clear()
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
 	growth_fist_bonus = 0.0
