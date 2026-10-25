@@ -208,5 +208,6 @@ static func handle_touch(ui: Control,point: Vector2) -> void:
 			if view.skills[index*2+slot].has_point(point): ui.hero_status_detail = "skill:%s:%d" % [held[index],slot]
 	for id in ["defense","offense","passive","conditions","links"]:
 		if view[id].has_point(point): ui.hero_status_detail = id
+	if ui.hero_status_detail == "links": ui.combat_link_menu_motion.page_changed()
 	ui.hero_status_page = 0
 	ui.queue_redraw()

@@ -738,6 +738,7 @@ func continue_saved_run() -> bool:
 	weapon_controller.restore_checkpoint(state.weapons)
 	player.hero_traits.restore(state.player.get("hero_traits",{}))
 	player.combat_links.restore(state.player.get("combat_links",{}),growth.ranks)
+	player.link_feedback.reset(player.combat_links.snapshot())
 	ultimate_controller.reset_ultimate()
 	ultimate_controller.gauge = int(state.ultimate.gauge)
 	ultimate_controller.set_time_collector_boost_unlocked(int(growth.ranks.get("time_collector_boost", 0)) == 1)

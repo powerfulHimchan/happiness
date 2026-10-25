@@ -166,6 +166,7 @@ var run_build_owned: bool = false
 var hero_status_open: bool = false
 var hero_status_detail: String = ""
 var combat_link_options: Dictionary = CombatLinksView.defaults()
+var combat_link_menu_motion := CombatLinksMenuMotion.new()
 var hero_status_page: int = 0
 var run_build_resume_pending: bool = false
 var result_panel_rect := Rect2()
@@ -413,6 +414,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if screen_mode == ScreenMode.RUN_BUILD and hero_status_open and hero_status_detail == "links" and preview_application_active:
+		var animate_before: bool = combat_link_menu_motion.is_animating()
+		combat_link_menu_motion.tick(delta)
+		if animate_before: queue_redraw()
 	if screen_mode == ScreenMode.START_WEAPON and preview_application_active and not start_options_open:
 		preview_elapsed_s = fposmod(preview_elapsed_s+maxf(0,delta),TAU*2.0)
 	_update_mode_timer(delta)
@@ -3507,6 +3512,7 @@ func open_run_build() -> bool:
 	run_build_state = state.duplicate(true)
 	hero_status_open = false
 	combat_link_options = CombatLinksView.defaults()
+	combat_link_menu_motion.reset()
 	hero_status_detail = ""
 	hero_status_page = 0
 	run_build_tab = 0
@@ -3535,6 +3541,7 @@ func _leave_run_build() -> void:
 	run_build_state.clear()
 	hero_status_open = false
 	combat_link_options = CombatLinksView.defaults()
+	combat_link_menu_motion.reset()
 	hero_status_detail = ""
 	hero_status_page = 0
 	run_build_finished.emit()

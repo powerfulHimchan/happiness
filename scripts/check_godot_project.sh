@@ -22,6 +22,21 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/assets/links/archive.svg"
+  "$game_root/assets/links/switch.svg"
+  "$game_root/assets/links/evade.svg"
+  "$game_root/assets/links/critical.svg"
+  "$game_root/assets/links/hurt.svg"
+  "$game_root/assets/links/potion.svg"
+  "$game_root/assets/links/skill.svg"
+  "$game_root/assets/links/frame_active.svg"
+  "$game_root/assets/links/frame_dormant.svg"
+  "$game_root/assets/links/frame_locked.svg"
+
+  "$game_root/scripts/ui/combat_links_art.gd"
+  "$game_root/scripts/ui/combat_links_menu_motion.gd"
+  "$game_root/scripts/player/combat_link_feedback.gd"
+  "$game_root/tests/gp891_910_presentation_runtime_test.gd"
   "$game_root/scripts/growth/prototype_combat_links.gd"
   "$game_root/scripts/ui/combat_links_view.gd"
   "$game_root/tests/gp841_890_runtime_test.gd"
@@ -957,6 +972,7 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 120s --headless --path "$game_root" --import
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp821_830_art_runtime_test.gd
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp831_840_animation_runtime_test.gd
+  checked_godot 120s --headless --path "$game_root" --script res://tests/gp891_910_presentation_runtime_test.gd -- runtime
   for link_phase in catalog combat acquisition seed resume ui; do
     checked_godot 120s --headless --path "$game_root" --script res://tests/gp841_890_runtime_test.gd -- "$link_phase"
   done

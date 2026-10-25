@@ -87,7 +87,7 @@ static func draw(ui: Control) -> void:
 	var pages := maxi(1,ceili(float(entries.size())/PAGE_SIZE))
 	var page := clampi(int(options.page),0,pages-1)
 	ui.draw_rect(Rect2(Vector2.ZERO,ui.size),Color(.01,.04,.07,.87))
-	HeroStatusView.panel(ui,view.modal,Color("193644"))
+	ui.draw_texture_rect(CombatLinksArt.BACKGROUND,view.modal,false)
 	HeroStatusView.text(ui,"전투 연계",HeroStatusView.box(safe,.10,.10,.80,.05),30,HeroStatusView.GOLD)
 	var active_count: int = state.get("combat_links",{}).size()
 	HeroStatusView.text(ui,"발동 중 %d개 · 재발동은 시간 갱신 · 상태 화면에서는 시간이 멈춥니다" % active_count,HeroStatusView.box(safe,.10,.16,.80,.03),19,HeroStatusView.MUTE)
@@ -95,17 +95,27 @@ static func draw(ui: Control) -> void:
 	var keys := ["family","kind","status","order","ownership"]
 	var choices := [FAMILY_FILTERS,KIND_FILTERS,STATUS_FILTERS,ORDER_FILTERS,OWNERSHIP_FILTERS]
 	for index in 5: ui._draw_button(view.filters[index],choices[index][int(options[keys[index]])],true)
+	var highlight := String(options.selected)
+	if highlight.is_empty() and not entries.is_empty(): highlight = String(entries[page*PAGE_SIZE].id)
 	for index in mini(PAGE_SIZE,entries.size()-page*PAGE_SIZE):
 		var card: Dictionary = entries[page*PAGE_SIZE+index]
-		var rect: Rect2 = view.cards[index]
-		HeroStatusView.panel(ui,rect,Color("245567") if card.live else HeroStatusView.PANEL)
-		HeroStatusView.text(ui,String(card.title),Rect2(rect.position+rect.size*Vector2(.05,.05),rect.size*Vector2(.90,.18)),24,HeroStatusView.GOLD)
-		HeroStatusView.text(ui,String(card.status),Rect2(rect.position+rect.size*Vector2(.05,.27),rect.size*Vector2(.90,.14)),19,Color("80e5c2") if card.live else HeroStatusView.MUTE)
-		for line in mini(2,card.lines.size()): HeroStatusView.text(ui,String(card.lines[line]),Rect2(rect.position+rect.size*Vector2(.05,.48+line*.20),rect.size*Vector2(.90,.17)),19)
+		var highlighted: bool = card.id == highlight
+		var pose: Dictionary = ui.combat_link_menu_motion.pose(index,highlighted)
+		var rect := Rect2(view.cards[index].position+pose.offset,view.cards[index].size)
+		var areas := CombatLinksArt.card_regions(rect)
+		var alpha := float(pose.alpha)
+		CombatLinksArt.frame(ui,card,rect,alpha)
+		if highlighted: ui.draw_rect(rect.grow(-3),Color(HeroStatusView.GOLD,.25+float(pose.pulse)*.45),false,1.5+float(pose.pulse),true)
+		var icon_rect: Rect2 = areas.icon
+		icon_rect.position.y -= float(pose.pulse)*2.0
+		CombatLinksArt.icon(ui,card.style,icon_rect,alpha)
+		HeroStatusView.text(ui,String(card.title),areas.title,24,Color(HeroStatusView.GOLD,alpha))
+		HeroStatusView.text(ui,String(card.status),areas.status,19,Color(Color("80e5c2") if card.live else HeroStatusView.MUTE,alpha))
+		for line in mini(2,card.lines.size()): HeroStatusView.text(ui,String(card.lines[line]),areas.first if line == 0 else areas.second,19,Color(HeroStatusView.INK,alpha))
 		if float(card.remaining) > 0.0:
-			var bar := Rect2(rect.position+rect.size*Vector2(.05,.94),rect.size*Vector2(.90,.02))
-			ui.draw_rect(bar,Color("102d3e"))
-			ui.draw_rect(Rect2(bar.position,Vector2(bar.size.x*clampf(float(card.remaining)/float(card.duration),0,1),bar.size.y)),Color("80e5c2"))
+			var bar: Rect2 = areas.bar
+			ui.draw_rect(bar,Color("102d3e",alpha))
+			ui.draw_rect(Rect2(bar.position,Vector2(bar.size.x*clampf(float(card.remaining)/float(card.duration),0,1),bar.size.y)),Color("80e5c2",alpha))
 	var selected := entries.filter(func(card: Dictionary) -> bool: return card.id == options.selected)
 	if selected.is_empty() and not entries.is_empty(): selected = [entries[page*PAGE_SIZE]]
 	if not selected.is_empty():
@@ -128,12 +138,17 @@ static func handle_touch(ui: Control, point: Vector2) -> void:
 			options[keys[index]] = (int(options[keys[index]])+1)%int(counts[index])
 			options.page = 0
 			options.selected = ""
+			ui.combat_link_menu_motion.page_changed()
+	var previous_page := int(options.page)
 	var entries := cards(ui.run_build_state,options)
 	var pages := maxi(1,ceili(float(entries.size())/PAGE_SIZE))
 	options.page = clampi(int(options.page),0,pages-1)
 	if view.previous.has_point(point): options.page = maxi(0,int(options.page)-1); options.selected = ""
 	if view.next.has_point(point): options.page = mini(pages-1,int(options.page)+1); options.selected = ""
+	if int(options.page) != previous_page: ui.combat_link_menu_motion.page_changed()
 	if view.close.has_point(point): ui.hero_status_detail = ""
 	for index in mini(PAGE_SIZE,entries.size()-int(options.page)*PAGE_SIZE):
-		if view.cards[index].has_point(point): options.selected = entries[int(options.page)*PAGE_SIZE+index].id
+		if view.cards[index].has_point(point):
+			options.selected = entries[int(options.page)*PAGE_SIZE+index].id
+			ui.combat_link_menu_motion.selected()
 	ui.queue_redraw()
