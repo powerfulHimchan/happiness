@@ -210,6 +210,7 @@ func _perform_switch(reason: String) -> void:
 
 
 func _apply_active_weapon() -> void:
+	player.active_weapon_family = active_weapon_id
 	for family in PrototypeWeaponRewards.FAMILY_IDS: combat_for(family).set_active(family == active_weapon_id)
 	var combat: Node = combat_for(active_weapon_id)
 	target_selector.set_target_profile(_weapon_name(active_weapon_id), combat.weapon.attack_range_m, active_weapon_id in [BOW_ID, "staff"])

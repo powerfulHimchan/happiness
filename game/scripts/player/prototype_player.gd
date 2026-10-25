@@ -100,6 +100,8 @@ var weapon_training: Dictionary = {}
 var weapon_mastery: Dictionary = {}
 var combat_tactics: Dictionary = {}
 var stat_ranks: Dictionary = {}
+var stat_specializations: Dictionary = {}
+var active_weapon_family: String = "sword"
 var critical_rng := RandomNumberGenerator.new()
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
@@ -642,7 +644,19 @@ func register_trait_weapon_switch(family: String) -> void:
 
 
 func defense_stat() -> int:
-	return PrototypeCombatStats.defense(stat_ranks)
+	return PrototypeCombatStats.defense(stat_ranks) + int(stat_specialization_bonuses(active_weapon_family).defense)
+
+
+func stat_specialization_bonuses(family: String,kind: String = "basic") -> Dictionary:
+	return PrototypeStatSpecializations.bonuses(stat_specializations,family,kind,damage_receiver.health,damage_receiver.max_health,damage_receiver.barrier_health)
+
+
+func critical_chance_stat(family: String = "") -> float:
+	return clampf(PrototypeCombatStats.critical_chance(stat_ranks)+float(stat_specialization_bonuses(active_weapon_family if family.is_empty() else family).chance),0.0,100.0)
+
+
+func critical_damage_stat(family: String = "",kind: String = "basic") -> float:
+	return PrototypeCombatStats.critical_damage(stat_ranks)+float(stat_specialization_bonuses(active_weapon_family if family.is_empty() else family,kind).critical_damage)
 
 
 func defense_multiplier() -> float:
@@ -650,7 +664,7 @@ func defense_multiplier() -> float:
 
 
 func combat_stats_snapshot() -> Dictionary:
-	return {"attack":attack_stat(), "defense":defense_stat(), "critical_chance":PrototypeCombatStats.critical_chance(stat_ranks), "critical_damage":PrototypeCombatStats.critical_damage(stat_ranks), "health":damage_receiver.health, "max_health":damage_receiver.max_health, "damage_reduction":(1.0-defense_multiplier())*100.0}
+	return {"attack":attack_stat(), "defense":defense_stat(), "critical_chance":critical_chance_stat(), "critical_damage":critical_damage_stat(), "health":damage_receiver.health, "max_health":damage_receiver.max_health, "damage_reduction":(1.0-defense_multiplier())*100.0}
 
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
@@ -884,6 +898,8 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	weapon_mastery.clear()
 	combat_tactics.clear()
 	stat_ranks.clear()
+	stat_specializations.clear()
+	active_weapon_family = "sword"
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
 	growth_fist_bonus = 0.0
@@ -1485,18 +1501,25 @@ func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
 	var reserved_weapon := ""
 	if event != null and event.attacker_id == &"player" and event.damage > 0:
 		var is_weapon := false
+		var hit_family := ""
+		var hit_kind := "ultimate" if event.tags.has("ultimate") else "skill" if event.tags.has("skill") else "basic"
 		for family in PrototypeWeaponRewards.FAMILY_IDS:
-			if event.tags.has(family): is_weapon = true
+			if event.tags.has(family):
+				is_weapon = true
+				hit_family = family
+				break
 		if is_weapon and (event.tags.has("basic") or event.tags.has("skill") or event.tags.has("ultimate")):
-			if event.resolved_damage < 0:
+			if not event.resolution_is_current():
+				event.resolved_event_id = event.event_id
+				event.resolved_base_damage = event.damage
 				if hero_traits.guarantees_critical(character_id,event.tags):
 					# Reserve before target callbacks can save a killing blow; roll back blocked hits.
 					reserved_weapon = hero_traits.lumi_weapon
 					hero_traits.lumi_weapon = ""
 					event.critical = true
 				else:
-					event.critical = critical_rng.randf() * 100.0 < PrototypeCombatStats.critical_chance(stat_ranks)
-				event.resolved_damage = maxi(1,roundi(event.damage * PrototypeCombatStats.critical_damage(stat_ranks) / 100.0)) if event.critical else event.damage
+					event.critical = critical_rng.randf() * 100.0 < critical_chance_stat(hit_family)
+				event.resolved_damage = maxi(1,roundi(event.damage * critical_damage_stat(hit_family,hit_kind) / 100.0)) if event.critical else event.damage
 			resolved = event.copy_with_damage(event.resolved_damage)
 			if event.critical: resolved.tags.append("critical")
 	var result := target.receive_damage(resolved)

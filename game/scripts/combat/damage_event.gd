@@ -10,14 +10,20 @@ var attack_id: StringName = &""
 var damage: int = 0
 # Final outgoing value for per-hit telemetry; never changes a projectile's next hit.
 var resolved_damage: int = -1
+var resolved_event_id: StringName = &""
+var resolved_base_damage: int = -1
 var critical: bool = false
 var stagger_s: float = 0.0
 var tags: PackedStringArray = PackedStringArray()
 var source_position: Vector2 = Vector2.ZERO
 
 
+func resolution_is_current() -> bool:
+	return resolved_damage >= 0 and resolved_event_id == event_id and resolved_base_damage == damage
+
+
 func outgoing_damage() -> int:
-	return resolved_damage if resolved_damage >= 0 else damage
+	return resolved_damage if resolution_is_current() else damage
 
 
 func copy_with_damage(amount: int) -> DamageEvent:

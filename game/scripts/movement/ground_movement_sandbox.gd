@@ -1100,7 +1100,15 @@ func _capture_run_build() -> Dictionary:
 	var cooldowns := {}
 	var damage_stances := {}
 	var tactic_conditions := {}
+	var family_stats := {}
+	var skill_damage := {}
 	for weapon in weapon_controller.equipment:
+		skill_damage[weapon] = []
+		for skill_id in weapon_controller.skills[weapon]:
+			var hits: Array[int] = []
+			for raw in PrototypeSkillRewards.SKILLS[skill_id].damage: hits.append(player.growth_damage(int(raw),weapon,"skill"))
+			skill_damage[weapon].append(hits)
+		family_stats[weapon] = {"chance":player.critical_chance_stat(weapon),"damage":player.critical_damage_stat(weapon),"ultimate_damage":player.critical_damage_stat(weapon,"ultimate")}
 		damage[weapon] = {"basic": player.growth_damage(100, weapon, "basic"), "skill": player.growth_damage(100, weapon, "skill")}
 		damage_stances[weapon] = {"ground_basic":player.growth_damage_preview(100,weapon,"basic",true), "air_basic":player.growth_damage_preview(100,weapon,"basic",false), "ground_skill":player.growth_damage_preview(100,weapon,"skill",true), "air_skill":player.growth_damage_preview(100,weapon,"skill",false)}
 		tactic_conditions[weapon] = PrototypeCombatTactics.condition_lines(player.combat_tactics,weapon,player.is_on_floor(),player.damage_receiver.health,player.damage_receiver.max_health,player.damage_receiver.barrier_health)
@@ -1109,6 +1117,9 @@ func _capture_run_build() -> Dictionary:
 		"character_id": player.character_id, "story": _active_story_status(),
 		"combat_stats": player.combat_stats_snapshot(),
 		"hero_trait": player.hero_traits.view(player.character_id),
+		"family_stats":family_stats, "skill_damage":skill_damage,
+		"stat_sources":{"base_attack":PrototypeCombatStats.BASE_ATTACK,"growth_attack":roundi(player.growth_common_bonus*100.0),"trait_multiplier":player.hero_traits.attack_multiplier(player.character_id),"base_defense":PrototypeCombatStats.defense(player.stat_ranks),"base_chance":PrototypeCombatStats.critical_chance(player.stat_ranks),"base_critical_damage":PrototypeCombatStats.critical_damage(player.stat_ranks),"specializations":player.stat_specialization_bonuses(player.active_weapon_family)},
+		"stat_conditions":PrototypeStatSpecializations.condition_lines(player.stat_specializations,player.active_weapon_family,player.damage_receiver.health,player.damage_receiver.max_health,player.damage_receiver.barrier_health),
 		"growth": growth.metrics_snapshot(), "stage": stage_runner.current_metrics(),
 		"equipment": weapon_controller.equipment.duplicate(), "blueprints": weapon_controller.blueprints.duplicate(),
 		"skills": weapon_controller.skills.duplicate(true), "active": weapon_controller.active_weapon_id,

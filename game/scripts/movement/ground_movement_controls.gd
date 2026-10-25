@@ -163,6 +163,9 @@ var run_build_page: int = 0
 var run_build_filter: int = 0
 var run_build_order: int = 0
 var run_build_owned: bool = false
+var hero_status_open: bool = false
+var hero_status_detail: String = ""
+var hero_status_page: int = 0
 var run_build_resume_pending: bool = false
 var result_panel_rect := Rect2()
 var result_retry_rect := Rect2()
@@ -476,7 +479,10 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.RUN_BUILD:
-		close_run_build()
+		if hero_status_open and not hero_status_detail.is_empty():
+			hero_status_detail = ""
+			hero_status_page = 0
+		else: close_run_build()
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.RUN_TASKS:
@@ -2022,7 +2028,7 @@ func _dispatch_action_command(command: PlayerCommand) -> void:
 
 func _handle_header_action(position: Vector2) -> bool:
 	if combat_build_rect.has_point(position):
-		open_run_build()
+		open_hero_status()
 		return true
 	if combat_layout_rect.has_point(position):
 		open_layout_editor()
@@ -2258,7 +2264,7 @@ func _draw_header() -> void:
 	_draw_button(reset_rect, "재설정", false)
 	_draw_button(combat_layout_rect, "배치", false)
 	if combat_build_rect.has_area():
-		_draw_button(combat_build_rect, "도전 상태", false)
+		_draw_button(combat_build_rect, "주인공 상태", false)
 
 
 func _ultimate_hud_label() -> String:
@@ -3498,6 +3504,9 @@ func open_run_build() -> bool:
 	if state.is_empty(): return false
 	release_all_inputs()
 	run_build_state = state.duplicate(true)
+	hero_status_open = false
+	hero_status_detail = ""
+	hero_status_page = 0
 	run_build_tab = 0
 	run_build_page = 0
 	run_build_filter = 0
@@ -3522,6 +3531,9 @@ func _leave_run_build() -> void:
 	run_build_owned = false
 	run_build_resume_pending = false
 	run_build_state.clear()
+	hero_status_open = false
+	hero_status_detail = ""
+	hero_status_page = 0
 	run_build_finished.emit()
 
 
@@ -3533,7 +3545,20 @@ func run_build_snapshot() -> Dictionary:
 	return {"tab": run_build_tab, "filter":run_build_filter, "order":run_build_order, "page": page, "pages": pages, "count": all_cards.size(), "cards": cards.duplicate(true), "layout": PrototypeRunBuildView.layout(_safe_area_in_viewport(), cards.size())}
 
 
+func open_hero_status() -> bool:
+	if not open_run_build(): return false
+	hero_status_open = true
+	queue_redraw()
+	return true
+
+
 func _handle_run_build_touch(position: Vector2) -> void:
+	if hero_status_open:
+		HeroStatusView.handle_touch(self,position)
+		return
+	if HeroStatusView.return_rect(_safe_area_in_viewport()).has_point(position):
+		hero_status_open = true
+		return
 	var snapshot := run_build_snapshot()
 	var layout: Dictionary = snapshot.layout
 	if layout.back.has_point(position):
@@ -3559,6 +3584,9 @@ func _handle_run_build_touch(position: Vector2) -> void:
 
 
 func _draw_run_build() -> void:
+	if hero_status_open:
+		HeroStatusView.draw(self)
+		return
 	var safe := _safe_area_in_viewport()
 	var snapshot := run_build_snapshot()
 	var layout: Dictionary = snapshot.layout
@@ -3584,6 +3612,7 @@ func _draw_run_build() -> void:
 	_draw_button(layout.next, "다음", snapshot.page < snapshot.pages - 1)
 	_draw_village_text("%d / %d" % [int(snapshot.page) + 1, int(snapshot.pages)], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.78), Vector2(safe.size.x * 0.40, safe.size.y * 0.055)), 19, TEXT_COLOR)
 	_draw_button(layout.back, "전투로 돌아가기", true)
+	_draw_button(HeroStatusView.return_rect(safe),"주인공 상태",true)
 
 
 func update_story_status(state: Dictionary) -> void:

@@ -288,7 +288,8 @@ func _test_freeze_and_resume() -> bool:
 	controls.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
 	controls.notification(Control.NOTIFICATION_APPLICATION_RESUMED)
 	if not _check(controls.current_screen_mode() == 16 and paused and sandbox._capture_run_build() == before, "조회 중 앱 비활성/복귀 정지·화면 보존"): return false
-	_tap(controls.run_build_snapshot().layout.back.get_center())
+	var return_area: Rect2 = HeroStatusView.layout(controls._safe_area_in_viewport()).back if controls.hero_status_open else controls.run_build_snapshot().layout.back
+	_tap(return_area.get_center())
 	if not _check(controls.current_screen_mode() == 5 and paused and not controls.open_run_build(), "복귀3초 동안 트리 정지·중복 진입 차단"): return false
 	_tap(controls.action_rects[&"skill_1"].get_center())
 	await create_timer(0.12, true).timeout
