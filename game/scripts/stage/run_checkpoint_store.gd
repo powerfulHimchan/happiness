@@ -190,6 +190,7 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	for card in valid_cards:
 		if not growth.ranks.has(card.id): continue
+		if not PrototypeCombatLinks.prerequisites(card,growth.ranks): return false
 		if card.get("category", "") in PrototypeWeaponRewards.FAMILY_IDS and card.category not in families: return false
 		for required in card.get("requires", []):
 			if not growth.ranks.has(required): return false
@@ -215,6 +216,7 @@ static func valid_state(state: Dictionary) -> bool:
 			if not growth.ranks.has(required): return false
 	var player: Dictionary = state.player
 	if not PrototypeCharacters.valid_id(player.get("character_id", "roan")): return false
+	if not PrototypeCombatLinks.valid_state(player.get("combat_links",{}),growth.ranks,families): return false
 	if not HeroTraits.valid_state(player.get("hero_traits",{}),String(player.get("character_id","roan"))): return false
 	var armed: String = player.get("hero_traits",{}).get("lumi_weapon","")
 	if not armed.is_empty() and not state.weapons.get("equipment",{"sword":0,"bow":0}).has(armed): return false

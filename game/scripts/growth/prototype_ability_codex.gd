@@ -37,6 +37,12 @@ static func cards(discovered: Dictionary, ranks: Dictionary) -> Array[Dictionary
 			for required in card.requires: prerequisites.append(String(by_id[required].title))
 			var prerequisite := " + ".join(prerequisites) + " 획득 후"
 			condition = condition + " · " + prerequisite if card.has("job") else prerequisite
+		if card.has("requires_any"):
+			var alternatives: Array[String] = []
+			for required in card.requires_any: alternatives.append(String(by_id[required].title))
+			condition = "다음 중 하나: " + " / ".join(alternatives)
+			if String(card.id).begins_with("link_extend_"):
+				condition = PrototypeCombatLinks.LABELS[PrototypeCombatLinks.STYLES.find(String(card.id).trim_prefix("link_extend_"))]+" 계열 중 하나 획득 · 무기 무관"
 		lines.append("조건: " + condition)
 		if card.has("excludes"):
 			var exclusive: Array[String] = []

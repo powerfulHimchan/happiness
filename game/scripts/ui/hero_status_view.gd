@@ -19,7 +19,7 @@ static func layout(safe: Rect2) -> Dictionary:
 	for index in 2:
 		gear.append(box(safe,.61+index*.185,.17,.17,.26))
 		for slot in 2: skills.append(box(safe,.61+index*.185,.45+slot*.09,.17,.078))
-	return {"portrait":box(safe,.035,.17,.21,.65),"stats":box(safe,.265,.17,.325,.40),"gear":gear,"skills":skills,"defense":box(safe,.28,.595,.145,.07),"offense":box(safe,.44,.595,.135,.07),"passive":box(safe,.265,.70,.325,.12),"conditions":box(safe,.61,.66,.355,.07),"browse":box(safe,.28,.865,.30,.08),"back":box(safe,.62,.865,.345,.08),"modal":box(safe,.10,.14,.80,.72),"previous":box(safe,.14,.755,.18,.065),"next":box(safe,.68,.755,.18,.065),"close":box(safe,.37,.755,.26,.065)}
+	return {"portrait":box(safe,.035,.17,.21,.65),"stats":box(safe,.265,.17,.325,.40),"gear":gear,"skills":skills,"defense":box(safe,.28,.595,.145,.07),"offense":box(safe,.44,.595,.135,.07),"passive":box(safe,.265,.70,.325,.12),"conditions":box(safe,.61,.66,.355,.07),"links":box(safe,.61,.865,.17,.08),"browse":box(safe,.28,.865,.30,.08),"back":box(safe,.795,.865,.17,.08),"modal":box(safe,.10,.14,.80,.72),"previous":box(safe,.14,.755,.18,.065),"next":box(safe,.68,.755,.18,.065),"close":box(safe,.37,.755,.26,.065)}
 
 static func families(state: Dictionary) -> Array:
 	var result := [String(state.get("active","sword"))]
@@ -154,10 +154,14 @@ static func draw(ui: Control) -> void:
 	text(ui,PrototypeRelic.hud(state.relic),box(safe,.615,.75,.345,.035),18,MUTE)
 	text(ui,String(PrototypeMemoryAbilities.profile(String(state.memory)).name),box(safe,.615,.795,.345,.03),18,MUTE)
 	ui._draw_button(view.browse,"보유 능력·장비 목록",true)
+	ui._draw_button(view.links,"전투 연계",true)
 	ui._draw_button(view.back,"전투로 돌아가기",true)
 	if not ui.hero_status_detail.is_empty(): draw_detail(ui,safe,view)
 
 static func draw_detail(ui: Control,safe: Rect2,view: Dictionary) -> void:
+	if ui.hero_status_detail == "links":
+		CombatLinksView.draw(ui)
+		return
 	var entry := inspect(String(ui.hero_status_detail),ui.run_build_state)
 	if entry.is_empty(): return
 	ui.draw_rect(Rect2(Vector2.ZERO,ui.size),Color(0.01,.04,.07,.83))
@@ -176,6 +180,9 @@ static func draw_detail(ui: Control,safe: Rect2,view: Dictionary) -> void:
 	text(ui,"%d / %d" % [page+1,pages],box(safe,.43,.825,.14,.025),17,MUTE)
 
 static func handle_touch(ui: Control,point: Vector2) -> void:
+	if ui.hero_status_detail == "links":
+		CombatLinksView.handle_touch(ui,point)
+		return
 	var view := layout(ui._safe_area_in_viewport())
 	if not ui.hero_status_detail.is_empty():
 		var entry := inspect(String(ui.hero_status_detail),ui.run_build_state)
@@ -199,7 +206,7 @@ static func handle_touch(ui: Control,point: Vector2) -> void:
 		if view.gear[index].has_point(point): ui.hero_status_detail = "weapon:"+String(held[index])
 		for slot in 2:
 			if view.skills[index*2+slot].has_point(point): ui.hero_status_detail = "skill:%s:%d" % [held[index],slot]
-	for id in ["defense","offense","passive","conditions"]:
+	for id in ["defense","offense","passive","conditions","links"]:
 		if view[id].has_point(point): ui.hero_status_detail = id
 	ui.hero_status_page = 0
 	ui.queue_redraw()

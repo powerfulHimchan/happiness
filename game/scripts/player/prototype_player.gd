@@ -51,6 +51,7 @@ const STOP_EPSILON_MPS := 0.02
 
 var character_id: String = "roan"
 var hero_traits := HeroTraits.new()
+var combat_links := PrototypeCombatLinks.new()
 var movement_animation := HeroMovementAnimation.new()
 var combat_animation := HeroCombatAnimation.new()
 var motion_polish := HeroMotionPolish.new()
@@ -191,6 +192,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	hero_traits.tick(delta)
+	combat_links.tick(delta)
 	if _lifesteal_flash_remaining_s > 0.0:
 		_lifesteal_flash_remaining_s = maxf(0.0, _lifesteal_flash_remaining_s - delta)
 		queue_redraw()
@@ -461,6 +463,8 @@ func receive_damage(event: DamageEvent) -> int:
 	]
 
 	if result == DamageReceiver.Result.APPLIED:
+		if not damage_receiver.dead and event.tags.has("enemy") and not event.tags.has("hazard") and not event.tags.has("trap"): combat_links.trigger("hurt",weapon_equipment)
+		if damage_receiver.dead: combat_links.windows.clear()
 		var cause := _damage_cause_label(event)
 		damage_cause_counts[cause] = int(damage_cause_counts.get(cause, 0)) + 1
 		motion_polish.recoil(global_position.x - event.source_position.x)
@@ -645,6 +649,7 @@ func register_trait_precise_evade() -> void:
 func register_trait_weapon_switch(family: String) -> void:
 	if not damage_receiver.dead and not get_tree().paused:
 		hero_traits.weapon_switched(character_id,family)
+		combat_links.trigger("switch",weapon_equipment,family)
 
 
 func defense_stat() -> int:
@@ -675,9 +680,10 @@ func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") 
 	return growth_damage_preview(base_damage, weapon_id, kind, is_on_floor())
 
 
-func growth_damage_preview(base_damage: int, weapon_id: String, kind: String, grounded: bool) -> int:
+func growth_damage_preview(base_damage: int, weapon_id: String, kind: String, grounded: bool, include_links: bool = true) -> int:
 	var weapon_bonus := float(get("growth_" + weapon_id + "_bonus")) if weapon_id in PrototypeWeaponRewards.FAMILY_IDS else 0.0
 	var damage := float(base_damage) * (attack_value() / PrototypeCombatStats.BASE_ATTACK + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind) * PrototypeWeaponMastery.damage_multiplier(weapon_mastery, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health) * PrototypeCombatTactics.damage_multiplier(combat_tactics, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health, damage_receiver.barrier_health)
+	if include_links and not damage_receiver.dead: damage *= combat_links.multiplier(weapon_id,kind)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
 	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
 
@@ -731,6 +737,7 @@ func use_recovery_potion() -> bool:
 	var before := damage_receiver.health
 	var barrier_before := damage_receiver.barrier_health
 	potions_remaining -= 1
+	combat_links.trigger("potion",weapon_equipment)
 	var recipe := PrototypePotionRecipes.profile(potion_recipe)
 	# 정수 백분율로 곱한 뒤 나눠 20%+10%의 소수 오차가 한 체력을 더 올리지 않게 한다.
 	var heal_percent := roundi(potion_heal_ratio() * 100)
@@ -858,6 +865,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 func reset_movement_test(spawn_position: Vector2) -> void:
 	hero_traits.reset()
+	combat_links.reset()
 	expedition = 0
 	barrier_focus_unlocked = false
 	crisis_power_unlocked = false
@@ -1056,6 +1064,7 @@ func _start_ground_evade() -> void:
 	ground_evade_count += 1
 	last_mobility_result = "지상 회피"
 	_begin_invincibility()
+	combat_links.trigger("evade",weapon_equipment)
 	evade_started.emit()
 
 
@@ -1074,6 +1083,7 @@ func _start_air_dash() -> void:
 	air_dash_available = false
 	air_dash_count += 1
 	last_mobility_result = "공중 대시"
+	combat_links.trigger("evade",weapon_equipment)
 	evade_started.emit()
 
 
@@ -1324,7 +1334,9 @@ func _update_movement_tests(delta: float) -> void:
 
 func set_character(id: String) -> bool:
 	if not PrototypeCharacters.valid_id(id): return false
-	if character_id != id: hero_traits.reset()
+	if character_id != id:
+		hero_traits.reset()
+		combat_links.windows.clear()
 	character_id = id
 	motion_polish.reset(avatar_sprite)
 	movement_animation.reset(avatar_sprite, id)
@@ -1539,7 +1551,12 @@ func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
 				event.resolved_damage = maxi(1,roundi(event.damage * critical_damage_stat(hit_family,hit_kind) / 100.0)) if event.critical else event.damage
 			resolved = event.copy_with_damage(event.resolved_damage)
 			if event.critical: resolved.tags.append("critical")
+	# Arm next-hit links before target callbacks can checkpoint a killing blow.
+	var previous_links := combat_links.snapshot()
+	if resolved != null and resolved.attacker_id == &"player" and resolved.damage > 0 and not damage_receiver.dead:
+		combat_links.hit(resolved.tags,weapon_equipment)
 	var result := target.receive_damage(resolved)
+	if result != DamageReceiver.Result.APPLIED: combat_links.windows = previous_links
 	if result != DamageReceiver.Result.APPLIED and not reserved_weapon.is_empty():
 		hero_traits.lumi_weapon = reserved_weapon
 		event.resolved_damage = -1

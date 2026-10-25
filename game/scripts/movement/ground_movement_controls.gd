@@ -165,6 +165,7 @@ var run_build_order: int = 0
 var run_build_owned: bool = false
 var hero_status_open: bool = false
 var hero_status_detail: String = ""
+var combat_link_options: Dictionary = CombatLinksView.defaults()
 var hero_status_page: int = 0
 var run_build_resume_pending: bool = false
 var result_panel_rect := Rect2()
@@ -3505,6 +3506,7 @@ func open_run_build() -> bool:
 	release_all_inputs()
 	run_build_state = state.duplicate(true)
 	hero_status_open = false
+	combat_link_options = CombatLinksView.defaults()
 	hero_status_detail = ""
 	hero_status_page = 0
 	run_build_tab = 0
@@ -3532,6 +3534,7 @@ func _leave_run_build() -> void:
 	run_build_resume_pending = false
 	run_build_state.clear()
 	hero_status_open = false
+	combat_link_options = CombatLinksView.defaults()
 	hero_status_detail = ""
 	hero_status_page = 0
 	run_build_finished.emit()

@@ -63,6 +63,7 @@ static func _build_cards() -> Array[Dictionary]:
 	var result: Array[Dictionary] = BASE_CARDS.duplicate(true)
 	result.append_array(PrototypeCombatStats.CARDS)
 	result.append_array(PrototypeStatSpecializations.CARDS)
+	result.append_array(PrototypeCombatLinks.CARDS)
 	result.append_array(PrototypeWeaponTraining.CARDS)
 	result.append_array(PrototypeWeaponMastery.CARDS)
 	result.append_array(PrototypeCombatTactics.CARDS)
@@ -149,6 +150,7 @@ func reset_run(starting_weapon: String = "sword") -> void:
 	player.combat_tactics.clear()
 	player.stat_ranks.clear()
 	player.stat_specializations.clear()
+	player.combat_links.reset()
 	selection_message = ""
 	_rewarded_lives.clear()
 	jobs.reset(starting_weapon)
@@ -184,6 +186,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	player.combat_tactics = PrototypeCombatTactics.selected(ranks)
 	player.stat_ranks = PrototypeCombatStats.selected(ranks)
 	player.stat_specializations = PrototypeStatSpecializations.selected(ranks)
+	player.combat_links.learn(ranks)
 	ultimate.set_time_collector_boost_unlocked(int(ranks.get("time_collector_boost", 0)) == 1)
 	player.set_orb_magnet_unlocked(int(ranks.get("orb_magnet", 0)) == 1)
 	player.set_orb_vitality_unlocked(int(ranks.get("orb_vitality", 0)) == 1)
@@ -307,6 +310,7 @@ func choose_card(index: int) -> bool:
 	player.combat_tactics = PrototypeCombatTactics.selected(ranks)
 	player.stat_ranks = PrototypeCombatStats.selected(ranks)
 	player.stat_specializations = PrototypeStatSpecializations.selected(ranks)
+	player.combat_links.learn(ranks)
 	match card_id:
 		"barrier_focus": player.barrier_focus_unlocked = true
 		"crisis_power": player.crisis_power_unlocked = true
@@ -511,6 +515,7 @@ func _emit_metrics() -> void:
 
 
 func _card_available(card: Dictionary) -> bool:
+	if not PrototypeCombatLinks.prerequisites(card,ranks): return false
 	if card.get("category", "") in PrototypeWeaponRewards.FAMILY_IDS and not weapons.equipment.has(card.category): return false
 	if card.has("job") and card.job != jobs.job_id and card.job != PrototypeJobProgress.base_job(jobs.job_id): return false
 	for required in card.get("requires", []):

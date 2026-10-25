@@ -544,7 +544,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
-		"player": {"hero_traits":player.hero_traits.snapshot(), "character_id": player.character_id, "health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress, "barrier_health": player.damage_receiver.barrier_health},
+		"player": {"combat_links":player.combat_links.snapshot(), "hero_traits":player.hero_traits.snapshot(), "character_id": player.character_id, "health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress, "barrier_health": player.damage_receiver.barrier_health},
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
@@ -737,6 +737,7 @@ func continue_saved_run() -> bool:
 	player.queue_redraw()
 	weapon_controller.restore_checkpoint(state.weapons)
 	player.hero_traits.restore(state.player.get("hero_traits",{}))
+	player.combat_links.restore(state.player.get("combat_links",{}),growth.ranks)
 	ultimate_controller.reset_ultimate()
 	ultimate_controller.gauge = int(state.ultimate.gauge)
 	ultimate_controller.set_time_collector_boost_unlocked(int(growth.ranks.get("time_collector_boost", 0)) == 1)
@@ -1102,7 +1103,9 @@ func _capture_run_build() -> Dictionary:
 	var tactic_conditions := {}
 	var family_stats := {}
 	var skill_damage := {}
+	var damage_without_links := {}
 	for weapon in weapon_controller.equipment:
+		damage_without_links[weapon] = {"basic":player.growth_damage_preview(100,weapon,"basic",player.is_on_floor(),false),"skill":player.growth_damage_preview(100,weapon,"skill",player.is_on_floor(),false)}
 		skill_damage[weapon] = []
 		for skill_id in weapon_controller.skills[weapon]:
 			var hits: Array[int] = []
@@ -1117,6 +1120,7 @@ func _capture_run_build() -> Dictionary:
 		"character_id": player.character_id, "story": _active_story_status(),
 		"combat_stats": player.combat_stats_snapshot(),
 		"hero_trait": player.hero_traits.view(player.character_id),
+		"combat_links":player.combat_links.snapshot(), "damage_without_links":damage_without_links,
 		"family_stats":family_stats, "skill_damage":skill_damage,
 		"stat_sources":{"base_attack":PrototypeCombatStats.BASE_ATTACK,"growth_attack":roundi(player.growth_common_bonus*100.0),"trait_multiplier":player.hero_traits.attack_multiplier(player.character_id),"base_defense":PrototypeCombatStats.defense(player.stat_ranks),"base_chance":PrototypeCombatStats.critical_chance(player.stat_ranks),"base_critical_damage":PrototypeCombatStats.critical_damage(player.stat_ranks),"specializations":player.stat_specialization_bonuses(player.active_weapon_family)},
 		"stat_conditions":PrototypeStatSpecializations.condition_lines(player.stat_specializations,player.active_weapon_family,player.damage_receiver.health,player.damage_receiver.max_health,player.damage_receiver.barrier_health),
