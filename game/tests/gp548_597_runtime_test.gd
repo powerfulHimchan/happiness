@@ -40,7 +40,7 @@ func _run() -> void:
 		"seed":
 			_seed_sources()
 			await _open_scene()
-			_check(PermanentAchievements.earned_count(scene.achievement_store.snapshot()) == 50, "existing durable sources migrate all fifty goals at startup")
+			_check(PermanentAchievements.earned_count(scene.achievement_store.snapshot()) == PermanentAchievements.DEFINITIONS.size(), "existing durable sources migrate all ninety-two goals at startup")
 			await _ui(true)
 		"resume":
 			var before := _bytes(STEM + "main.jsonl")
@@ -69,7 +69,7 @@ func _run() -> void:
 
 func _catalog() -> void:
 	var definitions := PermanentAchievements.DEFINITIONS
-	_check(definitions.size() == 50, "exactly fifty playable permanent goals")
+	_check(definitions.size() == 92, "original fifty plus forty-two research goals")
 	var seen := {}
 	var zero := PermanentAchievements.observations({}, {}, {})
 	_check(zero.values().all(func(v: Variant) -> bool: return v == 0), "fresh player receives no achievements")
@@ -88,7 +88,7 @@ func _catalog() -> void:
 	var all_ids: Array = abilities.keys()
 	for index in definitions.size():
 		var item: Dictionary = definitions[index]
-		_check(not seen.has(item.id) and item.ticket == 548 + index, "unique ordered feature ticket: " + item.id)
+		_check(not seen.has(item.id) and item.ticket == (548 + index if index < 50 else 718 + index - 50), "unique ordered feature ticket: " + item.id)
 		seen[item.id] = true
 		_check(full[item.id] == item.target, "real source can complete: " + item.id)
 		var ledger := _ledger(item.id)
@@ -178,11 +178,12 @@ func _ui(select_all: bool) -> void:
 		_check(controls.village_page == "achievements" and controls.achievement_page == 0, "real plaza -> achievement tab")
 		var before := _bytes(scene.achievement_store.save_path)
 		var seen: Array[String] = []
-		for page in 17:
+		for page in ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0):
 			var view: Dictionary = controls.village_snapshot()
-			_check(view.codex_page == page and view.codex_pages == 17 and view.cards.size() == (2 if page == 16 else 3), "all fifty cards, including last partial page")
+			_check(view.codex_page == page and view.codex_pages == ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0) and view.cards.size() == (2 if page == view.codex_pages - 1 else 3), "all ninety-two cards, including last partial page")
 			var rects: Array = view.layout.cards.duplicate()
 			rects.append_array(view.tabs.values())
+			rects.append_array(view.achievement_toolbar.values())
 			rects.append_array(view.pager.values())
 			rects.append_array([view.layout.back, view.layout.start])
 			if controls.checkpoint_available: rects.append(view.layout["continue"])
@@ -211,8 +212,8 @@ func _ui(select_all: bool) -> void:
 			controls.queue_redraw()
 			await process_frame
 			_tap(view.pager.next.get_center())
-		_check(seen.size() == 50 and controls.achievement_page == 16, "page boundary cannot skip or exceed content")
-		for ignored in 20: _tap(controls.village_snapshot().pager.previous.get_center())
+		_check(seen.size() == PermanentAchievements.DEFINITIONS.size() and controls.achievement_page == ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0) - 1, "page boundary cannot skip or exceed content")
+		for ignored in 40: _tap(controls.village_snapshot().pager.previous.get_center())
 		_check(controls.achievement_page == 0, "previous page lower bound")
 		if not select_all or dimensions != Vector2(1280, 720): _check(_bytes(scene.achievement_store.save_path) == before, "read-only page navigation writes no ledger")
 		_tap(controls.village_snapshot().tabs.history.get_center())
@@ -280,7 +281,7 @@ func _failure() -> void:
 	_check(scene._record_abilities(["sword_power"]) == OK and fresh_book.snapshot().has("sword_power"), "optional achievement failure does not block real ability recording")
 	scene.ability_discovery_store = original_book
 	failing.blocked = false
-	_check(scene._sync_achievements() == OK and PermanentAchievements.earned_count(failing.snapshot()) == 50, "progress write recovers from authoritative discoveries")
+	_check(scene._sync_achievements() == OK and PermanentAchievements.earned_count(failing.snapshot()) == PermanentAchievements.DEFINITIONS.size(), "progress write recovers from authoritative discoveries")
 	controls.show_main_screen()
 	before = _bytes(failing.save_path)
 	_check(not scene._select_achievement_title("route_wind") and _bytes(failing.save_path) == before, "title selection outside achievements is rejected")
@@ -320,7 +321,7 @@ func _render() -> void:
 		root.content_scale_size = Vector2i(1920,1080)
 		controls.village_page = "achievements"
 		controls.update_achievement_status(full)
-		for page in 17:
+		for page in ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0):
 			controls.achievement_page = page
 			controls.queue_redraw()
 			await process_frame

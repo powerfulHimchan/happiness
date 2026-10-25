@@ -62,7 +62,7 @@ static func draw(canvas: Control) -> void:
 	elif not canvas.pending_boss_legacy.is_empty():
 		notice = BossLegacyStore.description(String(canvas.pending_boss_legacy.get("choice", "")))
 	_text(canvas, notice, boxes.notice, int(21 * unit), PAPER)
-	var progress := "칭호 · " + PermanentAchievements.title_name(canvas.achievement_state) if not String(canvas.achievement_state.get("title", "")).is_empty() else "영구 업적 %d/50 · 광장 기록에서 확인" % PermanentAchievements.earned_count(canvas.achievement_state)
+	var progress := "칭호 · " + PermanentAchievements.title_name(canvas.achievement_state) if not String(canvas.achievement_state.get("title", "")).is_empty() else "영구 업적 %d/%d · 광장 기록에서 확인" % [PermanentAchievements.earned_count(canvas.achievement_state), PermanentAchievements.DEFINITIONS.size()]
 	_text(canvas, progress, boxes.progress, int(19 * unit), Color("d5e2d8"))
 
 

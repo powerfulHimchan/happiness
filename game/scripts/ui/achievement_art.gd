@@ -14,7 +14,7 @@ const ICONS := {
 	"bond": preload("res://assets/achievements/bond.svg"),
 	"secret": preload("res://assets/achievements/secret.svg"),
 }
-const CATEGORIES := {"탐험":"exploration", "기본 직업":"vocation", "상위 직업":"vocation", "무기 탐구":"weapon", "능력 수집":"growth", "엔딩":"ending", "원정":"expedition", "기억":"memory", "인연":"bond", "비밀":"secret"}
+const CATEGORIES := {"탐험":"exploration", "기본 직업":"vocation", "상위 직업":"vocation", "무기 탐구":"weapon", "능력 수집":"growth", "엔딩":"ending", "원정":"expedition", "기억":"memory", "인연":"bond", "비밀":"secret", "무기 연구":"weapon", "전술 연구":"weapon", "공용 연구":"growth"}
 
 static func symbol(card: Dictionary) -> String:
 	return CATEGORIES.get(PermanentAchievements.definition(String(card.id)).get("category", ""), "exploration")

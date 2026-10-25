@@ -1,7 +1,7 @@
 class_name PermanentAchievements
 extends RefCounted
 
-## GP-548–597: fifty permanent goals backed by existing durable discoveries.
+## GP-548–597 and GP-718–759: permanent goals backed by durable discoveries.
 const PAGE_SIZE := 3
 const FAMILY_NAMES := {"sword":"검", "bow":"활", "fist":"주먹", "staff":"지팡이", "polearm":"장봉", "shield":"방패"}
 static var DEFINITIONS: Array[Dictionary] = _build_definitions()
@@ -39,6 +39,7 @@ static func _build_definitions() -> Array[Dictionary]:
 	result.append(_entry("guardian_companion", "성문 수호자의 벗", "인연", 1, "성문 수호기사 구출로 동행 해금", "guardian"))
 	result.append(_entry("secret_archive", "시계탑의 비밀지기", "비밀", 1, "시계탑 기록보관소의 비밀 장면 기록", "secret", FinalRitual.SECRET_SCENE))
 	for index in result.size(): result[index].ticket = 548 + index
+	result.append_array(AchievementResearch.definitions())
 	return result
 
 static func definition(id: String) -> Dictionary:
@@ -64,6 +65,9 @@ static func observations(legacy: Dictionary, story: Dictionary, abilities: Dicti
 			"route": value = int(legacy.get("routes", {}).get(item.key) == true)
 			"job": value = int(legacy.get("jobs", {}).get(item.key) == true)
 			"family": value = int(families[item.key])
+			"research":
+				for id in item.required:
+					if known.has(id): value += 1
 			"abilities": value = known.size()
 			"ending": value = int(story.get("endings", {}).has(item.key))
 			"expedition": value = int(story.get("expedition_clears", {}).values().has(int(item.key)))
@@ -94,5 +98,5 @@ static func cards(state: Dictionary) -> Array[Dictionary]:
 		var progress := clampi(int(state.get("progress", {}).get(item.id, 0)), 0, item.target)
 		var complete := progress == int(item.target)
 		var selected: bool = state.get("title", "") == item.id and complete
-		result.append({"id":item.id, "name":item.name, "open":complete, "progress":progress, "target":item.target, "selected":selected, "status":"장착 중 · 다시 누르면 해제" if selected else "영구 달성 · 누르면 칭호 장착" if complete else "미달성 · " + item.category, "lines":[item.hint, "진행 %d / %d" % [progress, item.target], "보상: " + item.name + " 칭호", "칭호는 외형 표시 · 전투 수치 유지"]})
+		result.append({"id":item.id, "name":item.name, "category":item.category, "open":complete, "progress":progress, "target":item.target, "selected":selected, "status":"장착 중 · 다시 누르면 해제" if selected else "영구 달성 · 누르면 칭호 장착" if complete else "미달성 · " + item.category, "lines":[item.hint, "진행 %d / %d" % [progress, item.target], "보상: " + item.name + " 칭호", "칭호는 외형 표시 · 전투 수치 유지"]})
 	return result

@@ -1686,8 +1686,9 @@ func _sync_achievements() -> Error:
 
 
 func _select_achievement_title(id: String) -> bool:
-	if controls.current_screen_mode() != 13 or controls.village_page != "achievements" or PermanentAchievements.definition(id).is_empty(): return false
+	if controls.current_screen_mode() != 13 or controls.village_page != "achievements": return false
 	if not controls.achievement_message.is_empty() and _sync_achievements() != OK: return false
+	if PermanentAchievements.definition(id).is_empty(): return false
 	var state := achievement_store.snapshot()
 	if not PermanentAchievements.earned(state, id): return false
 	var error := achievement_store.select_title("" if state.title == id else id)

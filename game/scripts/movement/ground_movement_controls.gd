@@ -179,6 +179,9 @@ var skill_codex_page: int = 0
 var weapon_codex_page: int = 0
 var relic_codex_page: int = 0
 var route_atlas_page: int = 0
+var achievement_filter: int = 0
+var achievement_category: int = 0
+var achievement_sort: int = 0
 var achievement_page: int = 0
 var achievement_state: Dictionary = {"progress":{}, "title":""}
 var achievement_message: String = ""
@@ -2964,12 +2967,19 @@ func update_achievement_status(state: Dictionary, message: String = "") -> void:
 	queue_redraw()
 
 
+func _reset_achievement_browser() -> void:
+	achievement_page = 0
+	achievement_filter = 0
+	achievement_category = 0
+	achievement_sort = 0
+
+
 func show_village() -> void:
 	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]:
 		return
 	release_all_inputs()
 	village_page = "village"
-	achievement_page = 0
+	_reset_achievement_browser()
 	advanced_job_page = 0
 	skill_codex_page = 0
 	weapon_codex_page = 0
@@ -3027,10 +3037,12 @@ func village_snapshot() -> Dictionary:
 	record_history_page = clampi(record_history_page, 0, history_pages - 1)
 	if village_page == "history":
 		cards = cards.slice(record_history_page * PrototypeVillageView.HISTORY_PAGE_SIZE, (record_history_page + 1) * PrototypeVillageView.HISTORY_PAGE_SIZE)
-	var achievement_pages := ceili(float(PermanentAchievements.DEFINITIONS.size()) / PermanentAchievements.PAGE_SIZE)
+	var achievement_view := AchievementBrowser.query(achievement_state, achievement_filter, achievement_category, achievement_sort) if village_page == "achievements" else {}
+	var achievement_pages := maxi(1, ceili(float(achievement_view.get("visible", PermanentAchievements.DEFINITIONS.size())) / PermanentAchievements.PAGE_SIZE))
 	achievement_page = clampi(achievement_page, 0, achievement_pages - 1)
 	if village_page == "achievements":
-		cards = PermanentAchievements.cards(achievement_state).slice(achievement_page * PermanentAchievements.PAGE_SIZE, (achievement_page + 1) * PermanentAchievements.PAGE_SIZE)
+		cards.assign(achievement_view.cards.slice(achievement_page * PermanentAchievements.PAGE_SIZE, (achievement_page + 1) * PermanentAchievements.PAGE_SIZE))
+		if cards.is_empty(): cards.append(AchievementBrowser.empty_card())
 	var safe := _safe_area_in_viewport()
 	var tabs := {}
 	var pager := {}
@@ -3048,7 +3060,14 @@ func village_snapshot() -> Dictionary:
 			tabs[["forge", "weapons", "skills"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
 	if village_page in ["advanced_jobs", "abilities", "skills", "forge", "weapons", "history", "relics", "atlas", "achievements"]:
 		pager = {"previous": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06)), "next": Rect2(safe.position + Vector2(safe.size.x * 0.71, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06))}
-	return {"page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": PrototypeVillageView.layout(safe, cards.size(), checkpoint_available, village_page == "jobs"), "tabs": tabs, "pager": pager, "achievement_page": achievement_page, "achievement_pages": achievement_pages, "ability_page": ability_codex_page, "ability_pages": pages, "skill_page": skill_codex_page, "skill_pages": skill_pages, "weapon_page": weapon_codex_page, "weapon_pages": weapon_pages, "history_page": record_history_page, "history_pages": history_pages, "relic_page": relic_codex_page, "relic_pages": relic_pages, "route_page": route_atlas_page, "route_pages": route_pages, "advanced_page": advanced_job_page, "advanced_pages": advanced_pages, "codex_page": achievement_page if village_page == "achievements" else advanced_job_page if village_page == "advanced_jobs" else route_atlas_page if village_page == "atlas" else relic_codex_page if village_page == "relics" else record_history_page if village_page == "history" else weapon_codex_page if village_page in ["forge", "weapons"] else skill_codex_page if village_page == "skills" else ability_codex_page, "codex_pages": achievement_pages if village_page == "achievements" else advanced_pages if village_page == "advanced_jobs" else route_pages if village_page == "atlas" else relic_pages if village_page == "relics" else history_pages if village_page == "history" else weapon_pages if village_page in ["forge", "weapons"] else skill_pages if village_page == "skills" else pages}
+	var village_layout := PrototypeVillageView.layout(safe, cards.size(), checkpoint_available, village_page == "jobs")
+	var achievement_toolbar := {}
+	if village_page == "achievements":
+		achievement_toolbar = AchievementBrowser.toolbar(safe)
+		for index in village_layout.cards.size():
+			village_layout.cards[index].position.y = safe.position.y + safe.size.y*0.43
+			village_layout.cards[index].size.y = safe.size.y*0.33
+	return {"achievement_view":achievement_view, "achievement_toolbar":achievement_toolbar, "page": village_page, "resident": bool(unlocked_memories.get("clockwork_guard", false)), "cards": cards, "layout": village_layout, "tabs": tabs, "pager": pager, "achievement_page": achievement_page, "achievement_pages": achievement_pages, "ability_page": ability_codex_page, "ability_pages": pages, "skill_page": skill_codex_page, "skill_pages": skill_pages, "weapon_page": weapon_codex_page, "weapon_pages": weapon_pages, "history_page": record_history_page, "history_pages": history_pages, "relic_page": relic_codex_page, "relic_pages": relic_pages, "route_page": route_atlas_page, "route_pages": route_pages, "advanced_page": advanced_job_page, "advanced_pages": advanced_pages, "codex_page": achievement_page if village_page == "achievements" else advanced_job_page if village_page == "advanced_jobs" else route_atlas_page if village_page == "atlas" else relic_codex_page if village_page == "relics" else record_history_page if village_page == "history" else weapon_codex_page if village_page in ["forge", "weapons"] else skill_codex_page if village_page == "skills" else ability_codex_page, "codex_pages": achievement_pages if village_page == "achievements" else advanced_pages if village_page == "advanced_jobs" else route_pages if village_page == "atlas" else relic_pages if village_page == "relics" else history_pages if village_page == "history" else weapon_pages if village_page in ["forge", "weapons"] else skill_pages if village_page == "skills" else pages}
 
 
 func _handle_village_touch(position: Vector2) -> void:
@@ -3074,7 +3093,7 @@ func _handle_village_touch(position: Vector2) -> void:
 				weapon_codex_page = 0
 				relic_codex_page = 0
 				record_history_page = 0
-				achievement_page = 0
+				_reset_achievement_browser()
 				break
 		if village_page == "advanced_jobs" and not snapshot.pager.is_empty():
 			if snapshot.pager.previous.has_point(position): advanced_job_page = maxi(0, advanced_job_page - 1)
@@ -3091,12 +3110,21 @@ func _handle_village_touch(position: Vector2) -> void:
 		if village_page == "relics" and not snapshot.pager.is_empty():
 			if snapshot.pager.previous.has_point(position): relic_codex_page = maxi(0, relic_codex_page - 1)
 			elif snapshot.pager.next.has_point(position): relic_codex_page = mini(snapshot.relic_pages - 1, relic_codex_page + 1)
-		if village_page == "achievements":
-			if not snapshot.pager.is_empty() and snapshot.pager.previous.has_point(position): achievement_page = maxi(0, achievement_page - 1)
+		if village_page == "achievements" and snapshot.page == "achievements":
+			if snapshot.achievement_toolbar.filter.has_point(position):
+				achievement_filter = (achievement_filter+1) % AchievementBrowser.FILTERS.size()
+				achievement_page = 0
+			elif snapshot.achievement_toolbar.category.has_point(position):
+				achievement_category = (achievement_category+1) % AchievementBrowser.categories().size()
+				achievement_page = 0
+			elif snapshot.achievement_toolbar.sort.has_point(position):
+				achievement_sort = (achievement_sort+1) % AchievementBrowser.SORTS.size()
+				achievement_page = 0
+			elif not snapshot.pager.is_empty() and snapshot.pager.previous.has_point(position): achievement_page = maxi(0, achievement_page - 1)
 			elif not snapshot.pager.is_empty() and snapshot.pager.next.has_point(position): achievement_page = mini(snapshot.achievement_pages - 1, achievement_page + 1)
 			elif snapshot.page == "achievements":
 				for i in layout.cards.size():
-					if layout.cards[i].has_point(position):
+					if layout.cards[i].has_point(position) and (not String(snapshot.cards[i].id).is_empty() or not achievement_message.is_empty()):
 						achievement_title_selected.emit(String(snapshot.cards[i].id))
 						break
 		if village_page == "history" and not snapshot.pager.is_empty():
@@ -3153,7 +3181,7 @@ func _draw_village() -> void:
 	if village_page == "relics":
 		subtitle = "두 번째 정예에서 하나 선택 · 이번 도전에만 유지"
 	if village_page == "achievements":
-		subtitle = achievement_message if not achievement_message.is_empty() else "달성 %d/50 · 칭호: %s" % [PermanentAchievements.earned_count(achievement_state), PermanentAchievements.title_name(achievement_state)]
+		subtitle = achievement_message if not achievement_message.is_empty() else "달성 %d/%d · 미달성 %d · 표시 %d · 칭호: %s" % [snapshot.achievement_view.earned, snapshot.achievement_view.total, snapshot.achievement_view.locked, snapshot.achievement_view.visible, PermanentAchievements.title_name(achievement_state)]
 	if village_page == "abilities":
 		subtitle = ability_codex_message if not ability_codex_message.is_empty() else "발견 %d/%d · 직접 선택한 능력만 기록해요" % [discovered_abilities.size(), PrototypeAbilityCodex.definitions().size()]
 	_draw_text_centered(subtitle, Rect2(safe.position + Vector2(0, safe.size.y * 0.15), Vector2(safe.size.x, safe.size.y * 0.06)), 20, TEXT_COLOR)
@@ -3167,6 +3195,9 @@ func _draw_village() -> void:
 			_draw_button(snapshot.tabs[page], PrototypeVillageView.TAB_LABELS[page], village_page == page)
 	else:
 		_draw_text_centered(resident, Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.06)), 19, ACTIVE_COLOR if snapshot.resident else MUTED_TEXT_COLOR)
+	if village_page == "achievements":
+		for key in ["filter", "category", "sort"]:
+			_draw_button(snapshot.achievement_toolbar[key], String(snapshot.achievement_view[key]), false)
 	for i in snapshot.cards.size():
 		var card: Dictionary = snapshot.cards[i]
 		var rect: Rect2 = layout.cards[i]

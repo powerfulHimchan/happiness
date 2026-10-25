@@ -22,6 +22,9 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/growth/achievement_research.gd"
+  "$game_root/scripts/ui/achievement_browser.gd"
+  "$game_root/tests/gp718_767_runtime_test.gd"
   "$game_root/scripts/growth/prototype_combat_tactics.gd"
   "$game_root/tests/gp668_717_runtime_test.gd"
   "$game_root/scripts/ui/run_preparation_view.gd"
@@ -952,6 +955,10 @@ if [[ -n "$godot_command" ]]; then
     --script res://tests/start_screen_runtime_test.gd
   checked_godot 90s --headless --path "$game_root" \
     --script res://tests/gp608_617_art_runtime_test.gd
+  for research_phase in catalog seed resume live ui; do
+    checked_godot 120s --headless --path "$game_root" \
+      --script res://tests/gp718_767_runtime_test.gd -- "$research_phase"
+  done
   for achievement_phase in catalog seed resume live failure corrupt; do
     checked_godot 120s --headless --path "$game_root" \
       --script res://tests/gp548_597_runtime_test.gd -- "$achievement_phase"
