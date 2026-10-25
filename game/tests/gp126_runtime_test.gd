@@ -117,7 +117,13 @@ func _run() -> void:
 			controls.begin_retry()
 			if not _check(controls.current_screen_mode() == 2 and store.load_checkpoint() == saved and growth.ranks.is_empty(), "복구 실패 중 새 도전도 기존 저장 보호"): return
 		"legacy-resume":
-			if not _check(controls.discovered_abilities == {"sword_power": true} and not player.double_jump_unlocked and not player.lifesteal_unlocked, "이전 저장의 실제 보유 능력만 영구 복구"): return
+			# The first stage can legitimately award additional weapon abilities as
+			# the growth catalog expands. Recover exactly the saved IDs, not a fixed list.
+			var saved := store.load_checkpoint()
+			var expected := {}
+			if not _check(not saved.is_empty(), "복구할 이전 도전 저장 존재"): return
+			for id in saved.growth.ranks: expected[id] = true
+			if not _check(expected.has("sword_power") and controls.discovered_abilities == expected and not player.double_jump_unlocked and not player.lifesteal_unlocked, "이전 저장의 실제 보유 능력만 영구 복구"): return
 			var journal := FileAccess.get_file_as_string(GP126_BOOK)
 			sandbox._refresh_checkpoint()
 			if not _check(FileAccess.get_file_as_string(GP126_BOOK) == journal and sandbox.continue_saved_run(), "복구 반복 조회 쓰기 없음·이어하기 성공"): return
