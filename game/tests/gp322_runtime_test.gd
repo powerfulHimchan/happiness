@@ -52,21 +52,31 @@ func _run() -> void:
 		"preview":
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.start_length_rects[3].get_center())
+			controls.close_preparation_options()
 			var before: int = recorder.summary_snapshot().run_count
+			controls.open_preparation_options()
 			_tap(controls.expedition_rect.get_center())
+			controls.close_preparation_options()
 			if not _check(not controls.expedition_unlocked() and controls.selected_expedition == 0 and not controls.begin_retry(weapon, 10, "journey", character, false, 1) and recorder.summary_snapshot().run_count == before, "미해금 실제 입력·시작 API 차단·기록 불변"): return
 			journal.fail_writes = true
 			if not _check(journal.record_ending("prior-arrival", ArrivalEnding.ID, character, "rescue") != OK and not controls.expedition_unlocked(), "영구 엔딩 저장 실패로 해금하지 않음"): return
 			journal.fail_writes = false
 			if journal.record_ending("prior-arrival", ArrivalEnding.ID, character, "rescue") != OK: return
+			controls.open_preparation_options()
 			_tap(controls.expedition_rect.get_center())
+			controls.close_preparation_options()
 			if not _check(controls.expedition_unlocked() and controls.selected_expedition == 1 and not controls.begin_retry(weapon, 3, "standard", character, false, 1), "기록 성공 후 실제 원정 선택·일반 도전 결합 거부"): return
 			_tap(controls.start_weapon_cancel_rect.get_center())
 			if not _check(controls.selected_expedition == 0, "준비 취소는 이전 난이도 복원"): return
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.expedition_rect.get_center())
+			controls.close_preparation_options()
+			controls.open_preparation_options()
 			_tap(controls.start_length_rects[0].get_center())
+			controls.close_preparation_options()
 			if not _check(controls.selected_expedition == 0 and not journal.snapshot().endings.is_empty(), "일반 도전 전환은 기본 난이도·영구 해금 보존"): return
 			if not controls.begin_retry(weapon, 3, "standard", character): return
 			if not _step_section() or not _step_section() or not _step_section(): return
@@ -132,8 +142,12 @@ func _start_journey(character: String, weapon: String) -> bool:
 	controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 	controls.selected_story_enabled = expedition_story
 	runner.region_rng.seed = 322 if character == "roan" else 323
+	controls.open_preparation_options()
 	_tap(controls.start_length_rects[3].get_center())
+	controls.close_preparation_options()
+	controls.open_preparation_options()
 	_tap(controls.expedition_rect.get_center())
+	controls.close_preparation_options()
 	_tap(controls.start_weapon_confirm_rect.get_center())
 	if not _check(runner.expedition == 1 and runner.run_mode == "journey" and runner.stage_limit == 10, "실제 준비 입력으로 원정 1 시작"): return false
 	return _ack_scene(true) if expedition_story else true

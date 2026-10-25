@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<defs>
+<linearGradient id="paper"><stop stop-color="#ffefcc"/><stop offset=".46" stop-color="#fff6df"/><stop offset=".5" stop-color="#e4c68d"/><stop offset=".54" stop-color="#fff5dc"/><stop offset="1" stop-color="#ffe9bd"/></linearGradient>
+<linearGradient id="leather" x2="0" y2="1"><stop stop-color="#936435"/><stop offset="1" stop-color="#473326"/></linearGradient>
+<pattern id="grain" width="41" height="39" patternUnits="userSpaceOnUse"><circle cx="10" cy="13" r="1" fill="#b98a4c" opacity=".08"/><path d="m24 29 7-2" stroke="#b98a4c" opacity=".07"/></pattern>
+<g id="corner" fill="none" stroke="#c99545" stroke-width="4"><path d="M0 70Q0 0 70 0M12 60Q12 12 60 12M24 42q-13-18 9-20 25-3 12 20-10 15-21 0ZM38 25q8-22 25-10M23 38Q0 47 14 63"/><path d="m48 11 8-8 7 8-7 8Z" fill="#eac471"/><path d="m12 48-9 8 9 7 7-7Z" fill="#eac471"/></g>
+</defs>
+<ellipse cx="720" cy="861" rx="690" ry="34" fill="#1d302b" opacity=".20"/>
+<path d="M20 69Q332 2 720 60 1114 1 1420 69L1410 850Q1088 818 720 880 337 818 30 850Z" fill="url(#leather)" stroke="#543620" stroke-width="8"/>
+<path d="M41 74Q335 14 720 75 1101 15 1399 74L1385 826Q1077 803 720 857 358 805 55 826Z" fill="#d4ad6c" stroke="#edcf8a" stroke-width="4"/>
+<path d="M53 65Q355 20 720 89 1094 20 1387 65L1374 806Q1077 786 720 838 355 785 66 806Z" fill="url(#paper)" stroke="#c69449" stroke-width="3"/>
+<path d="M53 65Q355 20 720 89 1094 20 1387 65L1374 806Q1077 786 720 838 355 785 66 806Z" fill="url(#grain)"/>
+<path d="M720 89v749" stroke="#b98a46" stroke-width="4" opacity=".6"/>
+<path d="M700 91q-17 320 0 729M740 91q17 320 0 729" fill="none" stroke="#d0a56b" stroke-width="2" opacity=".5"/>
+<path d="M94 111Q358 75 674 130L674 774Q354 735 105 764ZM766 130Q1080 74 1347 111L1335 764Q1083 736 766 774Z" fill="none" stroke="#d4ac62" stroke-width="3"/>
+<use href="#corner" x="99" y="111"/><use href="#corner" transform="translate(675 130) scale(-1 1)"/>
+<use href="#corner" transform="translate(107 764) scale(1 -1)"/><use href="#corner" transform="translate(673 774) scale(-1 -1)"/>
+<use href="#corner" x="768" y="130"/><use href="#corner" transform="translate(1347 111) scale(-1 1)"/>
+<use href="#corner" transform="translate(768 774) scale(1 -1)"/><use href="#corner" transform="translate(1335 764) scale(-1 -1)"/>
+<path d="M722 838q27-17 54-2l-1 49-29-17-29 12Z" fill="#238083" stroke="#ad873f" stroke-width="3"/>
+</svg>

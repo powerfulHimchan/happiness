@@ -123,7 +123,9 @@ func _run() -> void:
 				controls.show_main_screen()
 				controls.show_start_weapon_selection()
 				controls.selected_story_enabled = false
+				controls.open_preparation_options()
 				_tap(controls.start_length_rects[mode].get_center())
+				controls.close_preparation_options()
 				_tap(controls.start_weapon_confirm_rect.get_center())
 				if not _sera_support("rescue", 20 if mode == 0 else 0): return
 				var snapshot: Dictionary = sandbox._capture_run_build()

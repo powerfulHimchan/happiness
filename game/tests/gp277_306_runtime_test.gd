@@ -206,7 +206,9 @@ func _start_story(character: String, weapon: String) -> bool:
 	if not controls.selected_story_enabled: _tap(controls.story_toggle_rect.get_center())
 	_tap(controls.character_confirm_rect.get_center())
 	_tap(controls.start_weapon_card_rects[0 if weapon == "sword" else 1].get_center())
+	controls.open_preparation_options()
 	_tap(controls.start_length_rects[2 if character == "lumi" else 0].get_center())
+	controls.close_preparation_options()
 	_tap(controls.start_weapon_confirm_rect.get_center())
 	return _check(controls.current_screen_mode() == 18 and sandbox.story_run.enabled and player.character_id == character and weapons.active_weapon_id == weapon, "실제 설정→이야기 켜짐→검/활·로안/루미 시작")
 

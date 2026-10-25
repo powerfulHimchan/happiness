@@ -22,6 +22,10 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/ui/run_preparation_view.gd"
+  "$game_root/scripts/ui/equipped_hero_preview.gd"
+  "$game_root/assets/preparation/storybook.svg"
+  "$game_root/tests/run_preparation_runtime_test.gd"
   "$game_root/scripts/economy/advanced_run_tasks.gd"
   "$game_root/tests/gp618_667_runtime_test.gd"
   "$game_root/scripts/ui/start_screen_view.gd"
@@ -891,7 +895,7 @@ if [[ -n "$godot_command" ]]; then
     # These content matrices isolate saves by every argument after phase.
     # Keep seed/resume/next together, distribute independent content cases.
     case "$script" in
-      res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd|res://tests/gp618_667_runtime_test.gd)
+      res://tests/gp344_runtime_test.gd|res://tests/gp354_runtime_test.gd|res://tests/gp364_runtime_test.gd|res://tests/gp374_runtime_test.gd|res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd|res://tests/gp618_667_runtime_test.gd)
         shard_key="$script|${user_args[*]:1}"
         ;;
     esac
@@ -922,6 +926,8 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 90s --headless --path "$game_root" \
+    --script res://tests/run_preparation_runtime_test.gd
   checked_godot 45s --headless --path "$game_root" \
     --script res://tests/start_screen_runtime_test.gd
   checked_godot 90s --headless --path "$game_root" \

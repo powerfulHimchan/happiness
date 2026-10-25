@@ -91,7 +91,7 @@ func _run() -> void:
 		_check(ui.current_screen_mode() == ui.ScreenMode.STORY_JOURNAL, "memory journal input")
 		ui.show_main_screen()
 		_tap(ui.main_start_rect)
-		_check(ui.current_screen_mode() == ui.ScreenMode.START_WEAPON, "new journey input")
+		_check(ui.current_screen_mode() == ui.ScreenMode.START_CHARACTER, "new journey starts at hero selection")
 		ui.show_main_screen()
 	print("Start screen runtime test: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)

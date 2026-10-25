@@ -35,8 +35,12 @@ func _run() -> void:
 		"legacy-seed":
 			controls.show_start_weapon_selection()
 			if not _check(controls.unlocked_memories.is_empty(), "처음에는 두 영구 기억 모두 잠김"): return
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[1].get_center())
+			controls.close_preparation_options()
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[2].get_center())
+			controls.close_preparation_options()
 			if not _check(controls.selected_memory_id == "" and legacy.claim("invalid-run", false, "core_echo").error == ERR_INVALID_DATA, "잠긴 기억은 UI·저장 양쪽에서 장착 차단"): return
 			_tap(controls.start_weapon_cancel_rect.get_center())
 			# GP-110이 작성한 필드 그대로: 이미 소비한 구출도 영구 능력을 해금한다.
@@ -52,28 +56,41 @@ func _run() -> void:
 				controls._refresh_start_weapon_layout()
 				var safe: Rect2 = controls.layout_snapshot().safe
 				var rectangles: Array = controls.start_weapon_card_rects.duplicate()
-				rectangles.append_array(controls.memory_card_rects)
-				rectangles.append_array([controls.boss_legacy_toggle_rect, controls.start_weapon_cancel_rect, controls.start_weapon_confirm_rect])
+				rectangles.append_array([controls.start_weapon_cancel_rect, controls.start_weapon_confirm_rect])
+				var option_rects: Array = controls.memory_card_rects.duplicate()
+				option_rects.append(controls.boss_legacy_toggle_rect)
+				for first in option_rects.size():
+					if not _check(safe.encloses(option_rects[first]),"설정 패널 입력 안전 영역"): return
+					for second in range(first+1,option_rects.size()):
+						if not _check(not option_rects[first].intersects(option_rects[second]),"설정 패널 입력 비중첩"): return
 				for i in rectangles.size():
 					if not _check(safe.encloses(rectangles[i]), "두 화면 비율 모든 선택 입력 안전 영역"): return
 					for j in range(i + 1, rectangles.size()):
 						if not _check(not rectangles[i].intersects(rectangles[j]), "무기·기억·보상·확정 입력 겹침 없음"): return
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[1].get_center())
+			controls.close_preparation_options()
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[2].get_center())
+			controls.close_preparation_options()
 			controls.notification(Node.NOTIFICATION_APPLICATION_PAUSED)
 			controls.notification(Node.NOTIFICATION_APPLICATION_RESUMED)
 			if not _check(controls.selected_memory_id == "clockwork_guard", "잠긴 공격 기억 터치는 수호 선택 유지·앱 복귀 보존"): return
 			_tap(controls.start_weapon_cancel_rect.get_center())
 			if not _check(legacy.progress_snapshot().selected_memory == "" and player.damage_receiver.max_health == 100, "취소는 영구 선택·플레이어 변경 없음"): return
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[1].get_center())
+			controls.close_preparation_options()
 			legacy.fail_writes = true
 			var original := FileAccess.get_file_as_string(GP111_LEGACY_PATH)
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(controls.current_screen_mode() == 2 and FileAccess.get_file_as_string(GP111_LEGACY_PATH) == original and not growth.run_active and player.memory_id == "", "보상 없는 기억 선택 저장 실패는 시작 차단"): return
 			legacy.fail_writes = false
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[1].get_center())
+			controls.close_preparation_options()
 			var confirm: Vector2 = controls.start_weapon_confirm_rect.get_center()
 			_tap(confirm)
 			if not _check(player.memory_id == "clockwork_guard" and player.damage_receiver.max_health == 105 and player.damage_receiver.health == 105 and legacy.progress_snapshot().selected_memory == "clockwork_guard" and player.boss_legacy.is_empty() and player.growth_damage(100, "sword", "skill") == 100, "수호 단일 장착·체력 +5·공격 불변·선택 저장"): return
@@ -108,14 +125,18 @@ func _run() -> void:
 		"echo-start":
 			if not _check(legacy.pending_reward().choice == "destroy" and controls.unlocked_memories.size() == 2, "재실행 양쪽 영구 기억·미사용 파괴 보상 유지"): return
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[2].get_center())
+			controls.close_preparation_options()
 			legacy.fail_writes = true
 			var before := FileAccess.get_file_as_string(GP111_LEGACY_PATH)
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(controls.current_screen_mode() == 2 and FileAccess.get_file_as_string(GP111_LEGACY_PATH) == before and legacy.pending_reward().choice == "destroy" and legacy.progress_snapshot().selected_memory == "clockwork_guard", "보상 소비·기억 선택 묶음 저장 실패는 둘 다 보존"): return
 			legacy.fail_writes = false
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[2].get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.memory_id == "core_echo" and player.boss_legacy.choice == "destroy" and player.damage_receiver.max_health == 100 and player.growth_damage(100, "sword", "basic") == 110 and player.growth_damage(100, "sword", "skill") == 121 and player.growth_damage(100, "bow", "skill") == 121 and player.growth_damage(100, "sword", "ultimate") == 110 and legacy.pending_reward().is_empty(), "공격 기억·일회 핵 곱연산·스킬만 강화·수호 제거"): return
 			weapons.set_equipment({"sword": 1, "bow": 0})
@@ -129,11 +150,15 @@ func _run() -> void:
 			var contents := FileAccess.get_file_as_string(GP111_SAVE_PATH)
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[1].get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_cancel_rect.get_center())
 			if not _check(player.memory_id == "core_echo" and legacy.progress_snapshot().selected_memory == "core_echo" and FileAccess.get_file_as_string(GP111_SAVE_PATH) == contents, "다른 기억 선택 취소는 현재 도전·선호·체크포인트 유지"): return
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[0].get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.memory_id == "" and player.boss_legacy.is_empty() and player.damage_receiver.max_health == 100 and player.growth_damage(100, "sword", "skill") == 100 and legacy.progress_snapshot().unlocked.size() == 2, "기억 없이 새 도전·영구 해금은 유지·효과 초기화"): return
 			# GP-105~110 형식에 기억 필드가 없으면 기존 효과를 추가하지 않는다.
@@ -146,7 +171,9 @@ func _run() -> void:
 			for ignored in 5:
 				controls.show_main_screen()
 				controls.show_start_weapon_selection()
+				controls.open_preparation_options()
 				_tap(controls.memory_card_rects[1].get_center())
+				controls.close_preparation_options()
 				_tap(controls.start_weapon_confirm_rect.get_center())
 				if not _check(player.memory_id == "clockwork_guard" and player.damage_receiver.max_health == 105 and legacy.progress_snapshot().unlocked.size() == 2, "반복 도전 체력 +5 고정·두 능력 동시 장착 없음"): return
 			recorder.clear_records()

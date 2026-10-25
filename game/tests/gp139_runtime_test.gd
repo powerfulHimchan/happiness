@@ -144,7 +144,9 @@ func _start_length(count: int, weapon: String, enabled: bool = true) -> bool:
 	sandbox._finish_growth_selection()
 	controls.show_main_screen()
 	controls.show_start_weapon_selection()
+	controls.open_preparation_options()
 	_tap(controls.start_length_rects[0 if count == 3 else 1].get_center())
+	controls.close_preparation_options()
 	_tap(controls.start_weapon_card_rects[0 if weapon == "sword" else 1].get_center())
 	controls.use_boss_legacy = enabled
 	_tap(controls.start_weapon_confirm_rect.get_center())
@@ -194,16 +196,23 @@ func _test_length_preview() -> bool:
 		controls.queue_redraw()
 		await process_frame
 		var rects: Array = controls.start_length_rects.duplicate()
-		rects.append_array(controls.start_weapon_card_rects)
 		rects.append_array(controls.memory_card_rects)
-		rects.append_array([controls.boss_legacy_toggle_rect, controls.start_weapon_confirm_rect, controls.start_weapon_cancel_rect])
+		rects.append_array([controls.boss_legacy_toggle_rect])
+		# Settings and weapon cards are distinct input layers, verified separately.
+		var weapon_rects: Array = controls.start_weapon_card_rects.duplicate()
+		weapon_rects.append_array([controls.start_weapon_confirm_rect,controls.start_weapon_cancel_rect])
+		for first in weapon_rects.size():
+			for second in range(first+1,weapon_rects.size()):
+				if not _check(not weapon_rects[first].intersects(weapon_rects[second]),"무기 선택 입력 비중첩"): return false
 		var safe: Rect2 = controls.layout_snapshot().safe
 		for i in rects.size():
 			if not _check(safe.encloses(rects[i]), "두 화면비 길이/무기/기억/보상/확정/취소 안전 영역"): return false
 			for j in range(i + 1, rects.size()):
 				if not _check(not rects[i].intersects(rects[j]), "모든 선택 터치 영역 비중첩"): return false
 		for index in 2:
+			controls.open_preparation_options()
 			_tap(controls.start_length_rects[index].get_center())
+			controls.close_preparation_options()
 			if not _check(controls.selected_stage_limit == (3 if index == 0 else 5) and runner.checkpoint_snapshot() == run and store.load_checkpoint() == saved and legacy.pending_reward() == pending and weapons.checkpoint_snapshot() == equipment, "길이 미리 선택은 실제 도전/저장/보상/장비 변경 없음"): return false
 		controls.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
 		controls.notification(Control.NOTIFICATION_APPLICATION_RESUMED)

@@ -60,16 +60,24 @@ func _run() -> void:
 			if journal.record_ending("prior-arrival", ArrivalEnding.ID, character, "rescue") != OK: return
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.start_length_rects[3].get_center())
+			controls.close_preparation_options()
 			if not _check(controls.expedition_unlocked() and controls.expedition_cap == 1 and not controls.begin_retry(weapon, 10, "journey", character, false, 2), "원정 1 미완주 시 원정 2 시작 차단"): return
 			if phase == "preview":
 				if journal.record_expedition_clear("prior-arrival", 1) != OK: return
 				controls.expedition_unlocked()
 				for expected in [1, 2, 0]:
+					controls.open_preparation_options()
 					_tap(controls.expedition_rect.get_center())
+					controls.close_preparation_options()
 					if not _check(controls.selected_expedition == expected, "기본·원정1·원정2 실제 순환 입력"): return
+				controls.open_preparation_options()
 				_tap(controls.expedition_rect.get_center())
+				controls.close_preparation_options()
+				controls.open_preparation_options()
 				_tap(controls.expedition_rect.get_center())
+				controls.close_preparation_options()
 				_tap(controls.start_weapon_cancel_rect.get_center())
 				if not _check(controls.selected_expedition == 0 and not controls.begin_retry(weapon, 5, "regions", character, false, 2), "준비 취소·다른 모드 원정2 차단"): return
 			else:
@@ -171,8 +179,12 @@ func _start_journey(character: String, weapon: String) -> bool:
 	controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 	controls.selected_story_enabled = expedition_story
 	controls.selected_expedition = 0
+	controls.open_preparation_options()
 	_tap(controls.start_length_rects[3].get_center())
+	controls.close_preparation_options()
+	controls.open_preparation_options()
 	for index in expected_level: _tap(controls.expedition_rect.get_center())
+	controls.close_preparation_options()
 	_tap(controls.start_weapon_confirm_rect.get_center())
 	if not _check(runner.expedition == expected_level and player.expedition == expected_level and runner.run_mode == "journey", " 실제 준비 입력으로 난이도 시작"): return false
 	return _ack_scene(true) if expedition_story else true

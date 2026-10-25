@@ -55,12 +55,19 @@ func _run() -> void:
 			_tap(controls.village_snapshot().layout.cards[2].get_center())
 			if not _check(_files() == journal, "동일 조제 재선택은 중복 저널 없음"): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			_tap(controls.character_confirm_rect.get_center())
 			_tap(controls.start_weapon_cancel_rect.get_center())
+			_tap(controls.character_cancel_rect.get_center())
 			if not _check(_files() == journal and controls.current_screen_mode() == 13, "준비 취소는 도전/조제 보존"): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			_tap(controls.character_confirm_rect.get_center())
+			controls.open_preparation_options()
 			_tap(controls.start_length_rects[1].get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_card_rects[1].get_center())
+			controls.open_preparation_options()
 			if controls.use_boss_legacy: _tap(controls.boss_legacy_toggle_rect.get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.potion_recipe == PORTIONED_ID and player.potions_remaining == 3 and player.potions_capacity() == 3 and runner.stage_limit == 5 and controls.movement_metrics.potion_heal_percent == 20 and controls._action_label(&"recovery_potion") == "회복 3/3", "실제 준비 확인·활/5단계·소분20%3개·HUD"): return
 			if not await _choose_earned("magic_barrier") or not await _choose_earned(RESTORATIVE_ID) or not await _choose_earned("potion_pouch"): return

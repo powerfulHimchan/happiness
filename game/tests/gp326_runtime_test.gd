@@ -52,7 +52,9 @@ func _run() -> void:
 			if not _unlock_four(character): return
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.start_length_rects[3].get_center())
+			controls.close_preparation_options()
 			if not _check(controls.expedition_unlocked() and controls.expedition_cap == 4 and not controls.begin_retry(weapon, 10, "journey", character, false, 5), "원정4 미완주는 원정5 차단"): return
 			if journal.record_ending("prior-four", ArrivalEnding.ID, character, "rescue") != OK: return
 			expedition_journal.fail_clear = true
@@ -61,9 +63,13 @@ func _run() -> void:
 			if journal.record_expedition_clear("prior-four", 4) != OK: return
 			controls.expedition_unlocked()
 			for level in [1, 2, 3, 4, 5, 0]:
+				controls.open_preparation_options()
 				_tap(controls.expedition_rect.get_center())
+				controls.close_preparation_options()
 				if not _check(controls.selected_expedition == level, "기본·원정1·2·3·4·5 순환"): return
+			controls.open_preparation_options()
 			for ignored in 5: _tap(controls.expedition_rect.get_center())
+			controls.close_preparation_options()
 			if not _check(controls.expedition_label().contains("봉인"), "원정5 패턴 설명"): return
 			_tap(controls.start_weapon_cancel_rect.get_center())
 			if not _check(controls.selected_expedition == 0 and not controls.begin_retry(weapon, 5, "regions", character, false, 5) and not controls.begin_retry(weapon, 10, "journey", character, false, 6), "취소·다른 모드·미구현 원정 차단"): return

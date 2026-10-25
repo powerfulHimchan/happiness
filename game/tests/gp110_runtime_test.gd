@@ -54,7 +54,9 @@ func _run() -> void:
 				controls._refresh_start_weapon_layout()
 				var safe: Rect2 = controls.layout_snapshot().safe
 				if not _check(safe.encloses(controls.boss_legacy_toggle_rect) and not controls.boss_legacy_toggle_rect.intersects(controls.start_weapon_card_rects[0]) and not controls.boss_legacy_toggle_rect.intersects(controls.start_weapon_confirm_rect), "두 화면 비율 보상 토글 안전 영역·입력 겹침 없음"): return
+			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_cancel_rect.get_center())
 			if not _check(not legacy.pending_reward().is_empty(), "선택 취소는 보상을 소비하지 않음"): return
 			controls.show_start_weapon_selection()
@@ -112,7 +114,9 @@ func _run() -> void:
 			sandbox._update_boss_legacy_status()
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.boss_legacy.is_empty() and legacy.pending_reward().is_empty() and legacy.grant("gp110-skip-source", "rescue") == OK and legacy.pending_reward().is_empty(), "보상 건너뛰기는 1회 기회 소비·재완주 통지로 부활 없음"): return
 			var file := FileAccess.open(LEGACY_PATH, FileAccess.READ_WRITE)

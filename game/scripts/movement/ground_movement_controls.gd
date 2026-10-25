@@ -327,6 +327,12 @@ var selected_backup_weapon: String = "bow"
 var previous_backup_weapon: String = "bow"
 var requested_backup_weapon: String = "bow"
 var start_backup_rects: Array[Rect2] = []
+var preparation_flow := false
+var start_options_open := false
+var preview_weapon_id := "sword"
+var preview_elapsed_s := 0.0
+var preview_application_active := true
+var equipped_preview := EquippedHeroPreview.new()
 var start_weapon_previous_selection: String = "sword"
 var start_weapon_return_mode: int = ScreenMode.MAIN
 var start_weapon_card_rects: Array[Rect2] = []
@@ -398,6 +404,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if screen_mode == ScreenMode.START_WEAPON and preview_application_active and not start_options_open:
+		preview_elapsed_s = fposmod(preview_elapsed_s+maxf(0,delta),TAU*2.0)
 	_update_mode_timer(delta)
 	android_validation_session_s += delta
 	redraw_accumulator += delta
@@ -430,10 +438,14 @@ func _notification(what: int) -> void:
 		_validate_control_layout()
 		queue_redraw()
 	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
+		preview_application_active = false
 		android_validation_pause_count += 1
 		release_all_inputs()
 		_append_action_log("앱 비활성화 · 입력 초기화")
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		preview_application_active = true
 	elif what == NOTIFICATION_APPLICATION_RESUMED:
+		preview_application_active = true
 		android_validation_resume_count += 1
 		_append_action_log("앱 복귀 · 입력 상태 정상")
 
@@ -449,6 +461,11 @@ func _input(event: InputEvent) -> void:
 			close_story_journal()
 			get_viewport().set_input_as_handled()
 			return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.START_WEAPON:
+		if start_options_open: close_preparation_options()
+		else: _back_from_weapon_selection()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.START_CHARACTER:
 		_close_character_selection(false)
 		get_viewport().set_input_as_handled()
@@ -1122,9 +1139,60 @@ func begin_stage_from_main(starting_weapon: String = "sword") -> bool:
 	return begin_retry(starting_weapon)
 
 
+func show_new_run_preparation() -> void:
+	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]: return
+	show_start_weapon_selection()
+	preparation_flow = true
+	show_character_selection()
+
+
+func open_preparation_options() -> void:
+	if screen_mode != ScreenMode.START_WEAPON: return
+	start_options_open = true
+	release_all_inputs()
+	queue_redraw()
+
+
+func close_preparation_options() -> void:
+	start_options_open = false
+	release_all_inputs()
+	queue_redraw()
+
+
+func _select_preview(family: String) -> void:
+	preview_weapon_id = family
+	preview_elapsed_s = 0.0
+	queue_redraw()
+
+
+func _cancel_preparation() -> void:
+	selected_starting_weapon = start_weapon_previous_selection
+	selected_backup_weapon = previous_backup_weapon
+	selected_stage_limit = previous_stage_limit
+	selected_run_mode = previous_run_mode
+	selected_expedition = previous_expedition
+	selected_character_id = previous_character_id
+	selected_story_enabled = previous_story_enabled
+	selected_memory_id = start_memory_previous_selection
+	start_options_open = false
+	preparation_flow = false
+	release_all_inputs()
+	screen_mode = start_weapon_return_mode
+	_refresh_layout()
+	queue_redraw()
+
+
+func _back_from_weapon_selection() -> void:
+	start_options_open = false
+	if preparation_flow: show_character_selection()
+	else: _cancel_preparation()
+
+
 func show_start_weapon_selection() -> void:
 	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]:
 		return
+	preparation_flow = false
+	start_options_open = false
 	expedition_unlocked()
 	start_weapon_return_mode = screen_mode
 	start_weapon_previous_selection = selected_starting_weapon
@@ -1139,35 +1207,22 @@ func show_start_weapon_selection() -> void:
 	use_boss_legacy = not pending_boss_legacy.is_empty()
 	release_all_inputs()
 	screen_mode = ScreenMode.START_WEAPON
+	_select_preview(selected_starting_weapon)
 	_refresh_start_weapon_layout()
 	queue_redraw()
 
 
 func _refresh_start_weapon_layout() -> void:
-	var safe := _safe_area_in_viewport()
-	var gap := minf(32.0, safe.size.x * 0.03)
-	var card_width := (safe.size.x * 0.90 - gap * (PrototypeWeaponRewards.FAMILY_IDS.size()-1)) / PrototypeWeaponRewards.FAMILY_IDS.size()
-	expedition_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.105), Vector2(safe.size.x * 0.62, safe.size.y * 0.065))
-	character_open_rect = Rect2(safe.position + Vector2(safe.size.x * 0.70, safe.size.y * 0.105), Vector2(safe.size.x * 0.25, safe.size.y * 0.065))
-	start_length_rects.clear()
-	var length_width := (safe.size.x * 0.90 - gap * 3) / 4.0
-	for index in 4:
-		start_length_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (length_width + gap), safe.size.y * 0.19), Vector2(length_width, safe.size.y * 0.065)))
-	start_weapon_card_rects.clear()
-	start_backup_rects.clear()
-	for index in PrototypeWeaponRewards.FAMILY_IDS.size():
-		start_weapon_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (card_width + gap), safe.size.y * 0.28), Vector2(card_width, safe.size.y * 0.29)))
-	for rect in start_weapon_card_rects:
-		start_backup_rects.append(Rect2(rect.position + Vector2(12, rect.size.y * 0.75), Vector2(rect.size.x - 24, rect.size.y * 0.20)))
-	memory_card_rects.clear()
-	var memory_gap := minf(18.0, safe.size.x * 0.02)
-	var memory_width := (safe.size.x * 0.90 - memory_gap * 2) / 3.0
-	for index in 3:
-		memory_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (memory_width + memory_gap), safe.size.y * 0.60), Vector2(memory_width, safe.size.y * 0.12)))
-	var button_width := minf(280.0, safe.size.x * 0.27)
-	boss_legacy_toggle_rect = Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.75), Vector2(safe.size.x * 0.90, safe.size.y * 0.06))
-	start_weapon_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - gap * 0.5 - button_width, safe.size.y * 0.86), Vector2(button_width, minf(64.0, safe.size.y * 0.09)))
-	start_weapon_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 + gap * 0.5, safe.size.y * 0.86), start_weapon_cancel_rect.size)
+	var view := RunPreparationView.weapon_layout(_safe_area_in_viewport(),start_options_open)
+	expedition_rect = view.expedition
+	character_open_rect = view.character
+	start_length_rects.assign(view.lengths)
+	start_weapon_card_rects.assign(view.cards)
+	start_backup_rects.assign(view.backup)
+	memory_card_rects.assign(view.memories)
+	boss_legacy_toggle_rect = view.legacy
+	start_weapon_cancel_rect = view.back
+	start_weapon_confirm_rect = view.confirm
 
 
 func start_legacy_description() -> String:
@@ -1198,40 +1253,7 @@ func expedition_label() -> String:
 
 func _draw_start_weapon_selection() -> void:
 	_refresh_start_weapon_layout()
-	var safe := _safe_area_in_viewport()
-	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
-	_draw_text_centered("네 지역 각 두 구간 · 성문과 중심부 · 약 30분" if selected_run_mode == JourneyRoutePlan.MODE else "연습 후 네 지역을 한 번씩 방문합니다" if selected_run_mode == "regions" else "도전 길이와 시작 무기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.025), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
-	_draw_button(expedition_rect, expedition_label(), selected_expedition > 0)
-	_draw_button(character_open_rect, "주인공·이야기 · " + PrototypeCharacters.display_name(selected_character_id), false)
-	_draw_village_text("조제 · " + PrototypePotionRecipes.summary(preferred_potion_recipe) + (" · 수호기사 지원30" if guardian_companion_unlocked else "") + (" · 세라 지원40" if sera_companion_unlocked else ""), Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.815), Vector2(safe.size.x * 0.90, safe.size.y * 0.03)), 17, PASS_COLOR)
-	for index in 4:
-		var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계", "전체 여정 · 10단계"][index]
-		var selected := selected_run_mode == JourneyRoutePlan.MODE if index == 3 else selected_run_mode == "regions" if index == 2 else selected_run_mode == "standard" and selected_stage_limit == (3 if index == 0 else 5)
-		_draw_button(start_length_rects[index], label, selected)
-	var ids := PrototypeWeaponRewards.FAMILY_IDS
-	var names := ["검", "활", "주먹", "지팡이", "장봉", "방패"]
-	var descriptions := ["자동 3연격 · 사거리 1.6m", "자동 사격 · 사거리 8m", "자동 4연타 · 사거리 1.1m", "자동 마법탄 · 사거리 7m", "자동 2연소 · 정면 2.8m", "자동 가격 · 사거리 1.5m"]
-	var skills := ["돌진 베기 · 회전 베기", "관통 화살 · 화살비", "쇄도권 · 연환권", "화염구 · 얼음창", "횡소봉 · 관통봉", "방패 올리기 · 응수"]
-	for index in ids.size():
-		var rect := start_weapon_card_rects[index]
-		var selected: bool = selected_starting_weapon == ids[index]
-		draw_style_box(_panel_style(Color("254f51") if selected else PANEL_COLOR), rect)
-		if selected:
-			draw_rect(rect.grow(-3.0), ACTIVE_COLOR, false, 3.0)
-		var labels := [names[index] + (" · 선택됨" if selected else ""), descriptions[index], skills[index]]
-		var offsets := [0.07, 0.32, 0.52, 0.73]
-		for line_index in labels.size():
-			_draw_village_text(labels[line_index], Rect2(rect.position + Vector2(8, rect.size.y * offsets[line_index]), Vector2(rect.size.x-16, 38)), 24 if line_index == 0 else 15, ACTIVE_COLOR if line_index == 0 else TEXT_COLOR)
-		_draw_button(start_backup_rects[index], "보조 · 선택됨" if selected_backup_weapon == ids[index] else "보조로 선택", selected_backup_weapon == ids[index])
-	_draw_memory_cards()
-	if not pending_boss_legacy.is_empty():
-		draw_style_box(_panel_style(PANEL_COLOR), boss_legacy_toggle_rect)
-		_draw_text_centered("다음 도전 1회 · 보상 " + ("켜짐" if use_boss_legacy else "꺼짐 · 이번 기회 건너뛰기"), Rect2(boss_legacy_toggle_rect.position, Vector2(boss_legacy_toggle_rect.size.x, 23)), 18, ACTIVE_COLOR if use_boss_legacy else MUTED_TEXT_COLOR)
-		_draw_text_centered(start_legacy_description(), Rect2(boss_legacy_toggle_rect.position + Vector2(0, 23), Vector2(boss_legacy_toggle_rect.size.x, 20)), 16, TEXT_COLOR)
-	else:
-		_draw_text_centered("영구 기억은 도전마다 하나만 장착합니다", boss_legacy_toggle_rect, 18, MUTED_TEXT_COLOR)
-	_draw_button(start_weapon_cancel_rect, "돌아가기", false)
-	_draw_button(start_weapon_confirm_rect, "이 무기로 시작", true)
+	RunPreparationView.draw_weapon(self)
 
 
 func show_character_selection() -> void:
@@ -1245,51 +1267,31 @@ func show_character_selection() -> void:
 
 
 func _close_character_selection(confirm: bool) -> void:
+	if not confirm and preparation_flow:
+		_cancel_preparation()
+		return
 	if not confirm:
 		selected_character_id = character_preview_previous_id
 		selected_story_enabled = character_previous_story_enabled
 	release_all_inputs()
 	screen_mode = ScreenMode.START_WEAPON
+	_select_preview(selected_starting_weapon)
 	_refresh_start_weapon_layout()
 	queue_redraw()
 
 
 func _refresh_character_layout() -> void:
-	var safe := _safe_area_in_viewport()
-	var gap := minf(32.0, safe.size.x * 0.03)
-	var width := (safe.size.x * 0.90 - gap) * 0.5
-	character_card_rects.clear()
-	for index in 2:
-		character_card_rects.append(Rect2(safe.position + Vector2(safe.size.x * 0.05 + index * (width + gap), safe.size.y * 0.23), Vector2(width, safe.size.y * 0.52)))
-	story_toggle_rect = Rect2(safe.position + safe.size * Vector2(0.05, 0.78), safe.size * Vector2(0.43, 0.055))
-	story_journal_open_rect = Rect2(safe.position + safe.size * Vector2(0.52, 0.78), safe.size * Vector2(0.43, 0.055))
-	var button_width := minf(280.0, safe.size.x * 0.27)
-	character_cancel_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 - gap * 0.5 - button_width, safe.size.y * 0.86), Vector2(button_width, minf(64.0, safe.size.y * 0.09)))
-	character_confirm_rect = Rect2(safe.position + Vector2(safe.size.x * 0.5 + gap * 0.5, safe.size.y * 0.86), character_cancel_rect.size)
+	var view := RunPreparationView.hero_layout(_safe_area_in_viewport())
+	character_card_rects.assign(view.cards)
+	story_toggle_rect = view.story
+	story_journal_open_rect = view.journal
+	character_cancel_rect = view.back
+	character_confirm_rect = view.confirm
 
 
 func _draw_character_selection() -> void:
 	_refresh_character_layout()
-	var safe := _safe_area_in_viewport()
-	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
-	_draw_text_centered("주인공과 여행 이야기를 선택하세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.07)), 32, ACTIVE_COLOR)
-	_draw_text_centered("두 주인공의 능력은 같습니다 · 이야기는 아래에서 켜세요", Rect2(safe.position + Vector2(0, safe.size.y * 0.13), Vector2(safe.size.x, safe.size.y * 0.05)), 20, TEXT_COLOR)
-	for index in 2:
-		var id: String = PrototypeCharacters.IDS[index]
-		var rect := character_card_rects[index]
-		var selected := selected_character_id == id
-		draw_style_box(_panel_style(Color("254f51") if selected else PANEL_COLOR), rect)
-		if selected: draw_rect(rect.grow(-3.0), ACTIVE_COLOR, false, 3.0)
-		var texture_size := PrototypeCharacters.texture(id).get_size()
-		var portrait_size := texture_size * minf(rect.size.y * 0.48 / texture_size.y, rect.size.x * 0.5 / texture_size.x)
-		draw_texture_rect(PrototypeCharacters.texture(id), Rect2(rect.position + Vector2((rect.size.x - portrait_size.x) * 0.5, rect.size.y * 0.06), portrait_size), false)
-		_draw_text_centered(PrototypeCharacters.display_name(id) + (" · 선택됨" if selected else ""), Rect2(rect.position + Vector2(0, rect.size.y * 0.59), Vector2(rect.size.x, 38)), 28, ACTIVE_COLOR)
-		_draw_village_text(PrototypeCharacters.appearance(id), Rect2(rect.position + Vector2(16, rect.size.y * 0.75), Vector2(rect.size.x - 32, 30)), 18, TEXT_COLOR)
-		_draw_village_text(PrototypeCharacters.SHARED_STORY, Rect2(rect.position + Vector2(16, rect.size.y * 0.85), Vector2(rect.size.x - 32, 30)), 18, MUTED_TEXT_COLOR)
-	_draw_button(story_toggle_rect, "이야기 · " + ("켜짐" if selected_story_enabled else "꺼짐"), selected_story_enabled)
-	_draw_button(story_journal_open_rect, "기억 수첩", false)
-	_draw_button(character_cancel_rect, "선택 취소", false)
-	_draw_button(character_confirm_rect, "이 주인공으로 준비", true)
+	RunPreparationView.draw_hero(self)
 
 
 func update_checkpoint_status(available: bool, message: String) -> void:
@@ -1714,51 +1716,48 @@ func _handle_screen_touch(position: Vector2) -> void:
 		return
 	if screen_mode == ScreenMode.START_WEAPON:
 		_refresh_start_weapon_layout()
-		if expedition_rect.has_point(position):
-			if selected_run_mode == JourneyRoutePlan.MODE and expedition_unlocked(): selected_expedition = (selected_expedition + 1) % (expedition_cap + 1)
+		var view := RunPreparationView.weapon_layout(_safe_area_in_viewport(),start_options_open)
+		if start_options_open:
+			if view.close.has_point(position): close_preparation_options()
+			elif expedition_rect.has_point(position):
+				if selected_run_mode == JourneyRoutePlan.MODE and expedition_unlocked(): selected_expedition = (selected_expedition+1)%(expedition_cap+1)
+			else:
+				for index in start_length_rects.size():
+					if start_length_rects[index].has_point(position):
+						selected_stage_limit = 10 if index == 3 else 3 if index == 0 else 5
+						selected_run_mode = JourneyRoutePlan.MODE if index == 3 else "regions" if index == 2 else "standard"
+						if index != 3: selected_expedition = 0
+						return
+				for index in memory_card_rects.size():
+					if memory_card_rects[index].has_point(position):
+						var id: String = PrototypeMemoryAbilities.IDS[index]
+						if PrototypeMemoryAbilities.available(id,unlocked_memories): selected_memory_id = id
+						return
+				if not pending_boss_legacy.is_empty() and boss_legacy_toggle_rect.has_point(position): use_boss_legacy = not use_boss_legacy
+			return
+		if view.settings.has_point(position):
+			open_preparation_options()
 			return
 		if character_open_rect.has_point(position):
 			show_character_selection()
 			return
-		for index in start_length_rects.size():
-			if start_length_rects[index].has_point(position):
-				selected_stage_limit = 10 if index == 3 else 3 if index == 0 else 5
-				selected_run_mode = JourneyRoutePlan.MODE if index == 3 else "regions" if index == 2 else "standard"
-				if index != 3: selected_expedition = 0
-				return
 		for index in start_backup_rects.size():
 			if start_backup_rects[index].has_point(position):
 				var family: String = PrototypeWeaponRewards.FAMILY_IDS[index]
 				if family == selected_starting_weapon: selected_starting_weapon = selected_backup_weapon
 				selected_backup_weapon = family
+				_select_preview(family)
 				return
 		for index in start_weapon_card_rects.size():
 			if start_weapon_card_rects[index].has_point(position):
 				var family: String = PrototypeWeaponRewards.FAMILY_IDS[index]
 				if family == selected_backup_weapon: selected_backup_weapon = selected_starting_weapon
 				selected_starting_weapon = family
+				_select_preview(family)
 				return
-		for index in memory_card_rects.size():
-			if memory_card_rects[index].has_point(position):
-				var id: String = PrototypeMemoryAbilities.IDS[index]
-				if PrototypeMemoryAbilities.available(id, unlocked_memories):
-					selected_memory_id = id
-				return
-		if not pending_boss_legacy.is_empty() and boss_legacy_toggle_rect.has_point(position):
-			use_boss_legacy = not use_boss_legacy
-			return
-		if start_weapon_cancel_rect.has_point(position):
-			selected_starting_weapon = start_weapon_previous_selection
-			selected_backup_weapon = previous_backup_weapon
-			selected_stage_limit = previous_stage_limit
-			selected_run_mode = previous_run_mode
-			selected_expedition = previous_expedition
-			selected_character_id = previous_character_id
-			selected_story_enabled = previous_story_enabled
-			selected_memory_id = start_memory_previous_selection
-			screen_mode = start_weapon_return_mode
+		if start_weapon_cancel_rect.has_point(position): _back_from_weapon_selection()
 		elif start_weapon_confirm_rect.has_point(position):
-			begin_retry(selected_starting_weapon, selected_stage_limit, selected_run_mode, selected_character_id, selected_story_enabled, selected_expedition, selected_backup_weapon)
+			if begin_retry(selected_starting_weapon,selected_stage_limit,selected_run_mode,selected_character_id,selected_story_enabled,selected_expedition,selected_backup_weapon): preparation_flow = false
 		return
 	if screen_mode == ScreenMode.STAGE_ROUTE:
 		if shop_data.get("enabled",false) and shop_open_rect.has_point(position):
@@ -1808,13 +1807,13 @@ func _handle_screen_touch(position: Vector2) -> void:
 		return
 	if screen_mode == ScreenMode.RESULT:
 		if result_retry_rect.has_point(position):
-			show_start_weapon_selection()
+			show_new_run_preparation()
 		elif result_main_rect.has_point(position):
 			show_main_screen()
 	elif screen_mode == ScreenMode.MAIN and main_village_rect.has_point(position):
 		show_village()
 	elif screen_mode == ScreenMode.MAIN and main_start_rect.has_point(position):
-		show_start_weapon_selection()
+		show_new_run_preparation()
 	elif screen_mode == ScreenMode.MAIN and checkpoint_available and main_continue_rect.has_point(position):
 		continue_requested.emit()
 	elif screen_mode == ScreenMode.MAIN and main_layout_rect.has_point(position):
@@ -3059,7 +3058,7 @@ func _handle_village_touch(position: Vector2) -> void:
 		else:
 			village_page = "village"
 	elif layout.start.has_point(position):
-		show_start_weapon_selection()
+		show_new_run_preparation()
 	elif checkpoint_available and layout["continue"].has_point(position):
 		show_main_screen()
 		continue_requested.emit()

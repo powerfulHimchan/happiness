@@ -43,7 +43,9 @@ func _run() -> void:
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
 			controls.use_boss_legacy = false
+			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[2].get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "영구 기억 도전 보상 유지"): return
 			if not _check(player.memory_id == "core_echo" and player.boss_legacy.is_empty() and controls.stage_route_options.size() == 4 and not runner.can_select_route("clockwork"), "영구 기억만 장착·일회 보상 건너뛰기는 위험 길 개방 없음"): return

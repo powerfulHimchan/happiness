@@ -137,7 +137,9 @@ func _start_regions(weapon: String) -> bool:
 	controls.selected_starting_weapon = weapon
 	controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 	runner.region_rng.seed = 42 if weapon == "sword" else 43
+	controls.open_preparation_options()
 	_tap(controls.start_length_rects[2].get_center())
+	controls.close_preparation_options()
 	if controls.pending_boss_legacy.get("choice", "") == "destroy":
 		if not _check(controls.start_legacy_description().contains("일반 도전"), "순회 준비는 위험 길 제외를 정확히 안내"): return false
 	_tap(controls.start_weapon_confirm_rect.get_center())
@@ -200,10 +202,15 @@ func _test_preview(weapon: String) -> bool:
 		controls.show_main_screen()
 		controls.show_start_weapon_selection()
 		var safe: Rect2 = controls.layout_snapshot().safe
+		var weapon_targets: Array = controls.start_weapon_card_rects.duplicate()
+		weapon_targets.append_array([controls.character_open_rect,controls.start_weapon_confirm_rect,controls.start_weapon_cancel_rect])
+		for first in weapon_targets.size():
+			if not _check(safe.encloses(weapon_targets[first]),"무기 화면 안전 영역"): return false
+			for second in range(first+1,weapon_targets.size()):
+				if not _check(not weapon_targets[first].intersects(weapon_targets[second]),"무기 화면 입력 비중첩"): return false
 		var rects: Array = controls.start_length_rects.duplicate()
-		rects.append_array(controls.start_weapon_card_rects)
 		rects.append_array(controls.memory_card_rects)
-		rects.append_array([controls.boss_legacy_toggle_rect, controls.start_weapon_confirm_rect, controls.start_weapon_cancel_rect])
+		rects.append_array([controls.boss_legacy_toggle_rect])
 		if not _check(controls.start_length_rects.size() == 4, "기존3/5·순회·전체 여정 네 선택지"): return false
 		for index in 3:
 			var label: String = ["3스테이지 · 약 9분", "5스테이지 · 약 15분", "지역 순회 · 5단계"][index]
@@ -212,7 +219,9 @@ func _test_preview(weapon: String) -> bool:
 			if not _check(safe.encloses(rects[i]), "순회 준비 입력 안전 영역"): return false
 			for j in range(i + 1, rects.size()):
 				if not _check(not rects[i].intersects(rects[j]), "준비 길이·무기·기억·하단 버튼 비중첩"): return false
+		controls.open_preparation_options()
 		_tap(controls.start_length_rects[2].get_center())
+		controls.close_preparation_options()
 		if not _check(controls.selected_run_mode == "regions" and runner.checkpoint_snapshot() == before and FileAccess.get_file_as_string(legacy.save_path) == journal, "순회 미리 선택은 실제 런/일회 보상 무변경"): return false
 		controls.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
 		controls.notification(Control.NOTIFICATION_APPLICATION_RESUMED)

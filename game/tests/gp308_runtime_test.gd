@@ -98,7 +98,9 @@ func _start_second_section(route: String) -> bool:
 	runner.region_rng.seed = selected_seed
 	controls.show_main_screen()
 	controls.show_start_weapon_selection()
+	controls.open_preparation_options()
 	_tap(controls.start_length_rects[3].get_center())
+	controls.close_preparation_options()
 	_tap(controls.start_weapon_confirm_rect.get_center())
 	if not _check(runner.route_id == route and runner.region_section() == 1 and festival_terrain.get_child_count() == (3 if route == "wind" else 4), "첫 구간은 기존 지형·실제 전체 여정 시작"): return false
 	if not _finish_stage() or not sandbox._claim_weapon_reward(""): return false

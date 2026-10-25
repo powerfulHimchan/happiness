@@ -152,7 +152,9 @@ func _start_journey(character: String, weapon: String) -> bool:
 	controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 	controls.selected_story_enabled = true
 	runner.region_rng.seed = 307 if character == "roan" else 308
+	controls.open_preparation_options()
 	_tap(controls.start_length_rects[3].get_center())
+	controls.close_preparation_options()
 	_tap(controls.start_weapon_confirm_rect.get_center())
 	# GP-307~314의 기존 여정·보상 검사는 태엽 기사 버전 저장 흐름을 유지한다.
 	# 새 도전의 기본 세라는 GP-315에서 이 전환 없이 실제 시작 입력으로 검사한다.
@@ -208,15 +210,22 @@ func _journey_preview() -> bool:
 		controls.size = dimensions
 		controls.show_start_weapon_selection()
 		var safe: Rect2 = controls.layout_snapshot().safe
+		var weapon_targets: Array = controls.start_weapon_card_rects.duplicate()
+		weapon_targets.append_array([controls.character_open_rect,controls.start_weapon_confirm_rect,controls.start_weapon_cancel_rect])
+		for first in weapon_targets.size():
+			if not _check(safe.encloses(weapon_targets[first]),"무기 화면 안전 영역"): return false
+			for second in range(first+1,weapon_targets.size()):
+				if not _check(not weapon_targets[first].intersects(weapon_targets[second]),"무기 화면 입력 비중첩"): return false
 		var rects: Array = controls.start_length_rects.duplicate()
-		rects.append_array(controls.start_weapon_card_rects)
 		rects.append_array(controls.memory_card_rects)
-		rects.append_array([controls.character_open_rect, controls.boss_legacy_toggle_rect, controls.start_weapon_confirm_rect, controls.start_weapon_cancel_rect])
+		rects.append_array([controls.boss_legacy_toggle_rect])
 		for i in rects.size():
 			if not _check(safe.encloses(rects[i]), "전체 여정 준비버튼 안전영역"): return false
 			for j in range(i + 1, rects.size()):
 				if not _check(not rects[i].intersects(rects[j]), "준비 선택버튼 비중첩"): return false
+		controls.open_preparation_options()
 		_tap(controls.start_length_rects[3].get_center())
+		controls.close_preparation_options()
 		controls.queue_redraw()
 		await process_frame
 		if not _check(controls.selected_run_mode == "journey" and runner.checkpoint_snapshot() == before, "전체 여정 미리 선택은실제 도전 무변경"): return false

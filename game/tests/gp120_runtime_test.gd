@@ -56,10 +56,15 @@ func _run() -> void:
 			if not _check(FileAccess.get_file_as_string(GP120_META) == contents, "같은 조제 재선택은 저널 중복 없음"): return
 			var record := recorder.checkpoint_snapshot()
 			_tap(controls.village_snapshot().layout.start.get_center())
+			_tap(controls.character_confirm_rect.get_center())
 			_tap(controls.start_weapon_cancel_rect.get_center())
+			_tap(controls.character_cancel_rect.get_center())
 			if not _check(controls.current_screen_mode() == 13 and recorder.checkpoint_snapshot() == record and legacy.progress_snapshot().potion_recipe == "concentrated", "새 도전 준비 취소는 도전·조제 보존"): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			_tap(controls.character_confirm_rect.get_center())
+			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.potion_recipe == "concentrated" and player.potions_remaining == 1 and controls._action_label(&"recovery_potion") == "회복 1/1" and not sandbox._select_potion_recipe("basic"), "새 도전 농축 1개·진행 중 조제 변경 차단"): return
 			_press_potion()
@@ -130,7 +135,10 @@ func _run() -> void:
 			if not await _test_apothecary_layout(true): return
 			if not _check(controls.preferred_potion_recipe == "concentrated", "이후 파괴 완주도 약초사·조제 유지"): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			_tap(controls.character_confirm_rect.get_center())
+			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
+			controls.close_preparation_options()
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.potion_recipe == "concentrated" and player.potions_remaining == 1 and player.damage_receiver.max_health == 100, "다음 새 도전은 저장한 농축 1개로 준비"): return
 		_:

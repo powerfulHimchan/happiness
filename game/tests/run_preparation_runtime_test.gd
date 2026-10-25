@@ -1,0 +1,142 @@
+extends SceneTree
+
+const SCENE := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+var checks := 0
+var failures := 0
+var scene: Node
+var ui: Control
+var output := ""
+
+func _initialize() -> void: call_deferred("_run")
+func check(ok: bool, label: String) -> void:
+	checks += 1
+	if not ok:
+		failures += 1
+		printerr("Preparation: "+label)
+func tap(rect: Rect2) -> void:
+	var event := InputEventScreenTouch.new()
+	event.index = 77
+	event.pressed = true
+	event.position = rect.get_center()
+	ui._input(event)
+	event.pressed = false
+	ui._input(event)
+func escape() -> void:
+	var event := InputEventKey.new()
+	event.pressed = true
+	event.keycode = KEY_ESCAPE
+	ui._input(event)
+func files() -> Array:
+	var result := []
+	for store in [scene.checkpoint_store,scene.boss_legacy_store,scene.achievement_store,scene.story_journal_store,scene.ability_discovery_store]:
+		result.append(FileAccess.get_file_as_bytes(store.save_path) if FileAccess.file_exists(store.save_path) else PackedByteArray())
+	return result
+func capture(name: String) -> void:
+	ui.queue_redraw()
+	await process_frame
+	if output.is_empty(): return
+	await RenderingServer.frame_post_draw
+	check(root.get_texture().get_image().save_png(output.path_join(name+".png")) == OK,"real render: "+name)
+func targets(rectangles: Array, safe: Rect2) -> void:
+	for i in rectangles.size():
+		check(safe.encloses(rectangles[i]),"visible input inside safe area")
+		for j in range(i+1,rectangles.size()): check(not rectangles[i].intersects(rectangles[j]),"visible inputs do not overlap")
+func _run() -> void:
+	output = OS.get_environment("PREPARATION_RENDER_DIR")
+	if not output.is_empty():
+		check(DisplayServer.get_name() != "headless","real display")
+		DirAccess.make_dir_recursive_absolute(output)
+	scene = SCENE.instantiate()
+	for store in [scene.checkpoint_store,scene.boss_legacy_store,scene.achievement_store,scene.story_journal_store,scene.ability_discovery_store]:
+		store.save_path = "user://preparation_"+store.get_script().resource_path.get_file()+".json"
+	scene.get_node("LocalTestRecorder").record_path = "user://preparation_records.jsonl"
+	root.add_child(scene)
+	current_scene = scene
+	await process_frame
+	scene.process_mode = Node.PROCESS_MODE_DISABLED
+	ui = scene.get_node("CanvasLayer/GroundMovementControls")
+	var player: PrototypePlayer = scene.get_node("Player")
+	var weapons: PrototypeWeaponController = scene.get_node("Player/PrototypeWeaponController")
+	var original_files := files()
+	var original_weapons := weapons.checkpoint_snapshot()
+	var health := player.damage_receiver.health
+	for dimensions in [Vector2i(1280,720),Vector2i(1600,720),Vector2i(1280,800),Vector2i(2400,1080)]:
+		root.size = dimensions
+		await process_frame
+		ui.size = ui.get_viewport_rect().size if not output.is_empty() else Vector2(dimensions)
+		ui.show_main_screen()
+		ui._refresh_layout()
+		tap(ui.main_start_rect)
+		check(ui.current_screen_mode() == ui.ScreenMode.START_CHARACTER,"main starts with hero selection")
+		var safe: Rect2 = ui._safe_area_in_viewport()
+		var hero := RunPreparationView.hero_layout(safe)
+		targets(hero.cards+[hero.back,hero.confirm,hero.story,hero.journal],safe)
+		for character in PrototypeCharacters.IDS:
+			tap(ui.character_card_rects[PrototypeCharacters.IDS.find(character)])
+			check(ui.selected_character_id == character,"hero card selection")
+			await capture("hero_"+character+"_%dx%d"%[dimensions.x,dimensions.y])
+			tap(ui.character_confirm_rect)
+			check(ui.current_screen_mode() == ui.ScreenMode.START_WEAPON and ui.selected_character_id == character,"hero confirm opens weapon book")
+			var view := RunPreparationView.weapon_layout(safe,false)
+			targets(view.cards+[view.settings,view.character,view.back,view.confirm],safe)
+			for family in PrototypeWeaponRewards.FAMILY_IDS:
+				var index := PrototypeWeaponRewards.FAMILY_IDS.find(family)
+				var card: Rect2 = ui.start_weapon_card_rects[index]
+				# Upper icon selects primary; nested backup button remains a separate action.
+				tap(Rect2(card.position,card.size*Vector2(1,.55)))
+				check(ui.selected_starting_weapon == family and ui.selected_backup_weapon != family and ui.preview_weapon_id == family,"six distinct primary choices and preview sync")
+				var first: Dictionary = ui.equipped_preview.snapshot(character,family,ui.preview_elapsed_s,view.preview)
+				ui._process(.41)
+				var second: Dictionary = ui.equipped_preview.snapshot(character,family,ui.preview_elapsed_s,view.preview)
+				check(first.frame != second.frame and first.foot != second.foot and second.weapon_texture != null,"animated equipped hero for every family")
+				var clock: float = ui.preview_elapsed_s
+				ui.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
+				ui._process(.5)
+				check(ui.preview_elapsed_s == clock,"preview pauses in background")
+				ui.notification(Control.NOTIFICATION_APPLICATION_RESUMED)
+				ui._process(.1)
+				check(ui.preview_elapsed_s > clock,"preview resumes")
+				await capture("weapon_"+character+"_"+family+"_%dx%d"%[dimensions.x,dimensions.y])
+				tap(ui.start_backup_rects[index])
+				check(ui.selected_backup_weapon == family and ui.selected_starting_weapon != family and ui.preview_elapsed_s == 0,"backup selection swaps duplicate primary and resets preview")
+				check(files() == original_files and weapons.checkpoint_snapshot() == original_weapons and player.damage_receiver.health == health,"preview never changes combat or saves")
+			# The overlay owns its inputs; underlying start/weapon targets cannot fire.
+			tap(view.settings)
+			check(ui.start_options_open,"settings button opens existing preparation options")
+			var option_clock: float = ui.preview_elapsed_s
+			ui._process(.5)
+			check(ui.preview_elapsed_s == option_clock,"settings pause the presentation clock")
+			targets(view.lengths+[view.expedition,view.legacy,view.close]+view.memories,safe)
+			var pair := [ui.selected_starting_weapon,ui.selected_backup_weapon]
+			tap(ui.start_weapon_confirm_rect)
+			check(ui.current_screen_mode() == ui.ScreenMode.START_WEAPON and [ui.selected_starting_weapon,ui.selected_backup_weapon] == pair,"overlay blocks underlying start button")
+			tap(ui.start_length_rects[3])
+			check(ui.selected_run_mode == "journey" and ui.selected_stage_limit == 10,"journey option preserved")
+			await capture("options_"+character+"_%dx%d"%[dimensions.x,dimensions.y])
+			tap(view.close)
+			tap(view.settings)
+			escape()
+			check(not ui.start_options_open and ui.current_screen_mode() == ui.ScreenMode.START_WEAPON,"Escape closes settings first")
+			if dimensions.x == 2400: escape()
+			else: tap(ui.start_weapon_cancel_rect)
+			check(ui.current_screen_mode() == ui.ScreenMode.START_CHARACTER and ui.selected_character_id == character,"weapon back keeps draft hero")
+			var clock: float = ui.preview_elapsed_s
+			ui._process(1)
+			check(ui.preview_elapsed_s == clock,"hidden preview clock stops")
+		if dimensions.x == 2400: escape()
+		else: tap(ui.character_cancel_rect)
+		check(ui.current_screen_mode() == ui.ScreenMode.MAIN and files() == original_files,"cancel returns to source without save writes")
+	# New-flow selections are propagated to a real run through existing creation code.
+	ui.show_main_screen()
+	tap(ui.main_start_rect)
+	tap(ui.character_card_rects[1])
+	tap(ui.character_confirm_rect)
+	var sword: Rect2 = ui.start_weapon_card_rects[0]
+	tap(Rect2(sword.position,sword.size*Vector2(1,.5)))
+	tap(ui.start_backup_rects[3])
+	tap(ui.start_weapon_confirm_rect)
+	check(player.character_id == "lumi" and weapons.active_weapon_id == "sword" and weapons.equipment.has("staff") and scene.get_node("PrototypeGrowthController").run_active,"real run uses chosen hero and two weapons")
+	paused = false
+	scene.free()
+	print("Preparation runtime test: %d checks, %d failures"%[checks,failures])
+	quit(1 if failures else 0)

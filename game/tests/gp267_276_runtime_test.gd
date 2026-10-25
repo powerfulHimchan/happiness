@@ -153,7 +153,9 @@ func _prepare_character(character: String, weapon: String, length_index: int) ->
 	_tap(controls.character_card_rects[0 if character == "roan" else 1].get_center())
 	_tap(controls.character_confirm_rect.get_center())
 	_tap(controls.start_weapon_card_rects[0 if weapon == "sword" else 1].get_center())
+	controls.open_preparation_options()
 	_tap(controls.start_length_rects[length_index].get_center())
+	controls.close_preparation_options()
 	return _check(controls.current_screen_mode() == 10 and controls.selected_character_id == character, "주인공 확정은 준비로 복귀·무기·길이 선택")
 
 func _start_character(character: String, weapon: String) -> bool:

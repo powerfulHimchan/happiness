@@ -124,7 +124,9 @@ func _run() -> void:
 				controls.selected_story_enabled = false
 				controls.selected_starting_weapon = weapon
 				controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
+				controls.open_preparation_options()
 				_tap(controls.start_length_rects[mode].get_center())
+				controls.close_preparation_options()
 				_tap(controls.start_weapon_confirm_rect.get_center())
 				if not _check_support("rescue", 50 if mode == 0 else 30): return
 				var raw := FileAccess.get_file_as_string(legacy.save_path)
