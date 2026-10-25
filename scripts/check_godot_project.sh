@@ -22,6 +22,18 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/ui/hero_status_art.gd"
+  "$game_root/tests/gp821_830_art_runtime_test.gd"
+  "$game_root/assets/status/dawn_archive.svg"
+  "$game_root/assets/status/attack.svg"
+  "$game_root/assets/status/defense.svg"
+  "$game_root/assets/status/critical_chance.svg"
+  "$game_root/assets/status/critical_damage.svg"
+  "$game_root/assets/status/health.svg"
+  "$game_root/assets/status/roan_counter.svg"
+  "$game_root/assets/status/lumi_starlight.svg"
+  "$game_root/assets/status/main_weapon_frame.svg"
+  "$game_root/assets/status/backup_weapon_frame.svg"
   "$game_root/scripts/ui/hero_status_view.gd"
   "$game_root/scripts/growth/prototype_stat_specializations.gd"
   "$game_root/tests/gp770_820_runtime_test.gd"
@@ -938,6 +950,7 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 120s --headless --path "$game_root" --script res://tests/gp821_830_art_runtime_test.gd
   for status_phase in seed resume combat ui acquisition; do
     checked_godot 120s --headless --path "$game_root" --script res://tests/gp770_820_runtime_test.gd -- "$status_phase"
   done
