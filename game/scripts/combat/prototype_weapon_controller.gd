@@ -199,6 +199,7 @@ func _perform_switch(reason: String) -> void:
 	_switch_cooldown_remaining_s = SWITCH_COOLDOWN_S
 	_switch_buffer_remaining_s = 0.0
 	_switch_buffered = false
+	player.register_trait_weapon_switch(active_weapon_id)
 	switch_count += 1
 	last_switch_log = "%s → %s · %s" % [
 		_weapon_name(previous_weapon),

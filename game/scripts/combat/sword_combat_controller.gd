@@ -383,8 +383,8 @@ func _damage_target(
 	last_event_id = String(event.event_id)
 	var result := player.deal_weapon_damage(target, event)
 	if result == DamageReceiver.Result.APPLIED:
-		total_damage += damage
-		hit_registered.emit(attack_id != StringName(weapon_family + "_basic"), target, damage)
+		total_damage += event.outgoing_damage()
+		hit_registered.emit(attack_id != StringName(weapon_family + "_basic"), target, event.outgoing_damage())
 	return result
 
 

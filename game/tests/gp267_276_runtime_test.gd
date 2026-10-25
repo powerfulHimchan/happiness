@@ -222,8 +222,9 @@ func _test_character_balance(weapon: String) -> bool:
 		if not _check(not player.avatar_sprite.flip_h and player.damage_receiver.health == 83 and player.movement_animation.state == "hit" and (player.avatar_sprite.texture as AtlasTexture).atlas == HeroMovementAnimation.SHEETS[character], "우향·실제 피해17·피격 외형 유지"): return false
 		var state: Dictionary = sandbox._capture_run_build()
 		state.erase("character_id")
+		state.erase("hero_trait")
 		if baseline.is_empty(): baseline = state
-		elif not _check(state == baseline, "두 주인공 실제 생존·피해·성장·스킬·필살기 스냅샷 동일"): return false
+		elif not _check(state == baseline, "두 주인공 미발동 시 공통 생존·피해·성장·스킬·필살기 동일"): return false
 	var id := String(recorder.checkpoint_snapshot().id)
 	if not _check(not controls.begin_retry(weapon, 3, "standard", "sera") and not player.set_character("sera") and String(recorder.checkpoint_snapshot().id) == id and player.character_id == "lumi", "미지원 주인공 API 무변경 거부"): return false
 	controls.show_character_selection()

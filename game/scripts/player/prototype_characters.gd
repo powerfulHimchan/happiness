@@ -1,7 +1,7 @@
 class_name PrototypeCharacters
 extends RefCounted
 
-## GP-267: 외형만 선택한다. 이동·전투·성장과 이야기는 같은 경로를 사용한다.
+## 두 주인공의 공통 능력치·무기와 캐릭터별 고유 특성 카탈로그.
 const IDS := ["roan", "lumi"]
 const ROAN_TEXTURE: Texture2D = preload("res://assets/characters/roan_idle.tres")
 const LUMI_TEXTURE: Texture2D = preload("res://assets/characters/lumi_idle.tres")
@@ -18,3 +18,6 @@ static func texture(id: String) -> Texture2D:
 
 static func appearance(id: String) -> String:
 	return "금발 묶음머리 · 코랄빛 망토" if id == "lumi" else "은발 짧은 머리 · 청록빛 망토"
+
+static func trait_profile(id: String) -> Dictionary:
+	return HeroTraits.profile(id)

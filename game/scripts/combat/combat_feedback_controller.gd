@@ -30,6 +30,7 @@ var _shake_remaining_s: float = 0.0
 var _shake_duration_s: float = 0.0
 var _shake_strength_px: float = 0.0
 var _shake_elapsed_s: float = 0.0
+var _critical_labels: Array[Dictionary] = []
 var _audio_player: AudioStreamPlayer
 var _hit_stream: AudioStreamWAV
 
@@ -49,6 +50,7 @@ func _ready() -> void:
 	(get_node("../Player/PolearmCombatController") as PolearmCombatController).hit_registered.connect(_on_weapon_hit.bind("polearm"))
 	(get_node("../Player/ShieldCombatController") as ShieldCombatController).hit_registered.connect(_on_weapon_hit.bind("shield"))
 	player.damage_received.connect(_on_player_damage_received)
+	player.critical_hit.connect(_on_critical_hit)
 	ultimate_controller.precise_evade_registered.connect(_on_precise_evade)
 	ultimate_controller.ultimate_activated.connect(_on_ultimate_activated)
 	_audio_player = AudioStreamPlayer.new()
@@ -60,11 +62,22 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_visual_hit_stop_remaining_s = maxf(0.0, _visual_hit_stop_remaining_s - delta)
 	_impact_remaining_s = maxf(0.0, _impact_remaining_s - delta)
+	for label in _critical_labels: label.remaining -= delta
+	_critical_labels = _critical_labels.filter(func(label: Dictionary) -> bool: return label.remaining > 0.0)
 	_update_camera_shake(delta)
 	queue_redraw()
 
 
+func _on_critical_hit(target: PrototypeTarget, damage: int) -> void:
+	_critical_labels.append({"position":target.global_position+Vector2(-65,-95),"damage":damage,"remaining":0.7})
+	if _critical_labels.size() > 12: _critical_labels.pop_front()
+	queue_redraw()
+
+
 func _draw() -> void:
+	for label in _critical_labels:
+		var point: Vector2 = label.position + Vector2(0,-35*(0.7-float(label.remaining)))
+		draw_string(ThemeDB.fallback_font,point,"치명타 %d" % int(label.damage),HORIZONTAL_ALIGNMENT_LEFT,-1,26,Color(1.0,0.82,0.20,minf(1.0,float(label.remaining)*3.0)))
 	if _impact_remaining_s <= 0.0:
 		return
 	var ratio := _impact_remaining_s / IMPACT_FLASH_S
@@ -95,6 +108,7 @@ func configure(
 
 
 func prepare_next_stage() -> void:
+	_critical_labels.clear()
 	_visual_hit_stop_remaining_s = 0.0
 	_impact_remaining_s = 0.0
 	_stop_camera_shake()

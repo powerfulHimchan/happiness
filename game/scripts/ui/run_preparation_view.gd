@@ -71,6 +71,11 @@ static func draw_hero(ui: Control) -> void:
 		var selected: bool = ui.selected_character_id == id
 		var bounds := box(safe,.012+index*.50,.145,.485,.675)
 		ui.draw_texture_rect(portrait(id),SupplyShopArt.fitted(portrait(id),bounds),false,Color.WHITE if selected else Color(.96,.96,.96,1))
+		var passive := PrototypeCharacters.trait_profile(id)
+		panel(ui,box(safe,.055+index*.50,.605,.39,.128),Color(1,.96,.87,.94),GOLD if selected else Color("ce9d7b"),int(10*unit))
+		ui._draw_village_text(String(passive.name),box(safe,.065+index*.50,.610,.37,.039),int(29*unit),TEAL)
+		ui._draw_village_text(String(passive.lines[0]) if id == "roan" else "무기 전환 후 다음 1타 확정 치명타",box(safe,.065+index*.50,.656,.37,.030),int(20*unit),INK)
+		ui._draw_village_text("재발동 6초 · 모든 무기" if id == "roan" else "유효 적중 1회 · 재발동 8초",box(safe,.065+index*.50,.696,.37,.026),int(19*unit),INK)
 		var label := box(safe,.10+index*.50,.745,.30,.095)
 		panel(ui,label,PAPER,GOLD if selected else Color("ce9d7b"),int(30*unit))
 		ui._draw_village_text(PrototypeCharacters.display_name(id)+( "  ✓" if selected else ""),label,int(54*unit),TEAL if index == 0 else Color("a75646"))
@@ -79,7 +84,7 @@ static func draw_hero(ui: Control) -> void:
 	button(ui,ui.story_toggle_rect,"이야기 "+("켜짐" if ui.selected_story_enabled else "꺼짐"),false,ui.selected_story_enabled)
 	button(ui,ui.story_journal_open_rect,"기억 수첩")
 	panel(ui,box(safe,.29,.948,.42,.041),Color(1,.96,.87,.90),Color(1,.90,.6,.25),10)
-	ui._draw_village_text("두 주인공의 능력은 같습니다",box(safe,.29,.952,.42,.032),int(22*unit),INK)
+	ui._draw_village_text("고유 특성은 선택한 주인공에게 자동 적용됩니다",box(safe,.29,.952,.42,.032),int(22*unit),INK)
 
 static func draw_weapon(ui: Control) -> void:
 	var safe: Rect2 = ui._safe_area_in_viewport()

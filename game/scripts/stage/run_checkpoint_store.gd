@@ -215,6 +215,9 @@ static func valid_state(state: Dictionary) -> bool:
 			if not growth.ranks.has(required): return false
 	var player: Dictionary = state.player
 	if not PrototypeCharacters.valid_id(player.get("character_id", "roan")): return false
+	if not HeroTraits.valid_state(player.get("hero_traits",{}),String(player.get("character_id","roan"))): return false
+	var armed: String = player.get("hero_traits",{}).get("lumi_weapon","")
+	if not armed.is_empty() and not state.weapons.get("equipment",{"sword":0,"bow":0}).has(armed): return false
 	if not PrototypePotionRecipes.valid_id(player.get("potion_recipe", PrototypePotionRecipes.BASIC)) or (player.has("potion_recipe") and not player.has("potions_remaining")):
 		return false
 	var potion: Dictionary = PrototypePotionRecipes.profile(String(player.get("potion_recipe", PrototypePotionRecipes.BASIC)))

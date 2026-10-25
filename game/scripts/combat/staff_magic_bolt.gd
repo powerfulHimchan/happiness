@@ -72,7 +72,7 @@ func _damage(target: PrototypeTarget, source: Vector2) -> void:
 	event.tags = PackedStringArray(["staff","basic" if attack_id == &"staff_basic" else "skill",element,"projectile"])
 	event.source_position = source
 	var result: int = damage_handler.call(target,event)
-	hit_registered.emit(target,damage,result)
+	hit_registered.emit(target,event.outgoing_damage(),result)
 
 func _draw() -> void:
 	var color := Color("ffb36b") if element == "fire" else Color("a5eeff") if element == "ice" else Color("d9b6ff")

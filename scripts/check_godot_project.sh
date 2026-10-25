@@ -22,6 +22,10 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/player/hero_traits.gd"
+  "$game_root/tests/hero_traits_runtime_test.gd"
+  "$game_root/scripts/growth/prototype_combat_stats.gd"
+  "$game_root/tests/hero_stats_runtime_test.gd"
   "$game_root/scripts/growth/achievement_research.gd"
   "$game_root/scripts/ui/achievement_browser.gd"
   "$game_root/tests/gp718_767_runtime_test.gd"
@@ -931,6 +935,14 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for traits_hero in roan lumi; do
+    for traits_phase in seed resume combat; do
+      checked_godot 90s --headless --path "$game_root" --script res://tests/hero_traits_runtime_test.gd -- "$traits_phase" "$traits_hero"
+    done
+  done
+  for stats_phase in seed resume combat; do
+    checked_godot 90s --headless --path "$game_root" --script res://tests/hero_stats_runtime_test.gd -- "$stats_phase"
+  done
   checked_godot 90s --headless --path "$game_root" \
     --script res://tests/gp668_717_runtime_test.gd -- catalog
   for tactics_hero in roan lumi; do

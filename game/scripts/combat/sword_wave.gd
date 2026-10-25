@@ -76,5 +76,5 @@ func _check_hits() -> void:
 		event.source_position = origin
 		var result: int = damage_handler.call(target, event)
 		if result == DamageReceiver.Result.APPLIED: _hit_count += 1
-		hit_registered.emit(target, damage, result, projectile_id)
+		hit_registered.emit(target, event.outgoing_damage(), result, projectile_id)
 		if _hit_count >= max_hits: return

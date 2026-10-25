@@ -15,7 +15,7 @@ const EVASIVE_BARRIER_RECOVERY := 5
 const BASE_CARDS: Array[Dictionary] = [
 	{"id": "sword_power", "title": "예리한 검", "category": "sword", "lines": ["검 기본 공격·스킬", "피해 +15%"], "tags": {"strength": 2.5, "determination": 1.5}},
 	{"id": "bow_power", "title": "힘찬 시위", "category": "bow", "lines": ["활 기본 공격·스킬", "피해 +15%"], "tags": {"shooting": 2.5, "nature": 1.5}},
-	{"id": "power", "title": "새벽의 힘", "category": "common", "lines": ["모든 무기 기본 공격·스킬", "피해 +10%"], "tags": {"strength": 1.25, "shooting": 1.25}},
+	{"id": "power", "title": "새벽의 힘", "category": "common", "lines": ["공격력 +10 · 모든 무기", "기본 공격·스킬·공격형 필살기 적용"], "tags": {"strength": 1.25, "shooting": 1.25}},
 	{"id": "vitality", "title": "튼튼한 심장", "category": "common", "lines": ["최대 체력 +20", "현재 체력 +20"], "tags": {"strength": 1.25, "nature": 0.75}},
 	{"id": "recovery", "title": "다시 일어서기", "category": "common", "lines": ["최대 체력 +10", "체력 40 회복"], "tags": {"nature": 0.75, "determination": 0.75}},
 	{"id": "air_jump", "title": "공중 도약", "category": "common", "lines": ["공중에서 한 번 더 점프", "착지 시 충전 · 도전 중 유지"], "tags": {"nature": 0.75, "determination": 0.75}, "max_rank": 1},
@@ -61,6 +61,7 @@ static var CARDS: Array[Dictionary] = _build_cards()
 
 static func _build_cards() -> Array[Dictionary]:
 	var result: Array[Dictionary] = BASE_CARDS.duplicate(true)
+	result.append_array(PrototypeCombatStats.CARDS)
 	result.append_array(PrototypeWeaponTraining.CARDS)
 	result.append_array(PrototypeWeaponMastery.CARDS)
 	result.append_array(PrototypeCombatTactics.CARDS)
@@ -145,6 +146,7 @@ func reset_run(starting_weapon: String = "sword") -> void:
 	player.weapon_training.clear()
 	player.weapon_mastery.clear()
 	player.combat_tactics.clear()
+	player.stat_ranks.clear()
 	selection_message = ""
 	_rewarded_lives.clear()
 	jobs.reset(starting_weapon)
@@ -178,6 +180,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	player.weapon_training = PrototypeWeaponTraining.selected(ranks)
 	player.weapon_mastery = PrototypeWeaponMastery.selected(ranks)
 	player.combat_tactics = PrototypeCombatTactics.selected(ranks)
+	player.stat_ranks = PrototypeCombatStats.selected(ranks)
 	ultimate.set_time_collector_boost_unlocked(int(ranks.get("time_collector_boost", 0)) == 1)
 	player.set_orb_magnet_unlocked(int(ranks.get("orb_magnet", 0)) == 1)
 	player.set_orb_vitality_unlocked(int(ranks.get("orb_vitality", 0)) == 1)
@@ -299,6 +302,7 @@ func choose_card(index: int) -> bool:
 	player.weapon_training = PrototypeWeaponTraining.selected(ranks)
 	player.weapon_mastery = PrototypeWeaponMastery.selected(ranks)
 	player.combat_tactics = PrototypeCombatTactics.selected(ranks)
+	player.stat_ranks = PrototypeCombatStats.selected(ranks)
 	match card_id:
 		"barrier_focus": player.barrier_focus_unlocked = true
 		"crisis_power": player.crisis_power_unlocked = true

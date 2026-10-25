@@ -138,7 +138,7 @@ func _apply_job_effect() -> void:
 		event.stagger_s = 0.30
 		event.tags = PackedStringArray([weapon, "ultimate"])
 		event.source_position = player.global_position
-		if target.receive_damage(event) == DamageReceiver.Result.APPLIED:
+		if player.deal_weapon_damage(target,event) == DamageReceiver.Result.APPLIED:
 			last_burst_hits += 1
 
 
@@ -149,6 +149,7 @@ func _ultimate_name() -> String:
 func register_precise_evade() -> void:
 	if not player.invincible:
 		return
+	player.register_trait_precise_evade()
 	precise_evade_count += 1
 	precise_evade_registered.emit()
 	_add_gauge(precise_evade_gauge_amount(), "정확한 회피")

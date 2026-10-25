@@ -544,7 +544,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	var state := {
 		"stage": stage_runner.checkpoint_snapshot(),
 		"growth": growth.checkpoint_snapshot(),
-		"player": {"character_id": player.character_id, "health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress, "barrier_health": player.damage_receiver.barrier_health},
+		"player": {"hero_traits":player.hero_traits.snapshot(), "character_id": player.character_id, "health": player.damage_receiver.health, "max_health": player.damage_receiver.max_health, "common": player.growth_common_bonus, "sword": player.growth_sword_bonus, "bow": player.growth_bow_bonus, "potions_remaining": player.potions_remaining, "potion_recipe": player.potion_recipe, "lifesteal_progress": player.lifesteal_progress, "barrier_health": player.damage_receiver.barrier_health},
 		"weapons": weapon_controller.checkpoint_snapshot(),
 		"ultimate": {"gauge": ultimate_controller.gauge, "profile": String(ultimate_controller.selected_profile.get("id", ""))},
 		"recorder": test_recorder.checkpoint_snapshot(),
@@ -736,6 +736,7 @@ func continue_saved_run() -> bool:
 	player.damage_receiver.barrier_health = int(state.player.get("barrier_health", 0))
 	player.queue_redraw()
 	weapon_controller.restore_checkpoint(state.weapons)
+	player.hero_traits.restore(state.player.get("hero_traits",{}))
 	ultimate_controller.reset_ultimate()
 	ultimate_controller.gauge = int(state.ultimate.gauge)
 	ultimate_controller.set_time_collector_boost_unlocked(int(growth.ranks.get("time_collector_boost", 0)) == 1)
@@ -1106,6 +1107,8 @@ func _capture_run_build() -> Dictionary:
 		cooldowns[weapon] = [float(metrics[weapon + "_skill_1_cooldown_s"]), float(metrics[weapon + "_skill_2_cooldown_s"])]
 	return {
 		"character_id": player.character_id, "story": _active_story_status(),
+		"combat_stats": player.combat_stats_snapshot(),
+		"hero_trait": player.hero_traits.view(player.character_id),
 		"growth": growth.metrics_snapshot(), "stage": stage_runner.current_metrics(),
 		"equipment": weapon_controller.equipment.duplicate(), "blueprints": weapon_controller.blueprints.duplicate(),
 		"skills": weapon_controller.skills.duplicate(true), "active": weapon_controller.active_weapon_id,

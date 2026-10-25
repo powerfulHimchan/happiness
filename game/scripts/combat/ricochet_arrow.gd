@@ -63,7 +63,7 @@ func _check_hits(segment_start: Vector2, segment_end: Vector2) -> void:
 	event.source_position = segment_start
 	var result: int = damage_handler.call(target, event) if damage_handler.is_valid() else target.receive_damage(event)
 	if result == DamageReceiver.Result.APPLIED: _hit_count += 1
-	hit_registered.emit(target, damage, result, projectile_id)
+	hit_registered.emit(target, event.outgoing_damage(), result, projectile_id)
 	if result != DamageReceiver.Result.APPLIED or _hit_count >= 2:
 		queue_free()
 		return

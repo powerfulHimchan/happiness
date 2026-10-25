@@ -335,8 +335,8 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 		if result == DamageReceiver.Result.APPLIED:
 			applied_targets += 1
 			skill_hit_count += 1
-			total_damage += event.damage
-			hit_registered.emit(true, rain_target, event.damage)
+			total_damage += event.outgoing_damage()
+			hit_registered.emit(true, rain_target, event.outgoing_damage())
 	last_combat_log = "%s %d/%d · 피해 %d · %d개체" % [
 		definition.display_name, hit_index + 1, definition.hit_times_s.size(),
 		player.growth_damage(int(definition.damage[hit_index]), "bow", "skill"),

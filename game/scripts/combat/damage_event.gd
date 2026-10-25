@@ -8,9 +8,28 @@ var event_id: StringName = &""
 var attacker_id: StringName = &""
 var attack_id: StringName = &""
 var damage: int = 0
+# Final outgoing value for per-hit telemetry; never changes a projectile's next hit.
+var resolved_damage: int = -1
+var critical: bool = false
 var stagger_s: float = 0.0
 var tags: PackedStringArray = PackedStringArray()
 var source_position: Vector2 = Vector2.ZERO
+
+
+func outgoing_damage() -> int:
+	return resolved_damage if resolved_damage >= 0 else damage
+
+
+func copy_with_damage(amount: int) -> DamageEvent:
+	var result := DamageEvent.new()
+	result.event_id = event_id
+	result.attacker_id = attacker_id
+	result.attack_id = attack_id
+	result.damage = amount
+	result.stagger_s = stagger_s
+	result.tags = tags.duplicate()
+	result.source_position = source_position
+	return result
 
 
 func summary() -> String:

@@ -10,6 +10,7 @@ signal player_died
 signal evade_started
 signal damage_received(event: DamageEvent)
 signal phoenix_revived
+signal critical_hit(target: PrototypeTarget, damage: int)
 signal shield_guard_applied
 
 var shield_guard_multiplier: Callable
@@ -49,6 +50,7 @@ const INPUT_DEAD_ZONE := 0.18
 const STOP_EPSILON_MPS := 0.02
 
 var character_id: String = "roan"
+var hero_traits := HeroTraits.new()
 var movement_animation := HeroMovementAnimation.new()
 var combat_animation := HeroCombatAnimation.new()
 
@@ -97,6 +99,8 @@ var growth_common_bonus: float = 0.0
 var weapon_training: Dictionary = {}
 var weapon_mastery: Dictionary = {}
 var combat_tactics: Dictionary = {}
+var stat_ranks: Dictionary = {}
+var critical_rng := RandomNumberGenerator.new()
 var growth_sword_bonus: float = 0.0
 var growth_bow_bonus: float = 0.0
 var growth_fist_bonus: float = 0.0
@@ -177,11 +181,13 @@ var _combat_turn_allowed: bool = true
 
 func _ready() -> void:
 	add_to_group("prototype_player")
+	critical_rng.randomize()
 	_last_position_x = global_position.x
 	_emit_metrics()
 
 
 func _physics_process(delta: float) -> void:
+	hero_traits.tick(delta)
 	if _lifesteal_flash_remaining_s > 0.0:
 		_lifesteal_flash_remaining_s = maxf(0.0, _lifesteal_flash_remaining_s - delta)
 		queue_redraw()
@@ -425,12 +431,12 @@ func receive_damage(event: DamageEvent) -> int:
 	# 공유 원본을 보존하고 핵·유물·방패 보정 후 한 번만 반올림한다.
 	var guard_multiplier := float(shield_guard_multiplier.call(event)) if event != null and shield_guard_multiplier.is_valid() else 1.0
 	var guarded := guard_multiplier < 1.0
-	if event != null and (guarded or boss_legacy.get("choice") == "destroy" or not is_equal_approx(incoming_damage_multiplier(), 1.0)):
+	if event != null and (guarded or boss_legacy.get("choice") == "destroy" or not is_equal_approx(incoming_damage_multiplier(), 1.0) or defense_stat() > 0):
 		var incoming := DamageEvent.new()
 		incoming.event_id = event.event_id
 		incoming.attacker_id = event.attacker_id
 		incoming.attack_id = event.attack_id
-		incoming.damage = maxi(1, roundi(event.damage * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * incoming_damage_multiplier() * guard_multiplier)) if event.damage > 0 else event.damage
+		incoming.damage = maxi(1, roundi(event.damage * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * incoming_damage_multiplier() * guard_multiplier * defense_multiplier())) if event.damage > 0 else event.damage
 		incoming.stagger_s = 0.0 if guarded else event.stagger_s
 		incoming.tags = event.tags.duplicate()
 		incoming.source_position = event.source_position
@@ -617,13 +623,43 @@ func _draw() -> void:
 		draw_line(center + Vector2(0, -8), center + Vector2(0, 8), job_emblem_color, 3.0)
 
 
+func attack_value() -> float:
+	return PrototypeCombatStats.BASE_ATTACK * (1.0 + growth_common_bonus) * hero_traits.attack_multiplier(character_id)
+
+
+func attack_stat() -> int:
+	return roundi(attack_value())
+
+
+func register_trait_precise_evade() -> void:
+	if invincible and not damage_receiver.dead and not get_tree().paused:
+		hero_traits.precise_evade(character_id)
+
+
+func register_trait_weapon_switch(family: String) -> void:
+	if not damage_receiver.dead and not get_tree().paused:
+		hero_traits.weapon_switched(character_id,family)
+
+
+func defense_stat() -> int:
+	return PrototypeCombatStats.defense(stat_ranks)
+
+
+func defense_multiplier() -> float:
+	return PrototypeCombatStats.defense_multiplier(defense_stat())
+
+
+func combat_stats_snapshot() -> Dictionary:
+	return {"attack":attack_stat(), "defense":defense_stat(), "critical_chance":PrototypeCombatStats.critical_chance(stat_ranks), "critical_damage":PrototypeCombatStats.critical_damage(stat_ranks), "health":damage_receiver.health, "max_health":damage_receiver.max_health, "damage_reduction":(1.0-defense_multiplier())*100.0}
+
+
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:
 	return growth_damage_preview(base_damage, weapon_id, kind, is_on_floor())
 
 
 func growth_damage_preview(base_damage: int, weapon_id: String, kind: String, grounded: bool) -> int:
 	var weapon_bonus := float(get("growth_" + weapon_id + "_bonus")) if weapon_id in PrototypeWeaponRewards.FAMILY_IDS else 0.0
-	var damage := float(base_damage) * (1.0 + growth_common_bonus + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind) * PrototypeWeaponMastery.damage_multiplier(weapon_mastery, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health) * PrototypeCombatTactics.damage_multiplier(combat_tactics, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health, damage_receiver.barrier_health)
+	var damage := float(base_damage) * (attack_value() / PrototypeCombatStats.BASE_ATTACK + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind) * PrototypeWeaponMastery.damage_multiplier(weapon_mastery, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health) * PrototypeCombatTactics.damage_multiplier(combat_tactics, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health, damage_receiver.barrier_health)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
 	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
 
@@ -802,6 +838,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 
 
 func reset_movement_test(spawn_position: Vector2) -> void:
+	hero_traits.reset()
 	expedition = 0
 	barrier_focus_unlocked = false
 	crisis_power_unlocked = false
@@ -846,6 +883,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	weapon_training.clear()
 	weapon_mastery.clear()
 	combat_tactics.clear()
+	stat_ranks.clear()
 	growth_sword_bonus = 0.0
 	growth_bow_bonus = 0.0
 	growth_fist_bonus = 0.0
@@ -1254,6 +1292,7 @@ func _update_movement_tests(delta: float) -> void:
 
 func set_character(id: String) -> bool:
 	if not PrototypeCharacters.valid_id(id): return false
+	if character_id != id: hero_traits.reset()
 	character_id = id
 	movement_animation.reset(avatar_sprite, id)
 	combat_animation.clear()
@@ -1315,6 +1354,7 @@ func _emit_metrics() -> void:
 		"invincibility_end_frame": _invincibility_end_frame,
 		"health": damage_receiver.health,
 		"max_health": damage_receiver.max_health,
+		"combat_stats": combat_stats_snapshot(),
 		"potion_pouch_boost_unlocked": potion_pouch_boost_unlocked,
 		"potion_mastery_unlocked": potion_mastery_unlocked,
 		"orb_magnet_boost_unlocked": orb_magnet_boost_unlocked,
@@ -1441,7 +1481,31 @@ func deal_weapon_damage(target: PrototypeTarget, event: DamageEvent) -> int:
 	# 회복으로 문턱을 넘는 타격도 공격 시점의 배율을 한 번만 사용한다.
 	var multiplier := lifesteal_rate_percent() / 5
 	var before := target.damage_receiver.health
-	var result := target.receive_damage(event)
+	var resolved := event
+	var reserved_weapon := ""
+	if event != null and event.attacker_id == &"player" and event.damage > 0:
+		var is_weapon := false
+		for family in PrototypeWeaponRewards.FAMILY_IDS:
+			if event.tags.has(family): is_weapon = true
+		if is_weapon and (event.tags.has("basic") or event.tags.has("skill") or event.tags.has("ultimate")):
+			if event.resolved_damage < 0:
+				if hero_traits.guarantees_critical(character_id,event.tags):
+					# Reserve before target callbacks can save a killing blow; roll back blocked hits.
+					reserved_weapon = hero_traits.lumi_weapon
+					hero_traits.lumi_weapon = ""
+					event.critical = true
+				else:
+					event.critical = critical_rng.randf() * 100.0 < PrototypeCombatStats.critical_chance(stat_ranks)
+				event.resolved_damage = maxi(1,roundi(event.damage * PrototypeCombatStats.critical_damage(stat_ranks) / 100.0)) if event.critical else event.damage
+			resolved = event.copy_with_damage(event.resolved_damage)
+			if event.critical: resolved.tags.append("critical")
+	var result := target.receive_damage(resolved)
+	if result != DamageReceiver.Result.APPLIED and not reserved_weapon.is_empty():
+		hero_traits.lumi_weapon = reserved_weapon
+		event.resolved_damage = -1
+		event.critical = false
+	if result == DamageReceiver.Result.APPLIED and resolved != null and resolved.tags.has("critical"):
+		critical_hit.emit(target,resolved.damage)
 	if result == DamageReceiver.Result.APPLIED and can_absorb and not damage_receiver.dead:
 		var actual := maxi(0, before - target.damage_receiver.health)
 		# 1단위는 체력 1/20이다. 강화 전후와 체력 문턱을 넘을 때 기존 소수를 보존한다.

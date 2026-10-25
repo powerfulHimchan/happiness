@@ -17,7 +17,22 @@ static func order_labels(tab: int) -> Array:
 
 static func browse(tab: int, state: Dictionary, filter_index: int = 0, order_index: int = 0) -> Array[Dictionary]:
 	var result := cards(tab,state)
-	if state.is_empty() or tab == 2: return result
+	if state.is_empty(): return result
+	if tab == 2:
+		# Keep catalog order stable; pin the five-stat card in the information browser.
+		for index in result.size():
+			if result[index].id == "combat_stats":
+				var stats: Dictionary = result[index]
+				result.remove_at(index)
+				result.insert(mini(1,result.size()),stats)
+				break
+		for index in result.size():
+			if result[index].id == "hero_trait":
+				var passive: Dictionary = result[index]
+				result.remove_at(index)
+				result.insert(mini(2,result.size()),passive)
+				break
+		return result
 	if tab == 0:
 		if filter_index > 0:
 			var category: String = (["common"]+PrototypeWeaponRewards.FAMILY_IDS+["job"])[clampi(filter_index-1,0,7)]
@@ -127,6 +142,11 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			var memory := PrototypeMemoryAbilities.profile(String(state.memory))
 			lines = [PrototypeRelic.hud(state.relic), String(memory.name), String(memory.effect), "구출 조력 적용 중" if state.legacy == "rescue" else "파괴 핵 적용 중" if state.legacy == "destroy" else "일회 보상 미적용", "조회로 장비나 보상을 변경하지 않습니다"]
 			result.append({"id": "relic", "name": "유물·기억", "status": "불사조 깃털 사용 완료" if state.relic.get("used", false) else "현재 도전에 적용된 효과", "lines": lines, "open": true})
+			var stats: Dictionary = state.get("combat_stats",{})
+			if not stats.is_empty():
+				result.append({"id":"combat_stats", "name":"주인공 능력치", "status":PrototypeCharacters.display_name(String(state.get("character_id","roan"))), "lines":["공격력 %d · 방어력 %d" % [int(stats.attack),int(stats.defense)], "치명타 확률 %.1f%%" % float(stats.critical_chance), "치명타 피해 %.1f%% (총 피해 배율)" % float(stats.critical_damage), "체력 %d / %d" % [int(stats.health),int(stats.max_health)], "방어력에 의한 피해 감소 %.1f%%" % float(stats.damage_reduction), "공격력100 = 무기 기본값 · 무기별 강화 별도"], "open":true})
+			var passive: Dictionary = state.get("hero_trait",{})
+			if not passive.is_empty(): result.append({"id":"hero_trait","name":String(passive.name),"status":String(passive.status),"lines":passive.lines,"open":true})
 	return result
 
 static func layout(safe: Rect2, count: int) -> Dictionary:
