@@ -32,6 +32,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 	_lightning_anchor = _captured_target.global_position if _valid_target(_captured_target) else player.global_position + Vector2(250 * player.facing_direction,0)
 
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
+	player.note_family_attack_visual("staff")
 	if String(definition.execution_style).begins_with("staff_"):
 		_execute_dawn_spell(definition, hit_index)
 		last_combat_log = "%s 발동" % definition.display_name
@@ -72,6 +73,7 @@ func _execute_dawn_spell(definition: SkillDefinition, hit_index: int) -> void:
 	_show_slash(SKILL_FLASH_S, hit_index)
 
 func _spawn_bolt(id: StringName, base_damage: int, direction: Vector2, element: String, hits: int, radius: float, hit_index: int = 0) -> void:
+	player.note_family_attack_visual("staff")
 	var bolt := StaffMagicBolt.new()
 	bolt.projectile_id = "player:%s:%d:%d" % [id, _action_sequence, hit_index]
 	bolt.attack_id = id

@@ -8,6 +8,7 @@ func _update_basic_attack(delta: float) -> void:
 		return
 	_combo_idle_s = 0.0
 	if _basic_remaining_s > 0: return
+	player.note_family_attack_visual("polearm")
 	_action_sequence += 1
 	var hit_index := combo_index
 	for node in get_tree().get_nodes_in_group("targetable"):

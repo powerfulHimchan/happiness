@@ -88,7 +88,7 @@ func _run() -> void:
 				var first: Dictionary = ui.equipped_preview.snapshot(character,family,ui.preview_elapsed_s,view.preview)
 				ui._process(.41)
 				var second: Dictionary = ui.equipped_preview.snapshot(character,family,ui.preview_elapsed_s,view.preview)
-				check(first.frame != second.frame and first.foot != second.foot and second.weapon_texture != null,"animated equipped hero for every family")
+				check(first.frame != second.frame and first.body != second.body and first.hand != second.hand and first.foot == second.foot and second.weapon_texture != null,"animated equipped hero for every family")
 				var clock: float = ui.preview_elapsed_s
 				ui.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
 				ui._process(.5)

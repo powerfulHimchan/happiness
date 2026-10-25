@@ -8,11 +8,14 @@ func snapshot(character: String, family: String, time_s: float, area: Rect2) -> 
 	var phase := fposmod(maxf(0,time_s),TAU)
 	var frame := int(maxf(0,time_s)*2.5)%2
 	var scale_factor := minf(area.size.y*.96/255.0,area.size.x*.98/190.0)
-	var foot := Vector2(area.get_center().x,area.end.y-area.size.y*.045+sin(phase*2.0)*scale_factor*1.3)
-	var body := Rect2(foot-Vector2(192,272)*scale_factor,Vector2(384,288)*scale_factor)
-	var hand := foot+Vector2(([41,40] if character == "roan" else [60,53])[frame],-65+sin(phase*2.0)*.6)*scale_factor
-	var left_hand := foot+Vector2(-44,-65)*scale_factor
-	var angle := sin(phase)*.025
+	var foot := Vector2(area.get_center().x,area.end.y-area.size.y*.045)
+	var breath := sin(phase*2.0)*.012
+	var stretch := Vector2(1.0-breath*.4,1.0+breath)
+	var body := Rect2(foot-Vector2(192,272)*scale_factor*stretch,Vector2(384,288)*scale_factor*stretch)
+	var hand := foot+Vector2(([41,40] if character == "roan" else [60,53])[frame],-65)*scale_factor*stretch
+	var left_hand := foot+Vector2(-44,-65)*scale_factor*stretch
+	var sway: float = {"sword":.028,"bow":.018,"fist":.04,"staff":.035,"polearm":.016,"shield":.012}.get(family,.02)
+	var angle := sin(phase*2.0)*sway
 	var size_factor := scale_factor
 	var local := Rect2()
 	var texture: Texture2D = SupplyShopArt.ICONS.get(family,WeaponFamilyPresentation.TEXTURES.get(family))

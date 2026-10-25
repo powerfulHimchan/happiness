@@ -186,6 +186,7 @@ func _update_basic_attack(delta: float) -> void:
 
 	var hit_index := combo_index
 	if weapon_family == "sword": player.strike_attack_visual("sword_thrust" if hit_index == 2 else "sword_slash", player.facing_direction, false)
+	else: player.note_family_attack_visual(weapon_family)
 	_action_sequence += 1
 	var damage: int = int(weapon.damage[hit_index])
 	var stagger_s := 0.18 if hit_index == weapon.damage.size() - 1 else 0.04
@@ -264,6 +265,7 @@ func _start_skill(action: int, definition: SkillDefinition, cooldown_remaining_s
 		)
 	player.begin_combat_action(velocity_x, definition.can_move, definition.can_turn)
 	if weapon_family == "sword": player.begin_attack_visual(_animation_clip(definition), player.facing_direction)
+	else: player.note_family_attack_visual(weapon_family, true)
 	player.set_combat_evade_allowed(false)
 	last_combat_log = "%s 시작 · 취소 %.2fs부터" % [
 		definition.display_name,
@@ -300,6 +302,7 @@ func _animation_clip(definition: SkillDefinition) -> String:
 func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	if _action == Action.WAVE_SLASH:
 		if weapon_family == "sword": player.strike_attack_visual(_animation_clip(definition), _wave_direction, true)
+		else: player.note_family_attack_visual(weapon_family, false, _wave_direction)
 		_spawn_wave(definition, hit_index)
 		_show_slash(SKILL_FLASH_S, hit_index)
 		return
@@ -310,6 +313,7 @@ func _execute_skill_hit(definition: SkillDefinition, hit_index: int) -> void:
 	if _action == Action.LINE_SLASH:
 		_line_visual_direction = hit_direction
 	if weapon_family == "sword": player.strike_attack_visual(_animation_clip(definition), hit_direction if _action == Action.LINE_SLASH else player.facing_direction, true)
+	else: player.note_family_attack_visual(weapon_family, false, hit_direction if _action == Action.LINE_SLASH else player.facing_direction)
 	var targets: Array[PrototypeTarget] = []
 	if _action == Action.DASH_SLASH:
 		if is_instance_valid(_captured_target) and _captured_target.is_targetable():

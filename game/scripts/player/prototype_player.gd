@@ -53,6 +53,7 @@ var character_id: String = "roan"
 var hero_traits := HeroTraits.new()
 var movement_animation := HeroMovementAnimation.new()
 var combat_animation := HeroCombatAnimation.new()
+var motion_polish := HeroMotionPolish.new()
 
 var barrier_focus_unlocked: bool = false
 var crisis_power_unlocked: bool = false
@@ -351,6 +352,7 @@ func begin_combat_action(
 
 func end_combat_action() -> void:
 	_combat_action_active = false
+	if motion_polish.anticipating: motion_polish.attack_elapsed = -1.0
 	_combat_horizontal_velocity_px = 0.0
 	_combat_move_allowed = true
 	_combat_turn_allowed = true
@@ -461,6 +463,7 @@ func receive_damage(event: DamageEvent) -> int:
 	if result == DamageReceiver.Result.APPLIED:
 		var cause := _damage_cause_label(event)
 		damage_cause_counts[cause] = int(damage_cause_counts.get(cause, 0)) + 1
+		motion_polish.recoil(global_position.x - event.source_position.x)
 		_hit_flash_remaining_s = POST_HIT_FLASH_S
 		_input_lock_remaining_s = maxf(_input_lock_remaining_s, event.stagger_s)
 		move_input = 0.0
@@ -554,6 +557,7 @@ func set_job_emblem(job_id: String, color: Color) -> void:
 
 
 func _draw() -> void:
+	motion_polish.draw(self)
 	if barrier_unlocked and damage_receiver.barrier_health > 0 and not damage_receiver.dead:
 		draw_arc(Vector2(0, -38), 58.0, -PI * 0.5, -PI * 0.5 + TAU * float(damage_receiver.barrier_health) / barrier_capacity(), 48, Color("82dcec", 0.75), 4.0, true)
 	if _lifesteal_flash_remaining_s > 0.0:
@@ -831,6 +835,7 @@ func prepare_next_stage(spawn_position: Vector2) -> void:
 	velocity = Vector2.ZERO
 	facing_direction = 1
 	avatar_sprite.flip_h = false
+	motion_polish.reset(avatar_sprite)
 	movement_animation.reset(avatar_sprite, character_id)
 	combat_animation.clear()
 	air_dash_available = true
@@ -915,6 +920,7 @@ func reset_movement_test(spawn_position: Vector2) -> void:
 	move_input_vector = Vector2.ZERO
 	facing_direction = 1
 	avatar_sprite.flip_h = false
+	motion_polish.reset(avatar_sprite)
 	movement_animation.reset(avatar_sprite, character_id)
 	combat_animation.clear()
 	jump_held = false
@@ -1115,16 +1121,24 @@ func _end_invincibility() -> void:
 
 
 func begin_attack_visual(clip: String, direction: int) -> void:
+	motion_polish.attack(clip.get_slice("_", 0), direction, true)
 	combat_animation.begin(clip, direction)
 	_update_avatar_action_visual()
 
 
+func note_family_attack_visual(family: String, windup: bool = false, direction: int = 0) -> void:
+	motion_polish.attack(family, facing_direction if direction == 0 else direction, windup)
+	_update_avatar_action_visual()
+
+
 func strike_attack_visual(clip: String, direction: int, is_skill: bool) -> void:
+	motion_polish.attack(clip.get_slice("_", 0), direction, false)
 	combat_animation.strike(clip, direction, is_skill)
 	_update_avatar_action_visual()
 
 
 func _update_avatar_action_visual(delta: float = 0.0) -> void:
+	avatar_sprite.rotation = 0.0
 	combat_animation.advance(delta, damage_receiver.dead or _hit_flash_remaining_s > 0.0 or _fall_recovery_active or _input_lock_remaining_s > 0.0 or _mobility_action != MobilityAction.NONE)
 	movement_animation.update(
 		avatar_sprite, character_id, delta, is_on_floor(), velocity,
@@ -1133,6 +1147,8 @@ func _update_avatar_action_visual(delta: float = 0.0) -> void:
 	)
 	avatar_sprite.flip_h = facing_direction < 0
 	combat_animation.apply(avatar_sprite, character_id)
+	motion_polish.update(avatar_sprite, delta, movement_animation.state, movement_animation.elapsed_s, velocity, facing_direction, _mobility_action, not combat_animation.clip.is_empty(), damage_receiver.dead or _fall_recovery_active or _hit_flash_remaining_s > 0.0 or _input_lock_remaining_s > 0.0)
+	queue_redraw()
 	if damage_receiver.dead:
 		avatar_sprite.modulate = Color("647986")
 	elif _hit_flash_remaining_s > 0.0:
@@ -1310,6 +1326,7 @@ func set_character(id: String) -> bool:
 	if not PrototypeCharacters.valid_id(id): return false
 	if character_id != id: hero_traits.reset()
 	character_id = id
+	motion_polish.reset(avatar_sprite)
 	movement_animation.reset(avatar_sprite, id)
 	combat_animation.clear()
 	_emit_metrics()
