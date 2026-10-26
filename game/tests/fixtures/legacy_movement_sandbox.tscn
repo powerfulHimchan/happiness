@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/movement/ground_movement_sandbox.tscn" id="1"]
+
+[node name="GroundMovementSandbox" instance=ExtResource("1")]
+
+[node name="StageRunner" parent="."]
+detailed_maps_enabled = false

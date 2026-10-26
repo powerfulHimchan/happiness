@@ -22,6 +22,11 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/stage/windmill_meadow.gd"
+  "$game_root/scripts/stage/windmill_meadow_layout.gd"
+  "$game_root/scripts/stage/windmill_meadow_art.gd"
+  "$game_root/tests/windmill_meadow_runtime_test.gd"
+  "$game_root/tests/fixtures/legacy_movement_sandbox.tscn"
   "$game_root/scripts/combat/conditional_weapon_designs.gd"
   "$game_root/scripts/economy/supply_shop_browser.gd"
   "$game_root/scripts/ui/weapon_catalog_browser.gd"
@@ -975,6 +980,9 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  for map_phase in flow physics journey story; do
+    checked_godot 120s --headless --path "$game_root" --script res://tests/windmill_meadow_runtime_test.gd -- "$map_phase"
+  done
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp821_830_art_runtime_test.gd
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp831_840_animation_runtime_test.gd
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp891_910_presentation_runtime_test.gd -- runtime

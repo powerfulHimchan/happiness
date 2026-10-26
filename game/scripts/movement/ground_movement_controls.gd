@@ -2208,8 +2208,8 @@ func _refresh_layout() -> void:
 
 func _draw_header() -> void:
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.91)), hud_rect)
-	var section_index: int = int(movement_metrics.get("stage_section_index", 1))
-	var section_count: int = int(movement_metrics.get("stage_section_count", 5))
+	var section_index: int = int(movement_metrics.get("map_zone_index", 1)) if movement_metrics.get("map_id") == "windmill_meadow" else int(movement_metrics.get("stage_section_index", 1))
+	var section_count: int = 7 if movement_metrics.get("map_id") == "windmill_meadow" else int(movement_metrics.get("stage_section_count", 5))
 	var section_name: String = String(movement_metrics.get("stage_section_name", "전진 1"))
 	var stage_elapsed: float = float(movement_metrics.get("stage_elapsed_s", 0.0))
 	var stage_target: float = float(movement_metrics.get("stage_target_s", 180.0))

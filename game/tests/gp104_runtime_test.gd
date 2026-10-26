@@ -1,6 +1,6 @@
 extends SceneTree
 
-const SANDBOX := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+const SANDBOX := preload("res://tests/fixtures/legacy_movement_sandbox.tscn")
 const RECORD_PATH := "user://gp104_runtime_records.jsonl"
 var sandbox: Node
 var controls: Control

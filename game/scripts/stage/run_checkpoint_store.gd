@@ -86,6 +86,8 @@ static func _number(value: Variant, low: float, high: float, integer: bool = fal
 
 
 static func valid_state(state: Dictionary) -> bool:
+	if state.get("stage") is Dictionary and state.stage.has("windmill_resume"):
+		return _valid_windmill_checkpoint(state)
 	for key in ["stage", "growth", "player", "weapons", "ultimate", "recorder"]:
 		if not state.get(key) is Dictionary:
 			return false
@@ -320,3 +322,37 @@ static func _valid_region_run(stage: Dictionary) -> bool:
 		if entry.route not in candidates: return false
 		seen.append(String(entry.route))
 	return true
+
+
+static func _valid_windmill_checkpoint(state: Dictionary) -> bool:
+	# Validate a partial map, then reuse all combat/equipment/campaign validation on a
+	# completed-shaped COPY. The actual save keeps only genuinely completed stages.
+	for key in ["growth","player","weapons","ultimate","recorder"]:
+		if not state.get(key) is Dictionary: return false
+	var stage: Dictionary = state.stage
+	if not _number(stage.get("limit"),3,10,true): return false
+	if state.has("story") and not state.story is Dictionary: return false
+	if not state.recorder.get("id") is String or String(state.recorder.id).is_empty(): return false
+	if not WindmillMeadow.valid_progress(stage.windmill_resume): return false
+	if not _number(stage.get("number"),1,7,true) or not stage.get("history") is Array or stage.history.size() != int(stage.number)-1: return false
+	if stage.get("run_mode", "standard") == JourneyRoutePlan.MODE:
+		if stage.get("route") != "wind" or int(stage.number)%2 != 1: return false
+	elif int(stage.number) != 1 or stage.get("route") != "meadow": return false
+	if stage.get("reward_claimed") != false or stage.get("skills_claimed") != false or stage.get("boss_choice") != "": return false
+	if not stage.get("sections") is Array or stage.sections.size() != int(stage.windmill_resume.phase): return false
+	if not _number(stage.get("elapsed"),0,1000000): return false
+	var total: float = float(stage.windmill_resume.section_elapsed)
+	for duration in stage.sections:
+		if not _number(duration,0,1000000): return false
+		total += float(duration)
+	if not is_equal_approx(total,float(stage.elapsed)): return false
+	if state.has("supplies") and not RunSupplyShop.valid_state(state.supplies,state): return false
+	var completed := state.duplicate(true)
+	completed.erase("supplies") # The original shop was validated against completed history above.
+	completed.stage.erase("windmill_resume")
+	completed.stage.history.append({"stage":stage.number,"route":stage.route,"elapsed_s":stage.elapsed})
+	while completed.stage.sections.size() < 5: completed.stage.sections.append(0.0)
+	if completed.has("story"):
+		if completed.story.get("pending") != "": return false
+		completed.story.pending = "stage:%d" % int(stage.number)
+	return valid_state(completed)

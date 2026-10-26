@@ -1,6 +1,6 @@
 extends SceneTree
 
-const SANDBOX := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+const SANDBOX := preload("res://tests/fixtures/legacy_movement_sandbox.tscn")
 var failures := 0
 func _initialize() -> void: call_deferred("_run")
 func _run() -> void:

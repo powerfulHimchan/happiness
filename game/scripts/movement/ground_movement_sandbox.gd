@@ -234,6 +234,7 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	if stage_runner.meadow != null and stage_runner.meadow.active: return
 	var terrain: PrototypeRouteTerrain = $RouteTerrain
 	var route := terrain.route_id
 	var landscape := stage_runner.stage_enabled and not terrain.heart_arena and RegionalLandscapeArt.supports(route)
@@ -756,6 +757,14 @@ func continue_saved_run() -> bool:
 	_restoring_checkpoint = false
 	player.apply_growth_health(0, 0)
 	ultimate_controller.force_emit_metrics()
+	if state.stage.has("windmill_resume"):
+		_intermission_stage = 0
+		test_recorder.resume_active_stage(stage_runner.current_section+1)
+		controls.screen_mode = 0
+		_finish_growth_selection()
+		stage_runner.force_emit_metrics()
+		_update_story_status()
+		return true
 	_begin_growth_pause()
 	_stage_recovered_health = 0
 	if stage_runner.uses_boss():
@@ -834,6 +843,7 @@ func _suspend_combat_environment() -> void:
 	_combat_environment_suspended = true
 	_suspended_node_states.clear()
 	var nodes: Array[Node] = [stage_runner, target_selector, $RecoveryOrbController, $RouteTerrain, $ClockTrapController]
+	if stage_runner.meadow != null: nodes.append(stage_runner.meadow)
 	if controls.village_environment_owned:
 		nodes.append_array([player, weapon_controller])
 	for group_name in [&"combat_enemy", &"enemy_projectile", &"targetable"]:
@@ -936,7 +946,7 @@ func _on_safe_zone_entered(
 	spawn_position: Vector2,
 	safe_label: String
 ) -> void:
-	if body != player:
+	if body != player or stage_runner.meadow != null and stage_runner.meadow.active:
 		return
 	player.set_safe_spawn(spawn_position, safe_label)
 

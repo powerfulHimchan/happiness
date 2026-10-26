@@ -1,6 +1,6 @@
 extends SceneTree
 
-const SANDBOX := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+const SANDBOX := preload("res://tests/fixtures/legacy_movement_sandbox.tscn")
 const STEM := "user://gp718_767_"
 var failures := 0
 var assertions := 0

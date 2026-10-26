@@ -61,6 +61,7 @@ func drop_position(origin: Vector2) -> Vector2:
 	# 실제 지형 사각형에서 아래쪽 지면을 찾는다. 구덩이 위 처치는 가까운 발판 가장자리로 옮긴다.
 	var surfaces: Array[Rect2] = [sandbox.LEFT_FLOOR_RECT, sandbox.RIGHT_FLOOR_RECT, sandbox.PRACTICE_PLATFORM_RECT]
 	surfaces.append_array(runner.route_terrain.platforms)
+	if runner.meadow != null and runner.meadow.active: surfaces = runner.meadow.collision_surfaces()
 	var best := Vector2.ZERO
 	var best_score := INF
 	for surface in surfaces:

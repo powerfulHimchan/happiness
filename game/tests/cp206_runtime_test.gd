@@ -1,6 +1,6 @@
 extends SceneTree
 
-const SANDBOX_SCENE := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+const SANDBOX_SCENE := preload("res://tests/fixtures/legacy_movement_sandbox.tscn")
 const ENEMY_PROJECTILE_SCENE := preload("res://scenes/combat/enemy_seed_projectile.tscn")
 
 

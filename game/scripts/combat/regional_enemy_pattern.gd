@@ -49,11 +49,11 @@ func tick(e, delta: float) -> void:
 				else: e._begin_attack("%s · %s" % [e.enemy_name(), "되감기 돌진" if id == "rewind_doll" else "뿔 돌진" if id == "rabbit" else "창 찌르기"])
 		2:
 			var step: float = minf((620.0 if id == "rabbit" else 500.0) * delta, distance() - e._attack_distance_px)
-			e.position.x = clampf(e.position.x + aim.x * step, 100.0, 4900.0)
+			e.position.x = clampf(e.position.x + aim.x * step, e.movement_bounds.x, e.movement_bounds.y)
 			e._attack_distance_px += step
 			if id == "rabbit": e.position.y = origin.y - sin(minf(e._attack_distance_px / distance(), 1.0) * PI) * 85.0
 			e._try_contact_damage(11 if id == "mask_guard" else 9, StringName(id + "_strike"))
-			if e._attack_distance_px >= distance() or e.position.x in [100.0, 4900.0]:
+			if e._attack_distance_px >= distance() or e.position.x in [e.movement_bounds.x, e.movement_bounds.y]:
 				e.position.y = origin.y
 				e._begin_recovery("%s · 반격 기회" % e.enemy_name())
 		3:

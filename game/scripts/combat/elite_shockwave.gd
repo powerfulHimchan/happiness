@@ -49,7 +49,7 @@ func _physics_process(delta: float) -> void:
 	if _try_hit_player(previous_position, global_position):
 		queue_free()
 		return
-	if _travelled_px >= max_distance_px or global_position.x <= 80.0 or global_position.x >= 4920.0:
+	if _travelled_px >= max_distance_px or global_position.x <= 80.0 or global_position.x >= _world_right():
 		queue_free()
 
 
@@ -93,3 +93,10 @@ func _distance_to_segment(point: Vector2, start: Vector2, end: Vector2) -> float
 func _update_visual() -> void:
 	if wave_sprite != null:
 		wave_sprite.modulate = Color("b8e8ff") if enemy_time_scale < 1.0 else Color.WHITE
+
+
+func _world_right() -> float:
+	var player := get_tree().get_first_node_in_group("prototype_player") as PrototypePlayer
+	if player != null:
+		return float((player.get_node("Camera2D") as Camera2D).limit_right) - 80.0
+	return 4920.0

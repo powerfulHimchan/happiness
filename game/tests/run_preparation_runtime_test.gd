@@ -1,6 +1,6 @@
 extends SceneTree
 
-const SCENE := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+const SCENE := preload("res://tests/fixtures/legacy_movement_sandbox.tscn")
 var checks := 0
 var failures := 0
 var scene: Node

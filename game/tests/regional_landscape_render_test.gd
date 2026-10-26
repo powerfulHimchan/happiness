@@ -1,7 +1,7 @@
 extends SceneTree
 
 ## Manual graphics QA: run with a real renderer and LANDSCAPE_RENDER_DIR.
-const SANDBOX := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+const SANDBOX := preload("res://tests/fixtures/legacy_movement_sandbox.tscn")
 const CONTROLS := preload("res://scripts/movement/ground_movement_controls.gd")
 
 func _initialize() -> void: call_deferred("_run")

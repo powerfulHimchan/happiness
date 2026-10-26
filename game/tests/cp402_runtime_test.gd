@@ -1,6 +1,6 @@
 extends SceneTree
 
-const SANDBOX_SCENE := preload("res://scenes/movement/ground_movement_sandbox.tscn")
+const SANDBOX_SCENE := preload("res://tests/fixtures/legacy_movement_sandbox.tscn")
 const TEST_SAVE_PATH := "user://cp402_runtime_test.json"
 
 

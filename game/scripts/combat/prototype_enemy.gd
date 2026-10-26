@@ -62,6 +62,7 @@ var last_enemy_log: String = "행동 대기"
 var last_event_msec: int = -1
 var _state_elapsed_s: float = 0.0
 var _attack_cooldown_s: float = 0.0
+var movement_bounds := Vector2(100, 4900)
 var _spawn_position: Vector2
 var _pole_falling: bool = false
 var _shield_stun_remaining_s: float = 0.0
@@ -161,7 +162,7 @@ func receive_damage(event: DamageEvent) -> int:
 func apply_pole_push(distance_px: float) -> void:
 	if not is_targetable(): return
 	var before := position.x
-	position.x = clampf(position.x + distance_px,100.0,4900.0)
+	position.x = clampf(position.x + distance_px,movement_bounds.x,movement_bounds.y)
 	_spawn_position.x += position.x-before
 	_interrupt_for_control()
 	_attack_cooldown_s = maxf(_attack_cooldown_s,0.4)
@@ -312,7 +313,7 @@ func _update_festival_soldier(delta: float) -> void:
 			if _state_elapsed_s >= SOLDIER_WARNING_S: _begin_attack("병정 행진 돌진")
 		State.ATTACK:
 			var distance := minf(400.0 * delta, SOLDIER_DASH_PX - _attack_distance_px)
-			position.x = clampf(position.x + _attack_direction.x * distance, 100.0, 4900.0)
+			position.x = clampf(position.x + _attack_direction.x * distance, movement_bounds.x, movement_bounds.y)
 			_attack_distance_px += distance
 			_try_contact_damage(9, &"soldier_march")
 			if _attack_distance_px >= SOLDIER_DASH_PX: _begin_recovery("병정 태엽 재감기 · 1.1초 빈틈")
@@ -370,7 +371,7 @@ func _update_leaf_slime(delta: float) -> void:
 		State.ATTACK:
 			_velocity.y += 1900.0 * delta
 			position += _velocity * delta
-			if expedition_patterns: position.x = clampf(position.x, 100.0, 4900.0)
+			if expedition_patterns: position.x = clampf(position.x, movement_bounds.x, movement_bounds.y)
 			_try_contact_damage(SLIME_DAMAGE, &"slime_jump")
 			if position.y >= _spawn_position.y:
 				position.y = _spawn_position.y
@@ -440,9 +441,9 @@ func _update_wind_spirit(delta: float) -> void:
 			position += displacement
 			_attack_distance_px += displacement.length()
 			_try_contact_damage(WIND_DAMAGE, &"wind_dash")
-			if _attack_distance_px >= 850.0 or position.x <= 100.0 or position.x >= 4900.0:
+			if _attack_distance_px >= 850.0 or position.x <= movement_bounds.x or position.x >= movement_bounds.y:
 				if forest_variant or expedition_patterns:
-					position.x = clampf(position.x, 100.0, 4900.0)
+					position.x = clampf(position.x, movement_bounds.x, movement_bounds.y)
 				_begin_recovery("바람 정령 빗나감 · 1.2초 빈틈")
 		State.RECOVERY:
 			if _combo_remaining > 0 and _state_elapsed_s >= 0.30:

@@ -35,6 +35,9 @@ const STAGE_TARGET_SECONDS := 180.0
 const ADVANCE_ONE_X := 1230.0
 const ADVANCE_TWO_X := 3830.0
 
+@export var detailed_maps_enabled: bool = true
+var meadow: WindmillMeadow
+
 @export var stage_enabled: bool = true
 @export_range(1, 10) var stage_limit: int = 1
 
@@ -100,6 +103,8 @@ var _initial_health: Dictionary = {}
 
 
 func _ready() -> void:
+	meadow = WindmillMeadow.new()
+	add_child(meadow)
 	region_rng.randomize()
 	for enemy in _all_combat_enemies():
 		_initial_positions[enemy.get_path()] = enemy.position
@@ -124,6 +129,13 @@ func _process(delta: float) -> void:
 			_emit_metrics()
 		return
 
+	if meadow != null and meadow.active:
+		meadow.advance(delta)
+		if _metric_elapsed_s >= 0.10:
+			_metric_elapsed_s = 0.0
+			_emit_metrics()
+		return
+
 	match current_section:
 		Section.ADVANCE_ONE:
 			if player.global_position.x >= ADVANCE_ONE_X:
@@ -144,10 +156,15 @@ func region_section() -> int:
 	return RegionStageLayout.section(run_mode, stage_number, route_id)
 
 
+func uses_meadow_map() -> bool:
+	return detailed_maps_enabled and ((run_mode != JourneyRoutePlan.MODE and stage_number == 1) or (run_mode == JourneyRoutePlan.MODE and route_id == "wind" and region_section() == 1))
+
+
 func reset_stage() -> void:
 	if not stage_enabled:
 		return
-	route_terrain.configure(stage_number, route_id, true, run_mode == JourneyRoutePlan.MODE, region_section())
+	if meadow != null: meadow.configure(self, false)
+	route_terrain.configure(stage_number, route_id, not uses_meadow_map(), run_mode == JourneyRoutePlan.MODE, region_section())
 	clock_traps.configure(stage_number, route_id, run_mode == JourneyRoutePlan.MODE, region_section())
 	reward_claimed = false
 	skills_claimed = false
@@ -175,6 +192,7 @@ func reset_stage() -> void:
 	_active_enemies.clear()
 	_metric_elapsed_s = 0.0
 	_last_stage_log = "구간 1/5 시작 · 첫 관문까지 전진"
+	if meadow != null: meadow.configure(self, uses_meadow_map())
 	stage_reset.emit()
 	_emit_metrics()
 
@@ -317,6 +335,8 @@ func final_enemy() -> PrototypeTarget:
 
 func checkpoint_snapshot() -> Dictionary:
 	var state := {"number": stage_number, "limit": stage_limit, "route": route_id, "elapsed": stage_elapsed_s, "history": stage_history.duplicate(true), "sections": section_actual_times.duplicate(), "reward_claimed": reward_claimed, "skills_claimed": skills_claimed, "boss_choice": boss_choice}
+	if meadow != null and meadow.active and not stage_complete:
+		state.windmill_resume = meadow.progress_snapshot()
 	if expedition > 0: state.expedition = expedition
 	if run_mode in ["regions", JourneyRoutePlan.MODE]:
 		state.run_mode = run_mode
@@ -349,7 +369,7 @@ func restore_checkpoint(state: Dictionary) -> void:
 	if run_mode == JourneyRoutePlan.MODE and stage_number >= 9:
 		stage_history[8].guardian_choice = guardian_choice
 	completed_elapsed_s = 0.0
-	for entry in stage_history.slice(0, -1):
+	for entry in (stage_history if state.has("windmill_resume") else stage_history.slice(0, -1)):
 		completed_elapsed_s += float(entry.elapsed_s)
 	reset_stage()
 	reward_claimed = bool(state.get("reward_claimed", true))
@@ -357,6 +377,13 @@ func restore_checkpoint(state: Dictionary) -> void:
 	boss_choice = String(state.get("boss_choice", ""))
 	stage_elapsed_s = float(state.elapsed)
 	section_actual_times.assign(state.sections)
+	if state.has("windmill_resume"):
+		current_section = int(state.windmill_resume.phase)
+		section_elapsed_s = float(state.windmill_resume.section_elapsed)
+		stage_complete = false
+		meadow.restore_progress(state.windmill_resume)
+		_emit_metrics()
+		return
 	current_section = Section.COMPLETE
 	stage_complete = true
 	for index in gates.size():
@@ -515,6 +542,11 @@ func current_metrics() -> Dictionary:
 		objective += " · 일반 적 연속 공격 재경고 확인"
 	if expedition > 0 and not stage_complete and current_section == Section.WAVE_TWO:
 		objective += " · 추가 정예 갑옷 멧돼지 처치"
+	var detailed := meadow != null and meadow.active
+	if detailed:
+		route_name = "풍차 들판"
+		section_name = "완료" if stage_complete else meadow.current_zone()
+		objective = meadow.objective()
 	var closed_gate_count := 0
 	for gate_index in gates.size():
 		if is_gate_closed(gate_index):
@@ -532,7 +564,7 @@ func current_metrics() -> Dictionary:
 		"run_visited_regions": visited,
 		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
 		"run_region_section": region_section(),
-		"run_route_terrain": "의식의 방" if uses_heart() else String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else CityGateLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.GATE else CityCoreLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
+		"run_route_terrain": "갈림길 · 풍차 장치 · 바람길" if detailed else "의식의 방" if uses_heart() else String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else CityGateLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.GATE else CityCoreLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
 		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice() and heart_threshold != HeartThreshold.PENDING and arrival_ending != ArrivalEnding.PENDING and not HeartEncounter.blocks_completion(heart_battle) and not FinalRitual.blocks_completion(final_ritual) and (final_ritual.get("phase") != FinalRitual.SEEN or final_record_ready),
 		"ending_id": String(final_ritual.get("choice", "")) if final_ritual.get("phase") == FinalRitual.SEEN else "",
 		"arrival_ending": arrival_ending,
@@ -554,8 +586,8 @@ func current_metrics() -> Dictionary:
 		"stage_section_name": section_name,
 		"stage_objective": objective,
 		"stage_elapsed_s": stage_elapsed_s,
-		"stage_target_s": STAGE_TARGET_SECONDS,
-		"stage_overtime": stage_elapsed_s > STAGE_TARGET_SECONDS,
+		"stage_target_s": WindmillMeadowLayout.TARGET_SECONDS if detailed else STAGE_TARGET_SECONDS,
+		"stage_overtime": stage_elapsed_s > (WindmillMeadowLayout.TARGET_SECONDS if detailed else STAGE_TARGET_SECONDS),
 		"stage_section_elapsed_s": section_elapsed_s,
 		"stage_section_target_s": target_s,
 		"stage_section_overtime": not stage_complete and section_elapsed_s > target_s,
@@ -564,6 +596,11 @@ func current_metrics() -> Dictionary:
 		"stage_active_enemy_count": _active_enemy_count(),
 		"stage_closed_gate_count": closed_gate_count,
 		"stage_last_log": _last_stage_log,
+		"map_id": "windmill_meadow" if detailed else "legacy",
+		"map_zone_index": WindmillMeadowLayout.zone_at(player.position.x) + 1 if detailed else 0,
+		"map_zone_count": 7 if detailed else 0,
+		"map_powered": meadow.powered if detailed else false,
+		"map_treasures": meadow.claimed.size() if detailed else 0,
 	}
 
 
@@ -620,6 +657,7 @@ func _configure_roster_wave(wave: int) -> void:
 
 
 func _activate_wave_one() -> void:
+	if meadow != null and meadow.active: return
 	_configure_roster_wave(1)
 	if route_id == JourneyRoutePlan.CORE:
 		_activate_city_core_wave(1)
@@ -654,6 +692,7 @@ func _activate_wave_one() -> void:
 
 
 func _activate_wave_two() -> void:
+	if meadow != null and meadow.active: return
 	_configure_roster_wave(2)
 	if route_id == JourneyRoutePlan.CORE:
 		_activate_city_core_wave(2)
@@ -718,6 +757,9 @@ func _activate_second_region_wave(number: int) -> void:
 
 
 func _activate_elite() -> void:
+	if meadow != null and meadow.active:
+		meadow.start_elite()
+		return
 	var enemy := final_enemy()
 	_activate_enemy(enemy, Vector2(4450.0, 780.0))
 	_active_enemies.assign([enemy])
@@ -744,6 +786,7 @@ func _deactivate_all_combat_enemies() -> void:
 
 
 func _restore_combat_sandbox() -> void:
+	if meadow != null: meadow.configure(self, false)
 	route_terrain.configure(1, "meadow", false)
 	clock_traps.configure(1, "meadow")
 	for gate_index in gates.size():
@@ -781,6 +824,7 @@ func _active_enemy_count() -> int:
 
 
 func _set_gate_closed(gate_index: int, closed: bool) -> void:
+	if meadow != null and meadow.active: closed = false
 	var gate := gates[gate_index]
 	var shape := gate.get_node("CollisionShape2D") as CollisionShape2D
 	var visual := gate.get_node("GateVisual") as Polygon2D

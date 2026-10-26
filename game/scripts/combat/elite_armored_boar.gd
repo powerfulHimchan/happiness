@@ -46,6 +46,7 @@ const DANGER_LINE_COLOR := Color("ff7043")
 
 @export var player_path: NodePath
 
+var arena_bounds := Vector2(LEFT_WALL_X, RIGHT_WALL_X)
 var region_species: String = "boar"
 var _region_original_texture: Texture2D
 var _region_charge_origin := Vector2.ZERO
@@ -284,14 +285,14 @@ func _update_warning() -> void:
 
 func _update_charge(delta: float) -> void:
 	position.x += _charge_direction * _charge_speed_mps() * PrototypePlayer.PIXELS_PER_METER * delta
-	if region_species != "boar": position.x = clampf(position.x, LEFT_WALL_X, RIGHT_WALL_X)
+	if region_species != "boar": position.x = clampf(position.x, arena_bounds.x, arena_bounds.y)
 	_try_charge_damage()
 	if region_species in ["vine_hunter", "clock_sentry", "mask_guard", "parade_doll"] and absf(position.x - _region_charge_origin.x) >= (520.0 if region_species == "vine_hunter" else 360.0):
 		if region_species == "clock_sentry": position = _region_charge_origin
 		_begin_recovery(region_enemy_name() + " 공격 뒤 빈틈")
 		return
-	if position.x <= LEFT_WALL_X or position.x >= RIGHT_WALL_X:
-		position.x = clampf(position.x, LEFT_WALL_X, RIGHT_WALL_X)
+	if position.x <= arena_bounds.x or position.x >= arena_bounds.y:
+		position.x = clampf(position.x, arena_bounds.x, arena_bounds.y)
 		_set_state(State.STUNNED, "벽 충돌 · %.1f초 검 약점" % _wall_stun_duration())
 
 
@@ -462,7 +463,7 @@ func apply_shield_stun(duration_s: float) -> void:
 
 func apply_pole_push(distance_px: float) -> void:
 	if not is_targetable(): return
-	position.x = clampf(position.x + distance_px, LEFT_WALL_X, RIGHT_WALL_X)
+	position.x = clampf(position.x + distance_px, arena_bounds.x, arena_bounds.y)
 	_phase_two_second_wave_pending = false
 	_begin_recovery(region_enemy_name() + " · 장봉 밀치기")
 

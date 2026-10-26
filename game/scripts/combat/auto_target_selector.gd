@@ -11,6 +11,7 @@ const SWITCH_DISTANCE_RATIO := 0.80
 const DEFAULT_ATTACK_RANGE_M := 1.6
 const ATTACK_ORIGIN_LOCAL := Vector2(0.0, -38.0)
 
+var visibility_filter: Callable
 var current_target: PrototypeTarget
 var attack_range_m: float = DEFAULT_ATTACK_RANGE_M
 var screen_only: bool = false
@@ -86,7 +87,7 @@ func _scan_targets(scan_reason: String) -> void:
 
 	for node in get_tree().get_nodes_in_group("targetable"):
 		var target := node as PrototypeTarget
-		if target == null or not target.is_targetable():
+		if target == null or not target.is_targetable() or visibility_filter.is_valid() and not visibility_filter.call(target):
 			continue
 		if screen_only and not is_target_on_screen(target):
 			_screen_filtered_count += 1
@@ -137,6 +138,7 @@ func _is_current_target_valid() -> bool:
 		return true
 	if not is_instance_valid(current_target) or not current_target.is_targetable():
 		return false
+	if visibility_filter.is_valid() and not visibility_filter.call(current_target): return false
 	var origin := _attack_origin_global()
 	var offset := current_target.closest_hit_point(origin) - origin
 	if offset.x * float(player.facing_direction) <= 0.0:

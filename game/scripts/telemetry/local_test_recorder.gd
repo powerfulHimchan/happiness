@@ -73,6 +73,11 @@ func restore_checkpoint(state: Dictionary, stage_number: int, mode: String = "st
 	_append_event("run_resumed", fields)
 
 
+func resume_active_stage(section_count: int) -> void:
+	_recorded_stage_completed = false
+	_recorded_section_count = clampi(section_count,1,SECTION_NAMES.size())
+
+
 func has_completed_run(run_id: String) -> bool:
 	for event in _read_valid_events():
 		if event.get("event") == "run_completed" and event.get("run_id") == run_id:
