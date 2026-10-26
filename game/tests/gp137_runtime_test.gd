@@ -195,7 +195,7 @@ func _test_weapon_codex(active: bool) -> bool:
 				var equipped: bool = active and weapons.equipment.has(card.weapon) and int(weapons.equipment[card.weapon]) == card.grade and weapons.blueprints[card.weapon] == card.blueprint
 				var available: bool = PrototypeWeaponRewards.design_available(card.blueprint, controls.unlocked_weapon_blueprints)
 				var status := "이번 도전 · 주 무기" if equipped and old_active == card.weapon else "이번 도전 · 보조 무기" if equipped else "획득 가능 · 효과 미리 보기" if available else "미해금 · 효과 미리 보기"
-				if not _check(card.name == source.name and card.lines.slice(0, 3) == source.lines and card.lines.size() == 6 and card.equipped == equipped and card.status == status and card.open == (available or equipped), "등급/이름/고유/보조 원본·해금·주/보조 장비 상태"): return false
+				if not _check(card.name == source.name and card.lines.slice(0, 3) == source.lines and card.lines.size() == 7 and String(card.lines[6]).begins_with("장비100 기준") and card.equipped == equipped and card.status == status and card.open == (available or equipped), "등급/이름/고유/보조 원본·해금·주/보조 장비 상태"): return false
 				if equipped: equipped_count += 1
 				if not _check(card.lines[3].contains("보스 파괴") == PrototypeWeaponRewards.BLUEPRINTS.has(card.blueprint) and card.lines[5].contains("필살기 제외"), "해금 조건·피해 보정 범위 안내"): return false
 				var rect: Rect2 = snapshot.layout.cards[i]

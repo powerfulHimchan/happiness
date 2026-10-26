@@ -110,14 +110,17 @@ func _test_reward_pages(id: String) -> bool:
 	var health := player.damage_receiver.health
 	var gauge := ultimate.gauge
 	var found: Array[String] = []
+	var added: int = ConditionalWeaponDesigns.DESIGNS.values().filter(func(item: Dictionary) -> bool: return weapons.equipment.has(item.weapon)).size()
+	var expected_count := 12+added
+	var pages := 1+ceili(float(expected_count-2)/controls.WEAPON_REWARD_PAGE_SIZE)
 	for dimensions in [Vector2(1280, 720), Vector2(2400, 1080)]:
 		controls.size = dimensions
 		controls._refresh_layout()
 		while controls.weapon_reward_page > 0: _tap(controls.weapon_reward_previous_rect.get_center())
 		found.clear()
-		for page in 4:
+		for page in pages:
 			controls._refresh_weapon_reward_layout()
-			if not _check(controls.weapon_reward_page == page and controls.weapon_reward_pages() == 4 and controls.selected_weapon_reward == -1, "보상 네 페이지·이동 후 선택 해제"): return false
+			if not _check(controls.weapon_reward_page == page and controls.weapon_reward_pages() == pages and controls.selected_weapon_reward == -1, "확장 보상 전체 페이지·이동 후 선택 해제"): return false
 			var rects: Array = controls.weapon_reward_rects.duplicate()
 			rects.append_array([controls.weapon_reward_confirm_rect, controls.weapon_reward_skip_rect, controls.weapon_reward_previous_rect, controls.weapon_reward_next_rect])
 			var safe: Rect2 = controls.layout_snapshot().safe
@@ -129,11 +132,11 @@ func _test_reward_pages(id: String) -> bool:
 				found.append(String(card.id))
 			await process_frame
 			_tap(controls.weapon_reward_next_rect.get_center())
-		if not _check(found.size() == 12 and found.all(func(key: String) -> bool: return found.count(key) == 1) and EXPECTED.keys().all(func(key: String) -> bool: return found.has(key)), "잠긴 태엽 제외 기존2+신규10 모든 후보 한 번씩"): return false
-		if not _check(controls.weapon_reward_page == 3, "마지막 페이지 경계 보존"): return false
+		if not _check(found.size() == expected_count and found.all(func(key: String) -> bool: return found.count(key) == 1) and EXPECTED.keys().all(func(key: String) -> bool: return found.has(key)), "기존12와 조건형 무기 후보를 중복 없이 한 번씩"): return false
+		if not _check(controls.weapon_reward_page == pages-1, "마지막 페이지 경계 보존"): return false
 	# 실제 UI 입력으로 원하는 장비를 선택한다.
 	while controls.weapon_reward_page > 0: _tap(controls.weapon_reward_previous_rect.get_center())
-	for page in 4:
+	for page in pages:
 		for index in controls.weapon_reward_cards.size():
 			if controls.weapon_reward_cards[index].id == id:
 				_tap(controls.weapon_reward_rects[index].get_center())
@@ -184,7 +187,7 @@ func _test_design_damage(id: String, grade: int) -> bool:
 func _test_catalog() -> bool:
 	var cards := PrototypeWeaponRewards.codex_cards({})
 	var original := ["sword_0", "sword_1", "sword_2", "clockwork_sword_1", "clockwork_sword_2", "bow_0", "bow_1", "bow_2", "clockwork_bow_1", "clockwork_bow_2"]
-	if not _check(cards.size() == 50 + PrototypeWeaponRewards.EXPANSION_DESIGNS.size()*2 and cards.slice(0, 10).map(func(card: Dictionary) -> String: return card.id) == original, "기존10 순서/ID 유지·기존 장비 순서 유지·수호·세라8종 포함 총38"): return false
+	if not _check(cards.size() == 50 + PrototypeWeaponRewards.EXPANSION_DESIGNS.size()*2 + ConditionalWeaponDesigns.DESIGNS.size()*2 and cards.slice(0, 10).map(func(card: Dictionary) -> String: return card.id) == original, "기존10 순서/ID 유지·기존 장비 순서 유지·수호·세라8종 포함 총38"): return false
 	for id in EXPECTED:
 		var values: Array = EXPECTED[id]
 		if not _check(PrototypeWeaponRewards.profile(values[0], 0, id).is_empty() and PrototypeWeaponRewards.profile("bow" if values[0] == "sword" else "sword", 1, id).is_empty(), "일반 등급·잘못된 무기 설계 거부"): return false

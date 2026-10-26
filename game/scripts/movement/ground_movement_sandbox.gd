@@ -1577,14 +1577,25 @@ func _sera_assist() -> void:
 
 
 func _supply_context() -> Dictionary:
+	var skill_damage := {}
+	var previews: Array = []
+	for pair in weapon_controller.skills.values(): previews.append_array(pair)
+	for offer in run_shop.get("stock",[]):
+		if not String(offer.skill).is_empty(): previews.append(offer.skill)
+	for id in previews:
+		if skill_damage.has(id): continue
+		var values: Array[int] = []
+		for raw in PrototypeSkillRewards.SKILLS[id].damage: values.append(player.growth_damage(int(raw),PrototypeSkillRewards.weapon_for(id),"skill"))
+		skill_damage[id] = values
 	var cooldowns := {}
 	for family in weapon_controller.equipment:
 		var combat: Node = weapon_controller.combat_for(family)
 		cooldowns[family] = [float(combat.get("_skill_1_cooldown_s")),float(combat.get("_skill_2_cooldown_s"))]
-	return {"health":player.damage_receiver.health,"max_health":player.damage_receiver.max_health,"potions":player.potions_remaining,"potion_capacity":player.potions_capacity(),"gauge":ultimate_controller.gauge,"equipment":weapon_controller.equipment.duplicate(),"blueprints":weapon_controller.blueprints.duplicate(),"skills":weapon_controller.skills.duplicate(true),"cooldowns":cooldowns,"family_recharge":player.family_skill_recharge()}
+	return {"active":weapon_controller.active_weapon_id,"skill_damage":skill_damage,"health":player.damage_receiver.health,"max_health":player.damage_receiver.max_health,"potions":player.potions_remaining,"potion_capacity":player.potions_capacity(),"gauge":ultimate_controller.gauge,"equipment":weapon_controller.equipment.duplicate(),"blueprints":weapon_controller.blueprints.duplicate(),"skills":weapon_controller.skills.duplicate(true),"cooldowns":cooldowns,"family_recharge":player.family_skill_recharge()}
 
 func _sync_supply_shop(message: String = "") -> void:
-	controls.update_supply_shop({"enabled":not run_shop.is_empty(),"tasks_enabled":RunTasks.enabled(run_shop),"coins":int(run_shop.get("coins",0)),"stage":int(run_shop.get("cleared",0)),"rerolled":RunSupplyShop.rerolled(run_shop,int(run_shop.get("cleared",0))),"cards":RunSupplyShop.cards(run_shop,_supply_context()),"context":_supply_context()},message)
+	var context := _supply_context()
+	controls.update_supply_shop({"enabled":not run_shop.is_empty(),"tasks_enabled":RunTasks.enabled(run_shop),"coins":int(run_shop.get("coins",0)),"stage":int(run_shop.get("cleared",0)),"rerolled":RunSupplyShop.rerolled(run_shop,int(run_shop.get("cleared",0))),"cards":RunSupplyShop.cards(run_shop,context),"context":context,"ledger":SupplyShopBrowser.ledger(run_shop,stage_runner.checkpoint_snapshot().history),"restock":SupplyShopBrowser.restock(run_shop,context)},message)
 
 func _shop_allowed(mode: int) -> bool:
 	return controls.current_screen_mode() == mode and not run_shop.is_empty() and stage_runner.has_next_stage() and stage_runner.stage_complete and stage_runner.reward_claimed and growth.run_active and not player.damage_receiver.dead and not growth.choosing and not growth.awaiting_job_confirmation

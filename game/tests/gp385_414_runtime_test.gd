@@ -101,7 +101,7 @@ func _definition(id: String) -> Dictionary:
 
 func _catalog() -> bool:
 	var cards := PrototypeWeaponRewards.codex_cards({})
-	if not _check(cards.size() == 74 and PrototypeWeaponRewards.EXPANSION_DESIGNS.size() == 12 and PrototypeRelic.OFFERS.size() == 33 and PrototypeWeaponTraining.CARDS.size() == 8 and PrototypeSkillRewards.CODEX_ORDER.size() == 88,"장비74·유물33·성장8추가·스킬88"): return false
+	if not _check(cards.size() == 74+ConditionalWeaponDesigns.DESIGNS.size()*2 and PrototypeWeaponRewards.EXPANSION_DESIGNS.size() == 12 and PrototypeRelic.OFFERS.size() == 33 and PrototypeWeaponTraining.CARDS.size() == 8 and PrototypeSkillRewards.CODEX_ORDER.size() == 88,"기존 장비74와 조건형 장비·유물33·성장8추가·스킬88"): return false
 	var old_tail: Array[String] = []
 	for id in ["fist","staff","polearm","shield"]:
 		for grade in 3: old_tail.append(id+"_"+str(grade))

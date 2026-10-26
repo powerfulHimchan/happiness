@@ -684,7 +684,7 @@ func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") 
 
 func growth_damage_preview(base_damage: int, weapon_id: String, kind: String, grounded: bool, include_links: bool = true) -> int:
 	var weapon_bonus := float(get("growth_" + weapon_id + "_bonus")) if weapon_id in PrototypeWeaponRewards.FAMILY_IDS else 0.0
-	var damage := float(base_damage) * (attack_value() / PrototypeCombatStats.BASE_ATTACK + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind) * PrototypeWeaponMastery.damage_multiplier(weapon_mastery, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health) * PrototypeCombatTactics.damage_multiplier(combat_tactics, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health, damage_receiver.barrier_health)
+	var damage := float(base_damage) * (attack_value() / PrototypeCombatStats.BASE_ATTACK + weapon_bonus + PrototypeWeaponTraining.damage_bonus(weapon_training, weapon_id, kind)) * PrototypeWeaponRewards.damage_multiplier(weapon_equipment, weapon_id, kind, weapon_blueprints, {"health":damage_receiver.health,"maximum":damage_receiver.max_health,"barrier":damage_receiver.barrier_health,"grounded":grounded}) * (1.10 if boss_legacy.get("choice") == "destroy" else 1.0) * PrototypeMemoryAbilities.damage_multiplier(memory_id, kind) * relic_damage_multiplier() * basic_relic_multiplier(kind) * skill_relic_multiplier(kind) * calm_damage_multiplier(kind) * expansion_damage_multiplier(weapon_id, kind) * PrototypeWeaponMastery.damage_multiplier(weapon_mastery, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health) * PrototypeCombatTactics.damage_multiplier(combat_tactics, weapon_id, kind, grounded, damage_receiver.health, damage_receiver.max_health, damage_receiver.barrier_health)
 	if include_links and not damage_receiver.dead: damage *= combat_links.multiplier(weapon_id,kind)
 	# 합산 배율의 부동소수 오차로 102.5가 102.499999…가 되는 경계를 정리한다.
 	return roundi(snappedf(damage * (1.10 if guardian_choice == "destroy" else 1.0), 0.000000001))
@@ -1369,6 +1369,7 @@ func _emit_metrics() -> void:
 		"double_jump_unlocked": double_jump_unlocked,
 		"barrier_unlocked": barrier_unlocked,
 		"barrier_health": damage_receiver.barrier_health,
+		"weapon_context":{"health":damage_receiver.health,"maximum":damage_receiver.max_health,"barrier":damage_receiver.barrier_health,"grounded":is_on_floor()},
 		"barrier_capacity": barrier_capacity(),
 		"fortified_barrier_unlocked": fortified_barrier_unlocked,
 		"restorative_barrier_unlocked": restorative_barrier_unlocked,

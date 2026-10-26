@@ -278,6 +278,11 @@ var task_message := ""
 var shop_open_rect: Rect2
 var shop_data: Dictionary = {"enabled":false}
 var shop_page: int = 0
+var shop_browser_options := SupplyShopBrowser.defaults()
+var shop_inspector_open := false
+var shop_inspector_tab := 0
+var shop_inspector_page := 0
+var weapon_browser_options := WeaponCatalogBrowser.defaults()
 var shop_selected_id: String = ""
 var shop_slot: int = -1
 var shop_message: String = ""
@@ -496,7 +501,10 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.SUPPLY_SHOP:
-		shop_close_requested.emit()
+		if shop_inspector_open:
+			shop_inspector_open = false
+			queue_redraw()
+		else: shop_close_requested.emit()
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventScreenTouch:
@@ -730,7 +738,7 @@ func show_weapon_rewards(stage: int, cards: Array[Dictionary]) -> void:
 
 
 func _weapon_reward_legacy_count() -> int:
-	return all_weapon_reward_cards.filter(func(card: Dictionary) -> bool: return not PrototypeWeaponRewards.DESIGNS.has(card.id)).size()
+	return all_weapon_reward_cards.filter(func(card: Dictionary) -> bool: return not PrototypeWeaponRewards.DESIGNS.has(card.id) and not ConditionalWeaponDesigns.DESIGNS.has(card.id)).size()
 
 
 func weapon_reward_pages() -> int:
@@ -2987,6 +2995,7 @@ func _reset_achievement_browser() -> void:
 
 
 func show_village() -> void:
+	weapon_browser_options = WeaponCatalogBrowser.defaults()
 	if screen_mode not in [ScreenMode.MAIN, ScreenMode.RESULT, ScreenMode.VILLAGE]:
 		return
 	release_all_inputs()
@@ -3034,8 +3043,8 @@ func village_snapshot() -> Dictionary:
 		var all_skills := PrototypeSkillRewards.codex_cards(loadout, float(movement_metrics.get("skill_recharge_multiplier", 1.0)), movement_metrics.get("family_skill_recharge", {}) if active else {})
 		cards = all_skills.slice(skill_codex_page * PrototypeSkillRewards.CODEX_PAGE_SIZE, (skill_codex_page + 1) * PrototypeSkillRewards.CODEX_PAGE_SIZE)
 	var active_run := bool(movement_metrics.get("growth_run_active", false))
-	var all_weapons := PrototypeWeaponRewards.codex_cards(unlocked_weapon_blueprints, movement_metrics.get("weapon_equipment", {}) if active_run else {}, movement_metrics.get("weapon_blueprints", {}) if active_run else {}, String(movement_metrics.get("active_weapon_id", "")) if active_run else "")
-	var weapon_pages := ceili(float(cards.size()) / 2.0) if village_page == "forge" else ceili(float(all_weapons.size()) / PrototypeWeaponRewards.CODEX_PAGE_SIZE)
+	var all_weapons := WeaponCatalogBrowser.query(unlocked_weapon_blueprints, movement_metrics.get("weapon_equipment", {}) if active_run else {}, movement_metrics.get("weapon_blueprints", {}) if active_run else {}, String(movement_metrics.get("active_weapon_id", "")) if active_run else "",movement_metrics.get("weapon_context",{}) if active_run else {"health":100,"maximum":100,"barrier":0,"grounded":true},weapon_browser_options if village_page == "weapons" else WeaponCatalogBrowser.defaults()) if village_page == "weapons" else PrototypeWeaponRewards.codex_cards(unlocked_weapon_blueprints, movement_metrics.get("weapon_equipment", {}) if active_run else {}, movement_metrics.get("weapon_blueprints", {}) if active_run else {}, String(movement_metrics.get("active_weapon_id", "")) if active_run else "")
+	var weapon_pages := ceili(float(cards.size()) / 2.0) if village_page == "forge" else maxi(1,ceili(float(all_weapons.size()) / PrototypeWeaponRewards.CODEX_PAGE_SIZE))
 	weapon_codex_page = clampi(weapon_codex_page, 0, weapon_pages - 1)
 	if village_page == "forge":
 		cards = cards.slice(weapon_codex_page * 2, (weapon_codex_page + 1) * 2)
@@ -3072,7 +3081,12 @@ func village_snapshot() -> Dictionary:
 			tabs[["forge", "weapons", "skills"][i]] = Rect2(safe.position + Vector2(safe.size.x * (0.05 + i * 0.31), safe.size.y * 0.24), Vector2(safe.size.x * 0.28, safe.size.y * 0.08))
 	if village_page in ["advanced_jobs", "abilities", "skills", "forge", "weapons", "history", "relics", "atlas", "achievements"]:
 		pager = {"previous": Rect2(safe.position + Vector2(safe.size.x * 0.05, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06)), "next": Rect2(safe.position + Vector2(safe.size.x * 0.71, safe.size.y * 0.78), Vector2(safe.size.x * 0.24, safe.size.y * 0.06))}
+	if village_page == "weapons" and cards.is_empty(): cards = [WeaponCatalogBrowser.empty_card()]
 	var village_layout := PrototypeVillageView.layout(safe, cards.size(), checkpoint_available, village_page == "jobs")
+	if village_page == "weapons":
+		for index in village_layout.cards.size():
+			village_layout.cards[index].position.y = safe.position.y+safe.size.y*.43
+			village_layout.cards[index].size.y = safe.size.y*.33
 	var achievement_toolbar := {}
 	if village_page == "achievements":
 		achievement_toolbar = AchievementBrowser.toolbar(safe)
@@ -3083,6 +3097,16 @@ func village_snapshot() -> Dictionary:
 
 
 func _handle_village_touch(position: Vector2) -> void:
+	if village_page == "weapons":
+		var toolbar := WeaponCatalogBrowser.toolbar(_safe_area_in_viewport())
+		var keys := ["family","grade","owner","condition","order"]
+		var counts := [7,4,3,7,4]
+		for index in 5:
+			if toolbar[index].has_point(position):
+				weapon_browser_options[keys[index]] = (int(weapon_browser_options[keys[index]])+1)%int(counts[index])
+				weapon_codex_page = 0
+				queue_redraw()
+				return
 	var snapshot := village_snapshot()
 	var layout: Dictionary = snapshot.layout
 	if layout.back.has_point(position):
@@ -3099,6 +3123,7 @@ func _handle_village_touch(position: Vector2) -> void:
 		for page in snapshot.tabs:
 			if snapshot.tabs[page].has_point(position):
 				village_page = page
+				weapon_browser_options = WeaponCatalogBrowser.defaults()
 				advanced_job_page = 0
 				ability_codex_page = 0
 				skill_codex_page = 0
@@ -3174,6 +3199,11 @@ func _draw_village() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("182d36"))
 	draw_rect(Rect2(safe.position + Vector2(0, safe.size.y * 0.25), Vector2(safe.size.x, safe.size.y * 0.75)), Color("2b4b43"))
 	draw_circle(safe.position + Vector2(safe.size.x * 0.90, safe.size.y * 0.11), safe.size.y * 0.06, Color("eacb88"))
+	if village_page == "weapons":
+		var toolbar := WeaponCatalogBrowser.toolbar(safe)
+		var keys := ["family","grade","owner","condition","order"]
+		var choices := [WeaponCatalogBrowser.FAMILIES,WeaponCatalogBrowser.GRADES,WeaponCatalogBrowser.OWNERS,WeaponCatalogBrowser.CONDITIONS,WeaponCatalogBrowser.ORDERS]
+		for index in 5: _draw_button(toolbar[index],choices[index][int(weapon_browser_options[keys[index]])],true)
 	if village_page == "achievements":
 		AchievementArt.draw_backdrop(self, safe)
 	_draw_text_centered(PrototypeVillageView.TITLES[village_page], Rect2(safe.position + Vector2(0, safe.size.y * 0.04), Vector2(safe.size.x, safe.size.y * 0.09)), 34, ACTIVE_COLOR)
@@ -3187,7 +3217,7 @@ func _draw_village() -> void:
 	if village_page == "history":
 		subtitle = "최근 도전 12개 · 시작 기록 순 · 이어하기는 한 도전으로 표시"
 	if village_page == "weapons":
-		subtitle = "등급·고유·보조 효과 비교 · 장착 변경은 정예 보상에서"
+		subtitle = "현재 체력·방벽·자세의 장비 배율 비교 · 성장/치명타 제외" if bool(movement_metrics.get("growth_run_active",false)) else "미도전: 체력100%·지상·방벽 없음 기준 · 성장/치명타 제외"
 	if village_page == "skills":
 		subtitle = "도감은 조회 전용 · 장착 변경은 정예 후 보상에서"
 	if village_page == "relics":
@@ -3789,6 +3819,10 @@ func update_supply_shop(data: Dictionary, message: String = "") -> void:
 	queue_redraw()
 
 func show_supply_shop() -> void:
+	shop_browser_options = SupplyShopBrowser.defaults()
+	shop_inspector_open = false
+	shop_inspector_tab = 0
+	shop_inspector_page = 0
 	release_all_inputs()
 	shop_page = 0
 	shop_selected_id = ""
@@ -3797,15 +3831,32 @@ func show_supply_shop() -> void:
 	queue_redraw()
 
 func supply_shop_snapshot() -> Dictionary:
-	var items: Array = shop_data.get("cards",[]).slice(shop_page*RunSupplyShop.PAGE_SIZE,(shop_page+1)*RunSupplyShop.PAGE_SIZE)
+	var all_items := SupplyShopBrowser.query(shop_data,shop_browser_options)
+	shop_page = clampi(shop_page,0,maxi(0,ceili(float(all_items.size())/RunSupplyShop.PAGE_SIZE)-1))
+	var items: Array = all_items.slice(shop_page*RunSupplyShop.PAGE_SIZE,(shop_page+1)*RunSupplyShop.PAGE_SIZE)
 	var view := SupplyShopView.layout(_safe_area_in_viewport(),items.size())
 	view.items = items
 	view.page = shop_page
-	view.pages = maxi(1,ceili(float(shop_data.get("cards",[]).size())/RunSupplyShop.PAGE_SIZE))
+	view.pages = maxi(1,ceili(float(all_items.size())/RunSupplyShop.PAGE_SIZE))
 	return view
 
 func _handle_supply_touch(position: Vector2) -> void:
+	if shop_inspector_open:
+		SupplyShopInspector.handle_touch(self,position)
+		return
 	var view := supply_shop_snapshot()
+	for index in 4:
+		if view.filters[index].has_point(position):
+			var key: String = SupplyShopBrowser.KEYS[index]
+			shop_browser_options[key] = (int(shop_browser_options[key])+1)%int(SupplyShopBrowser.COUNTS[index])
+			shop_page = 0
+			shop_selected_id = ""
+			shop_slot = -1
+			return
+	if view.filters[4].has_point(position):
+		shop_inspector_open = true
+		shop_inspector_page = 0
+		return
 	if shop_data.get("tasks_enabled",false) and view.tasks.has_point(position):
 		tasks_open_requested.emit()
 		return

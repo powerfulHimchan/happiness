@@ -22,6 +22,11 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/combat/conditional_weapon_designs.gd"
+  "$game_root/scripts/economy/supply_shop_browser.gd"
+  "$game_root/scripts/ui/weapon_catalog_browser.gd"
+  "$game_root/scripts/ui/supply_shop_inspector.gd"
+  "$game_root/tests/gp911_960_runtime_test.gd"
   "$game_root/assets/links/archive.svg"
   "$game_root/assets/links/switch.svg"
   "$game_root/assets/links/evade.svg"
@@ -973,6 +978,9 @@ if [[ -n "$godot_command" ]]; then
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp821_830_art_runtime_test.gd
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp831_840_animation_runtime_test.gd
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp891_910_presentation_runtime_test.gd -- runtime
+  for gear_phase in catalog combat acquisition seed resume ui; do
+    checked_godot 120s --headless --path "$game_root" --script res://tests/gp911_960_runtime_test.gd -- "$gear_phase"
+  done
   for link_phase in catalog combat acquisition seed resume ui; do
     checked_godot 120s --headless --path "$game_root" --script res://tests/gp841_890_runtime_test.gd -- "$link_phase"
   done
