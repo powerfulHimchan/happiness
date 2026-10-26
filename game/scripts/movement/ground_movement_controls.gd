@@ -390,6 +390,8 @@ var story_journal_tab: int = 0
 var story_journal_page: int = 0
 var selected_character_id: String = "roan"
 var character_detail_open := false
+var preparation_skill_id := ""
+var preparation_skill_rects: Array[Rect2] = []
 var character_reveal_progress := 1.0
 var requested_character_id: String = "roan"
 var previous_character_id: String = "roan"
@@ -445,7 +447,7 @@ func _process(delta: float) -> void:
 		var animate_before: bool = combat_link_menu_motion.is_animating()
 		combat_link_menu_motion.tick(delta)
 		if animate_before: queue_redraw()
-	if screen_mode == ScreenMode.START_WEAPON and preview_application_active and not start_options_open:
+	if screen_mode == ScreenMode.START_WEAPON and preview_application_active and not start_options_open and preparation_skill_id.is_empty():
 		preview_elapsed_s = fposmod(preview_elapsed_s+maxf(0,delta),TAU*2.0)
 	_update_mode_timer(delta)
 	android_validation_session_s += delta
@@ -512,7 +514,8 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.START_WEAPON:
-		if start_options_open: close_preparation_options()
+		if not preparation_skill_id.is_empty(): close_preparation_skill()
+		elif start_options_open: close_preparation_options()
 		else: _back_from_weapon_selection()
 		get_viewport().set_input_as_handled()
 		return
@@ -1204,7 +1207,7 @@ func show_new_run_preparation() -> void:
 
 
 func open_preparation_options() -> void:
-	if screen_mode != ScreenMode.START_WEAPON: return
+	if screen_mode != ScreenMode.START_WEAPON or not preparation_skill_id.is_empty(): return
 	start_options_open = true
 	release_all_inputs()
 	queue_redraw()
@@ -1216,13 +1219,31 @@ func close_preparation_options() -> void:
 	queue_redraw()
 
 
+func open_preparation_skill(index: int) -> bool:
+	if screen_mode != ScreenMode.START_WEAPON or start_options_open or not preparation_skill_id.is_empty(): return false
+	var ids := WeaponSkillPreview.ids(preview_weapon_id)
+	if index < 0 or index >= ids.size(): return false
+	preparation_skill_id = String(ids[index])
+	release_all_inputs()
+	queue_redraw()
+	return true
+
+
+func close_preparation_skill() -> void:
+	preparation_skill_id = ""
+	release_all_inputs()
+	queue_redraw()
+
+
 func _select_preview(family: String) -> void:
+	preparation_skill_id = ""
 	preview_weapon_id = family
 	preview_elapsed_s = 0.0
 	queue_redraw()
 
 
 func _cancel_preparation() -> void:
+	preparation_skill_id = ""
 	selected_starting_weapon = start_weapon_previous_selection
 	selected_backup_weapon = previous_backup_weapon
 	selected_stage_limit = previous_stage_limit
@@ -1240,6 +1261,7 @@ func _cancel_preparation() -> void:
 
 
 func _back_from_weapon_selection() -> void:
+	preparation_skill_id = ""
 	start_options_open = false
 	if preparation_flow: show_character_selection(true)
 	else: _cancel_preparation()
@@ -1280,6 +1302,7 @@ func _refresh_start_weapon_layout() -> void:
 	boss_legacy_toggle_rect = view.legacy
 	start_weapon_cancel_rect = view.back
 	start_weapon_confirm_rect = view.confirm
+	preparation_skill_rects.assign(WeaponPreparationView.skill_regions(_safe_area_in_viewport()))
 
 
 func start_legacy_description() -> String:
@@ -1792,6 +1815,10 @@ func _handle_screen_touch(position: Vector2) -> void:
 	if screen_mode == ScreenMode.START_WEAPON:
 		_refresh_start_weapon_layout()
 		var view := RunPreparationView.weapon_layout(_safe_area_in_viewport(),start_options_open)
+		if not preparation_skill_id.is_empty():
+			var popup := WeaponPreparationView.popup_layout(_safe_area_in_viewport())
+			if popup.close.has_point(position) or popup.x.has_point(position): close_preparation_skill()
+			return
 		if start_options_open:
 			if view.close.has_point(position): close_preparation_options()
 			elif expedition_rect.has_point(position):
@@ -1810,6 +1837,10 @@ func _handle_screen_touch(position: Vector2) -> void:
 						return
 				if not pending_boss_legacy.is_empty() and boss_legacy_toggle_rect.has_point(position): use_boss_legacy = not use_boss_legacy
 			return
+		for index in preparation_skill_rects.size():
+			if preparation_skill_rects[index].has_point(position):
+				open_preparation_skill(index)
+				return
 		if view.settings.has_point(position):
 			open_preparation_options()
 			return

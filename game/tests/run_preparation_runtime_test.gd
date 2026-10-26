@@ -103,7 +103,8 @@ func _run() -> void:
 			tap(ui.character_confirm_rect)
 			check(ui.current_screen_mode() == ui.ScreenMode.START_WEAPON and ui.selected_character_id == character,"hero confirm opens weapon book")
 			var view := RunPreparationView.weapon_layout(safe,false)
-			targets(view.cards+[view.settings,view.character,view.back,view.confirm],safe)
+			targets(view.cards+[view.settings,view.character,view.back,view.confirm]+WeaponPreparationView.skill_regions(safe),safe)
+			check(not ui.open_preparation_skill(-1) and not ui.open_preparation_skill(2), "invalid skill indices do not open modal")
 			for family in PrototypeWeaponRewards.FAMILY_IDS:
 				var index := PrototypeWeaponRewards.FAMILY_IDS.find(family)
 				var card: Rect2 = ui.start_weapon_card_rects[index]
@@ -122,12 +123,42 @@ func _run() -> void:
 				ui._process(.1)
 				check(ui.preview_elapsed_s > clock,"preview resumes")
 				await capture("weapon_"+character+"_"+family+"_%dx%d"%[dimensions.x,dimensions.y])
+				var skill_ids := WeaponSkillPreview.ids(family)
+				check(skill_ids.size() == 2 and skill_ids == PrototypeSkillRewards.defaults([family])[family], "weapon shows its actual two starting skills")
+				for slot in 2:
+					var skill: String = skill_ids[slot]
+					var skill_area: Rect2 = ui.preparation_skill_rects[slot]
+					# Both the icon and the name are inside the same skill action.
+					tap(Rect2(skill_area.position + skill_area.size * Vector2(0, .63 if slot == 1 else 0), skill_area.size * Vector2(1, .35)))
+					check(ui.preparation_skill_id == skill and ui.current_screen_mode() == ui.ScreenMode.START_WEAPON, "icon/name opens matching skill without leaving preparation")
+					var skill_profile := WeaponSkillPreview.profile(skill)
+					check(skill_profile.name == PrototypeSkillRewards.SKILLS[skill].display_name and not skill_profile.description.is_empty() and not skill_profile.effect.is_empty(), "description and effect agree with selected skill")
+					check(WeaponPreparationArt.SKILLS[skill] is Texture2D and WeaponPreparationArt.SKILLS[skill].get_width() == 128, "individual characteristic icon imported")
+					var selection := [ui.selected_starting_weapon,ui.selected_backup_weapon,ui.selected_character_id,ui.selected_run_mode]
+					var frozen: float = ui.preview_elapsed_s
+					ui._process(.5)
+					check(ui.preview_elapsed_s == frozen, "skill description freezes equipped preview")
+					tap(ui.start_weapon_confirm_rect)
+					tap(ui.start_weapon_card_rects[(index+1)%6])
+					tap(ui.start_backup_rects[(index+2)%6])
+					tap(view.settings)
+					check(ui.preparation_skill_id == skill and not ui.start_options_open and ui.current_screen_mode() == ui.ScreenMode.START_WEAPON and selection == [ui.selected_starting_weapon,ui.selected_backup_weapon,ui.selected_character_id,ui.selected_run_mode], "modal blocks underlying start, weapon, backup and settings")
+					var popup := WeaponPreparationView.popup_layout(safe)
+					check(safe.encloses(popup.panel) and popup.panel.encloses(popup.close) and popup.panel.encloses(popup.x) and not popup.close.intersects(popup.x), "skill dialog and close targets fit viewport")
+					await capture("skill_"+character+"_"+skill+"_%dx%d"%[dimensions.x,dimensions.y])
+					if dimensions.x == 2400: escape()
+					else: tap(popup.x if slot == 0 else popup.close)
+					check(ui.preparation_skill_id.is_empty() and ui.current_screen_mode() == ui.ScreenMode.START_WEAPON, "close/X/back dismisses only skill description")
+					ui._process(.1)
+					check(ui.preview_elapsed_s > frozen, "preview resumes after skill description closes")
+					check(files() == original_files and weapons.checkpoint_snapshot() == original_weapons and player.damage_receiver.health == health, "skill inspection never changes current combat or saved state")
 				tap(ui.start_backup_rects[index])
 				check(ui.selected_backup_weapon == family and ui.selected_starting_weapon != family and ui.preview_elapsed_s == 0,"backup selection swaps duplicate primary and resets preview")
 				check(files() == original_files and weapons.checkpoint_snapshot() == original_weapons and player.damage_receiver.health == health,"preview never changes combat or saves")
 			# The overlay owns its inputs; underlying start/weapon targets cannot fire.
 			tap(view.settings)
 			check(ui.start_options_open,"settings button opens existing preparation options")
+			check(not ui.open_preparation_skill(0) and ui.preparation_skill_id.is_empty(), "settings excludes skill modal")
 			var option_clock: float = ui.preview_elapsed_s
 			ui._process(.5)
 			check(ui.preview_elapsed_s == option_clock,"settings pause the presentation clock")
@@ -154,6 +185,9 @@ func _run() -> void:
 		if dimensions.x == 2400: escape()
 		else: tap(ui.character_cancel_rect)
 		check(ui.current_screen_mode() == ui.ScreenMode.MAIN and files() == original_files,"cancel returns to source without save writes")
+	check(WeaponSkillPreview.profile("sword_dash").stats[0][1] == "35" and WeaponSkillPreview.profile("sword_dash").stats[1][1] == "6초", "dash description matches 35 base damage and six second cooldown")
+	check(WeaponSkillPreview.profile("shield_guard").stats[0][1] == "전방 방어" and WeaponSkillPreview.profile("shield_counter").effect.contains("60"), "guard and conditional counter effects remain distinct")
+	check(WeaponSkillPreview.profile("missing").is_empty(), "unknown skill has no invented description")
 	# New-flow selections are propagated to a real run through existing creation code.
 	ui.show_main_screen()
 	tap(ui.main_start_rect)

@@ -18,14 +18,14 @@ func snapshot(character: String, family: String, time_s: float, area: Rect2) -> 
 	var angle := sin(phase*2.0)*sway
 	var size_factor := scale_factor
 	var local := Rect2()
-	var texture: Texture2D = SupplyShopArt.ICONS.get(family,WeaponFamilyPresentation.TEXTURES.get(family))
+	var texture: Texture2D = WeaponPreparationArt.WEAPONS[family]
 	match family:
-		"sword": local = Rect2(-18,-108,128,128); angle -= .60
-		"bow": local = Rect2(-65,-69,105,138); angle += .08
-		"fist": local = Rect2(-18,-21,37,37)
-		"staff": local = Rect2(-17,-108,35,160); angle += .09
-		"polearm": local = Rect2(-125,-20,256,40); angle -= 1.17
-		"shield": local = Rect2(-37,-52,74,94); angle -= .06
+		"sword": local = Rect2(-29,-103,128,128); angle -= .45
+		"bow": local = Rect2(-48,-88,128,176); angle += .08
+		"fist": local = Rect2(-22,-32,44,44)
+		"staff": local = Rect2(-24,-126,48,192); angle += .09
+		"polearm": local = Rect2(-128,-24,256,48); angle -= 1.17
+		"shield": local = Rect2(-38,-43,76,95); angle -= .06
 	return {"character":character,"family":family,"frame":frame,"texture":movement.frame_texture(character,frame),"body":body,"hand":hand,"left_hand":left_hand,"weapon_texture":texture,"weapon_rect":local,"rotation":angle,"scale":size_factor,"foot":foot}
 
 func draw(ui: Control, character: String, family: String, time_s: float, area: Rect2) -> void:
@@ -40,5 +40,5 @@ func draw(ui: Control, character: String, family: String, time_s: float, area: R
 	ui.draw_set_transform(Vector2.ZERO)
 	if family == "fist":
 		ui.draw_set_transform(state.left_hand,-state.rotation,Vector2.ONE*float(state.scale))
-		ui.draw_texture_rect(state.weapon_texture,Rect2(-18,-20,34,34),false)
+		ui.draw_texture_rect(state.weapon_texture,Rect2(-17,-25,34,34),false)
 		ui.draw_set_transform(Vector2.ZERO)

@@ -65,36 +65,9 @@ static func draw_weapon(ui: Control) -> void:
 	var unit := safe.size.y/1080.0
 	var view := weapon_layout(safe,ui.start_options_open)
 	background(ui)
-	ui._draw_village_text("무기 선택",box(safe,.30,.03,.43,.105),int(81*unit),INK)
-	ui._draw_village_text("주무기와 보조무기를 선택하세요",box(safe,.32,.145,.40,.05),int(27*unit),INK)
-	button(ui,ui.character_open_rect,PrototypeCharacters.display_name(ui.selected_character_id)+"  · 주인공")
-	button(ui,view.settings,"도전 설정")
-	ui.draw_texture_rect(BOOK,view.book,false)
-	ui.equipped_preview.draw(ui,ui.selected_character_id,ui.preview_weapon_id,ui.preview_elapsed_s,view.preview)
-	ui._draw_village_text("장착 미리보기 · "+PrototypeWeaponRewards.family_name(ui.preview_weapon_id),box(safe,.015,.835,.255,.045),int(22*unit),INK)
-	for index in PrototypeWeaponRewards.FAMILY_IDS.size():
-		var family: String = PrototypeWeaponRewards.FAMILY_IDS[index]
-		var rect: Rect2 = view.cards[index]
-		var main: bool = ui.selected_starting_weapon == family
-		var backup: bool = ui.selected_backup_weapon == family
-		panel(ui,rect,Color("ffedc6") if main else Color("faf0d8"),GOLD if main else TEAL if backup else Color("ceac70"),int(9*unit))
-		var icon := Rect2(rect.position+rect.size*Vector2(.16,.04),rect.size*Vector2(.68,.48))
-		SupplyShopArt.draw_symbol(ui,family,icon)
-		ui._draw_village_text(PrototypeWeaponRewards.family_name(family)+( " ✓" if main else ""),Rect2(rect.position+rect.size*Vector2(.03,.53),rect.size*Vector2(.94,.19)),int(28*unit),INK)
-		button(ui,ui.start_backup_rects[index],"보조 ✓" if backup else "보조로 선택",false,backup)
-	var family: String = ui.preview_weapon_id
-	var role := "주무기" if family == ui.selected_starting_weapon else "보조무기"
-	ui._draw_village_text("선택한 무기 · "+role,box(safe,.652,.283,.27,.055),int(26*unit),TEAL)
-	SupplyShopArt.draw_symbol(ui,family,box(safe,.69,.355,.19,.18))
-	ui._draw_village_text(PrototypeWeaponRewards.family_name(family),box(safe,.652,.543,.27,.055),int(40*unit),INK)
-	var skill_names := {"sword":"돌진 베기 · 회전 베기","bow":"관통 화살 · 화살비","fist":"쇄도권 · 연환권","staff":"화염구 · 얼음창","polearm":"횡소봉 · 관통봉","shield":"방패 올리기 · 응수"}
-	ui._draw_village_text(skill_names[family],box(safe,.645,.61,.29,.04),int(23*unit),INK)
-	ui.draw_line(box(safe,.645,.667,.29,.001).position,box(safe,.645,.667,.29,.001).end,Color("c8a56c"),2*unit)
-	ui._draw_village_text("주무기  "+PrototypeWeaponRewards.family_name(ui.selected_starting_weapon),box(safe,.646,.692,.29,.04),int(27*unit),INK)
-	ui._draw_village_text("보조무기  "+PrototypeWeaponRewards.family_name(ui.selected_backup_weapon),box(safe,.646,.747,.29,.04),int(27*unit),TEAL)
-	button(ui,ui.start_weapon_cancel_rect,"‹  이전: 주인공" if ui.preparation_flow else "‹  돌아가기")
-	button(ui,ui.start_weapon_confirm_rect,"모험 시작  ›",true)
+	WeaponPreparationView.draw(ui,view,BOOK)
 	if ui.start_options_open: draw_options(ui,safe,unit,view)
+	elif not ui.preparation_skill_id.is_empty(): WeaponPreparationView.draw_skill_popup(ui)
 
 static func draw_options(ui: Control, safe: Rect2, unit: float, view: Dictionary) -> void:
 	ui.draw_rect(Rect2(Vector2.ZERO,ui.size),Color(0.04,.12,.14,.78))
