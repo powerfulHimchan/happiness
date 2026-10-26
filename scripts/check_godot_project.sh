@@ -22,6 +22,11 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/ui/task_board_motion.gd"
+  "$game_root/scripts/ui/task_board_detail_art.gd"
+  "$game_root/tests/gp1011_1030_presentation_runtime_test.gd"
+  "$game_root/scripts/economy/partnership_run_tasks.gd"
+  "$game_root/tests/gp961_1010_runtime_test.gd"
   "$game_root/scripts/stage/windmill_meadow.gd"
   "$game_root/scripts/stage/windmill_meadow_layout.gd"
   "$game_root/scripts/stage/windmill_meadow_art.gd"
@@ -949,7 +954,7 @@ if [[ -n "$godot_command" ]]; then
     # These content matrices isolate saves by every argument after phase.
     # Keep seed/resume/next together, distribute independent content cases.
     case "$script" in
-      res://tests/gp344_runtime_test.gd|res://tests/gp354_runtime_test.gd|res://tests/gp364_runtime_test.gd|res://tests/gp374_runtime_test.gd|res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd|res://tests/gp618_667_runtime_test.gd|res://tests/gp668_717_runtime_test.gd)
+      res://tests/gp344_runtime_test.gd|res://tests/gp354_runtime_test.gd|res://tests/gp364_runtime_test.gd|res://tests/gp374_runtime_test.gd|res://tests/gp375_384_runtime_test.gd|res://tests/gp385_414_runtime_test.gd|res://tests/gp415_444_runtime_test.gd|res://tests/gp448_477_runtime_test.gd|res://tests/gp478_507_runtime_test.gd|res://tests/gp515_544_runtime_test.gd|res://tests/gp618_667_runtime_test.gd|res://tests/gp668_717_runtime_test.gd|res://tests/gp961_1010_runtime_test.gd)
         shard_key="$script|${user_args[*]:1}"
         ;;
     esac
@@ -987,6 +992,28 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 120s --headless --path "$game_root" --script res://tests/gp1011_1030_presentation_runtime_test.gd -- catalog
+  for board_phase in seed resume next; do
+    checked_godot 120s --headless --path "$game_root" --script res://tests/gp1011_1030_presentation_runtime_test.gd -- "$board_phase" pair_sword_bow_practice roan
+  done
+  checked_godot 90s --headless --path "$game_root" --script res://tests/gp961_1010_runtime_test.gd -- catalog
+  for partner_hero in roan lumi; do
+    partner_families=(sword bow fist staff polearm shield)
+    for (( partner_first=0; partner_first<6; partner_first++ )); do
+      for (( partner_second=partner_first+1; partner_second<6; partner_second++ )); do
+        for partner_style in practice arsenal; do
+          for partner_phase in seed resume next; do
+            checked_godot 120s --headless --path "$game_root" --script res://tests/gp961_1010_runtime_test.gd -- "$partner_phase" "pair_${partner_families[$partner_first]}_${partner_families[$partner_second]}_${partner_style}" "$partner_hero"
+          done
+        done
+      done
+    done
+    for supply_trial in meal_clock potion_workshop recovery_plan battle_ready all_services maintained_journey varied_basket supply_investment long_investment stock_explorer two_upgrades skill_basket; do
+      for partner_phase in seed resume next; do
+        checked_godot 120s --headless --path "$game_root" --script res://tests/gp961_1010_runtime_test.gd -- "$partner_phase" "supply_trial_${supply_trial}" "$partner_hero"
+      done
+    done
+  done
   for map_phase in flow physics journey story; do
     checked_godot 120s --headless --path "$game_root" --script res://tests/windmill_meadow_runtime_test.gd -- "$map_phase"
   done

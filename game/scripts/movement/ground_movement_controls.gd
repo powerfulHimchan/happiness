@@ -273,8 +273,10 @@ var task_page := 0
 var task_filter := "all"
 var task_category := "all"
 var task_sort := "catalog"
+var task_family := "all"
 var task_selected_id := ""
 var task_message := ""
+var task_board_motion := TaskBoardMotion.new()
 var shop_open_rect: Rect2
 var shop_data: Dictionary = {"enabled":false}
 var shop_page: int = 0
@@ -419,6 +421,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if screen_mode == ScreenMode.RUN_TASKS and preview_application_active:
+		var tasks_animating := task_board_motion.is_animating()
+		task_board_motion.tick(delta)
+		if tasks_animating: queue_redraw()
 	if screen_mode == ScreenMode.RUN_BUILD and hero_status_open and hero_status_detail == "links" and preview_application_active:
 		var animate_before: bool = combat_link_menu_motion.is_animating()
 		combat_link_menu_motion.tick(delta)
@@ -3888,6 +3894,7 @@ func _handle_supply_touch(position: Vector2) -> void:
 
 
 func update_tasks(data: Dictionary, message: String = "") -> void:
+	task_board_motion.sync(task_data.get("cards",[]),data.get("cards",[]))
 	task_data = data.duplicate(true)
 	task_message = message
 	task_page = RunTaskView.snapshot(self).page
@@ -3895,27 +3902,45 @@ func update_tasks(data: Dictionary, message: String = "") -> void:
 
 func show_tasks() -> void:
 	release_all_inputs()
-	task_page = 0
-	task_filter = "all"
-	task_category = "all"
-	task_sort = "catalog"
-	task_selected_id = ""
+	RunTaskView.reset(self)
+	task_board_motion.open(task_data.get("cards",[]))
 	screen_mode = ScreenMode.RUN_TASKS
 	queue_redraw()
 
 func _handle_task_touch(position: Vector2) -> void:
 	var view := RunTaskView.snapshot(self)
+	var touch_areas: Array = view.tabs.duplicate()
+	touch_areas.append_array(view.cards)
+	for key in ["back","reset","family","category","sort"]: touch_areas.append(view[key])
+	if view.page > 0: touch_areas.append(view.previous)
+	if view.page < view.pages-1: touch_areas.append(view.next)
+	for card in task_data.get("cards",[]):
+		if card.id == task_selected_id and card.ready: touch_areas.append(view.confirm)
+	if touch_areas.any(func(area: Rect2) -> bool: return area.has_point(position)): task_board_motion.pressed(position)
 	if view.back.has_point(position):
 		tasks_close_requested.emit()
 		return
 	for index in view.tabs.size():
 		if view.tabs[index].has_point(position):
+			if task_filter != RunTaskView.FILTERS[index]: task_board_motion.query_changed()
 			task_filter = RunTaskView.FILTERS[index]
 			task_page = 0
 			task_selected_id = ""
 			task_message = ""
 			return
+	if view.reset.has_point(position):
+		RunTaskView.reset(self)
+		task_board_motion.query_changed()
+		return
+	if view.family.has_point(position):
+		task_board_motion.query_changed()
+		task_family = RunTaskView.FAMILIES[(RunTaskView.FAMILIES.find(task_family)+1)%RunTaskView.FAMILIES.size()]
+		task_page = 0
+		task_selected_id = ""
+		task_message = ""
+		return
 	if view.category.has_point(position) or view.sort.has_point(position):
+		task_board_motion.query_changed()
 		if view.category.has_point(position): task_category = RunTaskView.CATEGORIES[(RunTaskView.CATEGORIES.find(task_category)+1)%RunTaskView.CATEGORIES.size()]
 		else: task_sort = RunTaskView.SORTS[(RunTaskView.SORTS.find(task_sort)+1)%RunTaskView.SORTS.size()]
 		task_page = 0
@@ -3923,12 +3948,15 @@ func _handle_task_touch(position: Vector2) -> void:
 		task_message = ""
 		return
 	if view.previous.has_point(position) or view.next.has_point(position):
-		task_page = clampi(view.page+(-1 if view.previous.has_point(position) else 1),0,view.pages-1)
+		var step := -1 if view.previous.has_point(position) else 1
+		task_page = clampi(view.page+step,0,view.pages-1)
+		if task_page != view.page: task_board_motion.page_changed(step)
 		task_selected_id = ""
 		task_message = ""
 		return
 	for index in view.cards.size():
 		if view.cards[index].has_point(position):
+			if task_selected_id != view.items[index].id: task_board_motion.selected()
 			task_selected_id = view.items[index].id
 			task_message = ""
 			return

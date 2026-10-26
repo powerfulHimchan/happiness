@@ -10,7 +10,7 @@ func _run() -> void:
 	character = args[2]
 	task = RunTasks.definition(task_id)
 	if not _check(not task.is_empty(),"정의된30종 과제"): return
-	family = task.get("family","sword")
+	family = task.get("family",task.get("families",["sword"])[0])
 	facing = 1
 	run_prefix = "user://gp477_%s_%s" % [task_id,character]
 	store.save_path = run_prefix+"_checkpoint.json"
@@ -57,10 +57,10 @@ func _run() -> void:
 			var earned := RunSupplyShop.reward(runner.route_id) if runner.stage_number < runner.stage_limit else 0
 			if not _check(RunTasks.claimed(sandbox.run_shop,task_id) and int(sandbox.run_shop.coins) == coins+earned and not sandbox._claim_task(task_id),"다음 스테이지/최종 전투 중복 과제 수입 없음"): return
 			controls.show_main_screen()
-			if not _check(controls.begin_retry(family,3,"standard",character,false,0,"bow" if family == "sword" else "sword") and not RunTasks.claimed(sandbox.run_shop,task_id) and sandbox.run_shop.coins == 0,"새 도전의 과제/지갑 초기화"): return
+			if not _check(controls.begin_retry(family,3,"standard",character,false,0,_secondary_family()) and not RunTasks.claimed(sandbox.run_shop,task_id) and sandbox.run_shop.coins == 0,"새 도전의 과제/지갑 초기화"): return
 	else:
 		var mode := "standard" if phase == "spend" or (task.get("route","") != "" and task.route != "city_gate") else "journey"
-		if not _check(controls.begin_retry(family,5 if mode == "standard" else 10,mode,character,false,0,"bow" if family == "sword" else "sword"),"과제 포함 새 도전"): return
+		if not _check(controls.begin_retry(family,5 if mode == "standard" else 10,mode,character,false,0,_secondary_family()),"과제 포함 새 도전"): return
 		if not _check(not sandbox._claim_task(task_id) and not RunTasks.claimed(sandbox.run_shop,task_id),"전투 중 과제 수령 차단"): return
 		player.damage_receiver.health = 30
 		player.potions_remaining = 0
@@ -82,6 +82,9 @@ func _run() -> void:
 	sandbox.free()
 	print("GP-448–477 runtime test: OK (%s %s %s)" % [phase,task_id,character])
 	quit(0)
+
+func _secondary_family() -> String:
+	return task.families[1] if task.has("families") else "bow" if family == "sword" else "sword"
 
 func _achieve_task() -> bool:
 	if task.kind in ["damage","hits","family"] and not _exercise_weapon(): return false
@@ -237,7 +240,10 @@ func _task_save_guards() -> bool:
 			"malformed": bad.supplies.actions.append(null)
 			"marker": bad.supplies.erase("tasks")
 			"unearned":
-				bad.supplies.actions[-1].id = "task:shield_training" if family != "shield" else "task:staff_training"
+				for other in PrototypeWeaponRewards.FAMILY_IDS:
+					if not weapons.equipment.has(other):
+						bad.supplies.actions[-1].id = "task:"+other+"_training"
+						break
 		if not _check(store.save_checkpoint(bad) == ERR_INVALID_DATA and store.load_checkpoint() == saved,"과제 변조 거부 · 정상 파일 보존: "+mutation): return false
 	if task.kind in ["purchases","services","rerolls"]:
 		var reordered := saved.duplicate(true)

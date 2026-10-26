@@ -42,6 +42,7 @@ static var DEFINITIONS: Array[Dictionary] = _definitions()
 static func _definitions() -> Array[Dictionary]:
 	var result: Array[Dictionary] = BASE_DEFINITIONS.duplicate(true)
 	result.append_array(AdvancedRunTasks.definitions())
+	result.append_array(PartnershipRunTasks.definitions())
 	return result
 
 static func category(task: Dictionary) -> String:

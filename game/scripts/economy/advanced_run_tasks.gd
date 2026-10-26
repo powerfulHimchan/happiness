@@ -37,6 +37,7 @@ static func definitions() -> Array[Dictionary]:
 	return result
 
 static func _value(goal: Dictionary, state: Dictionary) -> int:
+	if String(goal.kind).begins_with("supply_"): return PartnershipRunTasks.value(goal,state)
 	var weapons: Dictionary = state.get("weapons",{})
 	var equipment: Dictionary = weapons.get("equipment",{})
 	var growth: Dictionary = state.get("growth",{})
@@ -72,6 +73,8 @@ static func fraction(task: Dictionary, state: Dictionary) -> float:
 	return total/float(task.goals.size())
 
 static func restriction(task: Dictionary, state: Dictionary) -> String:
+	for family in task.get("families",[]):
+		if not state.get("weapons",{}).get("equipment",{}).has(family): return "두 무기를 함께 휴대하는 새 도전에서 진행"
 	if task.has("family") and not state.get("weapons",{}).get("equipment",{}).has(task.family): return "다른 무기의 새 도전에서 진행"
 	var stage: Dictionary = state.get("stage",{})
 	for goal in task.goals:

@@ -14,5 +14,6 @@
 <path d="M95 130h1410M95 758h1410" stroke="#8db2a7" stroke-width="1" opacity=".2"/>
 <g fill="#d0aa6d" stroke="#4b4234" stroke-width="2"><circle cx="53" cy="28" r="5"/><circle cx="1547" cy="28" r="5"/><circle cx="53" cy="860" r="5"/><circle cx="1547" cy="860" r="5"/></g>
 <g stroke="#b2cec0" stroke-width="2" fill="none" opacity=".13"><path d="m104 713 17-21 14 19 17-28 24 32m-73 8h86m1215-1 15-18 18 20 19-30 24 31m-76 8h87"/><circle cx="1428" cy="675" r="12"/><path d="M104 682h43m-22-20v40m-15-31 30 23m-29 0 29-23"/></g>
+<g opacity=".08" stroke="#b6d3c6" fill="none"><path d="M140 205q300-100 560 0t760 0M140 690q300-100 560 0t760 0"/><path d="M145 210v470m1310-470v470" stroke-dasharray="3 12"/></g>
 <g transform="translate(800 66)" fill="none" stroke="#e8c987" stroke-width="2" opacity=".26"><circle r="22"/><path d="M0-16V0l11 7M-30 0h-8M30 0h8M0-30v-8M0 30v8"/></g>
 </svg>

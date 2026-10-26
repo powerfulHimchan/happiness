@@ -10,7 +10,7 @@ func _run() -> void:
 
 func _compound_catalog() -> bool:
 	var definitions := AdvancedRunTasks.definitions()
-	if not _check(definitions.size() == 42 and RunTasks.DEFINITIONS.size() == 72,"42 new / 72 total unique tasks"): return false
+	if not _check(definitions.size() == 42 and RunTasks.DEFINITIONS.size() == 72 + PartnershipRunTasks.definitions().size(),"42 new / 72 total unique tasks"): return false
 	var ids := {}
 	for entry in RunTasks.DEFINITIONS:
 		if not _check(not ids.has(entry.id),"unique task id"): return false
@@ -159,7 +159,7 @@ func _render_tasks() -> bool:
 		controls.task_filter = "all"
 		controls.task_sort = "catalog"
 		controls.task_category = "all"
-		for page in 12:
+		for page in RunTaskView.snapshot(controls).pages:
 			controls.task_page = page
 			var view := RunTaskView.snapshot(controls)
 			controls.task_selected_id = view.items[0].id
