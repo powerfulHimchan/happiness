@@ -29,45 +29,31 @@ static func state(item: Dictionary) -> String:
 	return "ready" if item.get("ready",false) else "blocked"
 
 static func card_regions(rect: Rect2) -> Dictionary:
-	var side := minf(rect.size.x*.25,rect.size.y*.29)
-	return {"icon":Rect2(Vector2(rect.get_center().x-side*.5,rect.position.y+rect.size.y*.045),Vector2.ONE*side),"title":Rect2(rect.position+Vector2(12,rect.size.y*.32),Vector2(rect.size.x-24,34)),"price":Rect2(rect.position+Vector2(12,rect.size.y*.46),Vector2(rect.size.x-24,28)),"details":Rect2(rect.position+Vector2(12,rect.size.y*.60),Vector2(rect.size.x-24,rect.size.y*.36)),"stamp":Rect2(rect.position+Vector2(rect.size.x-42,12),Vector2(26,26))}
+	var side := minf(rect.size.x*.23,rect.size.y*.23)
+	return {"icon":Rect2(Vector2(rect.get_center().x-side*.5,rect.position.y+rect.size.y*.045),Vector2.ONE*side),"title":Rect2(rect.position+Vector2(12,rect.size.y*.36),Vector2(rect.size.x-24,34)),"price":Rect2(rect.position+Vector2(12,rect.size.y*.52),Vector2(rect.size.x-24,28)),"details":Rect2(rect.position+Vector2(12,rect.size.y*.66),Vector2(rect.size.x-24,rect.size.y*.32)),"stamp":Rect2(rect.position+Vector2(rect.size.x-42,12),Vector2(26,40))}
 
-static func draw_card(ui: Control, item: Dictionary, rect: Rect2, selected: bool) -> void:
+static func draw_card(ui: Control, item: Dictionary, rect: Rect2, selected: bool, pose: Dictionary = {}) -> void:
 	var status := state(item)
 	var accent: Color = ACCENTS.get(item.family,Color("b8e3bc"))
-	var fill := Color("244954") if status == "ready" else Color("233a45")
 	var panel := StyleBoxFlat.new()
-	panel.bg_color = fill
+	panel.bg_color = Color("244954") if status == "ready" else Color("233a45")
 	panel.border_color = Color("f4cf80") if selected else accent.darkened(.46)
-	panel.set_border_width_all(3 if selected else 1)
-	panel.set_corner_radius_all(16)
+	panel.set_border_width_all(2 if selected else 1)
+	panel.set_corner_radius_all(14)
+	panel.shadow_color = Color(0,0,0,.22)
+	panel.shadow_size = 4
+	panel.shadow_offset = Vector2(0,3)
 	ui.draw_style_box(panel,rect)
-	var regions := card_regions(rect)
-	var center: Vector2 = regions.icon.get_center()
-	var radius: float = regions.icon.size.x*.55
-	ui.draw_circle(center,radius,Color(accent,.08))
-	ui.draw_arc(center,radius,0,TAU,48,Color(accent,.32),1.5,true)
+	var areas := card_regions(rect)
 	var tint := Color.WHITE if status == "ready" else Color("8fa7ad")
-	if item.kind == "service": draw_symbol(ui,item.id,regions.icon,tint)
-	elif item.kind == "weapon":
-		draw_symbol(ui,item.family,regions.icon,tint)
-		for index in int(item.grade):
-			var mark := center+Vector2(radius*.90,(index*.19-.10)*regions.icon.size.y)
-			ui.draw_circle(mark,3,Color("ffe0a0"))
-	else:
-		draw_symbol(ui,"skill",regions.icon,tint)
-		draw_symbol(ui,item.family,Rect2(center+Vector2(radius*.20,radius*.05),regions.icon.size*.48),accent)
-	var stamp: Rect2 = regions.stamp
-	if status == "sold":
-		ui.draw_circle(stamp.get_center(),stamp.size.x*.5,Color("93c5b0"))
-		var origin := stamp.position
-		ui.draw_polyline(PackedVector2Array([origin+Vector2(6,13),origin+Vector2(11,18),origin+Vector2(21,8)]),Color("183944"),3,true)
-	elif status == "blocked":
-		ui.draw_arc(stamp.get_center()+Vector2(0,-4),6,PI,TAU,16,Color("829ca7"),2,true)
-		ui.draw_rect(Rect2(stamp.position+Vector2(5,10),Vector2(16,12)),Color("829ca7"))
-	elif selected:
-		var middle := stamp.get_center()
-		ui.draw_colored_polygon(PackedVector2Array([middle+Vector2(0,-11),middle+Vector2(9,0),middle+Vector2(0,11),middle+Vector2(-9,0)]),Color("f4cf80"))
+	SupplyShopDetailArt.emblem(ui,item,areas.icon,pose,tint)
+	SupplyShopDetailArt.rarity(ui,item,rect)
+	SupplyShopDetailArt.price(ui,areas.price,status == "ready")
+	if status == "sold": ui.draw_texture_rect(SupplyShopDetailArt.SOLD,SupplyShopArt.fitted(SupplyShopDetailArt.SOLD,areas.stamp),false)
+	elif status == "blocked": ui.draw_texture_rect(SupplyShopDetailArt.LOCKED,SupplyShopArt.fitted(SupplyShopDetailArt.LOCKED,areas.stamp),false,tint)
+	if selected:
+		var pulse := float(pose.get("selection",0))
+		ui.draw_line(rect.position+Vector2(5,18),rect.position+Vector2(5,rect.size.y-18),Color(Color("f4cf80"),.55+.45*pulse),2,true)
 
 static func draw_wallet(ui: Control, rect: Rect2, coins: int) -> void:
 	var panel := StyleBoxFlat.new()

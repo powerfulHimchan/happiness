@@ -288,6 +288,7 @@ var weapon_browser_options := WeaponCatalogBrowser.defaults()
 var shop_selected_id: String = ""
 var shop_slot: int = -1
 var shop_message: String = ""
+var supply_shop_motion := SupplyShopMotion.new()
 
 var skill_reward_open_rect: Rect2
 var skill_reward_loadout: Dictionary = PrototypeSkillRewards.defaults()
@@ -421,6 +422,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if screen_mode == ScreenMode.SUPPLY_SHOP and preview_application_active:
+		var shop_animating := supply_shop_motion.is_animating()
+		supply_shop_motion.tick(delta)
+		if shop_animating: queue_redraw()
 	if screen_mode == ScreenMode.RUN_TASKS and preview_application_active:
 		var tasks_animating := task_board_motion.is_animating()
 		task_board_motion.tick(delta)
@@ -3819,12 +3824,14 @@ func _draw_story_journal() -> void:
 
 
 func update_supply_shop(data: Dictionary, message: String = "") -> void:
+	supply_shop_motion.sync(shop_data,data)
 	shop_data = data.duplicate(true)
 	shop_message = message
 	shop_page = clampi(shop_page,0,maxi(0,ceili(float(shop_data.get("cards",[]).size())/RunSupplyShop.PAGE_SIZE)-1))
 	queue_redraw()
 
 func show_supply_shop() -> void:
+	supply_shop_motion.open()
 	shop_browser_options = SupplyShopBrowser.defaults()
 	shop_inspector_open = false
 	shop_inspector_tab = 0
@@ -3853,6 +3860,7 @@ func _handle_supply_touch(position: Vector2) -> void:
 	var view := supply_shop_snapshot()
 	for index in 4:
 		if view.filters[index].has_point(position):
+			supply_shop_motion.query_changed()
 			var key: String = SupplyShopBrowser.KEYS[index]
 			shop_browser_options[key] = (int(shop_browser_options[key])+1)%int(SupplyShopBrowser.COUNTS[index])
 			shop_page = 0
@@ -3860,6 +3868,7 @@ func _handle_supply_touch(position: Vector2) -> void:
 			shop_slot = -1
 			return
 	if view.filters[4].has_point(position):
+		supply_shop_motion.inspect()
 		shop_inspector_open = true
 		shop_inspector_page = 0
 		return
@@ -3870,12 +3879,15 @@ func _handle_supply_touch(position: Vector2) -> void:
 		shop_close_requested.emit()
 		return
 	if view.previous.has_point(position) or view.next.has_point(position):
-		shop_page = clampi(shop_page+(-1 if view.previous.has_point(position) else 1),0,view.pages-1)
+		var step := -1 if view.previous.has_point(position) else 1
+		shop_page = clampi(shop_page+step,0,view.pages-1)
+		if shop_page != view.page: supply_shop_motion.page_changed(step)
 		shop_selected_id = ""
 		shop_slot = -1
 		return
 	for index in view.cards.size():
 		if view.cards[index].has_point(position):
+			if shop_selected_id != String(view.items[index].id): supply_shop_motion.selected()
 			shop_selected_id = String(view.items[index].id)
 			shop_slot = -1
 			return
@@ -3885,6 +3897,7 @@ func _handle_supply_touch(position: Vector2) -> void:
 	if not selected.is_empty() and selected.kind == "skill":
 		for slot in 2:
 			if view.slots[slot].has_point(position):
+				if shop_slot != slot: supply_shop_motion.slot_selected()
 				shop_slot = slot
 				return
 	if view.reroll.has_point(position):

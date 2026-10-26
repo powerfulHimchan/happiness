@@ -22,6 +22,9 @@ if (( check_shard_count > 16 || check_shard_index >= check_shard_count )); then
 fi
 
 required_files=(
+  "$game_root/scripts/ui/supply_shop_motion.gd"
+  "$game_root/scripts/ui/supply_shop_detail_art.gd"
+  "$game_root/tests/gp1031_1050_presentation_runtime_test.gd"
   "$game_root/scripts/ui/task_board_motion.gd"
   "$game_root/scripts/ui/task_board_detail_art.gd"
   "$game_root/tests/gp1011_1030_presentation_runtime_test.gd"
@@ -992,6 +995,11 @@ if [[ -n "$godot_command" ]]; then
     fi
   }
   checked_godot 120s --headless --path "$game_root" --import
+  checked_godot 120s --headless --path "$game_root" --script res://tests/gp1031_1050_presentation_runtime_test.gd -- catalog
+  for shop_art_phase in seed resume next; do
+    checked_godot 120s --headless --path "$game_root" --script res://tests/gp1031_1050_presentation_runtime_test.gd -- "$shop_art_phase" skill_sword_0 roan
+  done
+  checked_godot 120s --headless --path "$game_root" --script res://tests/gp1031_1050_presentation_runtime_test.gd -- rules heal lumi
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp1011_1030_presentation_runtime_test.gd -- catalog
   for board_phase in seed resume next; do
     checked_godot 120s --headless --path "$game_root" --script res://tests/gp1011_1030_presentation_runtime_test.gd -- "$board_phase" pair_sword_bow_practice roan

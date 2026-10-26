@@ -29,11 +29,13 @@ static func draw(ui: Control) -> void:
 	var safe: Rect2 = ui._safe_area_in_viewport()
 	var view := layout(safe)
 	var content := lines(ui)
+	var appearance := .65+.35*SupplyShopMotion.smooth(ui.supply_shop_motion.inspector_age/SupplyShopMotion.INSPECTOR)
 	var pages := maxi(1,ceili(float(content.size())/PAGE_SIZE))
 	var page := clampi(ui.shop_inspector_page,0,pages-1)
-	ui.draw_rect(Rect2(Vector2.ZERO,ui.size),Color(.01,.04,.07,.88))
+	ui.draw_rect(Rect2(Vector2.ZERO,ui.size),Color(.01,.04,.07,.88*appearance))
 	HeroStatusView.panel(ui,view.panel)
-	HeroStatusView.text(ui,"보급소 확인",HeroStatusView.box(safe,.12,.12,.76,.065),30,HeroStatusView.GOLD)
+	ui.draw_line(view.panel.position+Vector2(14,4),view.panel.position+Vector2(14+(view.panel.size.x-28)*appearance,4),Color(Color("d8c2a0"),appearance),2,true)
+	HeroStatusView.text(ui,"보급소 확인",HeroStatusView.box(safe,.12,.12,.76,.065),30,Color(HeroStatusView.GOLD,appearance))
 	for index in 3: ui._draw_button(view.tabs[index],TABS[index],ui.shop_inspector_tab == index)
 	var ledger: Dictionary = ui.shop_data.get("ledger",{})
 	var summary := "경로 %d전 + 과제 %d전 − 지출 %d전 = 잔액 %d전" % [ledger.get("route_income",0),ledger.get("task_income",0),ledger.get("spent",0),ledger.get("balance",0)]
@@ -45,6 +47,7 @@ static func draw(ui: Control) -> void:
 	ui._draw_button(view.close,"보급소로",true)
 
 static func handle_touch(ui: Control,point: Vector2) -> void:
+	var previous := Vector2i(ui.shop_inspector_tab,ui.shop_inspector_page)
 	var view := layout(ui._safe_area_in_viewport())
 	for index in 3:
 		if view.tabs[index].has_point(point): ui.shop_inspector_tab = index; ui.shop_inspector_page = 0
@@ -52,4 +55,5 @@ static func handle_touch(ui: Control,point: Vector2) -> void:
 	if view.previous.has_point(point): ui.shop_inspector_page = maxi(0,ui.shop_inspector_page-1)
 	if view.next.has_point(point): ui.shop_inspector_page = mini(pages-1,ui.shop_inspector_page+1)
 	if view.close.has_point(point): ui.shop_inspector_open = false
+	if previous != Vector2i(ui.shop_inspector_tab,ui.shop_inspector_page): ui.supply_shop_motion.inspect()
 	ui.queue_redraw()

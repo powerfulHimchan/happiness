@@ -20,6 +20,7 @@
 <path d="M82 153v43m1436-43v43" stroke="#fff0bb" stroke-width="10"/>
 </g>
 <g fill="#82afac" opacity=".2"><circle cx="198" cy="143" r="2"/><circle cx="1421" cy="301" r="3"/><circle cx="152" cy="611" r="2"/><circle cx="1373" cy="713" r="2"/><circle cx="1210" cy="126" r="2"/></g>
+<g fill="none" stroke="#b9d4bb" opacity=".09"><path d="M120 208h1360M120 739h1360"/><path d="m130 240 24-12 24 12m1274 0-24-12-24 12"/></g>
 <rect x="20" y="844" width="1560" height="56" rx="10" fill="url(#wood)" stroke="#ae8757" stroke-width="4"/>
 <path d="M28 864h1544M275 847v53m346-53v53m365-53v53m349-53v53" stroke="#2c3331" stroke-width="3" opacity=".5"/>
 <g stroke="#b28a59" stroke-width="3" fill="#574b39"><path d="M97 807h87v35H97zM106 783h68v24h-68zM1411 780h81v63h-81z"/><path d="m1411 780 81 63m0-63-81 63M100 823h81"/></g>
