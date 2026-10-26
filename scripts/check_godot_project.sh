@@ -962,7 +962,14 @@ if [[ -n "$godot_command" ]]; then
       fi
       if (( assigned != check_shard_index )); then return 0; fi
     fi
-    timeout "$check_timeout" "$godot_command" "$@" 2>&1 | tee "$check_data_dir/runtime.log"
+    echo "Godot check: ${script:-project import} ${user_args[*]} (timeout $check_timeout)"
+    if timeout "$check_timeout" "$godot_command" "$@" 2>&1 | tee "$check_data_dir/runtime.log"; then
+      :
+    else
+      local check_status="$?"
+      echo "Godot check failed (exit $check_status): ${script:-project import} ${user_args[*]} (timeout $check_timeout)" >&2
+      return "$check_status"
+    fi
     if rg -q '^ERROR:|SCRIPT ERROR:|Parse Error:' "$check_data_dir/runtime.log"; then
       echo "Godot runtime or script error detected." >&2
       return 1
@@ -1712,7 +1719,9 @@ if [[ -n "$godot_command" ]]; then
       --script res://tests/gp138_runtime_test.gd -- "$collector_phase"
   done
   for weapon_codex_phase in seed resume finish legacy combinations; do
-    checked_godot 45s --headless --path "$game_root" \
+    # The expanded catalog is traversed at both aspect ratios, repeatedly across
+    # save/load states. A successful hosted run already takes over 40 seconds.
+    checked_godot 120s --headless --path "$game_root" \
       --script res://tests/gp137_runtime_test.gd -- "$weapon_codex_phase"
   done
   for fortified_phase in seed resume finish legacy combat; do
