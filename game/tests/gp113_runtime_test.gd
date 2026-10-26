@@ -25,6 +25,9 @@ func _run() -> void:
 	runner = sandbox.get_node("StageRunner")
 	weapons = sandbox.get_node("Player/PrototypeWeaponController")
 	recorder = sandbox.get_node("LocalTestRecorder")
+	# Seed 4 used to select bow_link_skill, changing the later baseline 155 to 183.
+	# Keep the failing draw deterministic so the shared legacy-growth guard is covered.
+	growth.rng.seed = 4
 	sandbox.get_node("CombatFeedbackController").configure(0.0, false, false)
 	weapons.sword_combat.set_process(false)
 	weapons.bow_combat.set_process(false)
