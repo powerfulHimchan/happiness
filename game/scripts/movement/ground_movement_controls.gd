@@ -198,6 +198,8 @@ var preferred_potion_recipe: String = PrototypePotionRecipes.BASIC
 var potion_recipe_message: String = ""
 var main_layout_rect := Rect2()
 var main_feedback_rect := Rect2()
+var feedback_layout_rect := Rect2()
+var start_backdrop := StartScreenBackdrop.new()
 var feedback_panel_rect := Rect2()
 var feedback_sound_down_rect := Rect2()
 var feedback_sound_up_rect := Rect2()
@@ -413,6 +415,8 @@ var boss_choice_profile: Dictionary = {}
 
 func _ready() -> void:
 	Engine.max_fps = 60
+	add_child(start_backdrop)
+	start_backdrop.set_screen(size, screen_mode == ScreenMode.MAIN)
 	for control_id in _layout_control_order():
 		control_scales[control_id] = 1.0
 	_load_saved_control_layout()
@@ -422,6 +426,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	start_backdrop.set_screen(size, screen_mode == ScreenMode.MAIN)
+	start_backdrop.tick(delta, screen_mode == ScreenMode.MAIN, preview_application_active)
 	if screen_mode == ScreenMode.SUPPLY_SHOP and preview_application_active:
 		var shop_animating := supply_shop_motion.is_animating()
 		supply_shop_motion.tick(delta)
@@ -481,6 +487,15 @@ func _notification(what: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if screen_mode == ScreenMode.LAYOUT_EDITOR:
+			cancel_layout_editor()
+			get_viewport().set_input_as_handled()
+			return
+		if screen_mode == ScreenMode.FEEDBACK_SETTINGS:
+			show_main_screen()
+			get_viewport().set_input_as_handled()
+			return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if screen_mode == ScreenMode.STORY:
 			if story_scene.get("id") == FinalRitual.ENDING_SCENE and not story_scene.get("final_locked", false): final_action_requested.emit("back")
@@ -550,6 +565,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	start_backdrop.set_screen(size, screen_mode == ScreenMode.MAIN)
 	if screen_mode == ScreenMode.RUN_TASKS:
 		RunTaskView.draw(self)
 		return
@@ -1333,11 +1349,12 @@ func _draw_character_selection() -> void:
 func update_checkpoint_status(available: bool, message: String) -> void:
 	checkpoint_available = available
 	checkpoint_message = message
+	_refresh_main_screen_layout()
 	queue_redraw()
 
 
 func open_layout_editor() -> void:
-	editor_return_mode = screen_mode if screen_mode == ScreenMode.COMBAT else ScreenMode.MAIN
+	editor_return_mode = screen_mode if screen_mode in [ScreenMode.COMBAT, ScreenMode.FEEDBACK_SETTINGS] else ScreenMode.MAIN
 	release_all_inputs()
 	editor_original_layout = {
 		"layout": _capture_control_layout(),
@@ -1379,7 +1396,7 @@ func apply_layout_editor() -> bool:
 	if editor_return_mode == ScreenMode.COMBAT:
 		_start_combat_resume_countdown()
 	else:
-		screen_mode = ScreenMode.MAIN
+		screen_mode = editor_return_mode
 	queue_redraw()
 	return true
 
@@ -1394,7 +1411,7 @@ func cancel_layout_editor() -> void:
 	if editor_return_mode == ScreenMode.COMBAT:
 		_start_combat_resume_countdown()
 	else:
-		screen_mode = ScreenMode.MAIN
+		screen_mode = editor_return_mode
 	queue_redraw()
 
 
@@ -1852,8 +1869,6 @@ func _handle_screen_touch(position: Vector2) -> void:
 		show_new_run_preparation()
 	elif screen_mode == ScreenMode.MAIN and checkpoint_available and main_continue_rect.has_point(position):
 		continue_requested.emit()
-	elif screen_mode == ScreenMode.MAIN and main_layout_rect.has_point(position):
-		open_layout_editor()
 	elif screen_mode == ScreenMode.MAIN and main_feedback_rect.has_point(position):
 		show_feedback_settings()
 	elif screen_mode == ScreenMode.FEEDBACK_SETTINGS:
@@ -1865,6 +1880,8 @@ func _handle_screen_touch(position: Vector2) -> void:
 			set_feedback_vibration_enabled(not feedback_vibration_enabled)
 		elif feedback_shake_rect.has_point(position):
 			set_feedback_screen_shake_enabled(not feedback_screen_shake_enabled)
+		elif feedback_layout_rect.has_point(position):
+			open_layout_editor()
 		elif feedback_records_clear_rect.has_point(position):
 			test_records_clear_requested.emit()
 		elif feedback_back_rect.has_point(position):
@@ -2160,33 +2177,18 @@ func _refresh_layout() -> void:
 		result_button_size
 	)
 	feedback_panel_rect = result_panel_rect
-	var feedback_row_x := feedback_panel_rect.position.x + 310.0
-	var feedback_row_width := feedback_panel_rect.size.x - 380.0
-	var feedback_button_width := 150.0
-	feedback_sound_down_rect = Rect2(
-		Vector2(feedback_row_x, feedback_panel_rect.position.y + 174.0),
-		Vector2(feedback_button_width, 54.0)
-	)
-	feedback_sound_up_rect = Rect2(
-		Vector2(feedback_sound_down_rect.end.x + 18.0, feedback_sound_down_rect.position.y),
-		Vector2(feedback_button_width, 54.0)
-	)
-	feedback_vibration_rect = Rect2(
-		Vector2(feedback_row_x, feedback_panel_rect.position.y + 254.0),
-		Vector2(feedback_row_width, 56.0)
-	)
-	feedback_shake_rect = Rect2(
-		Vector2(feedback_row_x, feedback_panel_rect.position.y + 334.0),
-		Vector2(feedback_row_width, 56.0)
-	)
-	feedback_records_clear_rect = Rect2(
-		Vector2(feedback_row_x, feedback_panel_rect.position.y + 400.0),
-		Vector2(feedback_row_width, 54.0)
-	)
-	feedback_back_rect = Rect2(
-		Vector2(feedback_panel_rect.get_center().x - 120.0, feedback_panel_rect.end.y - 82.0),
-		Vector2(240.0, 54.0)
-	)
+	var feedback_row_x := feedback_panel_rect.position.x + feedback_panel_rect.size.x * 0.34
+	var feedback_row_width := feedback_panel_rect.size.x * 0.60
+	var feedback_row_height := feedback_panel_rect.size.y * 0.075
+	var feedback_gap := 18.0
+	var feedback_button_width := (feedback_row_width - feedback_gap) * 0.5
+	feedback_sound_down_rect = Rect2(feedback_row_x, feedback_panel_rect.position.y + feedback_panel_rect.size.y * 0.22, feedback_button_width, feedback_row_height)
+	feedback_sound_up_rect = Rect2(feedback_sound_down_rect.end.x + feedback_gap, feedback_sound_down_rect.position.y, feedback_button_width, feedback_row_height)
+	feedback_vibration_rect = Rect2(feedback_row_x, feedback_panel_rect.position.y + feedback_panel_rect.size.y * 0.34, feedback_row_width, feedback_row_height)
+	feedback_shake_rect = Rect2(feedback_row_x, feedback_panel_rect.position.y + feedback_panel_rect.size.y * 0.46, feedback_row_width, feedback_row_height)
+	feedback_layout_rect = Rect2(feedback_row_x, feedback_panel_rect.position.y + feedback_panel_rect.size.y * 0.58, feedback_row_width, feedback_row_height)
+	feedback_records_clear_rect = Rect2(feedback_row_x, feedback_panel_rect.position.y + feedback_panel_rect.size.y * 0.70, feedback_row_width, feedback_row_height)
+	feedback_back_rect = Rect2(feedback_panel_rect.get_center().x - 120.0, feedback_panel_rect.position.y + feedback_panel_rect.size.y * 0.90, 240.0, feedback_row_height)
 
 	editor_toolbar_rect = Rect2(
 		safe.position + Vector2(10.0, 10.0),
@@ -2392,7 +2394,7 @@ func _refresh_main_screen_layout() -> void:
 	main_start_rect = boxes.start
 	main_village_rect = boxes.village
 	main_feedback_rect = boxes.settings
-	main_layout_rect = boxes.controls
+	main_layout_rect = Rect2()
 	if screen_mode == ScreenMode.MAIN:
 		story_journal_open_rect = boxes.journal
 
@@ -2400,67 +2402,20 @@ func _refresh_main_screen_layout() -> void:
 func _draw_feedback_settings() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(BACKGROUND_COLOR, 0.92), true)
 	draw_style_box(_panel_style(Color(PANEL_COLOR, 0.98)), feedback_panel_rect)
-	_draw_text_centered(
-		"설정",
-		Rect2(
-			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.position.y + 42.0),
-			Vector2(feedback_panel_rect.size.x, 58.0)
-		),
-		34,
-		ACTIVE_COLOR
-	)
-	var label_x := feedback_panel_rect.position.x + 70.0
-	_draw_text(
-		"효과음  %d%%" % int(round(feedback_sound_volume * 100.0)),
-		Vector2(label_x, feedback_sound_down_rect.position.y + 35.0),
-		22,
-		TEXT_COLOR
-	)
+	_draw_text_centered("설정", Rect2(feedback_panel_rect.position + Vector2(0, feedback_panel_rect.size.y * 0.06), Vector2(feedback_panel_rect.size.x, 58)), 34, ACTIVE_COLOR)
+	var label_x := feedback_panel_rect.position.x + feedback_panel_rect.size.x * 0.06
+	_draw_text("효과음  %d%%" % int(round(feedback_sound_volume * 100.0)), Vector2(label_x, feedback_sound_down_rect.get_center().y + 8), 22, TEXT_COLOR)
 	_draw_button(feedback_sound_down_rect, "소리 -", false)
 	_draw_button(feedback_sound_up_rect, "소리 +", false)
-	_draw_text(
-		"진동",
-		Vector2(label_x, feedback_vibration_rect.position.y + 36.0),
-		22,
-		TEXT_COLOR
-	)
-	_draw_button(
-		feedback_vibration_rect,
-		"켜짐" if feedback_vibration_enabled else "꺼짐",
-		feedback_vibration_enabled
-	)
-	_draw_text(
-		"화면 흔들기",
-		Vector2(label_x, feedback_shake_rect.position.y + 36.0),
-		22,
-		TEXT_COLOR
-	)
-	_draw_button(
-		feedback_shake_rect,
-		"켜짐" if feedback_screen_shake_enabled else "꺼짐",
-		feedback_screen_shake_enabled
-	)
-	var validation := android_validation_snapshot()
-	_draw_text(
-		"Android 검증 %d/10 · 연속 %s · 복귀 %d" % [
-			int(validation["completed_runs"]),
-			_format_clock(float(validation["session_elapsed_s"])),
-			int(validation["resume_count"]),
-		],
-		Vector2(label_x, feedback_records_clear_rect.position.y + 35.0),
-		18,
-		TEXT_COLOR
-	)
+	_draw_text("진동", Vector2(label_x, feedback_vibration_rect.get_center().y + 8), 22, TEXT_COLOR)
+	_draw_button(feedback_vibration_rect, "켜짐" if feedback_vibration_enabled else "꺼짐", feedback_vibration_enabled)
+	_draw_text("화면 흔들기", Vector2(label_x, feedback_shake_rect.get_center().y + 8), 22, TEXT_COLOR)
+	_draw_button(feedback_shake_rect, "켜짐" if feedback_screen_shake_enabled else "꺼짐", feedback_screen_shake_enabled)
+	_draw_text("조작 배치", Vector2(label_x, feedback_layout_rect.get_center().y + 8), 22, TEXT_COLOR)
+	_draw_button(feedback_layout_rect, "배치 편집", false)
+	_draw_text("로컬 기록", Vector2(label_x, feedback_records_clear_rect.get_center().y + 8), 22, TEXT_COLOR)
 	_draw_button(feedback_records_clear_rect, "기록 초기화", false)
-	_draw_text_centered(
-		"기록은 기기에만 저장되며 네트워크로 전송되지 않습니다.",
-		Rect2(
-			Vector2(feedback_panel_rect.position.x, feedback_panel_rect.end.y - 130.0),
-			Vector2(feedback_panel_rect.size.x, 36.0)
-		),
-		17,
-		MUTED_TEXT_COLOR
-	)
+	_draw_text_centered("기록은 기기에만 저장되며 네트워크로 전송되지 않습니다.", Rect2(feedback_panel_rect.position + Vector2(0, feedback_panel_rect.size.y * 0.81), Vector2(feedback_panel_rect.size.x, 36)), 17, MUTED_TEXT_COLOR)
 	_draw_button(feedback_back_rect, "메인으로", false)
 
 

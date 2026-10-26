@@ -38,11 +38,15 @@ func _run() -> void:
 	await process_frame
 	scene.process_mode = Node.PROCESS_MODE_DISABLED
 	ui = scene.get_node("CanvasLayer/GroundMovementControls")
-	_check(StartScreenView.TITLE == "행복 동화" and ProjectSettings.get_setting("application/config/name") == StartScreenView.TITLE, "new title and app name agree")
+	_check(StartScreenView.TITLE == "다시 피는 새벽" and ProjectSettings.get_setting("application/config/name") == StartScreenView.TITLE, "new title and app name agree")
 	_check(ProjectSettings.get_setting("application/boot_splash/show_image") == false, "Godot logo hidden")
 	_check(ProjectSettings.get_setting("application/config/custom_user_dir_name") == "godot/app_userdata/Happiness Tale- Rewind to Dawn", "desktop save folder preserved across rename")
 	_check(OS.get_user_data_dir().to_lower().ends_with("godot/app_userdata/happiness tale- rewind to dawn"), "resolved desktop save folder preserved")
 	_check(StartScreenView.BACKGROUND.get_width() > 1600, "selected background imported")
+	ui.configure_layout_store_path_for_test(STEM + "controls.json")
+	_check(StartScreenView.WORDS.size() == 5, "five image-lettered menu actions")
+	for texture in StartScreenView.WORDS.values():
+		_check(texture is Texture2D and texture.get_width() > 100, "outlined lettering imports as image")
 	var render_dir := OS.get_environment("START_SCREEN_RENDER_DIR")
 	if not render_dir.is_empty():
 		_check(DisplayServer.get_name() != "headless", "real renderer required for screenshots")
@@ -56,8 +60,9 @@ func _run() -> void:
 			ui.checkpoint_available = saved
 			ui.show_main_screen()
 			ui._refresh_layout()
+			_check(not ui.main_layout_rect.has_area(), "no invisible control-layout target on home")
 			var safe: Rect2 = ui._safe_area_in_viewport()
-			var buttons: Array[Rect2] = [ui.main_start_rect, ui.main_village_rect, ui.main_feedback_rect, ui.main_layout_rect, ui.story_journal_open_rect]
+			var buttons: Array[Rect2] = [ui.main_start_rect, ui.main_village_rect, ui.main_feedback_rect, ui.story_journal_open_rect]
 			if saved:
 				buttons.append(ui.main_continue_rect)
 			else:
@@ -75,14 +80,61 @@ func _run() -> void:
 			if not render_dir.is_empty() and DisplayServer.get_name() != "headless":
 				await RenderingServer.frame_post_draw
 				var file := "main_%dx%d_%s.png" % [dimensions.x, dimensions.y, "saved" if saved else "new"]
-				_check(root.get_texture().get_image().save_png(render_dir.path_join(file)) == OK, "capture " + file)
+				var before := root.get_texture().get_image()
+				_check(before.save_png(render_dir.path_join(file)) == OK, "capture " + file)
+				for frame in 20:
+					ui._process(0.1)
+				ui.queue_redraw()
+				await process_frame
+				await RenderingServer.frame_post_draw
+				var after := root.get_texture().get_image()
+				_check(before.get_data() != after.get_data(), "background animation changes rendered pixels")
+				_check(after.save_png(render_dir.path_join(file.replace(".png", "_motion.png"))) == OK, "capture animated background")
 		ui.checkpoint_available = false
 		ui.show_main_screen()
 		_tap(ui.main_feedback_rect)
 		_check(ui.current_screen_mode() == ui.ScreenMode.FEEDBACK_SETTINGS, "settings input")
-		ui.show_main_screen()
-		_tap(ui.main_layout_rect)
-		_check(ui.current_screen_mode() == ui.ScreenMode.LAYOUT_EDITOR, "control layout input")
+		var settings_buttons: Array[Rect2] = [ui.feedback_sound_down_rect, ui.feedback_sound_up_rect, ui.feedback_vibration_rect, ui.feedback_shake_rect, ui.feedback_layout_rect, ui.feedback_records_clear_rect, ui.feedback_back_rect]
+		for i in settings_buttons.size():
+			_check(ui.feedback_panel_rect.encloses(settings_buttons[i]), "settings actions contained")
+			for j in range(i + 1, settings_buttons.size()):
+				_check(not settings_buttons[i].intersects(settings_buttons[j]), "settings actions do not overlap")
+		if not render_dir.is_empty() and DisplayServer.get_name() != "headless":
+			ui.queue_redraw()
+			await process_frame
+			await RenderingServer.frame_post_draw
+			_check(root.get_texture().get_image().save_png(render_dir.path_join("settings_%dx%d.png" % [dimensions.x, dimensions.y])) == OK, "capture settings")
+		var preferences: Dictionary = ui.feedback_settings_snapshot()
+		_tap(ui.feedback_layout_rect)
+		_check(ui.current_screen_mode() == ui.ScreenMode.LAYOUT_EDITOR, "settings opens control layout")
+		var original: Dictionary = ui.control_layout_snapshot()
+		ui.set_control_opacity(0.45)
+		ui.cancel_layout_editor()
+		_check(ui.current_screen_mode() == ui.ScreenMode.FEEDBACK_SETTINGS, "cancel returns to settings")
+		_check(ui.control_layout_snapshot().opacity == original.opacity, "cancel restores original layout")
+		_tap(ui.feedback_layout_rect)
+		_check(ui.start_layout_test(), "settings-origin layout preview starts")
+		ui.advance_mode_timer_for_test(10.0)
+		_check(ui.current_screen_mode() == ui.ScreenMode.LAYOUT_EDITOR, "preview returns to editor")
+		ui.configure_layout_store_path_for_test("user://missing_title_test_directory/control.json")
+		_check(not ui.apply_layout_editor() and ui.current_screen_mode() == ui.ScreenMode.LAYOUT_EDITOR, "failed save stays in editor")
+		ui.configure_layout_store_path_for_test(STEM + "controls.json")
+		_check(ui.apply_layout_editor(), "layout saves from settings")
+		_check(ui.current_screen_mode() == ui.ScreenMode.FEEDBACK_SETTINGS, "save returns to settings")
+		_check(ui.feedback_settings_snapshot() == preferences, "layout navigation retains settings")
+		_tap(ui.feedback_layout_rect)
+		if not render_dir.is_empty() and DisplayServer.get_name() != "headless":
+			ui.queue_redraw()
+			await process_frame
+			await RenderingServer.frame_post_draw
+			_check(root.get_texture().get_image().save_png(render_dir.path_join("layout_%dx%d.png" % [dimensions.x, dimensions.y])) == OK, "capture layout editor")
+		var back := InputEventKey.new()
+		back.keycode = KEY_ESCAPE
+		back.pressed = true
+		ui._input(back)
+		_check(ui.current_screen_mode() == ui.ScreenMode.FEEDBACK_SETTINGS, "editor back returns to settings")
+		ui._input(back)
+		_check(ui.current_screen_mode() == ui.ScreenMode.MAIN, "settings back returns home")
 		ui.show_main_screen()
 		_tap(ui.main_village_rect)
 		_check(ui.current_screen_mode() == ui.ScreenMode.VILLAGE, "village input")
@@ -93,5 +145,25 @@ func _run() -> void:
 		_tap(ui.main_start_rect)
 		_check(ui.current_screen_mode() == ui.ScreenMode.START_CHARACTER, "new journey starts at hero selection")
 		ui.show_main_screen()
+	# Ambience freezes off-title and while the app is inactive, without RNG use.
+	seed(58123)
+	var expected_random := randf()
+	seed(58123)
+	var clock: float = ui.start_backdrop.elapsed_s
+	ui.show_feedback_settings()
+	ui._process(0.1)
+	_check(ui.start_backdrop.elapsed_s == clock and not ui.start_backdrop.visible, "animation hidden and frozen outside title")
+	ui.show_main_screen()
+	ui.preview_application_active = false
+	ui._process(0.1)
+	_check(ui.start_backdrop.elapsed_s == clock, "animation frozen in background")
+	ui.preview_application_active = true
+	ui._process(0.1)
+	_check(ui.start_backdrop.elapsed_s > clock, "animation resumes on title")
+	_check(randf() == expected_random, "ambience does not consume gameplay RNG")
+	var elapsed: float = ui.start_backdrop.elapsed_s
+	ui.start_backdrop.tick(-1.0, true, true)
+	_check(ui.start_backdrop.elapsed_s == elapsed, "negative time does not rewind animation")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(STEM + "controls.json"))
 	print("Start screen runtime test: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
