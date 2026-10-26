@@ -55,11 +55,14 @@ func _run() -> void:
 			_tap(controls.village_snapshot().layout.cards[2].get_center())
 			if not _check(_files() == journal, "동일 조제 재선택은 중복 저널 없음"): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			_tap(controls.start_weapon_cancel_rect.get_center())
+			if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 			_tap(controls.character_cancel_rect.get_center())
 			if not _check(_files() == journal and controls.current_screen_mode() == 13, "준비 취소는 도전/조제 보존"): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			controls.open_preparation_options()
 			_tap(controls.start_length_rects[1].get_center())

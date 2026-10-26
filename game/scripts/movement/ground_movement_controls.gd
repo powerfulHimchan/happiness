@@ -389,6 +389,8 @@ var story_journal_return_mode: int = 2
 var story_journal_tab: int = 0
 var story_journal_page: int = 0
 var selected_character_id: String = "roan"
+var character_detail_open := false
+var character_reveal_progress := 1.0
 var requested_character_id: String = "roan"
 var previous_character_id: String = "roan"
 var character_preview_previous_id: String = "roan"
@@ -426,6 +428,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if screen_mode == ScreenMode.START_CHARACTER and character_detail_open and preview_application_active and character_reveal_progress < 1.0:
+		character_reveal_progress = minf(1.0, character_reveal_progress + maxf(0.0, delta) / .28)
+		queue_redraw()
 	start_backdrop.set_screen(size, screen_mode == ScreenMode.MAIN)
 	start_backdrop.tick(delta, screen_mode == ScreenMode.MAIN, preview_application_active)
 	if screen_mode == ScreenMode.SUPPLY_SHOP and preview_application_active:
@@ -512,7 +517,7 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.START_CHARACTER:
-		_close_character_selection(false)
+		_back_from_character_selection()
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and screen_mode == ScreenMode.RUN_BUILD:
@@ -1236,7 +1241,7 @@ func _cancel_preparation() -> void:
 
 func _back_from_weapon_selection() -> void:
 	start_options_open = false
-	if preparation_flow: show_character_selection()
+	if preparation_flow: show_character_selection(true)
 	else: _cancel_preparation()
 
 
@@ -1308,10 +1313,12 @@ func _draw_start_weapon_selection() -> void:
 	RunPreparationView.draw_weapon(self)
 
 
-func show_character_selection() -> void:
+func show_character_selection(reveal_selected: bool = false) -> void:
 	if screen_mode != ScreenMode.START_WEAPON: return
 	character_preview_previous_id = selected_character_id
 	character_previous_story_enabled = selected_story_enabled
+	character_detail_open = reveal_selected
+	character_reveal_progress = 1.0
 	release_all_inputs()
 	screen_mode = ScreenMode.START_CHARACTER
 	_refresh_character_layout()
@@ -1319,6 +1326,8 @@ func show_character_selection() -> void:
 
 
 func _close_character_selection(confirm: bool) -> void:
+	if confirm and not character_detail_open:
+		return
 	if not confirm and preparation_flow:
 		_cancel_preparation()
 		return
@@ -1332,8 +1341,18 @@ func _close_character_selection(confirm: bool) -> void:
 	queue_redraw()
 
 
+func _back_from_character_selection() -> void:
+	if character_detail_open:
+		character_detail_open = false
+		character_reveal_progress = 1.0
+		_refresh_character_layout()
+		queue_redraw()
+	else:
+		_close_character_selection(false)
+
+
 func _refresh_character_layout() -> void:
-	var view := RunPreparationView.hero_layout(_safe_area_in_viewport())
+	var view := RunPreparationView.hero_layout(_safe_area_in_viewport(), character_detail_open)
 	character_card_rects.assign(view.cards)
 	story_toggle_rect = view.story
 	story_journal_open_rect = view.journal
@@ -1763,8 +1782,11 @@ func _handle_screen_touch(position: Vector2) -> void:
 		for index in character_card_rects.size():
 			if character_card_rects[index].has_point(position):
 				selected_character_id = PrototypeCharacters.IDS[index]
+				character_detail_open = true
+				character_reveal_progress = 0.0
+				_refresh_character_layout()
 				return
-		if character_cancel_rect.has_point(position): _close_character_selection(false)
+		if character_cancel_rect.has_point(position): _back_from_character_selection()
 		elif character_confirm_rect.has_point(position): _close_character_selection(true)
 		return
 	if screen_mode == ScreenMode.START_WEAPON:

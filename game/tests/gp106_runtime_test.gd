@@ -42,6 +42,7 @@ func _run() -> void:
 		controls.size = viewport
 		controls._refresh_layout()
 		_tap(controls.main_start_rect.get_center())
+		if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 		_tap(controls.character_confirm_rect.get_center())
 		if not _check(controls.current_screen_mode() == 10 and not growth.run_active and recorder.summary_snapshot().run_count == 0, "확정 전 무기 선택에서는 도전을 시작하지 않음"):
 			return
@@ -62,6 +63,7 @@ func _run() -> void:
 		if not _check(controls.selected_starting_weapon == "bow" and controls.command_buffer.pending_count() == 0, "선택 중 앱 복귀 시 선택 유지·입력 해제"):
 			return
 		_tap(controls.start_weapon_cancel_rect.get_center())
+		if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 		_tap(controls.character_cancel_rect.get_center())
 		if not _check(controls.current_screen_mode() == 2 and not growth.run_active and weapons.active_weapon_id == "sword", "취소는 주 무기·도전 상태를 변경하지 않음"):
 			return
@@ -72,6 +74,7 @@ func _run() -> void:
 		controls.show_main_screen()
 		controls._refresh_layout()
 		_tap(controls.main_start_rect.get_center())
+		if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 		_tap(controls.character_confirm_rect.get_center())
 		_tap(controls.start_weapon_card_rects[weapon_index].get_center())
 		var confirm: Vector2 = controls.start_weapon_confirm_rect.get_center()
@@ -125,9 +128,11 @@ func _run() -> void:
 		var contents := FileAccess.get_file_as_string(SAVE_PATH)
 		var old_result: Dictionary = controls.current_result_snapshot()
 		_tap(controls.main_start_rect.get_center())
+		if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 		_tap(controls.character_confirm_rect.get_center())
 		_tap(controls.start_weapon_card_rects[1 - weapon_index].get_center())
 		_tap(controls.start_weapon_cancel_rect.get_center())
+		if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 		_tap(controls.character_cancel_rect.get_center())
 		if not _check(FileAccess.get_file_as_string(SAVE_PATH) == contents and controls.current_result_snapshot() == old_result and controls.checkpoint_available and weapons.active_weapon_id == weapon, "새 무기 선택 취소는 저장된 도전을 유지"):
 			return
@@ -142,6 +147,7 @@ func _run() -> void:
 	controls.result_snapshot = {"stage_count": 3, "completion_s": 99.0}
 	controls._refresh_layout()
 	_tap(controls.result_retry_rect.get_center())
+	if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 	_tap(controls.character_cancel_rect.get_center())
 	if not _check(controls.current_screen_mode() == 1 and controls.current_result_snapshot().completion_s == 99.0, "결과에서 재도전 선택·취소 시 결과 보존"):
 		return

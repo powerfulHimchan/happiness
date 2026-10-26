@@ -46,9 +46,11 @@ func _run() -> void:
 			runner.set_process(false)
 			if not await _test_layout_and_pages(): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			if not _check(controls.current_screen_mode() == 10 and sandbox.is_combat_environment_suspended(), "마을에서 준비·전투 동결 유지"): return
 			_tap(controls.start_weapon_cancel_rect.get_center())
+			if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 			_tap(controls.character_cancel_rect.get_center())
 			if not _check(controls.current_screen_mode() == 13 and legacy.progress_snapshot() == meta and store.load_checkpoint().is_empty(), "준비 취소는 마을 복귀·메타와 저장 미변경"): return
 			_tap(controls.village_snapshot().layout.back.get_center())
@@ -59,6 +61,7 @@ func _run() -> void:
 			if not _check(controls.village_snapshot().resident and controls.village_snapshot().cards[1].open and not controls.village_snapshot().cards[0].open, "구출 기사 영구 정착·쉼터만 해금"): return
 			var reward := legacy.pending_reward()
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			legacy.fail_writes = true
 			_tap(controls.start_weapon_confirm_rect.get_center())
@@ -66,6 +69,7 @@ func _run() -> void:
 			if not _check(controls.current_screen_mode() == 2 and not sandbox.is_combat_environment_suspended() and legacy.pending_reward() == reward, "저장 실패는 메인 복구·보상 소비 없음·동결 해제"): return
 			controls.show_village()
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[1].get_center())
@@ -79,8 +83,10 @@ func _run() -> void:
 			meta = legacy.progress_snapshot()
 			controls.show_village()
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			_tap(controls.start_weapon_cancel_rect.get_center())
+			if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 			_tap(controls.character_cancel_rect.get_center())
 			if not _check(store.load_checkpoint() == checkpoint and legacy.progress_snapshot() == meta and controls.village_snapshot().resident, "이어하기 저장·소비 후 정착·준비 취소 보존"): return
 		"resume":

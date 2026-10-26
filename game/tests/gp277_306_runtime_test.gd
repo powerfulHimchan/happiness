@@ -204,6 +204,7 @@ func _start_story(character: String, weapon: String) -> bool:
 	_tap(controls.character_open_rect.get_center())
 	_tap(controls.character_card_rects[0 if character == "roan" else 1].get_center())
 	if not controls.selected_story_enabled: _tap(controls.story_toggle_rect.get_center())
+	if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 	_tap(controls.character_confirm_rect.get_center())
 	_tap(controls.start_weapon_card_rects[0 if weapon == "sword" else 1].get_center())
 	controls.open_preparation_options()
@@ -312,10 +313,12 @@ func _test_story_preview(character: String) -> bool:
 	_tap(controls.character_open_rect.get_center())
 	_tap(controls.story_toggle_rect.get_center())
 	if not await _test_journal(): return false
+	if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 	_tap(controls.character_cancel_rect.get_center())
 	if not _check(controls.selected_story_enabled == selected, "설정 취소는 이야기 선택 복구"): return false
 	_tap(controls.character_open_rect.get_center())
 	_tap(controls.story_toggle_rect.get_center())
+	if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 	_tap(controls.character_confirm_rect.get_center())
 	_tap(controls.start_weapon_cancel_rect.get_center())
 	return _check(controls.selected_story_enabled == selected and not growth.run_active and recorder.summary_snapshot().run_count == 0 and not sandbox.story_run.enabled and not character.is_empty(), "전체 준비 취소는 도전/스토리/보상 시작 없음")

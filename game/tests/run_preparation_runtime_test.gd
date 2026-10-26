@@ -38,6 +38,7 @@ func capture(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	check(root.get_texture().get_image().save_png(output.path_join(name+".png")) == OK,"real render: "+name)
 func targets(rectangles: Array, safe: Rect2) -> void:
+	rectangles = rectangles.filter(func(rect: Rect2): return rect.has_area())
 	for i in rectangles.size():
 		check(safe.encloses(rectangles[i]),"visible input inside safe area")
 		for j in range(i+1,rectangles.size()): check(not rectangles[i].intersects(rectangles[j]),"visible inputs do not overlap")
@@ -70,10 +71,34 @@ func _run() -> void:
 		check(ui.current_screen_mode() == ui.ScreenMode.START_CHARACTER,"main starts with hero selection")
 		var safe: Rect2 = ui._safe_area_in_viewport()
 		var hero := RunPreparationView.hero_layout(safe)
+		check(not ui.character_detail_open and not ui.character_confirm_rect.has_area(), "initial choice hides profile and next target")
+		ui._close_character_selection(true)
+		check(ui.current_screen_mode() == ui.ScreenMode.START_CHARACTER, "cannot confirm without choosing a portrait")
+		await capture("hero_choices_%dx%d" % [dimensions.x, dimensions.y])
 		targets(hero.cards+[hero.back,hero.confirm,hero.story,hero.journal],safe)
 		for character in PrototypeCharacters.IDS:
+			if ui.character_detail_open: tap(ui.character_cancel_rect)
 			tap(ui.character_card_rects[PrototypeCharacters.IDS.find(character)])
-			check(ui.selected_character_id == character,"hero card selection")
+			check(ui.selected_character_id == character and ui.character_detail_open, "portrait opens selected profile")
+			check(ui.character_card_rects.all(func(rect: Rect2): return not rect.has_area()), "hidden portrait has no target")
+			var chosen: String = ui.selected_character_id
+			tap(hero.cards[1 - PrototypeCharacters.IDS.find(character)])
+			check(ui.selected_character_id == chosen, "hidden portrait cannot change selected hero")
+			ui._process(.14)
+			var reveal: float = ui.character_reveal_progress
+			ui.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
+			ui._process(.5)
+			check(ui.character_reveal_progress == reveal, "profile transition pauses with app")
+			ui.notification(Control.NOTIFICATION_APPLICATION_RESUMED)
+			ui._process(.01)
+			check(ui.character_reveal_progress > reveal, "profile transition resumes")
+			await capture("hero_transition_" + character + "_%dx%d" % [dimensions.x, dimensions.y])
+			ui._process(.3)
+			var story := HeroSelectionView.biography_layout(safe, character)
+			check(story.lines.size() * story.line_height <= story.rect.size.y and "".join(story.lines) == PrototypeCharacters.biography(character), "complete biography fits without truncation")
+			check(PrototypeCharacters.biography(character).length() >= 280 and PrototypeCharacters.biography(character).length() <= 340, "approved biography is approximately 300 characters")
+			check(PrototypeCharacters.initial_combat_stats() == {"health":100,"attack":100,"defense":0,"critical_chance":0.0,"critical_damage":150.0}, "initial stats use gameplay defaults")
+			check(files() == original_files and weapons.checkpoint_snapshot() == original_weapons and player.damage_receiver.health == health, "profile does not change current run or saves")
 			await capture("hero_"+character+"_%dx%d"%[dimensions.x,dimensions.y])
 			tap(ui.character_confirm_rect)
 			check(ui.current_screen_mode() == ui.ScreenMode.START_WEAPON and ui.selected_character_id == character,"hero confirm opens weapon book")
@@ -123,6 +148,9 @@ func _run() -> void:
 			var clock: float = ui.preview_elapsed_s
 			ui._process(1)
 			check(ui.preview_elapsed_s == clock,"hidden preview clock stops")
+		if ui.character_detail_open:
+			escape()
+			check(not ui.character_detail_open and ui.current_screen_mode() == ui.ScreenMode.START_CHARACTER, "profile back restores two choices")
 		if dimensions.x == 2400: escape()
 		else: tap(ui.character_cancel_rect)
 		check(ui.current_screen_mode() == ui.ScreenMode.MAIN and files() == original_files,"cancel returns to source without save writes")

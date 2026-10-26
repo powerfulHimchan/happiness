@@ -2,6 +2,7 @@ class_name PrototypeCombatStats
 extends RefCounted
 
 ## Attack 100 is the existing weapon damage baseline. Health stays in DamageReceiver.
+const BASE_HEALTH := 100
 const BASE_ATTACK := 100
 const BASE_DEFENSE := 0
 const BASE_CRITICAL_CHANCE := 0.0

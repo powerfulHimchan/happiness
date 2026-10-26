@@ -1,7 +1,7 @@
 class_name RunPreparationView
 extends RefCounted
 
-## Approved poster / open-book compositions. All text and hit areas remain live game UI.
+## Approved hero detail / open-book compositions with shared input geometry.
 const BOOK := preload("res://assets/preparation/storybook.svg")
 const INK := Color("493420")
 const TEAL := Color("17666b")
@@ -12,8 +12,8 @@ static var portraits: Dictionary = {}
 static func box(safe: Rect2, x: float,y: float,w: float,h: float) -> Rect2:
 	return Rect2(safe.position+safe.size*Vector2(x,y),safe.size*Vector2(w,h))
 
-static func hero_layout(safe: Rect2) -> Dictionary:
-	return {"cards":[box(safe,.025,.16,.46,.66),box(safe,.515,.16,.46,.66)],"back":box(safe,.035,.865,.17,.08),"confirm":box(safe,.70,.865,.265,.08),"story":box(safe,.40,.865,.20,.07),"journal":box(safe,.82,.04,.13,.055)}
+static func hero_layout(safe: Rect2, detail: bool = false) -> Dictionary:
+	return HeroSelectionView.layout(safe, detail)
 
 static func weapon_layout(safe: Rect2, _options: bool) -> Dictionary:
 	var cards: Array[Rect2] = []
@@ -58,35 +58,7 @@ static func portrait(id: String) -> Texture2D:
 	return portraits[id]
 
 static func draw_hero(ui: Control) -> void:
-	var safe: Rect2 = ui._safe_area_in_viewport()
-	var unit := safe.size.y/1080.0
-	background(ui)
-	var a := safe.position+safe.size*Vector2(.68,0)
-	var b := safe.position+safe.size*Vector2(.44,1)
-	ui.draw_colored_polygon(PackedVector2Array([a,safe.position+Vector2(safe.size.x,0),safe.end,b]),Color(1,.67,.62,.20))
-	ui.draw_line(a,b,Color(1,.87,.49,.65),4*unit,true)
-	ui._draw_village_text("주인공 선택",box(safe,.24,.025,.52,.115),int(85*unit),INK)
-	for index in 2:
-		var id: String = PrototypeCharacters.IDS[index]
-		var selected: bool = ui.selected_character_id == id
-		var bounds := box(safe,.012+index*.50,.145,.485,.675)
-		ui.draw_texture_rect(portrait(id),SupplyShopArt.fitted(portrait(id),bounds),false,Color.WHITE if selected else Color(.96,.96,.96,1))
-		var passive := PrototypeCharacters.trait_profile(id)
-		panel(ui,box(safe,.055+index*.50,.605,.39,.128),Color(1,.96,.87,.94),GOLD if selected else Color("ce9d7b"),int(10*unit))
-		var passive_areas := HeroStatusArt.selection_regions(box(safe,.055+index*.50,.605,.39,.128))
-		HeroStatusArt.icon(ui,id,passive_areas.icon)
-		ui._draw_village_text(String(passive.name),passive_areas.name,int(29*unit),TEAL)
-		ui._draw_village_text(String(passive.lines[0]) if id == "roan" else "무기 전환 후 다음 1타 확정 치명타",passive_areas.effect,int(20*unit),INK)
-		ui._draw_village_text("재발동 6초 · 모든 무기" if id == "roan" else "유효 적중 1회 · 재발동 8초",passive_areas.cooldown,int(19*unit),INK)
-		var label := box(safe,.10+index*.50,.745,.30,.095)
-		panel(ui,label,PAPER,GOLD if selected else Color("ce9d7b"),int(30*unit))
-		ui._draw_village_text(PrototypeCharacters.display_name(id)+( "  ✓" if selected else ""),label,int(54*unit),TEAL if index == 0 else Color("a75646"))
-	button(ui,ui.character_cancel_rect,"‹  이전")
-	button(ui,ui.character_confirm_rect,"다음: 무기 선택  ›",true)
-	button(ui,ui.story_toggle_rect,"이야기 "+("켜짐" if ui.selected_story_enabled else "꺼짐"),false,ui.selected_story_enabled)
-	button(ui,ui.story_journal_open_rect,"기억 수첩")
-	panel(ui,box(safe,.29,.948,.42,.041),Color(1,.96,.87,.90),Color(1,.90,.6,.25),10)
-	ui._draw_village_text("고유 특성은 선택한 주인공에게 자동 적용됩니다",box(safe,.29,.952,.42,.032),int(22*unit),INK)
+	HeroSelectionView.draw(ui)
 
 static func draw_weapon(ui: Control) -> void:
 	var safe: Rect2 = ui._safe_area_in_viewport()

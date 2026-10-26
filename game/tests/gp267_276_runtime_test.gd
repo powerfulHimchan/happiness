@@ -78,6 +78,7 @@ func _run() -> void:
 				controls.show_start_weapon_selection()
 				_tap(controls.character_open_rect.get_center())
 				_tap(controls.character_card_rects[1 if expected == "roan" else 0].get_center())
+				if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 				_tap(controls.character_confirm_rect.get_center())
 				_tap(controls.start_weapon_cancel_rect.get_center())
 				if not _check(controls.current_screen_mode() == 1 and player.character_id == expected and controls.selected_character_id == expected, "실제 결과의 재도전 준비·주인공 변경 취소"): return
@@ -151,6 +152,7 @@ func _prepare_character(character: String, weapon: String, length_index: int) ->
 	_tap(controls.character_open_rect.get_center())
 	if not _check(controls.current_screen_mode() == 17, "실제 주인공 변경 버튼"): return false
 	_tap(controls.character_card_rects[0 if character == "roan" else 1].get_center())
+	if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 	_tap(controls.character_confirm_rect.get_center())
 	_tap(controls.start_weapon_card_rects[0 if weapon == "sword" else 1].get_center())
 	controls.open_preparation_options()
@@ -179,19 +181,20 @@ func _test_character_preview(character: String) -> bool:
 			if not _check(not controls.character_open_rect.intersects(rect), "변경 버튼과 기존 준비 입력 비중첩"): return false
 		_tap(controls.character_open_rect.get_center())
 		var rects: Array = controls.character_card_rects.duplicate()
-		rects.append_array([controls.character_cancel_rect, controls.character_confirm_rect])
+		rects.append_array([controls.character_cancel_rect])
 		var safe: Rect2 = controls.layout_snapshot().safe
 		for i in rects.size():
 			if not _check(safe.encloses(rects[i]), "두 화면비 주인공 카드·버튼 안전 영역"): return false
 			for j in range(i + 1, rects.size()):
 				if not _check(not rects[i].intersects(rects[j]), "주인공 입력 비중첩"): return false
-		if not _check(ThemeDB.fallback_font.get_string_size("이 주인공으로 준비", HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x < controls.character_confirm_rect.size.x - 16, "실제18px 확정 글꼴"): return false
+		if not _check(not controls.character_confirm_rect.has_area(), "주인공 미선택 시 다음 입력 없음"): return false
 		_tap(controls.character_card_rects[1 if character == "roan" else 0].get_center())
 		controls.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
 		controls.notification(Control.NOTIFICATION_APPLICATION_RESUMED)
 		controls.queue_redraw()
 		await process_frame
 		if not _check(controls.selected_character_id != character and player.character_id == character and controls.command_buffer.pending_count() == 0, "미리보기·앱 복귀는 현재 도전 변경·입력 누적 없음"): return false
+		if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 		if dimensions.x > 2000:
 			var back := InputEventKey.new()
 			back.pressed = true
@@ -201,6 +204,7 @@ func _test_character_preview(character: String) -> bool:
 		if not _check(controls.selected_character_id == character and controls.current_screen_mode() == 10, "선택 취소로 원래 준비 주인공 복구"): return false
 		_tap(controls.character_open_rect.get_center())
 		_tap(controls.character_card_rects[1 if character == "roan" else 0].get_center())
+		if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 		_tap(controls.character_confirm_rect.get_center())
 		_tap(controls.start_weapon_cancel_rect.get_center())
 		if not _check(controls.selected_character_id == character and player.character_id == character and store.load_checkpoint() == saved and recorder.checkpoint_snapshot() == records and FileAccess.get_file_as_string(legacy.save_path) == journal, "준비 전체 취소도 기존 캐릭터·보상·저장 보존"): return false

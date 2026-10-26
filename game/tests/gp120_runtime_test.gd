@@ -56,11 +56,14 @@ func _run() -> void:
 			if not _check(FileAccess.get_file_as_string(GP120_META) == contents, "같은 조제 재선택은 저널 중복 없음"): return
 			var record := recorder.checkpoint_snapshot()
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			_tap(controls.start_weapon_cancel_rect.get_center())
+			if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 			_tap(controls.character_cancel_rect.get_center())
 			if not _check(controls.current_screen_mode() == 13 and recorder.checkpoint_snapshot() == record and legacy.progress_snapshot().potion_recipe == "concentrated", "새 도전 준비 취소는 도전·조제 보존"): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
@@ -135,6 +138,7 @@ func _run() -> void:
 			if not await _test_apothecary_layout(true): return
 			if not _check(controls.preferred_potion_recipe == "concentrated", "이후 파괴 완주도 약초사·조제 유지"): return
 			_tap(controls.village_snapshot().layout.start.get_center())
+			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
