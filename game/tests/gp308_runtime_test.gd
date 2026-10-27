@@ -61,7 +61,7 @@ func _run() -> void:
 					player.global_position.x = 3840
 					runner._process(0.1)
 					if not _check(runner.seed_sack.position == RegionStageLayout.WAVE_TWO[route].seed and runner.leaf_slime.position == RegionStageLayout.WAVE_TWO[route].slime, "둘째 웨이브 실제 전용 위치"): return
-					if not _finish_stage() or not sandbox._claim_weapon_reward("sword"): return
+					if not _finish_second_section_stage() or not sandbox._claim_weapon_reward("sword"): return
 					_tap(controls.relic_reward_open_rect.get_center())
 					if not _check(sandbox._claim_relic_reward(PrototypeRelic.CLOCK_ID), "두 번째 구간의 실제 유물 보상"): return
 					player.damage_receiver.health = 83
@@ -102,8 +102,10 @@ func _start_second_section(route: String) -> bool:
 	_tap(controls.start_length_rects[3].get_center())
 	controls.close_preparation_options()
 	_tap(controls.start_weapon_confirm_rect.get_center())
+	# New preparation always opens the prologue; terrain tests must acknowledge it.
+	if not _ack_scene(true): return false
 	if not _check(runner.route_id == route and runner.region_section() == 1 and festival_terrain.get_child_count() == (3 if route == "wind" else 4), "첫 구간은 기존 지형·실제 전체 여정 시작"): return false
-	if not _finish_stage() or not sandbox._claim_weapon_reward(""): return false
+	if not _finish_second_section_stage() or not sandbox._claim_weapon_reward(""): return false
 	if not _check(controls.stage_route_options[0].name.contains(RegionStageLayout.TITLES[route]), "실제 다음 구간 카드의 전용 이름"): return false
 	_tap(controls.stage_route_rects[0].get_center())
 	return _check(runner.stage_number == 2 and runner.route_id == route and runner.region_section() == 2 and festival_terrain.base_platforms == RegionStageLayout.platforms(route) and festival_terrain.get_child_count() == (6 if route == "forest" else 5), "실제 입력으로 같은 지역 두 번째 전용 지형 구성")
@@ -224,3 +226,10 @@ func _second_hazard(route: String) -> bool:
 	if not _check(trap.zone_index == 1 and trap.zones[1] == RegionStageLayout.TRAP_ZONES[1], "다음 웨이브의 새 위치"): return false
 	trap.configure(2, "ruins")
 	return _check(trap.region_section == 1 and trap.zones == ClockTrapController.ZONES and trap.state == ClockTrapController.State.OFF, "기존 유적 경로의 원래 함정 배치 복원")
+
+# Keep exercising the real story flow while preserving the terrain/reward assertions.
+func _finish_second_section_stage() -> bool:
+	if not super._finish_stage(): return false
+	if controls.current_screen_mode() == 18:
+		return _ack_scene(true)
+	return true

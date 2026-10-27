@@ -20,7 +20,10 @@ func _check(ok: bool, message: String) -> void:
 		printerr("GP-718–767: "+message)
 
 func _remove(path: String) -> void:
-	if FileAccess.file_exists(path): DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	# A leftover checkpoint backup can restore another phase into this fixture.
+	for suffix in ["", ".bak", ".tmp"]:
+		if FileAccess.file_exists(path + suffix):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path + suffix))
 
 func _ids(item: Dictionary) -> Array:
 	if item.source == "research": return item.required.duplicate()
@@ -55,7 +58,7 @@ func _run() -> void:
 
 func _catalog() -> void:
 	var additions := AchievementResearch.definitions()
-	_check(additions.size() == 42 and PermanentAchievements.DEFINITIONS.size() == 92, "forty-two goals extend the original fifty")
+	_check(additions.size() == 42 and PermanentAchievements.DEFINITIONS.size() == 93, "forty-two research goals and first dawn extend the original fifty")
 	var seen := {}
 	for index in additions.size():
 		var item := additions[index]
@@ -81,7 +84,7 @@ func _catalog() -> void:
 	var duplicate_known := {"sword_power":true, "not_real":true, "sword_mastery_ground":false}
 	_check(PermanentAchievements.observations({}, {}, duplicate_known).research_sword_study_5 == 1, "only validated true discoveries count")
 	var view := AchievementBrowser.query({})
-	_check(view.earned == 0 and view.locked == 92 and view.visible == 92, "fresh summary")
+	_check(view.earned == 0 and view.locked == 93 and view.visible == 93, "fresh summary")
 	view.cards[0].name = "mutated"
 	_check(AchievementBrowser.query({}).cards[0].name != "mutated", "returned query is independent")
 
@@ -247,7 +250,7 @@ func _ui() -> void:
 	_check(combat == [player.damage_receiver.health,player.damage_receiver.max_health,player.growth_damage(100,"sword"),scene.get_node("StageRunner").checkpoint_snapshot()], "browsing preserves live combat state")
 	var earned := PermanentAchievements.earned_count(state)
 	_check(earned == 30, "known fixture contains thirty earned research goals")
-	_check(AchievementBrowser.query(state,1).visible == earned and AchievementBrowser.query(state,2).visible == 92-earned and AchievementBrowser.query(state,3).visible == 1, "summary and status counts agree")
+	_check(AchievementBrowser.query(state,1).visible == earned and AchievementBrowser.query(state,2).visible == 93-earned and AchievementBrowser.query(state,3).visible == 1, "summary and status counts agree")
 
 func _render() -> void:
 	var output := OS.get_environment("ACHIEVEMENT_RENDER_DIR")

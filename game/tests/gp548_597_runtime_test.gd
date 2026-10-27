@@ -40,7 +40,7 @@ func _run() -> void:
 		"seed":
 			_seed_sources()
 			await _open_scene()
-			_check(PermanentAchievements.earned_count(scene.achievement_store.snapshot()) == PermanentAchievements.DEFINITIONS.size(), "existing durable sources migrate all ninety-two goals at startup")
+			_check(PermanentAchievements.earned_count(scene.achievement_store.snapshot()) == PermanentAchievements.DEFINITIONS.size(), "existing durable sources migrate all ninety-three goals at startup")
 			await _ui(true)
 		"resume":
 			var before := _bytes(STEM + "main.jsonl")
@@ -69,7 +69,7 @@ func _run() -> void:
 
 func _catalog() -> void:
 	var definitions := PermanentAchievements.DEFINITIONS
-	_check(definitions.size() == 93, "original fifty plus forty-two research goals")
+	_check(definitions.size() == 93, "original fifty plus forty-two research goals and first dawn")
 	var seen := {}
 	var zero := PermanentAchievements.observations({}, {}, {})
 	_check(zero.values().all(func(v: Variant) -> bool: return v == 0), "fresh player receives no achievements")
@@ -88,7 +88,9 @@ func _catalog() -> void:
 	var all_ids: Array = abilities.keys()
 	for index in definitions.size():
 		var item: Dictionary = definitions[index]
-		_check(not seen.has(item.id) and item.ticket == (548 + index if index < 50 else 718 + index - 50), "unique ordered feature ticket: " + item.id)
+		var expected_ticket := 548 + index if index < 50 else 718 + index - 50
+		if item.id == "first_dawn": expected_ticket = 901
+		_check(not seen.has(item.id) and item.ticket == expected_ticket, "unique ordered feature ticket: " + item.id)
 		seen[item.id] = true
 		_check(full[item.id] == item.target, "real source can complete: " + item.id)
 		var ledger := _ledger(item.id)
@@ -170,6 +172,9 @@ func _ui(select_all: bool) -> void:
 	var combat := [player.damage_receiver.health, player.damage_receiver.max_health, player.growth_damage(100, "sword"), runner.checkpoint_snapshot().duplicate(true)]
 	var source_bytes := [_bytes(STEM+"legacy.jsonl"), _bytes(STEM+"story.jsonl"), _bytes(STEM+"abilities.jsonl"), _bytes(STEM+"checkpoint.json")]
 	for dimensions in [Vector2(1280, 720), Vector2(1600, 720), Vector2(1280, 800)]:
+		root.content_scale_size = Vector2i(dimensions)
+		root.size = Vector2i(dimensions)
+		await process_frame
 		controls.size = dimensions
 		controls._refresh_layout()
 		controls.village_page = "village"
@@ -180,7 +185,7 @@ func _ui(select_all: bool) -> void:
 		var seen: Array[String] = []
 		for page in ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0):
 			var view: Dictionary = controls.village_snapshot()
-			_check(view.codex_page == page and view.codex_pages == ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0) and view.cards.size() == mini(3,PermanentAchievements.DEFINITIONS.size()-page*3), "all ninety-two cards, including last partial page")
+			_check(view.codex_page == page and view.codex_pages == ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0) and view.cards.size() == mini(3,PermanentAchievements.DEFINITIONS.size()-page*3), "all ninety-three cards, including the appended first-dawn goal")
 			var rects: Array = view.layout.cards.duplicate()
 			rects.append_array(view.tabs.values())
 			rects.append_array(view.achievement_toolbar.values())
