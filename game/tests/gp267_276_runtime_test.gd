@@ -162,6 +162,8 @@ func _prepare_character(character: String, weapon: String, length_index: int) ->
 
 func _start_character(character: String, weapon: String) -> bool:
 	if not _prepare_character(character, weapon, 2 if character == "lumi" else 0): return false
+	# Exercise pre-story character checkpoints; always-on narration has its own preparation/story tests.
+	controls.selected_story_enabled = false
 	_tap(controls.start_weapon_confirm_rect.get_center())
 	return _check(player.character_id == character and controls.current_screen_mode() == 0 and player.avatar_sprite.texture == PrototypeCharacters.texture(character) and weapons.active_weapon_id == weapon and growth.run_active, "실제 로안·루미 검·활 시작")
 
