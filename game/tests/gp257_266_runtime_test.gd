@@ -142,6 +142,7 @@ func _start_regions(weapon: String) -> bool:
 	controls.close_preparation_options()
 	if controls.pending_boss_legacy.get("choice", "") == "destroy":
 		if not _check(controls.start_legacy_description().contains("일반 도전"), "순회 준비는 위험 길 제외를 정확히 안내"): return false
+	controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 	_tap(controls.start_weapon_confirm_rect.get_center())
 	return _check(runner.run_mode == "regions" and runner.stage_limit == 5 and runner.stage_number == 1 and runner.region_order.size() == 4 and runner.current_metrics().run_route_name == "연습 구간", "실제 순회 버튼·검/활 시작·연습 후 네 지역")
 

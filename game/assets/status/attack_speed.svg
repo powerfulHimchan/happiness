@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+<defs><linearGradient id="rim" x2="1" y2="1"><stop stop-color="#ffe3a1"/><stop offset="1" stop-color="#a57736"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#f5fcff"/><stop offset="1" stop-color="#72bfd0"/></linearGradient></defs>
+<path d="M64 5 108 22 118 62 104 102 64 123 24 102 10 62 20 22Z" fill="#173d4b" stroke="url(#rim)" stroke-width="6"/>
+<path d="m47 81 41-53 12-2-1 13-43 48" fill="url(#metal)" stroke="#3a6977" stroke-width="3"/>
+<path d="m40 74 24 19m-9-8-16 21" fill="none" stroke="#efc66f" stroke-width="8" stroke-linecap="round"/>
+<path d="M26 43h28M21 56h22M25 69h14" fill="none" stroke="#99e3df" stroke-width="5" stroke-linecap="round"/>
+<path d="m73 85 14-13-4 11 13-2-19 19 4-14Z" fill="#f8d686"/>
+</svg>

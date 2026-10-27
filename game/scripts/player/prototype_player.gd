@@ -674,8 +674,12 @@ func defense_multiplier() -> float:
 	return PrototypeCombatStats.defense_multiplier(defense_stat())
 
 
+func attack_speed_multiplier() -> float:
+	return PrototypeCombatStats.BASE_ATTACK_SPEED / 100.0
+
+
 func combat_stats_snapshot() -> Dictionary:
-	return {"attack":attack_stat(), "defense":defense_stat(), "critical_chance":critical_chance_stat(), "critical_damage":critical_damage_stat(), "health":damage_receiver.health, "max_health":damage_receiver.max_health, "damage_reduction":(1.0-defense_multiplier())*100.0}
+	return {"attack_speed":attack_speed_multiplier()*100.0, "attack":attack_stat(), "defense":defense_stat(), "critical_chance":critical_chance_stat(), "critical_damage":critical_damage_stat(), "health":damage_receiver.health, "max_health":damage_receiver.max_health, "damage_reduction":(1.0-defense_multiplier())*100.0}
 
 
 func growth_damage(base_damage: int, weapon_id: String, kind: String = "basic") -> int:

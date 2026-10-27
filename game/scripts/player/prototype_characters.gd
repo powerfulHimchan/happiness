@@ -31,4 +31,4 @@ static func biography(id: String) -> String:
 
 ## Base values, before equipment/memories/legacy/expedition modifiers.
 static func initial_combat_stats() -> Dictionary:
-	return {"health": PrototypeCombatStats.BASE_HEALTH, "attack": PrototypeCombatStats.BASE_ATTACK, "defense": PrototypeCombatStats.BASE_DEFENSE, "critical_chance": PrototypeCombatStats.BASE_CRITICAL_CHANCE, "critical_damage": PrototypeCombatStats.BASE_CRITICAL_DAMAGE}
+	return {"attack_speed": PrototypeCombatStats.BASE_ATTACK_SPEED, "health": PrototypeCombatStats.BASE_HEALTH, "attack": PrototypeCombatStats.BASE_ATTACK, "defense": PrototypeCombatStats.BASE_DEFENSE, "critical_chance": PrototypeCombatStats.BASE_CRITICAL_CHANCE, "critical_damage": PrototypeCombatStats.BASE_CRITICAL_DAMAGE}

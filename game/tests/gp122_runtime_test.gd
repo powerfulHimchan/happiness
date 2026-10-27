@@ -73,6 +73,7 @@ func _run() -> void:
 			if not _finish_stage() or not _check(sandbox._resolve_boss_choice("destroy"), "실제 보스 파괴로 다음 위험 도전 준비"): return
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.boss_legacy.choice == "destroy" and controls.surveyed_routes.size() == 2, "새 도전은 영구 답사 유지·파괴 핵 적용"): return
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "위험 길 선택 전 중간 저장"): return
@@ -102,6 +103,7 @@ func _run() -> void:
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
 			controls.use_boss_legacy = false
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "이전 형식 저장 첫 통과 준비"): return
 			_tap(controls.stage_route_rects[1].get_center())

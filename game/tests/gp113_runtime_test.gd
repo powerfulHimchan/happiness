@@ -48,6 +48,7 @@ func _run() -> void:
 			if not _check(legacy.pending_reward().is_empty() and legacy.progress_snapshot().blueprints.size() == 2, "이전 소비 형식·기록 초기화와 영구 해금 독립"): return
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.boss_legacy.is_empty() and player.memory_id == "" and weapons.blueprints == {"sword": "", "bow": ""}, "일회 보상 없이 해금만 유지·특수 무기 자동 지급 없음"): return
 			if not _finish_stage(): return

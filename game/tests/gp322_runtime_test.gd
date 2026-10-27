@@ -148,7 +148,8 @@ func _start_journey(character: String, weapon: String) -> bool:
 	controls.open_preparation_options()
 	_tap(controls.expedition_rect.get_center())
 	controls.close_preparation_options()
-	_tap(controls.start_weapon_confirm_rect.get_center())
+	if expedition_story: _tap(controls.start_weapon_confirm_rect.get_center())
+	else: controls.begin_retry(weapon, 10, "journey", character, false, controls.selected_expedition, controls.selected_backup_weapon)
 	if not _check(runner.expedition == 1 and runner.run_mode == "journey" and runner.stage_limit == 10, "실제 준비 입력으로 원정 1 시작"): return false
 	return _ack_scene(true) if expedition_story else true
 

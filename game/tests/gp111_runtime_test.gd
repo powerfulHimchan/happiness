@@ -84,6 +84,7 @@ func _run() -> void:
 			controls.close_preparation_options()
 			legacy.fail_writes = true
 			var original := FileAccess.get_file_as_string(GP111_LEGACY_PATH)
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(controls.current_screen_mode() == 2 and FileAccess.get_file_as_string(GP111_LEGACY_PATH) == original and not growth.run_active and player.memory_id == "", "보상 없는 기억 선택 저장 실패는 시작 차단"): return
 			legacy.fail_writes = false
@@ -92,9 +93,11 @@ func _run() -> void:
 			_tap(controls.memory_card_rects[1].get_center())
 			controls.close_preparation_options()
 			var confirm: Vector2 = controls.start_weapon_confirm_rect.get_center()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(confirm)
 			if not _check(player.memory_id == "clockwork_guard" and player.damage_receiver.max_health == 105 and player.damage_receiver.health == 105 and legacy.progress_snapshot().selected_memory == "clockwork_guard" and player.boss_legacy.is_empty() and player.growth_damage(100, "sword", "skill") == 100, "수호 단일 장착·체력 +5·공격 불변·선택 저장"): return
 			var runs: int = recorder.summary_snapshot().run_count
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(confirm)
 			if not _check(recorder.summary_snapshot().run_count == runs, "확정 중복 터치로 새 도전 중복 없음"): return
 			if not _finish_stage(): return
@@ -130,6 +133,7 @@ func _run() -> void:
 			controls.close_preparation_options()
 			legacy.fail_writes = true
 			var before := FileAccess.get_file_as_string(GP111_LEGACY_PATH)
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(controls.current_screen_mode() == 2 and FileAccess.get_file_as_string(GP111_LEGACY_PATH) == before and legacy.pending_reward().choice == "destroy" and legacy.progress_snapshot().selected_memory == "clockwork_guard", "보상 소비·기억 선택 묶음 저장 실패는 둘 다 보존"): return
 			legacy.fail_writes = false
@@ -137,6 +141,7 @@ func _run() -> void:
 			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[2].get_center())
 			controls.close_preparation_options()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.memory_id == "core_echo" and player.boss_legacy.choice == "destroy" and player.damage_receiver.max_health == 100 and player.growth_damage(100, "sword", "basic") == 110 and player.growth_damage(100, "sword", "skill") == 121 and player.growth_damage(100, "bow", "skill") == 121 and player.growth_damage(100, "sword", "ultimate") == 110 and legacy.pending_reward().is_empty(), "공격 기억·일회 핵 곱연산·스킬만 강화·수호 제거"): return
 			weapons.set_equipment({"sword": 1, "bow": 0})
@@ -159,6 +164,7 @@ func _run() -> void:
 			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[0].get_center())
 			controls.close_preparation_options()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.memory_id == "" and player.boss_legacy.is_empty() and player.damage_receiver.max_health == 100 and player.growth_damage(100, "sword", "skill") == 100 and legacy.progress_snapshot().unlocked.size() == 2, "기억 없이 새 도전·영구 해금은 유지·효과 초기화"): return
 			# GP-105~110 형식에 기억 필드가 없으면 기존 효과를 추가하지 않는다.
@@ -174,6 +180,7 @@ func _run() -> void:
 				controls.open_preparation_options()
 				_tap(controls.memory_card_rects[1].get_center())
 				controls.close_preparation_options()
+				controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 				_tap(controls.start_weapon_confirm_rect.get_center())
 				if not _check(player.memory_id == "clockwork_guard" and player.damage_receiver.max_health == 105 and legacy.progress_snapshot().unlocked.size() == 2, "반복 도전 체력 +5 고정·두 능력 동시 장착 없음"): return
 			recorder.clear_records()

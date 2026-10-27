@@ -46,6 +46,7 @@ func _run() -> void:
 			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[2].get_center())
 			controls.close_preparation_options()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "영구 기억 도전 보상 유지"): return
 			if not _check(player.memory_id == "core_echo" and player.boss_legacy.is_empty() and controls.stage_route_options.size() == 4 and not runner.can_select_route("clockwork"), "영구 기억만 장착·일회 보상 건너뛰기는 위험 길 개방 없음"): return
@@ -53,6 +54,7 @@ func _run() -> void:
 			sandbox._update_boss_legacy_status()
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward("sword"), "위험 길 준비 무기 보상"): return
 			if not _check(player.boss_legacy.choice == "destroy" and legacy.pending_reward().is_empty() and controls.stage_route_options.size() == 4 and controls.stage_route_options[2].id == "clockwork", "적용한 일회 핵 도전만 세 번째 위험 카드"): return

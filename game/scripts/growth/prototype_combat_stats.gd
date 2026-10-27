@@ -4,6 +4,8 @@ extends RefCounted
 ## Attack 100 is the existing weapon damage baseline. Health stays in DamageReceiver.
 const BASE_HEALTH := 100
 const BASE_ATTACK := 100
+# 100% keeps each weapon's authored attack intervals unchanged.
+const BASE_ATTACK_SPEED := 100.0
 const BASE_DEFENSE := 0
 const BASE_CRITICAL_CHANCE := 0.0
 const BASE_CRITICAL_DAMAGE := 150.0

@@ -10,14 +10,12 @@ const ART := {
 	"back": preload("res://assets/preparation/lettering/back.svg"),
 	"reselect": preload("res://assets/preparation/lettering/reselect.svg"),
 	"next": preload("res://assets/preparation/lettering/next.svg"),
-	"story-on": preload("res://assets/preparation/lettering/story-on.svg"),
-	"story-off": preload("res://assets/preparation/lettering/story-off.svg"),
 	"roan": preload("res://assets/preparation/lettering/roan.svg"),
 	"lumi": preload("res://assets/preparation/lettering/lumi.svg"),
 	"journal": StartScreenView.WORDS.journal,
 }
-const STAT_IDS := ["health", "attack", "defense", "critical_chance", "critical_damage"]
-const STAT_LABELS := ["체력", "공격력", "방어력", "치명타 확률", "치명타 피해"]
+const STAT_IDS := ["health", "attack", "defense", "critical_chance", "critical_damage", "attack_speed"]
+const STAT_LABELS := ["체력", "공격력", "방어력", "치명타 확률", "치명타 피해", "공격 속도"]
 static var _story_cache: Dictionary = {}
 
 static func box(safe: Rect2, x: float, y: float, w: float, h: float) -> Rect2:
@@ -33,7 +31,7 @@ static func layout(safe: Rect2, detail: bool = false) -> Dictionary:
 		"cards": cards,
 		"back": _word_hit("reselect" if detail else "back", box(safe, .035, .90, .23, .07), unit),
 		"confirm": _word_hit("next", box(safe, .73, .90, .24, .07), unit) if detail else Rect2(),
-		"story": _word_hit("story-off", box(safe, .415, .90, .18, .07), unit),
+		"story": Rect2(),
 		"journal": _word_hit("journal", box(safe, .81, .035, .16, .07), unit),
 		"heading": box(safe, .285, .022, .43, .11),
 		"portrait": box(safe, .015, .15, .36, .71),
@@ -96,14 +94,13 @@ static func draw(ui: Control) -> void:
 		var bounds: Rect2 = Rect2(initial.position.lerp(view.portrait.position, fade), initial.size.lerp(view.portrait.size, fade)) if selected else initial
 		var alpha: float = 1.0 if not ui.character_detail_open or selected else 1.0 - fade
 		if alpha > 0:
-			ui.draw_texture_rect(texture, SupplyShopArt.fitted(texture, bounds), false, Color(1, 1, 1, alpha))
+			ui.hero_selection_motion.draw(ui, id, bounds, alpha)
 	if ui.character_detail_open:
 		ui.draw_texture_rect(SHADE, box(safe, .39, .125, .605, .775), false, Color(1, 1, 1, fade))
 		_detail(ui, safe, view, fade)
 	# Footer legibility, with no button panels or obsolete trait notice.
 	ui.draw_rect(box(safe, 0, .895, 1, .105), Color(.035, .12, .13, .20))
 	_word(ui, "reselect" if ui.character_detail_open else "back", ui.character_cancel_rect.grow(-8 * unit), PAPER, true)
-	_word(ui, "story-on" if ui.selected_story_enabled else "story-off", ui.story_toggle_rect.grow(-8 * unit), PAPER, true)
 	_word(ui, "journal", ui.story_journal_open_rect.grow(-8 * unit), PAPER, true)
 	if ui.character_detail_open:
 		_word(ui, "next", ui.character_confirm_rect.grow(-8 * unit), Color("ffe3a3"), true)
@@ -130,7 +127,7 @@ static func _detail(ui: Control, safe: Rect2, view: Dictionary, alpha: float) ->
 	_text(ui, "최초 전투 능력치", view.stats_heading, int(30 * unit), ink)
 	var stats := PrototypeCharacters.initial_combat_stats()
 	for index in STAT_IDS.size():
-		var cell := Rect2(view.stats.position + Vector2(view.stats.size.x * index / 5.0, 0), Vector2(view.stats.size.x / 5.0, view.stats.size.y))
+		var cell := Rect2(view.stats.position + Vector2(view.stats.size.x * index / 6.0, 0), Vector2(view.stats.size.x / 6.0, view.stats.size.y))
 		var icon := Rect2(cell.position, Vector2(36, 42) * unit)
 		ui.draw_texture_rect(HeroStatusArt.ICONS[STAT_IDS[index]], SupplyShopArt.fitted(HeroStatusArt.ICONS[STAT_IDS[index]], icon), false, Color(1, 1, 1, alpha))
 		var body := Rect2(cell.position + Vector2(41 * unit, -5 * unit), cell.size - Vector2(43 * unit, 0))

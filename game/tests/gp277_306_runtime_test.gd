@@ -203,7 +203,7 @@ func _start_story(character: String, weapon: String) -> bool:
 	controls.show_start_weapon_selection()
 	_tap(controls.character_open_rect.get_center())
 	_tap(controls.character_card_rects[0 if character == "roan" else 1].get_center())
-	if not controls.selected_story_enabled: _tap(controls.story_toggle_rect.get_center())
+	if not _check(controls.selected_story_enabled and not controls.story_toggle_rect.has_area(), "새 도전 이야기 항상 켜짐·토글 없음"): return false
 	if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 	_tap(controls.character_confirm_rect.get_center())
 	_tap(controls.start_weapon_card_rects[0 if weapon == "sword" else 1].get_center())
@@ -311,13 +311,13 @@ func _test_story_preview(character: String) -> bool:
 	controls.show_start_weapon_selection()
 	var selected: bool = controls.selected_story_enabled
 	_tap(controls.character_open_rect.get_center())
-	_tap(controls.story_toggle_rect.get_center())
+	if not _check(not controls.story_toggle_rect.has_area() and controls.selected_story_enabled, "이야기 토글 제거·항상 켜짐"): return false
 	if not await _test_journal(): return false
 	if controls.character_detail_open: _tap(controls.character_cancel_rect.get_center())
 	_tap(controls.character_cancel_rect.get_center())
 	if not _check(controls.selected_story_enabled == selected, "설정 취소는 이야기 선택 복구"): return false
 	_tap(controls.character_open_rect.get_center())
-	_tap(controls.story_toggle_rect.get_center())
+	if not _check(not controls.story_toggle_rect.has_area() and controls.selected_story_enabled, "이야기 토글 제거·항상 켜짐"): return false
 	if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 	_tap(controls.character_confirm_rect.get_center())
 	_tap(controls.start_weapon_cancel_rect.get_center())

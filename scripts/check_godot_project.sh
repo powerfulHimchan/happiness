@@ -86,13 +86,13 @@ required_files=(
   "$game_root/tests/gp668_717_runtime_test.gd"
   "$game_root/scripts/ui/run_preparation_view.gd"
   "$game_root/scripts/ui/hero_selection_view.gd"
+  "$game_root/scripts/ui/hero_selection_motion.gd"
+  "$game_root/assets/status/attack_speed.svg"
   "$game_root/assets/preparation/hero-detail-shade.svg"
   "$game_root/assets/preparation/lettering/heading.svg"
   "$game_root/assets/preparation/lettering/back.svg"
   "$game_root/assets/preparation/lettering/reselect.svg"
   "$game_root/assets/preparation/lettering/next.svg"
-  "$game_root/assets/preparation/lettering/story-on.svg"
-  "$game_root/assets/preparation/lettering/story-off.svg"
   "$game_root/assets/preparation/lettering/roan.svg"
   "$game_root/assets/preparation/lettering/lumi.svg"
   "$game_root/scripts/ui/equipped_hero_preview.gd"
@@ -796,8 +796,8 @@ if ! rg -q 'for family in PrototypeWeaponRewards\.FAMILY_IDS' "$game_root/script
   exit 1
 fi
 
-if ! rg -q '_basic_remaining_s = maxf\(0\.0, _basic_remaining_s - delta\)' "$game_root/scripts/combat/sword_combat_controller.gd" \
-  || ! rg -q '_basic_remaining_s = maxf\(0\.0, _basic_remaining_s - delta\)' "$game_root/scripts/combat/bow_combat_controller.gd"; then
+if ! rg -q '_basic_remaining_s = maxf\(0\.0, _basic_remaining_s - delta \* player\.attack_speed_multiplier\(\)\)' "$game_root/scripts/combat/sword_combat_controller.gd" \
+  || ! rg -q '_basic_remaining_s = maxf\(0\.0, _basic_remaining_s - delta \* player\.attack_speed_multiplier\(\)\)' "$game_root/scripts/combat/bow_combat_controller.gd"; then
   echo "CP-205 inactive weapon attack waits must continue without reset." >&2
   exit 1
 fi

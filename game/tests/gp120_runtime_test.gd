@@ -68,6 +68,7 @@ func _run() -> void:
 			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
 			controls.close_preparation_options()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.potion_recipe == "concentrated" and player.potions_remaining == 1 and controls._action_label(&"recovery_potion") == "회복 1/1" and not sandbox._select_potion_recipe("basic"), "새 도전 농축 1개·진행 중 조제 변경 차단"): return
 			_press_potion()
@@ -143,6 +144,7 @@ func _run() -> void:
 			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
 			controls.close_preparation_options()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.potion_recipe == "concentrated" and player.potions_remaining == 1 and player.damage_receiver.max_health == 100, "다음 새 도전은 저장한 농축 1개로 준비"): return
 		_:

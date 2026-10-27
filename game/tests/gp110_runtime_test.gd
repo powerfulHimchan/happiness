@@ -61,6 +61,7 @@ func _run() -> void:
 			if not _check(not legacy.pending_reward().is_empty(), "선택 취소는 보상을 소비하지 않음"): return
 			controls.show_start_weapon_selection()
 			_tap(controls.start_weapon_card_rects[1].get_center())
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.boss_legacy.choice == "rescue" and player.damage_receiver.max_health == 110 and player.damage_receiver.health == 110 and weapons.active_weapon_id == "bow" and player.growth_damage(100, "bow") == 100 and legacy.pending_reward().is_empty(), "확정 시작에서만 소비·체력 +10·공격 유지"): return
 			if not _reach_elite(): return
@@ -95,6 +96,7 @@ func _run() -> void:
 		"destroy-start":
 			controls.show_main_screen()
 			controls.show_start_weapon_selection()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.boss_legacy.choice == "destroy" and player.damage_receiver.max_health == 100 and player.growth_damage(100, "sword") == 110 and player.growth_damage(100, "bow", "skill") == 110 and player.growth_damage(100, "sword", "ultimate") == 110, "핵은 모든 공격 +10%·체력 초기화"): return
 			var event := _hit_player(10, "risk")
@@ -117,6 +119,7 @@ func _run() -> void:
 			controls.open_preparation_options()
 			_tap(controls.boss_legacy_toggle_rect.get_center())
 			controls.close_preparation_options()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.boss_legacy.is_empty() and legacy.pending_reward().is_empty() and legacy.grant("gp110-skip-source", "rescue") == OK and legacy.pending_reward().is_empty(), "보상 건너뛰기는 1회 기회 소비·재완주 통지로 부활 없음"): return
 			var file := FileAccess.open(LEGACY_PATH, FileAccess.READ_WRITE)

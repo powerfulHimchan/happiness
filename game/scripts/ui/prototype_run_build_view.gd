@@ -144,7 +144,7 @@ static func cards(tab: int, state: Dictionary) -> Array[Dictionary]:
 			result.append({"id": "relic", "name": "유물·기억", "status": "불사조 깃털 사용 완료" if state.relic.get("used", false) else "현재 도전에 적용된 효과", "lines": lines, "open": true})
 			var stats: Dictionary = state.get("combat_stats",{})
 			if not stats.is_empty():
-				result.append({"id":"combat_stats", "name":"주인공 능력치", "status":PrototypeCharacters.display_name(String(state.get("character_id","roan"))), "lines":["공격력 %d · 방어력 %d" % [int(stats.attack),int(stats.defense)], "치명타 확률 %.1f%%" % float(stats.critical_chance), "치명타 피해 %.1f%% (총 피해 배율)" % float(stats.critical_damage), "체력 %d / %d" % [int(stats.health),int(stats.max_health)], "방어력에 의한 피해 감소 %.1f%%" % float(stats.damage_reduction), "공격력100 = 무기 기본값 · 무기별 강화 별도"], "open":true})
+				result.append({"id":"combat_stats", "name":"주인공 능력치", "status":PrototypeCharacters.display_name(String(state.get("character_id","roan"))), "lines":["공격력 %d · 방어력 %d" % [int(stats.attack),int(stats.defense)], "치명타 확률 %.1f%%" % float(stats.critical_chance), "치명타 피해 %.1f%% (총 피해 배율)" % float(stats.critical_damage), "체력 %d / %d" % [int(stats.health),int(stats.max_health)], "방어력에 의한 피해 감소 %.1f%%" % float(stats.damage_reduction), "공격 속도 %.0f%% · 100%% = 무기 기본 간격" % float(stats.get("attack_speed",100)), "공격력100 = 무기 기본값 · 무기별 강화 별도"], "open":true})
 			var passive: Dictionary = state.get("hero_trait",{})
 			if not passive.is_empty(): result.append({"id":"hero_trait","name":String(passive.name),"status":String(passive.status),"lines":passive.lines,"open":true})
 	return result

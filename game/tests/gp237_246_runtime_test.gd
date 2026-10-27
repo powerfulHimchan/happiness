@@ -50,6 +50,7 @@ func _run() -> void:
 			controls.selected_starting_weapon = weapon
 			controls.selected_backup_weapon = "sword" if weapon == "bow" else "bow"
 			controls.selected_stage_limit = 5
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage() or not _check(sandbox._claim_weapon_reward(""), "실제 여섯 후보 도전 준비"): return
 			if not _check(player.boss_legacy.choice == "destroy" and controls.all_stage_route_options.size() == 6, "위험 권한 실제 여섯 경로"): return

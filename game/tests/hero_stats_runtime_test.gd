@@ -49,7 +49,7 @@ func _run() -> void:
 		if not _check(controls.begin_retry("bow",3,"standard","roan",false,0,"sword") and player.stat_ranks.is_empty(),"new run clears temporary stats"): return
 	elif phase in ["seed","render"]:
 		if not _check(controls.begin_retry("sword",5,"standard","lumi",false,0,"bow"),"new run"): return
-		if not _check(player.combat_stats_snapshot() == {"attack":100,"defense":0,"critical_chance":0.0,"critical_damage":150.0,"health":100,"max_health":100,"damage_reduction":0.0},"base five stats"): return
+		if not _check(player.combat_stats_snapshot() == {"attack_speed":100.0,"attack":100,"defense":0,"critical_chance":0.0,"critical_damage":150.0,"health":100,"max_health":100,"damage_reduction":0.0},"base five stats"): return
 		for id in ["stat_defense","stat_critical_chance","stat_critical_damage"]:
 			for ignored in 2:
 				if not _earn_card(id): return
@@ -80,7 +80,7 @@ func _check_ui() -> bool:
 	var state: Dictionary = sandbox._capture_run_build()
 	var cards := PrototypeRunBuildView.browse(2,state)
 	var stat_cards := cards.filter(func(card: Dictionary) -> bool: return card.id == "combat_stats")
-	if not _check(stat_cards.size() == 1 and cards[1].id == "combat_stats" and stat_cards[0].lines.size() == 6,"five-stat card visible on first info page"): return false
+	if not _check(stat_cards.size() == 1 and cards[1].id == "combat_stats" and stat_cards[0].lines.size() == 7,"five-stat card visible on first info page"): return false
 	var before := player.critical_rng.state
 	for ignored in 3:
 		PrototypeRunBuildView.cards(2,sandbox._capture_run_build())

@@ -371,8 +371,8 @@ var expedition_rect := Rect2()
 var selected_run_mode: String = "standard"
 var requested_run_mode: String = "standard"
 var previous_run_mode: String = "standard"
-var selected_story_enabled: bool = false
-var requested_story_enabled: bool = false
+var selected_story_enabled: bool = true
+var requested_story_enabled: bool = true
 var previous_story_enabled: bool = false
 var character_previous_story_enabled: bool = false
 var story_toggle_rect := Rect2()
@@ -393,6 +393,7 @@ var character_detail_open := false
 var preparation_skill_id := ""
 var preparation_skill_rects: Array[Rect2] = []
 var character_reveal_progress := 1.0
+var hero_selection_motion := HeroSelectionMotion.new()
 var requested_character_id: String = "roan"
 var previous_character_id: String = "roan"
 var character_preview_previous_id: String = "roan"
@@ -430,6 +431,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if screen_mode == ScreenMode.START_CHARACTER and preview_application_active:
+		hero_selection_motion.tick(delta)
 	if screen_mode == ScreenMode.START_CHARACTER and character_detail_open and preview_application_active and character_reveal_progress < 1.0:
 		character_reveal_progress = minf(1.0, character_reveal_progress + maxf(0.0, delta) / .28)
 		queue_redraw()
@@ -1272,6 +1275,7 @@ func show_start_weapon_selection() -> void:
 		return
 	preparation_flow = false
 	start_options_open = false
+	selected_story_enabled = true
 	expedition_unlocked()
 	start_weapon_return_mode = screen_mode
 	start_weapon_previous_selection = selected_starting_weapon
@@ -1340,8 +1344,10 @@ func show_character_selection(reveal_selected: bool = false) -> void:
 	if screen_mode != ScreenMode.START_WEAPON: return
 	character_preview_previous_id = selected_character_id
 	character_previous_story_enabled = selected_story_enabled
+	selected_story_enabled = true
 	character_detail_open = reveal_selected
 	character_reveal_progress = 1.0
+	hero_selection_motion.reset()
 	release_all_inputs()
 	screen_mode = ScreenMode.START_CHARACTER
 	_refresh_character_layout()
@@ -1368,6 +1374,7 @@ func _back_from_character_selection() -> void:
 	if character_detail_open:
 		character_detail_open = false
 		character_reveal_progress = 1.0
+		hero_selection_motion.reset()
 		_refresh_character_layout()
 		queue_redraw()
 	else:
@@ -1796,9 +1803,6 @@ func _handle_screen_touch(position: Vector2) -> void:
 			return
 	if screen_mode == ScreenMode.START_CHARACTER:
 		_refresh_character_layout()
-		if story_toggle_rect.has_point(position):
-			selected_story_enabled = not selected_story_enabled
-			return
 		if story_journal_open_rect.has_point(position):
 			open_story_journal()
 			return
@@ -1807,6 +1811,7 @@ func _handle_screen_touch(position: Vector2) -> void:
 				selected_character_id = PrototypeCharacters.IDS[index]
 				character_detail_open = true
 				character_reveal_progress = 0.0
+				hero_selection_motion.select(selected_character_id)
 				_refresh_character_layout()
 				return
 		if character_cancel_rect.has_point(position): _back_from_character_selection()

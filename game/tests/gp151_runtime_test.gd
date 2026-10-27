@@ -41,6 +41,7 @@ func _run() -> void:
 			if not _reach_boss() or not _finish_stage(): return
 			if not _check(sandbox._resolve_boss_choice("rescue"), "실제 구출 완주"): return
 			controls.show_start_weapon_selection()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _finish_stage(): return
 			var recent: Array = recorder.summary_snapshot().recent_runs

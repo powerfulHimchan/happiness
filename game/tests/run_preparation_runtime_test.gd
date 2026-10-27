@@ -35,6 +35,7 @@ func capture(name: String) -> void:
 	ui.queue_redraw()
 	await process_frame
 	if output.is_empty(): return
+	if OS.get_environment("PREPARATION_RENDER_FOCUS") == "hero" and not name.begins_with("hero_"): return
 	await RenderingServer.frame_post_draw
 	check(root.get_texture().get_image().save_png(output.path_join(name+".png")) == OK,"real render: "+name)
 func targets(rectangles: Array, safe: Rect2) -> void:
@@ -76,6 +77,20 @@ func _run() -> void:
 		check(ui.current_screen_mode() == ui.ScreenMode.START_CHARACTER, "cannot confirm without choosing a portrait")
 		await capture("hero_choices_%dx%d" % [dimensions.x, dimensions.y])
 		targets(hero.cards+[hero.back,hero.confirm,hero.story,hero.journal],safe)
+		check(not ui.story_toggle_rect.has_area() and ui.selected_story_enabled, "no story toggle target; preparation always enables story")
+		var stable_targets: Array = ui.character_card_rects.duplicate()
+		var idle_roan: Dictionary = ui.hero_selection_motion.snapshot("roan", hero.cards[0])
+		var idle_lumi: Dictionary = ui.hero_selection_motion.snapshot("lumi", hero.cards[1])
+		ui._process(.7)
+		check(idle_roan != ui.hero_selection_motion.snapshot("roan", hero.cards[0]) and idle_lumi != ui.hero_selection_motion.snapshot("lumi", hero.cards[1]), "both portraits have live idle motion")
+		check(ui.hero_selection_motion.snapshot("roan", hero.cards[0]).rotation != ui.hero_selection_motion.snapshot("lumi", hero.cards[1]).rotation, "heroes use distinct idle rhythm and sway")
+		check(ui.character_card_rects == stable_targets, "presentation motion never moves hit targets")
+		var idle_clock: float = ui.hero_selection_motion.elapsed_s
+		ui.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
+		ui._process(.8)
+		check(ui.hero_selection_motion.elapsed_s == idle_clock, "idle animation pauses in background")
+		ui.notification(Control.NOTIFICATION_APPLICATION_RESUMED)
+		await capture("hero_choices_moving_%dx%d" % [dimensions.x,dimensions.y])
 		for character in PrototypeCharacters.IDS:
 			if ui.character_detail_open: tap(ui.character_cancel_rect)
 			tap(ui.character_card_rects[PrototypeCharacters.IDS.find(character)])
@@ -86,22 +101,34 @@ func _run() -> void:
 			check(ui.selected_character_id == chosen, "hidden portrait cannot change selected hero")
 			ui._process(.14)
 			var reveal: float = ui.character_reveal_progress
+			var reaction_clock: float = ui.hero_selection_motion.reaction_s
 			ui.notification(Control.NOTIFICATION_APPLICATION_PAUSED)
 			ui._process(.5)
+			check(ui.hero_selection_motion.reaction_s == reaction_clock, "selection reaction pauses with app")
 			check(ui.character_reveal_progress == reveal, "profile transition pauses with app")
 			ui.notification(Control.NOTIFICATION_APPLICATION_RESUMED)
 			ui._process(.01)
 			check(ui.character_reveal_progress > reveal, "profile transition resumes")
 			await capture("hero_transition_" + character + "_%dx%d" % [dimensions.x, dimensions.y])
-			ui._process(.3)
+			ui._process(.30)
+			var pose: Dictionary = ui.hero_selection_motion.snapshot(character, hero.cards[0])
+			check((pose.nod > .1 and pose.hop == 0) if character == "roan" else (pose.hop > 0 and pose.nod == 0), "Roan thanks with a nod; Lumi celebrates with a hop")
+			await capture("hero_happy_"+character+"_first_%dx%d" % [dimensions.x,dimensions.y])
+			ui._process(.48)
+			await capture("hero_happy_"+character+"_second_%dx%d" % [dimensions.x,dimensions.y])
+			ui._process(1.0)
+			check(ui.hero_selection_motion.reaction_s == HeroSelectionMotion.REACTION_SECONDS and ui.hero_selection_motion.snapshot(character, hero.cards[0]).reaction == 0.0, "one-shot selection reaction settles back to idle")
 			var story := HeroSelectionView.biography_layout(safe, character)
 			check(story.lines.size() * story.line_height <= story.rect.size.y and "".join(story.lines) == PrototypeCharacters.biography(character), "complete biography fits without truncation")
 			check(PrototypeCharacters.biography(character).length() >= 280 and PrototypeCharacters.biography(character).length() <= 340, "approved biography is approximately 300 characters")
-			check(PrototypeCharacters.initial_combat_stats() == {"health":100,"attack":100,"defense":0,"critical_chance":0.0,"critical_damage":150.0}, "initial stats use gameplay defaults")
+			check(PrototypeCharacters.initial_combat_stats() == {"attack_speed":100.0,"health":100,"attack":100,"defense":0,"critical_chance":0.0,"critical_damage":150.0}, "initial stats use gameplay defaults")
 			check(files() == original_files and weapons.checkpoint_snapshot() == original_weapons and player.damage_receiver.health == health, "profile does not change current run or saves")
 			await capture("hero_"+character+"_%dx%d"%[dimensions.x,dimensions.y])
 			tap(ui.character_confirm_rect)
 			check(ui.current_screen_mode() == ui.ScreenMode.START_WEAPON and ui.selected_character_id == character,"hero confirm opens weapon book")
+			var hero_clock: float = ui.hero_selection_motion.elapsed_s
+			ui._process(.3)
+			check(ui.hero_selection_motion.elapsed_s == hero_clock, "hidden hero animation clock stops")
 			var view := RunPreparationView.weapon_layout(safe,false)
 			targets(view.cards+[view.settings,view.character,view.back,view.confirm]+WeaponPreparationView.skill_regions(safe),safe)
 			check(not ui.open_preparation_skill(-1) and not ui.open_preparation_skill(2), "invalid skill indices do not open modal")
@@ -197,6 +224,7 @@ func _run() -> void:
 	tap(Rect2(sword.position,sword.size*Vector2(1,.5)))
 	tap(ui.start_backup_rects[3])
 	tap(ui.start_weapon_confirm_rect)
+	check(scene.story_run.enabled and ui.requested_story_enabled and ui.current_screen_mode() == 18, "actual new-run input always opens the prologue")
 	check(player.character_id == "lumi" and weapons.active_weapon_id == "sword" and weapons.equipment.has("staff") and scene.get_node("PrototypeGrowthController").run_active,"real run uses chosen hero and two weapons")
 	paused = false
 	scene.free()

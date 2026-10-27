@@ -49,6 +49,9 @@ static func inspect(id: String,state: Dictionary) -> Dictionary:
 			lines.append("기본 피해100 기준 · 기본%d / 스킬%d" % [state.damage[family].basic,state.damage[family].skill])
 			lines.append("치명타 확률 %.1f%% · 치명타 피해 %.1f%%" % [float(values.get("chance",0)),float(values.get("damage",150))])
 			lines.append("공격형 필살기 치명타 피해 %.1f%%" % float(values.get("ultimate_damage",150)))
+			var intervals: Array[String] = []
+			for interval in values.get("attack_intervals", []): intervals.append("%.2f" % (float(interval) / (float(stats.get("attack_speed",100)) / 100.0)))
+			lines.append("공격 속도 %.0f%% · 기본 공격 간격 %s초" % [float(stats.get("attack_speed",100)), " / ".join(intervals)])
 		"skill":
 			if parts.size() != 3 or parts[2] not in ["0","1"] or not state.skills.has(parts[1]): return {}
 			var family := String(parts[1])
@@ -75,7 +78,7 @@ static func inspect(id: String,state: Dictionary) -> Dictionary:
 		"offense":
 			title = "공격력과 치명타"
 			status = PrototypeWeaponRewards.family_name(active)+" 기준"
-			lines.assign(["기본 공격력 %d + 성장 %d" % [int(sources.get("base_attack",100)),int(sources.get("growth_attack",0))],"고유 특성 공격력 배율 %.2f배" % float(sources.get("trait_multiplier",1)),"현재 공격력 %d" % int(stats.get("attack",100)),"기본 치명타 확률 %.1f%% + 특화 %.1f%%p" % [float(sources.get("base_chance",0)),float(sources.get("specializations",{}).get("chance",0))],"현재 치명타 확률 %.1f%% (최대100%%)" % float(stats.get("critical_chance",0)),"현재 치명타 피해 %.1f%%" % float(stats.get("critical_damage",150)),"필살기 치명타 피해 %.1f%%" % float(family_stats.get("ultimate_damage",150)),"무기별 피해 강화는 장비 상세에서 확인할 수 있습니다"])
+			lines.assign(["기본 공격력 %d + 성장 %d" % [int(sources.get("base_attack",100)),int(sources.get("growth_attack",0))],"고유 특성 공격력 배율 %.2f배" % float(sources.get("trait_multiplier",1)),"현재 공격력 %d" % int(stats.get("attack",100)),"공격 속도 %.0f%% · 100%% = 무기 기본 간격" % float(stats.get("attack_speed",100)),"기본 치명타 확률 %.1f%% + 특화 %.1f%%p" % [float(sources.get("base_chance",0)),float(sources.get("specializations",{}).get("chance",0))],"현재 치명타 확률 %.1f%% (최대100%%)" % float(stats.get("critical_chance",0)),"현재 치명타 피해 %.1f%%" % float(stats.get("critical_damage",150)),"필살기 치명타 피해 %.1f%%" % float(family_stats.get("ultimate_damage",150)),"무기별 피해 강화는 장비 상세에서 확인할 수 있습니다"])
 		"conditions":
 			title = "능력치 특화 조건"
 			status = PrototypeWeaponRewards.family_name(active)+" · 현재 체력과 방벽 기준"
@@ -119,9 +122,9 @@ static func draw(ui: Control) -> void:
 	text(ui,"레벨 %d · 방벽 %d" % [state.growth.growth_level,state.health.barrier],box(safe,.045,.775,.19,.03),18,MUTE)
 	panel(ui,view.stats)
 	text(ui,"현재 능력치",box(safe,.28,.19,.295,.045),25,GOLD)
-	var labels := ["공격력","방어력","치명타 확률","치명타 피해","체력"]
-	var values := [str(int(stats.get("attack",100))),str(int(stats.get("defense",0))),"%.1f%%" % float(stats.get("critical_chance",0)),"%.1f%%" % float(stats.get("critical_damage",150)),"%d / %d" % [state.health.current,state.health.maximum]]
-	for index in 5:
+	var labels := ["공격력","방어력","치명타 확률","치명타 피해","체력","공격 속도"]
+	var values := [str(int(stats.get("attack",100))),str(int(stats.get("defense",0))),"%.1f%%" % float(stats.get("critical_chance",0)),"%.1f%%" % float(stats.get("critical_damage",150)),"%d / %d" % [state.health.current,state.health.maximum],"%.0f%%" % float(stats.get("attack_speed",100))]
+	for index in HeroStatusArt.STAT_IDS.size():
 		var areas := HeroStatusArt.stat_regions(safe,index)
 		HeroStatusArt.icon(ui,HeroStatusArt.STAT_IDS[index],areas.icon)
 		text(ui,labels[index],areas.label,22)

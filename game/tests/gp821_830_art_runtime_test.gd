@@ -86,7 +86,7 @@ func _run() -> void:
 func _art_catalog() -> bool:
 	var textures: Array[Texture2D] = [HeroStatusArt.BACKGROUND,HeroStatusArt.MAIN_FRAME,HeroStatusArt.BACKUP_FRAME]
 	for key in HeroStatusArt.ICONS: textures.append(HeroStatusArt.ICONS[key])
-	if not _check(textures.size() == 10 and HeroStatusArt.STAT_IDS.size() == 5,"exactly ten new graphics"): return false
+	if not _check(textures.size() == 11 and HeroStatusArt.STAT_IDS.size() == 6,"exactly ten new graphics"): return false
 	var fingerprints := {}
 	for texture in textures:
 		var image := texture.get_image()
@@ -103,7 +103,7 @@ func _art_catalog() -> bool:
 func _layout_art() -> bool:
 	var safe: Rect2 = controls._safe_area_in_viewport()
 	var view := HeroStatusView.layout(safe)
-	for index in 5:
+	for index in HeroStatusArt.STAT_IDS.size():
 		var areas := HeroStatusArt.stat_regions(safe,index)
 		if not _check(view.stats.encloses(areas.icon) and view.stats.encloses(areas.label) and view.stats.encloses(areas.value) and not areas.icon.intersects(areas.label) and not areas.label.intersects(areas.value),"five badge/label/value rows remain separate inside stat panel"): return false
 	var passive := HeroStatusArt.passive_regions(safe)

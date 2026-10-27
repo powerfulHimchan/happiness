@@ -64,6 +64,7 @@ func _run() -> void:
 			if not controls.character_detail_open: _tap(controls.character_card_rects[PrototypeCharacters.IDS.find(controls.selected_character_id)].get_center())
 			_tap(controls.character_confirm_rect.get_center())
 			legacy.fail_writes = true
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			legacy.fail_writes = false
 			if not _check(controls.current_screen_mode() == 2 and not sandbox.is_combat_environment_suspended() and legacy.pending_reward() == reward, "저장 실패는 메인 복구·보상 소비 없음·동결 해제"): return
@@ -74,6 +75,7 @@ func _run() -> void:
 			controls.open_preparation_options()
 			_tap(controls.memory_card_rects[1].get_center())
 			controls.close_preparation_options()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(controls.current_screen_mode() == 0 and not sandbox.is_combat_environment_suspended() and player.memory_id == "clockwork_guard" and legacy.pending_reward().is_empty(), "마을 준비 확정·기억 장착·일회 보상 소비·전투 재개"): return
 			if not _finish_stage(): return

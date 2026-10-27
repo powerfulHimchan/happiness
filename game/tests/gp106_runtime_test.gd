@@ -78,6 +78,7 @@ func _run() -> void:
 		_tap(controls.character_confirm_rect.get_center())
 		_tap(controls.start_weapon_card_rects[weapon_index].get_center())
 		var confirm: Vector2 = controls.start_weapon_confirm_rect.get_center()
+		controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 		_tap(confirm)
 		if not _check(controls.current_screen_mode() == 0 and growth.run_active and weapons.active_weapon_id == weapon and weapons.switch_count == 0 and is_zero_approx(weapons._switch_cooldown_remaining_s) and runner.stage_number == 1 and player.damage_receiver.health == 100 and growth.level == 1 and ultimate.selected_profile.is_empty() and store.load_checkpoint().is_empty(), "확정한 검·활로 새 도전·전환 대기시간 없음"):
 			return
@@ -89,6 +90,7 @@ func _run() -> void:
 		if not _check(metrics.active_weapon_id == weapon and metrics.skill_1_button_label == ("돌진" if weapon_index == 0 else "관통") and metrics.skill_2_button_label == ("회전" if weapon_index == 0 else "화살비"), "주 무기와 HUD 스킬 일치"):
 			return
 		var runs: int = recorder.summary_snapshot().run_count
+		controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 		_tap(confirm)
 		controls.release_all_inputs()
 		if not _check(recorder.summary_snapshot().run_count == runs, "확정 중복 터치로 도전 중복 시작 차단"):

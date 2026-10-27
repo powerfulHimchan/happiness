@@ -1122,7 +1122,7 @@ func _capture_run_build() -> Dictionary:
 			var hits: Array[int] = []
 			for raw in PrototypeSkillRewards.SKILLS[skill_id].damage: hits.append(player.growth_damage(int(raw),weapon,"skill"))
 			skill_damage[weapon].append(hits)
-		family_stats[weapon] = {"chance":player.critical_chance_stat(weapon),"damage":player.critical_damage_stat(weapon),"ultimate_damage":player.critical_damage_stat(weapon,"ultimate")}
+		family_stats[weapon] = {"attack_intervals": Array(weapon_controller.get(weapon + "_combat").weapon.attack_interval_s), "chance":player.critical_chance_stat(weapon),"damage":player.critical_damage_stat(weapon),"ultimate_damage":player.critical_damage_stat(weapon,"ultimate")}
 		damage[weapon] = {"basic": player.growth_damage(100, weapon, "basic"), "skill": player.growth_damage(100, weapon, "skill")}
 		damage_stances[weapon] = {"ground_basic":player.growth_damage_preview(100,weapon,"basic",true), "air_basic":player.growth_damage_preview(100,weapon,"basic",false), "ground_skill":player.growth_damage_preview(100,weapon,"skill",true), "air_skill":player.growth_damage_preview(100,weapon,"skill",false)}
 		tactic_conditions[weapon] = PrototypeCombatTactics.condition_lines(player.combat_tactics,weapon,player.is_on_floor(),player.damage_receiver.health,player.damage_receiver.max_health,player.damage_receiver.barrier_health)

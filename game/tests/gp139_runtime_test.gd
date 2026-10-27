@@ -149,6 +149,7 @@ func _start_length(count: int, weapon: String, enabled: bool = true) -> bool:
 	controls.close_preparation_options()
 	_tap(controls.start_weapon_card_rects[0 if weapon == "sword" else 1].get_center())
 	controls.use_boss_legacy = enabled
+	controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 	_tap(controls.start_weapon_confirm_rect.get_center())
 	return _check(growth.run_active and runner.stage_number == 1 and runner.stage_limit == count and weapons.active_weapon_id == weapon, "실제 터치로3/5 길이와 검/활 시작")
 

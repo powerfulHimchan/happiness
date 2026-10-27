@@ -71,6 +71,7 @@ func _run() -> void:
 			controls.open_preparation_options()
 			if controls.use_boss_legacy: _tap(controls.boss_legacy_toggle_rect.get_center())
 			controls.close_preparation_options()
+			controls.selected_story_enabled = false # Explicit legacy combat fixture; no UI toggle.
 			_tap(controls.start_weapon_confirm_rect.get_center())
 			if not _check(player.potion_recipe == PORTIONED_ID and player.potions_remaining == 3 and player.potions_capacity() == 3 and runner.stage_limit == 5 and controls.movement_metrics.potion_heal_percent == 20 and controls._action_label(&"recovery_potion") == "회복 3/3", "실제 준비 확인·활/5단계·소분20%3개·HUD"): return
 			if not await _choose_earned("magic_barrier") or not await _choose_earned(RESTORATIVE_ID) or not await _choose_earned("potion_pouch"): return

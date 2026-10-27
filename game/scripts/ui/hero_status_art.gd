@@ -3,12 +3,13 @@ extends RefCounted
 
 ## GP-821–830: original SVG artwork. Drawing only; no gameplay or saved state.
 const BACKGROUND := preload("res://assets/status/dawn_archive.svg")
-const STAT_IDS := ["attack","defense","critical_chance","critical_damage","health"]
+const STAT_IDS := ["attack","defense","critical_chance","critical_damage","health","attack_speed"]
 const ICONS := {
 	"attack":preload("res://assets/status/attack.svg"),
 	"defense":preload("res://assets/status/defense.svg"),
 	"critical_chance":preload("res://assets/status/critical_chance.svg"),
 	"critical_damage":preload("res://assets/status/critical_damage.svg"),
+	"attack_speed":preload("res://assets/status/attack_speed.svg"),
 	"health":preload("res://assets/status/health.svg"),
 	"roan":preload("res://assets/status/roan_counter.svg"),
 	"lumi":preload("res://assets/status/lumi_starlight.svg"),
@@ -26,7 +27,7 @@ static func icon(ui: Control,id: String,area: Rect2) -> void:
 	if ICONS.has(id): ui.draw_texture_rect(ICONS[id],SupplyShopArt.fitted(ICONS[id],area),false)
 
 static func stat_regions(safe: Rect2,index: int) -> Dictionary:
-	var y := .25+index*.058
+	var y := .245+index*.050
 	return {"icon":box(safe,.279,y,.028,.045),"label":box(safe,.315,y,.115,.045),"value":box(safe,.44,y,.13,.045)}
 
 static func passive_regions(safe: Rect2) -> Dictionary:

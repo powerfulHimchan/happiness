@@ -65,7 +65,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	_basic_remaining_s = maxf(0.0, _basic_remaining_s - delta)
+	_basic_remaining_s = maxf(0.0, _basic_remaining_s - delta * player.attack_speed_multiplier())
 	_skill_1_cooldown_s = maxf(0.0, _skill_1_cooldown_s - delta * player.skill_recharge_multiplier(weapon_family))
 	_skill_2_cooldown_s = maxf(0.0, _skill_2_cooldown_s - delta * player.skill_recharge_multiplier(weapon_family))
 	_slash_remaining_s = maxf(0.0, _slash_remaining_s - delta)

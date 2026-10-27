@@ -1,5 +1,7 @@
 # 다시 피는 새벽 — Rewind to Dawn
 
+주인공 선택에 서로 다른 대기·선택 반응 애니메이션, 새 도전의 이야기 항상 켜짐, 공격 속도 능력치 표시를 추가했습니다. [구현·검증 범위](docs/prototype/HERO_SELECTION_DETAIL_STATUS.md)를 참고합니다.
+
 무기 선택을 **이미지 글자 메뉴 + 개선한 여섯 무기 + 스킬 특성 아이콘**으로 개편했습니다. 스킬 아이콘/이름을 누르면 실제 스킬 데이터의 설명·피해·재사용 등을 확인할 수 있습니다. [화면·동작·검증](docs/prototype/WEAPON_PREPARATION_PRESENTATION_STATUS.md).
 
 첫 맵 **풍차 들판**을 7개 구역·42,000px 지형으로 확장했습니다. 개울/능선 갈림길, 농장과 풍차 계단, 장치 작동 후 열리는 바람 다리·기류, 선택 상자, 중간 저장·이어하기를 지원합니다. [구현과 검증 범위](docs/prototype/WINDMILL_MEADOW_STATUS.md).
