@@ -34,6 +34,7 @@ var base_platforms: Array[Rect2] = []
 var motion_elapsed_s: float = 0.0
 
 @onready var player: PrototypePlayer = get_node("../Player") as PrototypePlayer
+var journey_arena := ""
 var heart_arena: bool = false
 var stage_number: int = 1
 var route_id: String = "meadow"
@@ -44,6 +45,7 @@ var _last_landed_platform: int = -1
 func configure(stage: int, route: String, enabled: bool = true, regional_start: bool = false, section: int = 1) -> void:
 	for body in get_children():
 		body.free()
+	journey_arena = ""
 	heart_arena = false
 	stage_number = stage
 	route_id = route
@@ -132,6 +134,13 @@ func layout_snapshot() -> Dictionary:
 
 
 func _draw() -> void:
+	if not journey_arena.is_empty():
+		draw_rect(Rect2(-1000,-1000,8000,3000),{"belo":Color("241d3d"),"aurel":Color("173b59"),"ian":Color("172f38")}[journey_arena])
+		draw_texture_rect(JourneyBossProgress.ARENAS[journey_arena],Rect2(3350,-96,1920,1080),false)
+		draw_rect(Rect2(-1000,840,8000,1500),Color("34394a"))
+		draw_line(Vector2(-1000,840),Vector2(7000,840),Color("e0c282"),10)
+		for x in range(3000,5500,120): draw_line(Vector2(x,854),Vector2(x+35,970),Color("5b6877"),3)
+		return
 	if heart_arena:
 		HeartEncounter.draw_arena(self)
 		return

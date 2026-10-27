@@ -1,5 +1,7 @@
 # 다시 피는 새벽 — Rewind to Dawn
 
+전체 여정에 **중간 보스 벨로·마지막 보스 아우렐·숨겨진 보스 이안**을 추가했습니다. 이안은 「첫 새벽」 업적을 달성한 뒤 새 도전에서 시계 문양3개를 모으면 선택할 수 있습니다. [구현·검증 범위](docs/prototype/JOURNEY_BOSS_EXPANSION_STATUS.md)를 참고합니다.
+
 주인공 선택에 서로 다른 대기·선택 반응 애니메이션, 새 도전의 이야기 항상 켜짐, 공격 속도 능력치 표시를 추가했습니다. [구현·검증 범위](docs/prototype/HERO_SELECTION_DETAIL_STATUS.md)를 참고합니다.
 
 무기 선택을 **이미지 글자 메뉴 + 개선한 여섯 무기 + 스킬 특성 아이콘**으로 개편했습니다. 스킬 아이콘/이름을 누르면 실제 스킬 데이터의 설명·피해·재사용 등을 확인할 수 있습니다. [화면·동작·검증](docs/prototype/WEAPON_PREPARATION_PRESENTATION_STATUS.md).

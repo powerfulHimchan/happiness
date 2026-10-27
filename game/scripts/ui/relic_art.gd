@@ -3,6 +3,7 @@ extends RefCounted
 
 ## GP-608–617: original vector illustrations, shared by rewards and the codex.
 ## Drawing only: no reward selection, combat effects, timers or saved state.
+const POCKETWATCH := preload("res://assets/journey_bosses/pocketwatch.svg")
 const ICONS := {
 	"phoenix_feather": preload("res://assets/relics/phoenix_feather.svg"),
 	"clock_fragment": preload("res://assets/relics/clock_fragment.svg"),
@@ -17,7 +18,7 @@ const ICONS := {
 }
 
 static func supports(id: String) -> bool:
-	return ICONS.has(id)
+	return id == PrototypeRelic.IAN_ID or ICONS.has(id)
 
 static func reward_region(rect: Rect2) -> Rect2:
 	var side := minf(128.0, minf(rect.size.x - 28.0, rect.size.y * 0.32))
@@ -40,7 +41,7 @@ static func codex_regions(rect: Rect2, line_count: int) -> Dictionary:
 static func draw_reward(ui: Control, id: String, rect: Rect2) -> void:
 	var region := reward_region(rect)
 	ui.draw_circle(region.get_center(), region.size.x * 0.48, Color("d3c58e", 0.06))
-	ui.draw_texture_rect(ICONS[id], region, false)
+	ui.draw_texture_rect(POCKETWATCH if id == PrototypeRelic.IAN_ID else ICONS[id], region, false)
 
 static func draw_codex_card(ui: Control, card: Dictionary, rect: Rect2) -> void:
 	var areas := codex_regions(rect, card.lines.size())

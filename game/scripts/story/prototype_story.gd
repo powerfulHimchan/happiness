@@ -117,4 +117,6 @@ static func journal_cards(tab: int, progress: Dictionary, character: String) -> 
 				lines.assign(["이 결말은 기억 수첩에 보존됩니다", "주인공 · " + PrototypeCharacters.display_name(String(collected[id].character)), "카드를 눌러 엔딩 전체 다시 읽기"])
 		else: lines.assign([String(profile.hint), "아직 발견하지 않은 내용입니다"])
 		result.append({"id": id, "name": profile.name if open else ("기억 조각 %d" if tab == 0 else "여행 기록 %d" if tab == 1 else "엔딩 %d") % (result.size() + 1), "open": open, "status": "발견함" if open else "미발견", "lines": lines})
+	if tab == 1 and progress.get("secrets",{}).has(JourneyBossProgress.SECRET):
+		result.append({"id":"ian_workshop","name":"이안의 공방 기록","open":true,"status":"발견함","lines":["시간을 가두려던 시계가 아니었다.","누군가 돌아갈 아침을 기억하려 만든 시계였다.","이안 처치 · 회중시계 영구 해금"]})
 	return result

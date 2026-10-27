@@ -36,7 +36,7 @@ func record_expedition_clear(run_id: String, level: int) -> Error:
 	return _append({"event": "expedition_clear", "run_id": run_id, "level": level})
 
 func record_secret(id: String) -> Error:
-	if id != "clocktower_archive": return ERR_INVALID_DATA
+	if id not in ["clocktower_archive",JourneyBossProgress.SECRET]: return ERR_INVALID_DATA
 	return OK if snapshot().secrets.has(id) else _append({"event": "secret", "id": id})
 
 func _append(event: Dictionary) -> Error:
@@ -76,7 +76,7 @@ func snapshot() -> Dictionary:
 			"expedition_clear":
 				if data.ending_completions.has(run_id) and not data.expedition_clears.has(run_id) and (event.get("level") is int or event.get("level") is float) and float(event.level) in [1.0, 2.0, 3.0, 4.0, 5.0]: data.expedition_clears[run_id] = int(event.level)
 			"secret":
-				if event.get("id") == "clocktower_archive": data.secrets.clocktower_archive = true
+				if event.get("id") in ["clocktower_archive",JourneyBossProgress.SECRET]: data.secrets[event.id] = true
 			"ending":
 				if not ArrivalEnding.valid_record(event.get("id"), run_id, event.get("character"), event.get("choice")) or data.ending_completions.has(run_id): continue
 				data.ending_completions[run_id] = {"id": event.id, "character": event.character, "choice": event.choice}

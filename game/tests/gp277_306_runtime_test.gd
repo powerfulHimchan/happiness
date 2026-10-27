@@ -77,6 +77,7 @@ func _run() -> void:
 						if not _finish_stage(): return
 					if not _check(runner.awaiting_boss_choice() and store.load_checkpoint().story.pending == "stage:%d" % runner.stage_limit, "마지막 보스 장면 대기까지 저장"): return
 		"records":
+			sandbox._refresh_checkpoint() # Settle completed-run recovery before the read-only journal snapshot.
 			var progress := journal.snapshot()
 			var id := "regions_" if character == "lumi" else ""
 			id += "rescue" if weapon == "sword" else "destroy"

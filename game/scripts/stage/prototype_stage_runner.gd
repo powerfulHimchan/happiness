@@ -35,6 +35,13 @@ const STAGE_TARGET_SECONDS := 180.0
 const ADVANCE_ONE_X := 1230.0
 const ADVANCE_TWO_X := 3830.0
 
+@export var journey_bosses_enabled := true
+var journey_sigil_count := -1
+var extra_elapsed_s := 0.0
+var extra_stage_elapsed_s := 0.0
+var extra_boss_active := false
+var extra_completion_ready := true
+var extra_boss: PrototypeTarget
 @export var detailed_maps_enabled: bool = true
 var meadow: WindmillMeadow
 
@@ -118,6 +125,12 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not stage_enabled or stage_complete:
 		return
+	if extra_boss_active:
+		_metric_elapsed_s += delta
+		if _metric_elapsed_s >= .10:
+			_metric_elapsed_s = 0
+			_emit_metrics()
+		return
 	stage_elapsed_s += delta
 	section_elapsed_s += delta
 	_metric_elapsed_s += delta
@@ -198,6 +211,11 @@ func reset_stage() -> void:
 
 
 func reset_run() -> void:
+	extra_elapsed_s = 0
+	extra_stage_elapsed_s = 0
+	extra_boss_active = false
+	extra_boss = null
+	extra_completion_ready = true
 	if run_mode != JourneyRoutePlan.MODE: expedition = 0
 	final_boss_id = SeraEncounter.ID if run_mode == JourneyRoutePlan.MODE else SeraEncounter.LEGACY
 	heart_threshold = ""
@@ -330,6 +348,7 @@ func awaiting_guardian_choice() -> bool:
 
 
 func final_enemy() -> PrototypeTarget:
+	if extra_boss_active and is_instance_valid(extra_boss): return extra_boss
 	return heart if uses_heart() else sera if uses_sera() else guardian if uses_guardian() else boss if uses_boss() else armored_boar
 
 
@@ -533,6 +552,10 @@ func current_metrics() -> Dictionary:
 		objective = "방패 돌진·충격파·빛의 창 회피 · 벽 충돌/공격 뒤 빈틈 공략"
 	if uses_heart(): route_name = "행복의 심장"
 	if expedition > 0: route_name += " · 원정 %d" % expedition
+	if extra_boss_active and is_instance_valid(extra_boss):
+		route_name = "추가 보스 스테이지 · " + extra_boss.NAMES[extra_boss.boss_id]
+		section_name = extra_boss.pattern_name(extra_boss.current_pattern)
+		objective = "공격 예고를 피하고 빈틈에 반격 · 모든 무기 사용 가능"
 	if heart_battle == HeartEncounter.ACTIVE:
 		section_name = "진 보스 · 행복의 심장"
 		objective = "지면 맥박·부채 바늘·수평 절단 회피 · 핵 노출 공략"
@@ -542,6 +565,7 @@ func current_metrics() -> Dictionary:
 		objective += " · 일반 적 연속 공격 재경고 확인"
 	if expedition > 0 and not stage_complete and current_section == Section.WAVE_TWO:
 		objective += " · 추가 정예 갑옷 멧돼지 처치"
+	if journey_sigil_count >= 0: objective += " · 시계 문양 %d/3" % journey_sigil_count
 	var detailed := meadow != null and meadow.active
 	if detailed:
 		route_name = "풍차 들판"
@@ -565,7 +589,7 @@ func current_metrics() -> Dictionary:
 		"run_remaining_regions": REGION_IDS.size() - visited.size() if run_mode in ["regions", JourneyRoutePlan.MODE] else 0,
 		"run_region_section": region_section(),
 		"run_route_terrain": "갈림길 · 풍차 장치 · 바람길" if detailed else "의식의 방" if uses_heart() else String(RegionStageLayout.DESCRIPTIONS[route_id]) if region_section() == 2 else CityGateLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.GATE else CityCoreLayout.TERRAIN_NAME if route_id == JourneyRoutePlan.CORE else "회전 발판 · 기계 승강대" if route_id == "festival" else "멈춤·반복 시간 발판" if route_id == "ruins" else "움직이는 덩굴 · 고정 쉼터" if route_id == "forest" else "태엽 발판" if route_id == "clockwork" else ("연습 지형" if stage_number == 1 and run_mode != JourneyRoutePlan.MODE else ("평지 다리" if route_id == "meadow" else "징검 발판")),
-		"run_complete": stage_complete and stage_number >= stage_limit and not awaiting_boss_choice() and heart_threshold != HeartThreshold.PENDING and arrival_ending != ArrivalEnding.PENDING and not HeartEncounter.blocks_completion(heart_battle) and not FinalRitual.blocks_completion(final_ritual) and (final_ritual.get("phase") != FinalRitual.SEEN or final_record_ready),
+		"run_complete": extra_completion_ready and stage_complete and stage_number >= stage_limit and not awaiting_boss_choice() and heart_threshold != HeartThreshold.PENDING and arrival_ending != ArrivalEnding.PENDING and not HeartEncounter.blocks_completion(heart_battle) and not FinalRitual.blocks_completion(final_ritual) and (final_ritual.get("phase") != FinalRitual.SEEN or final_record_ready),
 		"ending_id": String(final_ritual.get("choice", "")) if final_ritual.get("phase") == FinalRitual.SEEN else "",
 		"arrival_ending": arrival_ending,
 		"heart_battle": heart_battle,
@@ -576,7 +600,7 @@ func current_metrics() -> Dictionary:
 		"guardian_choice": guardian_choice,
 		"guardian_choice_pending": awaiting_guardian_choice(),
 		"boss_name": BossHappinessHeart.BOSS_NAME if uses_heart() else BossSera.BOSS_NAME if uses_sera() else BossHappinessGuardian.BOSS_NAME if uses_guardian() else BossClockworkKnight.BOSS_NAME if uses_boss() else "",
-		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s,
+		"run_elapsed_s": completed_elapsed_s + stage_elapsed_s + extra_elapsed_s,
 		"run_stage_history": stage_history.duplicate(true),
 		"stage_enabled": stage_enabled,
 		"stage_complete": stage_complete,
@@ -585,7 +609,7 @@ func current_metrics() -> Dictionary:
 		"stage_section_count": 5,
 		"stage_section_name": section_name,
 		"stage_objective": objective,
-		"stage_elapsed_s": stage_elapsed_s,
+		"stage_elapsed_s": extra_stage_elapsed_s if extra_boss_active else stage_elapsed_s,
 		"stage_target_s": WindmillMeadowLayout.TARGET_SECONDS if detailed else STAGE_TARGET_SECONDS,
 		"stage_overtime": stage_elapsed_s > (WindmillMeadowLayout.TARGET_SECONDS if detailed else STAGE_TARGET_SECONDS),
 		"stage_section_elapsed_s": section_elapsed_s,

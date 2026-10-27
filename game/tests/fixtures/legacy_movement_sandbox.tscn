@@ -6,3 +6,4 @@
 
 [node name="StageRunner" parent="."]
 detailed_maps_enabled = false
+journey_bosses_enabled = false

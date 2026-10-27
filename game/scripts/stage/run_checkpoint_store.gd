@@ -57,7 +57,10 @@ func _write(path: String, contents: String) -> Error:
 		return FileAccess.get_open_error()
 	file.store_string(contents)
 	file.flush()
-	return file.get_error()
+	var error := file.get_error()
+	# Release the temporary file before replacing the active checkpoint.
+	file.close()
+	return error
 
 
 func _read(path: String) -> Dictionary:
@@ -97,6 +100,7 @@ static func valid_state(state: Dictionary) -> bool:
 		return false
 	var legacy: Dictionary = state.get("boss_legacy", {})
 	var stage: Dictionary = state.stage
+	if state.has("journey_bosses") and not JourneyBossProgress.valid(state.journey_bosses,stage): return false
 	if stage.has("run_mode") and not stage.run_mode is String: return false
 	var mode: String = stage.get("run_mode", "standard")
 	if stage.has("expedition") and (not _number(stage.expedition, 0, 5, true) or (stage.expedition > 0 and mode != JourneyRoutePlan.MODE)): return false
@@ -330,6 +334,7 @@ static func _valid_windmill_checkpoint(state: Dictionary) -> bool:
 	for key in ["growth","player","weapons","ultimate","recorder"]:
 		if not state.get(key) is Dictionary: return false
 	var stage: Dictionary = state.stage
+	if state.has("journey_bosses") and not JourneyBossProgress.valid(state.journey_bosses,stage): return false
 	if not _number(stage.get("limit"),3,10,true): return false
 	if state.has("story") and not state.story is Dictionary: return false
 	if not state.recorder.get("id") is String or String(state.recorder.id).is_empty(): return false

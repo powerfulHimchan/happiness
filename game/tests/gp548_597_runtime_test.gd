@@ -69,7 +69,7 @@ func _run() -> void:
 
 func _catalog() -> void:
 	var definitions := PermanentAchievements.DEFINITIONS
-	_check(definitions.size() == 92, "original fifty plus forty-two research goals")
+	_check(definitions.size() == 93, "original fifty plus forty-two research goals")
 	var seen := {}
 	var zero := PermanentAchievements.observations({}, {}, {})
 	_check(zero.values().all(func(v: Variant) -> bool: return v == 0), "fresh player receives no achievements")
@@ -180,7 +180,7 @@ func _ui(select_all: bool) -> void:
 		var seen: Array[String] = []
 		for page in ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0):
 			var view: Dictionary = controls.village_snapshot()
-			_check(view.codex_page == page and view.codex_pages == ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0) and view.cards.size() == (2 if page == view.codex_pages - 1 else 3), "all ninety-two cards, including last partial page")
+			_check(view.codex_page == page and view.codex_pages == ceili(float(PermanentAchievements.DEFINITIONS.size()) / 3.0) and view.cards.size() == mini(3,PermanentAchievements.DEFINITIONS.size()-page*3), "all ninety-two cards, including last partial page")
 			var rects: Array = view.layout.cards.duplicate()
 			rects.append_array(view.tabs.values())
 			rects.append_array(view.achievement_toolbar.values())

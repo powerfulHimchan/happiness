@@ -519,6 +519,7 @@ func skill_relic_multiplier(kind: String) -> float:
 func skill_recharge_multiplier(family: String = "") -> float:
 	var relic := PrototypeRelic.CLOCK_RECHARGE_MULTIPLIER if has_active_relic(PrototypeRelic.CLOCK_ID) else 1.0
 	var tactics := PrototypeCombatTactics.recharge_multiplier(combat_tactics, family, damage_receiver.health, damage_receiver.max_health) if is_instance_valid(damage_receiver) else 1.0
+	if relic_state.get("id", "") == PrototypeRelic.IAN_ID: relic = 1.0 / .85
 	return relic * PrototypeWeaponMastery.recharge_multiplier(weapon_mastery, family) * tactics
 
 
@@ -675,7 +676,7 @@ func defense_multiplier() -> float:
 
 
 func attack_speed_multiplier() -> float:
-	return PrototypeCombatStats.BASE_ATTACK_SPEED / 100.0
+	return PrototypeCombatStats.BASE_ATTACK_SPEED / 100.0 * (1.10 if relic_state.get("id", "") == PrototypeRelic.IAN_ID else 1.0)
 
 
 func combat_stats_snapshot() -> Dictionary:

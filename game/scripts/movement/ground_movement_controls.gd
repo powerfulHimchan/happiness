@@ -14,6 +14,7 @@ signal recovery_potion_pressed
 signal weapon_swap_pressed
 signal retry_requested
 signal final_action_requested(action: String)
+signal journey_boss_action(action: String)
 signal layout_test_started
 signal layout_test_finished
 signal combat_configuration_started
@@ -295,6 +296,7 @@ var supply_shop_motion := SupplyShopMotion.new()
 var skill_reward_open_rect: Rect2
 var skill_reward_loadout: Dictionary = PrototypeSkillRewards.defaults()
 var skill_reward_claimed: bool = true
+var relic_unlocked_ian := false
 var relic_offer_available: bool = false
 var relic_reward_open_rect: Rect2
 var relic_reward_card_rect: Rect2
@@ -508,6 +510,10 @@ func _input(event: InputEvent) -> void:
 			return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if screen_mode == ScreenMode.STORY:
+			if story_scene.get("id") == "journey_boss":
+				if story_scene.actions.any(func(item: Dictionary): return item.id == "leave"): journey_boss_action.emit("leave")
+				get_viewport().set_input_as_handled()
+				return
 			if story_scene.get("id") == FinalRitual.ENDING_SCENE and not story_scene.get("final_locked", false): final_action_requested.emit("back")
 			elif story_scene.get("id") != FinalRitual.CHOICE_SCENE: _acknowledge_story_input()
 			get_viewport().set_input_as_handled()
@@ -939,7 +945,7 @@ func _draw_stage_routes() -> void:
 	else:
 		_draw_text_centered("스킬 교체 완료", skill_reward_open_rect, 18, MUTED_TEXT_COLOR)
 	if relic_offer_available:
-		_draw_button(relic_reward_open_rect, "유물 선택 · %d종" % PrototypeRelic.OFFERS.size(), true)
+		_draw_button(relic_reward_open_rect, "유물 선택 · %d종" % _relic_offers().size(), true)
 	if shop_data.get("enabled",false):
 		_draw_button(shop_open_rect,"보급소 · %d전" % int(shop_data.get("coins",0)),true)
 		SupplyShopArt.draw_symbol(self,"coin",Rect2(shop_open_rect.position+Vector2(8,shop_open_rect.size.y*.18),Vector2.ONE*shop_open_rect.size.y*.64))
@@ -1735,7 +1741,7 @@ func _handle_screen_touch(position: Vector2) -> void:
 		elif relic_reward_cancel_rect.has_point(position):
 			show_stage_routes(cleared_stage, run_stage_count, stage_recovered_health, all_stage_route_options)
 		elif relic_reward_confirm_rect.has_point(position):
-			relic_reward_selected.emit(String(PrototypeRelic.OFFERS[selected_relic_offer].id))
+			relic_reward_selected.emit(String(_relic_offers()[selected_relic_offer].id))
 		return
 	if screen_mode == ScreenMode.SKILL_REWARD:
 		_handle_skill_reward_touch(position)
@@ -1774,6 +1780,11 @@ func _handle_screen_touch(position: Vector2) -> void:
 			weapon_reward_selected.emit(String(weapon_reward_cards[selected_weapon_reward].id))
 		return
 	if screen_mode == ScreenMode.STORY:
+		if story_scene.get("id") == "journey_boss":
+			var extra_layout := JourneyBossView.layout(_safe_area_in_viewport(),story_scene.actions.size())
+			for i in story_scene.actions.size():
+				if extra_layout.choices[i].has_point(position) and story_scene.actions[i].get("enabled",true): journey_boss_action.emit(story_scene.actions[i].id); break
+			return
 		if story_scene.get("id") == FinalRitual.CHOICE_SCENE:
 			var final_layout := FinalRitual.layout(_safe_area_in_viewport())
 			var ritual: Dictionary = story_scene.ritual
@@ -3348,15 +3359,21 @@ func update_potion_recipe_status(id: String, message: String = "") -> void:
 	queue_redraw()
 
 
+func _relic_offers() -> Array[Dictionary]:
+	var offers := PrototypeRelic.OFFERS.duplicate(true)
+	if relic_unlocked_ian: offers.append(PrototypeRelic.IAN_OFFER)
+	return offers
+
+
 func relic_reward_pages() -> int:
-	return ceili(float(PrototypeRelic.OFFERS.size()) / PrototypeRelic.REWARD_PAGE_SIZE)
+	return ceili(float(_relic_offers().size()) / PrototypeRelic.REWARD_PAGE_SIZE)
 
 
 func _refresh_relic_reward_layout() -> void:
 	var safe := _safe_area_in_viewport()
 	relic_reward_card_rects.clear()
 	relic_reward_page = clampi(relic_reward_page, 0, relic_reward_pages() - 1)
-	var count := mini(PrototypeRelic.REWARD_PAGE_SIZE, PrototypeRelic.OFFERS.size() - relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE)
+	var count := mini(PrototypeRelic.REWARD_PAGE_SIZE, _relic_offers().size() - relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE)
 	# Five reward cards must remain readable on narrow phone layouts. Keep the
 	# gutters compact so the descriptions have enough width before shrinking
 	# their font size.
@@ -3380,7 +3397,7 @@ func _draw_relic_rewards() -> void:
 	_draw_text_centered("유물 선택 · 이번 도전에 하나만 획득", Rect2(safe.position + Vector2(0, safe.size.y * 0.06), Vector2(safe.size.x, 50)), 30, ACTIVE_COLOR)
 	for i in relic_reward_card_rects.size():
 		var offer_index := relic_reward_page * PrototypeRelic.REWARD_PAGE_SIZE + i
-		var offer: Dictionary = PrototypeRelic.OFFERS[offer_index]
+		var offer: Dictionary = _relic_offers()[offer_index]
 		var rect: Rect2 = relic_reward_card_rects[i]
 		draw_style_box(_panel_style(Color("365d68") if selected_relic_offer == offer_index else PANEL_COLOR), rect)
 		_draw_village_text("희귀 · " + String(offer.name), Rect2(rect.position + Vector2(12, rect.size.y * 0.07), Vector2(rect.size.x - 24, 42)), mini(28, maxi(16, int(rect.size.x * 0.095))), Color("ffca78"))
@@ -3431,7 +3448,7 @@ func _draw_relic_rewards() -> void:
 	_draw_button(relic_reward_next_rect, "다음", relic_reward_page < relic_reward_pages() - 1)
 	_draw_village_text("%d / %d" % [relic_reward_page + 1, relic_reward_pages()], Rect2(safe.position + Vector2(safe.size.x * 0.30, safe.size.y * 0.71), Vector2(safe.size.x * 0.40, safe.size.y * 0.06)), 19, TEXT_COLOR)
 	_draw_button(relic_reward_cancel_rect, "나중에 선택", false)
-	_draw_button(relic_reward_confirm_rect, String(PrototypeRelic.OFFERS[selected_relic_offer].name) + " 획득", true)
+	_draw_button(relic_reward_confirm_rect, String(_relic_offers()[selected_relic_offer].name) + " 획득", true)
 	if not checkpoint_message.is_empty():
 		_draw_text_centered(checkpoint_message, Rect2(safe.position + Vector2(0, safe.size.y * 0.92), Vector2(safe.size.x, 28)), 16, WAIT_COLOR)
 
@@ -3708,6 +3725,9 @@ func finish_story(return_mode: int) -> void:
 
 
 func _draw_story() -> void:
+	if story_scene.get("id") == "journey_boss":
+		JourneyBossView.draw(self)
+		return
 	var safe := _safe_area_in_viewport()
 	if story_scene.get("id") == FinalRitual.CHOICE_SCENE:
 		FinalRitual.draw(self, safe, story_scene.ritual, final_selected, story_message)

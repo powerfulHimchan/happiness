@@ -148,6 +148,20 @@ required_files=(
   "$game_root/assets/preparation/weapon-lettering/sword_spin.svg"
   "$game_root/assets/preparation/storybook.svg"
   "$game_root/tests/run_preparation_runtime_test.gd"
+  "$game_root/scripts/journey_bosses/journey_boss.gd"
+  "$game_root/scripts/journey_bosses/journey_boss_progress.gd"
+  "$game_root/scripts/journey_bosses/journey_boss_director.gd"
+  "$game_root/scripts/journey_bosses/journey_boss_view.gd"
+  "$game_root/scenes/combat/journey_boss.tscn"
+  "$game_root/tests/journey_bosses_runtime_test.gd"
+  "$game_root/assets/journey_bosses/belo.svg"
+  "$game_root/assets/journey_bosses/aurel.svg"
+  "$game_root/assets/journey_bosses/ian.svg"
+  "$game_root/assets/journey_bosses/belo_arena.svg"
+  "$game_root/assets/journey_bosses/aurel_arena.svg"
+  "$game_root/assets/journey_bosses/ian_arena.svg"
+  "$game_root/assets/journey_bosses/sigil.svg"
+  "$game_root/assets/journey_bosses/pocketwatch.svg"
   "$game_root/scripts/economy/advanced_run_tasks.gd"
   "$game_root/tests/gp618_667_runtime_test.gd"
   "$game_root/scripts/ui/start_screen_view.gd"
@@ -1093,6 +1107,9 @@ if [[ -n "$godot_command" ]]; then
   done
   for map_phase in flow physics journey story; do
     checked_godot 120s --headless --path "$game_root" --script res://tests/windmill_meadow_runtime_test.gd -- "$map_phase"
+  done
+  for boss_phase in full hidden narrative first_story fault combat validate skill seed resume seed_ian resume_ian seed_aurel resume_aurel; do
+    checked_godot 90s --headless --path "$game_root" --script res://tests/journey_bosses_runtime_test.gd -- "$boss_phase"
   done
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp821_830_art_runtime_test.gd
   checked_godot 120s --headless --path "$game_root" --script res://tests/gp831_840_animation_runtime_test.gd

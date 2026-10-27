@@ -40,6 +40,9 @@ static func _build_definitions() -> Array[Dictionary]:
 	result.append(_entry("secret_archive", "시계탑의 비밀지기", "비밀", 1, "시계탑 기록보관소의 비밀 장면 기록", "secret", FinalRitual.SECRET_SCENE))
 	for index in result.size(): result[index].ticket = 548 + index
 	result.append_array(AchievementResearch.definitions())
+	var first_dawn := _entry("first_dawn","첫 새벽","엔딩",1,"전체 여정 10스테이지와 필수 보스를 완주하고 엔딩 기록 · 비밀 공방 도전 해금","first_dawn")
+	first_dawn.ticket = 901
+	result.append(first_dawn)
 	return result
 
 static func definition(id: String) -> Dictionary:
@@ -69,6 +72,7 @@ static func observations(legacy: Dictionary, story: Dictionary, abilities: Dicti
 				for id in item.required:
 					if known.has(id): value += 1
 			"abilities": value = known.size()
+			"first_dawn": value = int(not story.get("endings",{}).is_empty())
 			"ending": value = int(story.get("endings", {}).has(item.key))
 			"expedition": value = int(story.get("expedition_clears", {}).values().has(int(item.key)))
 			"fragments": value = fragments

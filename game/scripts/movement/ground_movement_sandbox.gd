@@ -24,6 +24,7 @@ const RIGHT_SAFE_SPAWN := Vector2(4300.0, 780.0)
 @onready var growth: PrototypeGrowthController = $PrototypeGrowthController
 
 var run_shop: Dictionary = {}
+var journey_bosses: JourneyBossDirector
 
 var _growth_pause_owned: bool = false
 var _growth_previous_tree_pause: bool = false
@@ -66,6 +67,8 @@ var _suspended_node_states: Array[Dictionary] = []
 
 
 func _ready() -> void:
+	journey_bosses = JourneyBossDirector.new()
+	journey_bosses.setup(self)
 	player.boss_legacy_store = boss_legacy_store
 	player.phoenix_allowed = _can_collect_recovery_orb
 	player.lifesteal_allowed = _can_collect_recovery_orb
@@ -374,6 +377,7 @@ func _reset_test() -> void:
 	player.expedition = stage_runner.expedition
 	stage_runner.set_run_mode(controls.requested_run_mode)
 	stage_runner.reset_run()
+	journey_bosses.reset()
 	if stage_runner.run_mode == JourneyRoutePlan.MODE:
 		stage_runner.arrival_ending = ArrivalEnding.LOCKED
 		stage_runner.heart_battle = HeartEncounter.AVAILABLE if story_journal_store.snapshot().endings.has(ArrivalEnding.ID) else HeartEncounter.LOCKED
@@ -428,6 +432,7 @@ func _finish_growth_selection() -> void:
 func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 	if _restoring_checkpoint:
 		return
+	if journey_bosses.intercept(metrics): return
 	if not bool(metrics.get("stage_complete", false)):
 		if _try_open_sera_intro() or _sera_intro_active: return
 		if growth.run_active and not player.damage_receiver.dead and int(metrics.get("stage_section_index", 0)) == 5:
@@ -474,6 +479,7 @@ func _on_growth_stage_metrics(metrics: Dictionary) -> void:
 		var reward_saved := _grant_boss_legacy(String(test_recorder.checkpoint_snapshot().id), String(metrics.get("boss_choice", "")), stage_runner.final_boss_id)
 		reward_saved = _record_story_completion(_story_checkpoint_context()) and reward_saved
 		test_recorder.record_stage_metrics(metrics)
+		_sync_achievements()
 		if reward_saved and test_recorder.has_completed_run(String(test_recorder.checkpoint_snapshot().id)):
 			_discard_checkpoint()
 	elif stage_runner.awaiting_boss_choice() and growth.run_active and not player.damage_receiver.dead:
@@ -562,6 +568,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 	if not run_shop.is_empty(): state.supplies = run_shop.duplicate(true)
 	if story_run.enabled: state.story = story_run.snapshot()
 	else: state.stage.erase("heart_threshold")
+	if not journey_bosses.state.is_empty(): state.journey_bosses = journey_bosses.snapshot()
 	var error := checkpoint_store.save_checkpoint(state)
 	if error == OK:
 		_available_checkpoint = state.duplicate(true)
@@ -571,6 +578,7 @@ func _save_checkpoint(metrics: Dictionary, record_metrics: bool = true) -> Error
 
 
 func _claim_weapon_reward(id: String) -> bool:
+	if not journey_bosses.state.is_empty() and journey_bosses.intercept(stage_runner.current_metrics()): return false
 	if controls.current_screen_mode() != 11 or not stage_runner.has_next_stage() or stage_runner.reward_claimed or stage_runner.awaiting_guardian_choice() or not growth.run_active or player.damage_receiver.dead:
 		return false
 	if not _sync_guardian_reward(_available_checkpoint): return false
@@ -705,6 +713,7 @@ func continue_saved_run() -> bool:
 	run_shop = state.get("supplies",{}).duplicate(true)
 	_restoring_checkpoint = true
 	story_run.restore(state.get("story", {}))
+	journey_bosses.restore(state.get("journey_bosses", {}))
 	controls.selected_story_enabled = story_run.enabled
 	controls.requested_story_enabled = story_run.enabled
 	_finish_growth_selection()
@@ -765,6 +774,7 @@ func continue_saved_run() -> bool:
 		stage_runner.force_emit_metrics()
 		_update_story_status()
 		return true
+	if journey_bosses.resume(): return true
 	_begin_growth_pause()
 	_stage_recovered_health = 0
 	if stage_runner.uses_boss():
@@ -798,6 +808,7 @@ func continue_saved_run() -> bool:
 
 
 func _continue_stage(route: String) -> void:
+	if not journey_bosses.state.is_empty() and journey_bosses.intercept(stage_runner.current_metrics()): return
 	if not stage_runner.has_next_stage() or not stage_runner.reward_claimed or stage_runner.awaiting_guardian_choice() or not growth.run_active or player.damage_receiver.dead or not stage_runner.can_select_route(route) or controls.current_screen_mode() != 9:
 		return
 	if not _sync_guardian_reward(_available_checkpoint): return
@@ -1043,6 +1054,7 @@ func _claim_relic_reward(id: String = PrototypeRelic.PHOENIX_ID) -> bool:
 	or not stage_runner.has_next_stage() or not stage_runner.reward_claimed \
 	or not growth.run_active or player.damage_receiver.dead or not player.relic_state.is_empty() or not PrototypeRelic.valid_id(id):
 		return false
+	if id == PrototypeRelic.IAN_ID and not story_journal_store.snapshot().secrets.has(JourneyBossProgress.SECRET): return false
 	player.relic_state = {"id": id, "used": false}
 	player.relic_run_id = String(test_recorder.checkpoint_snapshot().id)
 	if _save_checkpoint(stage_runner.current_metrics()) != OK:
@@ -1260,6 +1272,7 @@ func _story_checkpoint_context() -> Dictionary:
 
 
 func _record_story_completion(state: Dictionary) -> bool:
+	if state.has("journey_bosses") and state.journey_bosses.get("aurel") != "done": return true
 	if state.is_empty() or String(state.stage.get("boss_choice", "")).is_empty(): return true
 	if not _record_heart_truth(state): return false
 	if HeartEncounter.blocks_completion(String(state.stage.get("heart_battle", ""))): return true
@@ -1414,6 +1427,7 @@ func _acknowledge_heart_victory() -> bool:
 
 
 func _open_final_ritual() -> void:
+	if journey_bosses.request_final("ritual"): return
 	_begin_growth_pause()
 	controls.release_all_inputs()
 	var ritual := stage_runner.final_ritual
@@ -1489,6 +1503,7 @@ func _acknowledge_final_ending() -> bool:
 
 
 func _open_arrival_ending() -> void:
+	if journey_bosses.request_final("arrival"): return
 	_begin_growth_pause()
 	controls.release_all_inputs()
 	controls.show_story(ArrivalEnding.scene(player.character_id, stage_runner.boss_choice, story_run.arrival_seen))

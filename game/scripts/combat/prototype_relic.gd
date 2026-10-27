@@ -1,6 +1,8 @@
 class_name PrototypeRelic
 extends RefCounted
 
+const IAN_ID := "watchmaker_pocketwatch"
+const IAN_OFFER := {"id":IAN_ID,"name":"시계공의 회중시계","lines":["공격 속도 +10% · 스킬 대기 -15%","잊힌 시계공 이안 처치로 영구 해금","유물 하나만 장착 · 현재 도전 지속"]}
 const IRON_LEAF_ID := "iron_leaf"
 const LAST_SPARK_ID := "last_spark"
 const SWORD_PENDANT_ID := "sword_pendant"
@@ -94,7 +96,7 @@ static func family_damage_multiplier(id: String, family: String, kind: String) -
 
 
 static func valid_id(id: String) -> bool:
-	return OFFERS.any(func(offer: Dictionary) -> bool: return offer.id == id)
+	return id == IAN_ID or OFFERS.any(func(offer: Dictionary) -> bool: return offer.id == id)
 
 static func valid_state(value: Variant) -> bool:
 	return value is Dictionary and (value.is_empty() or (value.size() == 2 and value.get("id") is String and valid_id(value.id) and value.get("used") is bool and (value.id == PHOENIX_ID or not value.used)))
@@ -102,6 +104,7 @@ static func valid_state(value: Variant) -> bool:
 static func hud(state: Dictionary) -> String:
 	if state.is_empty():
 		return "유물 없음"
+	if state.id == IAN_ID: return "시계공의 회중시계 · 공격 속도 +10% · 스킬 대기 -15%"
 	var family := family_profile(String(state.id))
 	if not family.is_empty(): return String(family.name) + " · " + String(family.lines[0])
 	if state.id == IRON_LEAF_ID: return "강철 잎 · 체력80% 이상: 전투 피해 -15%"
